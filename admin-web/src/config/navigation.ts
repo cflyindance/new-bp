@@ -217,7 +217,16 @@ export const NAV_MODULES: NavModule[] = [
         { id: "team-payroll-schedule", title: "发薪周期设置", titleEn: "Pay schedule settings", path: "/team/payroll-report/schedule-settings" },
         { id: "team-payroll-declarations", title: "员工声明设置", titleEn: "Employee declaration settings", path: "/team/payroll-report/declaration-settings" },
       ] },
-      { id: "team-reports", title: "员工报表", path: "/team/reports" },
+      { id: "team-reports", title: "员工报表", path: "/team/reports", children: [
+        { id: "team-rpt-summary", title: "汇总", titleEn: "Summary", path: "/team/reports/summary" },
+        { id: "team-rpt-tip-summary", title: "小费汇总表", titleEn: "Tip summary", path: "/team/reports/tip-summary" },
+        { id: "team-rpt-tip-detail", title: "小费明细表", titleEn: "Tip details", path: "/team/reports/tip-detail" },
+        { id: "team-rpt-performance", title: "绩效", titleEn: "Performance", path: "/team/reports/performance" },
+        { id: "team-rpt-payroll", title: "薪资", titleEn: "Payroll", path: "/team/reports/payroll" },
+        { id: "team-rpt-attendance", title: "考勤记录", titleEn: "Attendance records", path: "/team/reports/attendance" },
+        { id: "team-rpt-overtime-rules", title: "加班规则", titleEn: "Overtime rules", path: "/team/reports/overtime-rules" },
+        { id: "team-rpt-review-stats", title: "评价统计", titleEn: "Review statistics", path: "/team/reports/review-stats" },
+      ] },
       { id: "team-training", title: "绩效与培训", path: "/team/training-performance" },
       { id: "team-settings", title: "设置", path: "/team/settings" },
     ],
@@ -739,7 +748,7 @@ export function isTipsManagementTertiaryPath(path: string): boolean {
   return getActiveTipsManagementSubPath(path) !== "";
 }
 
-/** 团队管理 →「员工报表」：主内容区细项导航（路由 `/team/reports/...`） */
+/** 团队管理 →「员工报表」：公共侧栏子导航（路由 `/team/reports/...`） */
 export interface TeamReportsSubItem {
   id: string;
   title: string;
@@ -747,13 +756,9 @@ export interface TeamReportsSubItem {
   path: string;
 }
 
-export const TEAM_REPORTS_SUBNAV: TeamReportsSubItem[] = [
-  { id: "team-rpt-summary", title: "汇总", titleEn: "Summary", path: "/team/reports/summary" },
-  { id: "team-rpt-tip-summary", title: "小费汇总表", titleEn: "Tip summary", path: "/team/reports/tip-summary" },
-  { id: "team-rpt-tip-detail", title: "小费明细表", titleEn: "Tip details", path: "/team/reports/tip-detail" },
-  { id: "team-rpt-performance", title: "绩效", titleEn: "Performance", path: "/team/reports/performance" },
-  { id: "team-rpt-payroll", title: "薪资", titleEn: "Payroll", path: "/team/reports/payroll" },
-];
+export const TEAM_REPORTS_SUBNAV: TeamReportsSubItem[] =
+  NAV_MODULES.find((module) => module.id === "team")!.children!
+    .find((item) => item.id === "team-reports")!.children!;
 
 export function getTeamReportsDefaultPath(): string {
   return TEAM_REPORTS_SUBNAV[0]?.path ?? "/team/reports/summary";

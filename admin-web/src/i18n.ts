@@ -483,7 +483,7 @@ const messages = {
     "placeholder.bullet.tips":
       "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：点击「团队管理」，再点击「小费管理」进入覆盖子导航，可选择「小费分配」或「分配规则」。日期／员工汇总保留在分配页面内，分配明细从业务列表进入。",
     "placeholder.bullet.teamReports":
-      "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；本区域左侧为细项（汇总、小费汇总表、小费明细表、绩效、薪资），交互同小费管理。",
+      "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；点击员工报表整行进入子导航滑层，依次选择汇总、小费汇总表、小费明细表、绩效、薪资、考勤记录、加班规则、评价统计；返回箭头退回团队管理。",
     "placeholder.bullet.teamScheduling":
       "<strong class=\"text-card-foreground\">团队管理 · 排班与考勤</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">排班与考勤</strong>；本区域左侧为细项（考勤记录、加班规则），交互同小费管理。",
     "placeholder.bullet.brandProducts":
@@ -986,7 +986,7 @@ const messages = {
     "placeholder.bullet.tips":
       "<strong class=\"text-card-foreground\">Team · Tips</strong>: open Team, then Tips to see Tip allocation and Distribution rules in the submenu sheet. Date and employee summaries remain page tabs; open details from the allocation list.",
     "placeholder.bullet.teamReports":
-      "<strong class=\"text-card-foreground\">Team · Staff reports</strong>: open Team → <strong class=\"text-card-foreground\">Staff reports</strong> from the sheet. Left column: summary, tip summary, tip details, performance, payroll.",
+      "<strong class=\"text-card-foreground\">Team · Staff reports</strong>: open Team → <strong class=\"text-card-foreground\">Staff reports</strong> from the sheet. Click the Staff reports row to open its submenu: summary, tip summary, tip details, performance, payroll, attendance records, overtime rules, review statistics. Back returns to Team.",
     "placeholder.bullet.teamScheduling":
       "<strong class=\"text-card-foreground\">Team · Scheduling & attendance</strong>: open Team → <strong class=\"text-card-foreground\">Scheduling</strong> from the sheet. Left column: attendance log and overtime rules.",
     "placeholder.bullet.brandProducts":

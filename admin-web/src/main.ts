@@ -5280,31 +5280,6 @@ function renderTipsManagementSidebar(path: string): string {
   `;
 }
 
-function renderTeamReportsSidebar(path: string): string {
-  const navLabel = t("tertiaryNav.teamReports").replace(/"/g, "&quot;");
-  const activeSub = getActiveTeamReportsSubPath(path);
-  return `
-    <nav class="team-reports-subnav w-52 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${navLabel}">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${t("tertiaryNav.teamReports")}</p>
-      <ul class="space-y-0.5">
-        ${TEAM_REPORTS_SUBNAV.map((item) => {
-          const selected = item.path === activeSub;
-          return `
-        <li>
-          <a href="#${item.path}"
-            class="flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-              selected
-                ? "bg-primary/10 font-medium text-primary"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            }"
-            ${selected ? 'aria-current="page"' : ""}
-          >${pick(item.title, item.titleEn)}</a>
-        </li>`;
-        }).join("")}
-      </ul>
-    </nav>
-  `;
-}
 
 /** 侧栏折叠模块：一级行点击仅展开/收起；子项在下方二级链接进入（顺序见 navigation.ts NAV_MODULES） */
 function renderExpandableSidebarModule(m: NavModule, hash: string, expanded: boolean): string {
@@ -11808,7 +11783,6 @@ function renderMain(): string {
                                         })()
                                       : isTeamReportsTertiary
                                         ? `<div class="${tertiaryRowClass}">
-                    ${renderTeamReportsSidebar(path)}
                     <div class="${tertiaryMainClass} min-h-0 overflow-hidden">${renderTeamReportsMainPanel(path, title, tabModule)}</div>
                   </div>`
                                         : isTipsManagementTertiary
