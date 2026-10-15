@@ -2,6 +2,10 @@ import {addCalendarDays,parseIsoDate} from './payroll-local-date';
 import {validateNewScheduleRule} from './payroll-schedule-engine';
 import type {PayrollScheduleRule} from './payroll-schedule-types';
 export interface ScheduleHistoryRow {rule:PayrollScheduleRule;endDate?:string;status:'pending'|'active'|'expired';}
+/** Presentation only: keep date-derived lifecycle and the remaining rows' relative order. */
+export function activeScheduleHistoryFirst(rows:ScheduleHistoryRow[]):ScheduleHistoryRow[]{
+  return [...rows].sort((a,b)=>Number(b.status==='active')-Number(a.status==='active'));
+}
 /** Derive lifecycle from store-local dates. Never use a cached status to grant editing. */
 export function scheduleHistory(rules:PayrollScheduleRule[],storeId:string,today:string):ScheduleHistoryRow[]{
   parseIsoDate(today);

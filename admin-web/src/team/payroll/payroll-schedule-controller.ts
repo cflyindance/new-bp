@@ -1,7 +1,7 @@
 import type {PayrollPageContext} from './payroll-context';
 import type {PayrollBatchBridge} from './payroll-batch-export-types';
 import type {PayrollScheduleRule,PayrollFrequency,PlannedPayDatePolicy} from './payroll-schedule-types';
-import {scheduleHistory,editPendingRule,withdrawPendingRule} from './payroll-schedule-history';
+import {scheduleHistory,activeScheduleHistoryFirst,editPendingRule,withdrawPendingRule} from './payroll-schedule-history';
 import {generatePeriods,validateNewScheduleRule} from './payroll-schedule-engine';
 
 const labels:Record<PayrollFrequency,string>={weekly:'单周',biweekly:'双周',semimonthly:'半月',monthly:'一月',custom:'自定义'};
@@ -31,13 +31,10 @@ export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBat
         timezone:'UTC',status:'expired' as const,plannedPayDatePolicy:{kind:'daysAfterEnd' as const,days:6},
       })));
     }
-    const rows=scheduleHistory(rules(),selected,today());
-    const current=rows.find(row=>row.status==='active');
-    panel.innerHTML=`<header><h2>发薪周期设置</h2></header>
-      <div class="payroll-schedule-tools"><label>门店 <select data-store>${options(selected)}</select></label><button type="button" data-add ${!demo()||!selected?'disabled':''}>新增规则</button></div>
-      <p role="status">${demo()?'示例规则 · 仅保留在本次页面，不改变实际薪资记录':'实际规则只读；正式发布尚未接入，不能在此保存真实规则。'}</p>
-      <section class="payroll-schedule-current"><strong>当前规则</strong><span>${current?labels[current.rule.frequency]:'暂无已生效规则'}</span><span>${current?`自 ${current.rule.effectiveFrom} 起`:''}</span></section>
-      <h3>全部规则与历史</h3><div class="payroll-schedule-table"><table><thead><tr><th>版本</th><th>门店</th><th>发薪周期</th><th>开始日期</th><th>结束日期</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map(row=>`<tr><td>V${row.rule.version}</td><td>${escape(storeName(row.rule.storeId))}</td><td>${labels[row.rule.frequency]}</td><td>${row.rule.effectiveFrom}</td><td>${row.endDate||'持续生效'}</td><td>${{pending:'待生效',active:'生效中',expired:'已过期'}[row.status]}</td><td><button data-view="${escape(row.rule.id)}">查看</button>${demo()&&row.status==='pending'?` <button data-edit="${escape(row.rule.id)}">编辑</button> <button data-delete="${escape(row.rule.id)}">删除</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7">暂无规则记录</td></tr>'}</tbody></table></div>`;
+    const rows=activeScheduleHistoryFirst(scheduleHistory(rules(),selected,today()));
+    panel.innerHTML=`<header class="payroll-settings-heading"><h2>发薪周期设置</h2><div class="payroll-workspace-actions"><button type="button" class="btn btn-primary payroll-workspace-action-btn" data-add ${!demo()||!selected?'disabled':''}>新增规则</button></div></header>
+      <div class="payroll-schedule-tools"><label>门店 <select data-store>${options(selected)}</select></label></div>
+      <div class="payroll-schedule-table"><table><thead><tr><th>版本</th><th>门店</th><th>发薪周期</th><th>开始日期</th><th>结束日期</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map(row=>`<tr><td>V${row.rule.version}</td><td>${escape(storeName(row.rule.storeId))}</td><td>${labels[row.rule.frequency]}</td><td>${row.rule.effectiveFrom}</td><td>${row.endDate||'持续生效'}</td><td>${{pending:'待生效',active:'生效中',expired:'已过期'}[row.status]}</td><td><button data-view="${escape(row.rule.id)}">查看</button>${demo()&&row.status==='pending'?` <button data-edit="${escape(row.rule.id)}">编辑</button> <button data-delete="${escape(row.rule.id)}">删除</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7">暂无规则记录</td></tr>'}</tbody></table></div>`;
   }
   function openEditor(rule?:PayrollScheduleRule,readonly=false){
     const start=rule?.effectiveFrom||`${Number(today().slice(0,4))+1}-01-01`;

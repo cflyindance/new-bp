@@ -680,13 +680,23 @@
 :host .team-payroll-page.payroll-workspace-active[data-payroll-view]:not([data-payroll-view="report"]) #view-workspace { display:none !important; }
 :host [data-payroll-view="report"] > .content-area { visibility:visible; pointer-events:auto; }
 :host .payroll-settings-route[open] {
+  background: #fff;
   position:relative; inset:auto; width:100%; height:auto; min-height:calc(100dvh - 160px);
   max-width:none; max-height:none; margin:0; z-index:auto; overflow:visible;
   padding:24px; box-sizing:border-box;
 }
+:host .payroll-settings-route > .payroll-declaration-settings-header { background:#fff; }
 :host .payroll-schedule-dialog.payroll-schedule-page > header {
   justify-content: flex-start;
 }
+:host .payroll-settings-heading,
+:host .payroll-schedule-dialog.payroll-schedule-page > header.payroll-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+:host .payroll-settings-heading .payroll-workspace-actions { flex-shrink: 0; }
 :host .payroll-schedule-page .payroll-schedule-current,
 :host .payroll-schedule-page .payroll-schedule-table {
   background: white;
