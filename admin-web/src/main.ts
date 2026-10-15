@@ -1,3 +1,4 @@
+import { flattenMemberNavigation } from "./config/member-center-navigation";
 import "./styles/app.css";
 import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
 import { createPayrollPageContext } from "./team/payroll/payroll-context";
@@ -2690,6 +2691,9 @@ function renderPcSheetDarkSubnav(
           <ul id="${childrenId}" class="${l3WrapClass} ${expanded ? "" : "hidden"}" role="list" aria-label="${l3Label}" ${expanded ? "" : 'aria-hidden="true"'}>
             ${children
               .map((c) => {
+                if (c.sidebarChildren?.length) {
+                  return renderItem({ ...c, id: c.id ?? encodeURIComponent(c.path), activePrefix: c.path });
+                }
                 const selected = c.path === activeChild;
                 return `
             <li${c.id === "team-clock-live" ? ' data-future-version-diff' : ""}>
@@ -3626,22 +3630,9 @@ function findTitle(path: string): { title: string; module?: string } {
   }
   if (path.startsWith("/members")) {
     const memMod = NAV_MODULES.find((x) => x.id === "members")!;
-    const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-entry");
-    if (card?.sidebarChildren) {
-      const sortedM = [...card.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
-      for (const c of sortedM) {
-        if (path === c.path || path.startsWith(`${c.path}/`)) {
-          return { title: pick(c.title, c.titleEn), module: t("findTitle.moduleMembersCards") };
-        }
-      }
-    }
-    const points = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-points");
-    if (path === "/members/points" || path.startsWith("/members/points/")) {
-      return {
-        title: pick(points?.title ?? "积分配置", points?.titleEn),
-        module: t("findTitle.moduleMembers"),
-      };
-    }
+    const memberNode = flattenMemberNavigation().sort((a, b) => b.path.length - a.path.length)
+      .find(item => path === item.path || path.startsWith(`${item.path}/`));
+    if (memberNode) return { title: pick(memberNode.title, memberNode.titleEn), module: t("findTitle.moduleMembers") };
     return { title: pick(memMod.title, memMod.titleEn), module: t("findTitle.moduleMembers") };
   }
   const mktNav = findMarketingNavTitle(path);
@@ -11967,6 +11958,13 @@ function renderPlaceholder(
     teamReportsSubnav?: boolean;
   },
 ): string {
+  if (path.startsWith("/members/")) {
+    return `<section class="rounded-xl border border-border bg-card p-6" data-member-route-placeholder>
+      <h2 class="text-lg font-semibold">${escapeHtml(title)}</h2>
+      <p class="mt-3 text-sm text-muted-foreground">待配置：此功能入口与路由已建立，请通过路由配置接入对应会员业务页面。</p>
+      <p class="mt-3 text-sm text-muted-foreground">当前地址：<code>${escapeHtml(path)}</code></p>
+    </section>`;
+  }
   const sidebarSecond = tabModule?.subNavPlacement === "sidebar";
   const sheetSecond = tabModule?.subNavPlacement === "sheet";
   const brandProductsSubnav = opts?.brandProductsSubnav;

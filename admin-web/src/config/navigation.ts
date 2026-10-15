@@ -1,3 +1,4 @@
+import { MEMBER_CENTER_NAV, flattenMemberNavigation } from "./member-center-navigation";
 /**
  * 整合后推荐导航树（融合脑图 + 竞品）
  * 来源：docs/餐饮商家后台-导航与目录结构建议.md §八、§8.1
@@ -344,8 +345,7 @@ export const NAV_MODULES: NavModule[] = [
     path: "/members",
     defaultChildPath: "/members/card/coupon-mgmt",
     children: [
-      { id: "mem-card-entry", title: "卡券管理", titleEn: "Cards & coupons", path: "/members/card/coupon-mgmt" },
-      { id: "mem-points", title: "积分配置", titleEn: "Points config", path: "/members/points" },
+      ...MEMBER_CENTER_NAV.map(item => ({ id: item.id, title: item.title, path: item.path, titleEn: item.titleEn })),
       { id: "mem-settings", title: "设置", titleEn: "Settings", path: "/members/settings" },
     ],
   },
@@ -1226,22 +1226,8 @@ export function getActiveFinanceSettingsSubPath(path: string): string {
   return "";
 }
 
-/** 会员中心侧滑层 ·「卡券管理」（可展开三级）+「积分配置」（id 与 NAV_MODULES children / 平台预设 L2 键一致） */
-export const MEMBERS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
-  {
-    id: "mem-card-entry",
-    title: "卡券管理",
-    titleEn: "Cards & coupons",
-    path: "/members/card/coupon-mgmt",
-    activePrefix: "/members/card",
-    sidebarChildren: [
-      { title: "优惠券管理", titleEn: "Coupon management", path: "/members/card/coupon-mgmt" },
-      { title: "付费会员明细", titleEn: "Paid member details", path: "/members/card/paid-detail" },
-      { title: "付费会员配置", titleEn: "Paid member settings", path: "/members/card/paid-config" },
-    ],
-  },
-  { id: "mem-points", title: "积分配置", titleEn: "Points config", path: "/members/points" },
-];
+/** 会员中心截图菜单树；二级 id 与 NAV_MODULES / 平台预设键一致。 */
+export const MEMBERS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = MEMBER_CENTER_NAV;
 
 /** 会员中心侧滑层 · 设置 */
 export const MEMBERS_SHEET_SETTINGS_SUBNAV: ProductCenterSidebarSubItem[] = [
@@ -1462,8 +1448,8 @@ export function findGiftCardsNavTitle(path: string): { title: string; module: st
 }
 
 export function getMembersSheetSidebarChildActivePath(path: string, item: ProductCenterSidebarSubItem): string {
-  if (item.id !== "mem-card-entry" || !item.sidebarChildren?.length) return "";
-  const sorted = [...item.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
+  if (!item.sidebarChildren?.length) return "";
+  const sorted = flattenMemberNavigation(item.sidebarChildren).sort((a, b) => b.path.length - a.path.length);
   for (const c of sorted) {
     if (path === c.path || path.startsWith(`${c.path}/`)) return c.path;
   }
@@ -1473,18 +1459,9 @@ export function getMembersSheetSidebarChildActivePath(path: string, item: Produc
 /** 会员中心路由 → 主区标题 / 模块副标题 */
 export function findMembersNavTitle(path: string): { title: string; module: string } | null {
   if (!path.startsWith("/members")) return null;
-  const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-entry");
-  if (card?.sidebarChildren) {
-    const sorted = [...card.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
-    for (const c of sorted) {
-      if (path === c.path || path.startsWith(`${c.path}/`)) {
-        return { title: c.title, module: "会员中心 · 卡券管理" };
-      }
-    }
-  }
-  if (path === "/members/points" || path.startsWith("/members/points/")) {
-    return { title: "积分配置", module: "会员中心 · Member center" };
-  }
+  const node = flattenMemberNavigation().sort((a, b) => b.path.length - a.path.length)
+    .find(item => path === item.path || path.startsWith(`${item.path}/`));
+  if (node) return { title: node.title, module: "会员中心 · Member center" };
   return { title: "会员中心", module: "会员中心 · Member center" };
 }
 
@@ -1653,10 +1630,7 @@ export function flattenNavPaths(modules: NavModule[] = NAV_MODULES): string[] {
   for (const tg of BRAND_TAGS_MGMT_SUBNAV) out.push(tg.path);
   for (const rc of BRAND_RECIPES_MGMT_SUBNAV) out.push(rc.path);
   for (const pc of PRODUCT_CENTER_DEEP_NAV) out.push(pc.path);
-  for (const mem of MEMBERS_SHEET_SUBNAV) {
-    out.push(mem.path);
-    if (mem.sidebarChildren) for (const ch of mem.sidebarChildren) out.push(ch.path);
-  }
+  for (const mem of flattenMemberNavigation()) out.push(mem.path);
   for (const gc of GIFT_CARDS_SHEET_SUBNAV) {
     out.push(gc.path);
     if (gc.sidebarChildren) for (const ch of gc.sidebarChildren) out.push(ch.path);

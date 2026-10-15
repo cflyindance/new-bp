@@ -67,7 +67,6 @@ export const CLOUD_PRODUCT_NAV_CHILD_IDS = [
 /** 点击一级导航即提示的中心 */
 const NAV_MODULE_NOTICES: Record<string, CloudProductNotice> = {
   "product-center-main": { title: "商品中心", message: "云产品-商品中心-通过路由配置" },
-  members: { title: "会员中心", message: "云产品-会员中心-通过路由配置" },
   reviews: { title: "评价中心", message: "云产品-评价中心-通过路由配置" },
   reservations: { title: "预约等位中心", message: "云产品-云等位-通过路由配置" },
   "reports-finance": { title: "报表中心", message: "云产品-云报表-通过路由配置" },

@@ -264,17 +264,17 @@ function buildNavEntries(hubId: string, subnav: ProductCenterSidebarSubItem[]): 
       sheetNavPath: item.path,
       breadcrumb: `${hubTitle} › ${pickLocaleTitle(item.title, item.titleEn)}`,
     });
-    for (const [i, child] of (item.sidebarChildren ?? []).entries()) {
-      entries.push({
-        id: `nav:${item.id}:c${i}`,
-        kind: "nav",
-        title: child.title,
-        titleEn: child.titleEn,
-        navPath: child.path,
-        sheetNavPath: item.path,
-        breadcrumb: `${hubTitle} › ${pickLocaleTitle(item.title, item.titleEn)} › ${pickLocaleTitle(child.title, child.titleEn)}`,
+    const visit = (children: NonNullable<ProductCenterSidebarSubItem["sidebarChildren"]>, trail: string[], key: string): void => {
+      children.forEach((child, i) => {
+        const breadcrumb = [...trail, pickLocaleTitle(child.title, child.titleEn)];
+        entries.push({
+          id: `nav:${key}:c${i}`, kind: "nav", title: child.title, titleEn: child.titleEn,
+          navPath: child.path, sheetNavPath: item.path, breadcrumb: breadcrumb.join(" › "),
+        });
+        visit(child.sidebarChildren ?? [], breadcrumb, `${key}:c${i}`);
       });
-    }
+    };
+    visit(item.sidebarChildren ?? [], [hubTitle, pickLocaleTitle(item.title, item.titleEn)], item.id);
   }
   return entries;
 }

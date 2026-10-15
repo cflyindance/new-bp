@@ -1,3 +1,4 @@
+import { flattenMemberNavigation } from "./member-center-navigation";
 /**
  * 菜单路由 · 固定页面路由注册表（只读，供新增一级导航对话框）
  */
@@ -178,6 +179,12 @@ export function buildNavRouteRegistry(): NavRouteRegistryEntry[] {
     moduleRootPath: resolveModuleRoot("/operations/inventory-ordering/inventory-change-log", NAV_MODULES),
   });
 
+  for (const node of flattenMemberNavigation()) {
+    pushEntry(entries, seen, {
+      id: `route:members:${node.path}`, path: node.path, title: node.title,
+      titleEn: node.titleEn, level: 3, groupId: "members", groupTitle: "会员中心", moduleRootPath: "/members",
+    });
+  }
   cachedRegistry = entries;
   return entries;
 }
