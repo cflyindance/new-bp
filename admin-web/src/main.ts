@@ -149,7 +149,6 @@ import {
   renderNotificationsHubPageContent,
 } from "./config/notifications-hub-pages";
 import {
-  bindFohBrandMenuUi,
   isFohBrandMenuPath,
   renderFohBrandMenuPage,
   FOH_BRAND_MENU_PATH,
@@ -4209,6 +4208,14 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
+  // 旧店中店入口／设置分组书签归一到新子页面；保留字段定位锚点。
+  if (raw === "/operations/queue-call/brand-menu" || raw === "/operations/queue-call/brand-menu/" ||
+      raw.startsWith("/operations/queue-call/brand-menu/brand-menu-")) {
+    const settings = raw.includes("brand-menu-settings") || /#s53[01]-/.test(window.location.hash);
+    const anchor = window.location.hash.slice(1).split("#")[1];
+    replaceHashPath(`/operations/queue-call/brand-menu/${settings ? "settings" : "brands"}${anchor ? `#${anchor}` : ""}`);
+    return;
+  }
   /* 品牌与菜单已迁前厅管理中心；旧门店管理书签重定向 */
   if (raw === "/stores/brand-menu" || raw === "/stores/brand-menu/" || raw.startsWith("/stores/brand-menu/")) {
     replaceHashPath(raw.replace(/^\/stores\/brand-menu/, "/operations/queue-call/brand-menu"));
@@ -6326,12 +6333,12 @@ function renderFohBrandMenuGroupCard(
     </section>`;
 }
 
-function renderFohBrandMenuPageWithSettings(): string {
+function renderFohBrandMenuPageWithSettings(path: string): string {
   const catalog = getModuleSettingsCatalog(FOH_BRAND_MENU_PATH);
-  const items = catalog?.items ?? [];
-  const brandsItems = items.filter((item) => item.groupKey === "brand-menu-presentation");
+  const items = catalog ? buildModuleSettingsGroupsForPreset(catalog).flatMap((group) => group.items) : [];
+  const brandsItems = items.filter((item) => item.seq === 547);
   const settingsItems = items
-    .filter((item) => item.groupKey === "brand-menu-settings")
+    .filter((item) => item.seq === 530 || item.seq === 531)
     .slice()
     .sort((a, b) => {
       // 品牌模式(531) → 品牌页作为首页(530)
@@ -6346,12 +6353,38 @@ function renderFohBrandMenuPageWithSettings(): string {
     brandsItems,
     { hideHeader: true },
   );
-  const settingsPanelHtml = renderFohBrandMenuGroupCard("设置", "brand-menu-settings", settingsItems);
+  const settingsPanelHtml = renderStoreBrandChannelSettings(settingsItems);
 
   return wrapPageWithSaveBar(
     FOH_BRAND_MENU_PATH,
-    renderFohBrandMenuPage({ brandsPanelHtml, settingsPanelHtml }),
+    renderFohBrandMenuPage({ path, brandsPanelHtml, settingsPanelHtml }),
   );
+}
+
+/** 保留 530/531 原字段和默认值；只按渠道重排，不新增两个选项的依赖。 */
+function renderStoreBrandChannelSettings(items: ModuleSettingCatalogItem[]): string {
+  if (!items.length) return "";
+  const ordered = [531, 530].map((seq) => items.find((item) => item.seq === seq))
+    .filter((item): item is ModuleSettingCatalogItem => Boolean(item));
+  const lines = [{ id: "kiosk", label: "Kiosk" }, { id: "emenu", label: "eMenu" }, { id: "sdi", label: "SDI" }];
+  return `<section class="rounded-xl border border-border bg-card p-4 space-y-4" aria-label="渠道展示设置">
+    <h3 class="text-sm font-semibold">渠道展示设置</h3>
+    <p class="text-sm text-muted-foreground">按渠道设置品牌点餐方式和首页入口；单个品牌的展示渠道在品牌管理中维护。</p>
+    <div class="overflow-x-auto"><table class="w-full text-sm" data-brand-channel-settings>
+      <thead><tr class="border-b border-border text-left"><th class="p-3 font-medium">渠道</th>
+        ${ordered.map((item) => `<th class="p-3 font-medium" id="${escapeHtml(item.id)}">${escapeHtml(item.title)}</th>`).join("")}
+      </tr></thead>
+      <tbody>${lines.map((line) => `<tr class="border-b border-border last:border-0"><th scope="row" class="p-3 text-left font-medium">${line.label}</th>
+        ${ordered.map((item) => {
+          const fieldId = `${item.seq}-c-line-${line.id}`;
+          const checked = readModuleSettingCheckbox(fieldId, true);
+          return `<td class="p-0"><label class="flex min-h-12 cursor-pointer items-center gap-2 p-3">
+            <input type="checkbox" role="switch" aria-label="${line.label} ${escapeHtml(item.title)}" class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm" data-module-setting-checkbox="${fieldId}" ${checked ? "checked" : ""} />
+            <span class="text-muted-foreground">启用</span></label></td>`;
+        }).join("")}</tr>`).join("")}</tbody>
+    </table></div>
+    ${ordered.map((item) => `<p class="text-xs text-muted-foreground">${escapeHtml(item.title)}：${escapeHtml(item.sceneDesc)}</p>`).join("")}
+  </section>`;
 }
 
 /** 品类/分类管理：页内已有滚动容器，勿用 wrapPageWithSaveBar 的外层 overflow-y-auto */
@@ -10814,7 +10847,7 @@ function bindModuleSettingsFormControls(): void {
     const fieldId = input.getAttribute("data-module-setting-checkbox");
     if (!fieldId) return;
     input.addEventListener("change", () => {
-      writeModuleSettingCheckbox(fieldId, input.checked);
+      writeModuleSettingCheckbox(fieldId, input.checked, input.closest("[data-brand-channel-settings]") ? true : undefined);
     });
   });
 
@@ -11787,7 +11820,7 @@ function renderMain(): string {
                                           : isFloorPlanPath(path)
                                             ? wrapPageWithSaveBar(path, renderFloorPlanPage())
                                             : isFohBrandMenu
-                                              ? renderFohBrandMenuPageWithSettings()
+                                              ? renderFohBrandMenuPageWithSettings(path)
                                               : isFohCategorySettingsPath(path)
                                                 ? renderFohCategorySettingsPageWithSaveBar(path)
                                                 : isFohClassificationSettingsPath(path)
@@ -13162,7 +13195,6 @@ function mount(): void {
   bindKdsTerminalSettingsControls();
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
-  bindFohBrandMenuUi(mount);
   bindStoreRestaurantLogoControls();
   bindIngenicoBluIntegrationUi();
   bindAdvancedServiceSwitchUi();

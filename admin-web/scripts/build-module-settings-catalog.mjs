@@ -340,6 +340,10 @@ function buildCatalog(rows, mapping) {
   ts += `  settingsPath: string,\n`;
   ts += `  item: Pick<ModuleSettingCatalogItem, "groupKey" | "id">,\n`;
   ts += `): string {\n`;
+  ts += `  if (settingsPath === "/operations/queue-call/brand-menu") {\n`;
+  ts += `    const page = item.id.startsWith("s547-") ? "brands" : "settings";\n`;
+  ts += `    return \`\${settingsPath}/\${page}#\${item.id}\`;\n`;
+  ts += `  }\n`;
   ts += `  return \`\${getModuleSettingsCategoryPath(settingsPath, item.groupKey)}#\${item.id}\`;\n`;
   ts += `}\n\n`;
   ts += `export function listAllModuleSettingCatalogEntries(): Array<{\n`;

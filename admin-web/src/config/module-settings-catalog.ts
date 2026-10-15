@@ -715,6 +715,10 @@ export function getModuleSettingsItemHref(
   settingsPath: string,
   item: Pick<ModuleSettingCatalogItem, "groupKey" | "id">,
 ): string {
+  if (settingsPath === "/operations/queue-call/brand-menu") {
+    const page = item.id.startsWith("s547-") ? "brands" : "settings";
+    return `${settingsPath}/${page}#${item.id}`;
+  }
   return `${getModuleSettingsCategoryPath(settingsPath, item.groupKey)}#${item.id}`;
 }
 

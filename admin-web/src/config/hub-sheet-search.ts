@@ -23,6 +23,7 @@ import {
 } from "./navigation";
 import {
   getModuleSettingsCategoryPath,
+  getModuleSettingsItemHref,
   MODULE_SETTINGS_BY_PATH,
   type ModuleSettingCatalogItem,
 } from "./module-settings-catalog";
@@ -296,7 +297,9 @@ function buildSettingEntries(
     id: `setting:${settingsPath}:${item.seq}`,
     kind: "setting" as const,
     title: item.title,
-    navPath: getModuleSettingsCategoryPath(settingsPath, item.groupKey),
+    navPath: settingsPath === "/operations/queue-call/brand-menu"
+      ? getModuleSettingsItemHref(settingsPath, item).split("#")[0]
+      : getModuleSettingsCategoryPath(settingsPath, item.groupKey),
     sheetNavPath: settingsNavPath,
     breadcrumb: `${hubTitle} › ${t("hubSearch.crumbSettings")} › ${item.groupTitle}`,
     seq: item.seq,

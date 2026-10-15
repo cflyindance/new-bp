@@ -227,7 +227,7 @@ export function formatBrandDisplayChannelsSummary(brand: StoreBrandRecord): stri
 }
 
 function formatBrandMenuDetailButtonLabel(count: number): string {
-  return `详情（${count}）`;
+  return `管理菜单（${count}）`;
 }
 
 function renderBrandImageCell(brand: StoreBrandRecord): string {
@@ -457,7 +457,7 @@ export function isStoreBrandManagementSeq(seq: number): boolean {
 export function renderStoreBrandManagementHtml(): string {
   const brands = readStoreBrands();
   return `
-    <div class="mt-3 space-y-3" data-store-brand-management>
+    <div class="space-y-3 p-4" data-store-brand-management>
       <div class="flex flex-wrap items-center justify-end gap-2">
         <button type="button" class="${BTN_PRIMARY}" data-brand-create>新增品牌</button>
       </div>
@@ -699,7 +699,10 @@ export function bindStoreBrandManagementControls(): void {
       const menuDetailBtn = target.closest<HTMLElement>("[data-brand-menu-detail]");
       if (menuDetailBtn) {
         const id = menuDetailBtn.getAttribute("data-brand-id");
-        if (id) openBrandMenuViewDialog(panel, id);
+        if (id) {
+          showBrandDialog(panel, id);
+          panel.querySelector<HTMLElement>("[data-brand-dialog] [data-brand-menu-structure-picker]")?.scrollIntoView({ block: "start" });
+        }
         return;
       }
       if (

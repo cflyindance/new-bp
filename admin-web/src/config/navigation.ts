@@ -402,6 +402,10 @@ export const NAV_MODULES: NavModule[] = [
         title: "店中店管理",
         titleEn: "Shop-in-shop management",
         path: "/operations/queue-call/brand-menu",
+        children: [
+          { id: "qc-brand-management", title: "品牌管理", titleEn: "Brand management", path: "/operations/queue-call/brand-menu/brands" },
+          { id: "qc-brand-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/brand-menu/settings" },
+        ],
       },
       {
         id: "qc-category-settings",

@@ -235,8 +235,8 @@ function deferFieldWrite(
   return true;
 }
 
-export function writeModuleSettingCheckbox(fieldId: string, checked: boolean): void {
-  const before = readModuleSettingCheckbox(fieldId, checked);
+export function writeModuleSettingCheckbox(fieldId: string, checked: boolean, defaultChecked = checked): void {
+  const before = readModuleSettingCheckbox(fieldId, defaultChecked);
   if (before === checked) return;
   if (deferFieldWrite(fieldId, checked ? "1" : "0", "checkbox", before, checked)) return;
   try {
