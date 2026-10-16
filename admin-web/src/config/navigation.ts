@@ -1329,13 +1329,13 @@ export function groupRuleRestrictionsSubnav(items: ProductCenterSidebarSubItem[]
   const limits = items.find((item) => item.id === "qc-menu-order-limits");
   const buffet = items.find((item) => item.id === "foh-buffet-rules");
   const children = [
-    ...(limits?.sidebarChildren ?? []),
     ...(buffet ? [{ id: buffet.id, title: buffet.title, titleEn: buffet.titleEn, path: buffet.path }] : []),
+    ...(limits?.sidebarChildren ?? []),
   ];
   const group: ProductCenterSidebarSubItem = {
     id: "qc-rule-restrictions",
-    title: "规则限制",
-    titleEn: "Rule restrictions",
+    title: "菜单下单规则",
+    titleEn: "Menu ordering rules",
     path: "/operations/queue-call/rule-restrictions",
     activePrefixes: children.map((child) => child.path),
     sidebarChildren: children,

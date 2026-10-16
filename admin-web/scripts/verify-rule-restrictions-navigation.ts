@@ -16,7 +16,8 @@ for (const [limits, buffet, count] of [[true,true,3],[true,false,2],[false,true,
 assert.equal(JSON.stringify(raw), original, 'input must remain unchanged');
 const base = '/operations/queue-call/menu-order-limits';
 const grouped = groupRuleRestrictionsSubnav(raw);
-assert.deepEqual(grouped.find(i => i.id === 'qc-rule-restrictions')!.sidebarChildren!.map(i => i.title), ['每轮菜品互斥/组合','其他设置','自助餐规则']);
+assert.equal(grouped.find(i => i.id === 'qc-rule-restrictions')!.title, '菜单下单规则');
+assert.deepEqual(grouped.find(i => i.id === 'qc-rule-restrictions')!.sidebarChildren!.map(i => i.title), ['自助餐规则','每轮菜品互斥/组合','其他设置']);
 assert.equal(getActiveNavModuleSheetSubPath(base,module),'');
 assert.ok(module.children.some(i => i.id === 'qc-menu-order-limits' && i.path === base), 'retain legacy route capability');
 for (const path of [base+'/dish-round',base+'/other','/operations/queue-call/buffet-rules']) {
