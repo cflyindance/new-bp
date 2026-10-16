@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { NAV_MODULES, navModuleChildrenAsSheetSubnav } from '../src/config/navigation';
+const mod = NAV_MODULES.find(m=>m.id==='inventory-ordering')!;
+const items = navModuleChildrenAsSheetSubnav(mod).filter(i=>i.id!=='inv-settings');
+assert.deepEqual(items.map(i=>i.title),['物料分类','效期管理']);
+assert.deepEqual(items.map(i=>i.sidebarChildren?.map(c=>c.title)),[['物料分类','物料列表'],['效期分类','效期规则']]);
+assert.equal(new Set(items.flatMap(i=>i.sidebarChildren!.map(c=>c.path))).size,4);
+assert.ok(mod.children.some(i=>i.id==='inv-settings'),'keep legacy settings capability');
+const main=readFileSync(new URL('../src/main.ts',import.meta.url),'utf8');
+assert.ok(main.includes('data-inventory-route-placeholder'));
+assert.ok(main.includes('route === "/operations/inventory-ordering/expiry/categories"'));
+const sheet=main.slice(main.indexOf('function renderInventorySecondarySheet'),main.indexOf('function findTitle'));
+assert.ok(sheet.includes('renderPcSheetDarkSubnav(hash, subnav'));
+assert.ok(!sheet.includes('const links = items'));
+console.log('inventory navigation: PASS');

@@ -117,6 +117,7 @@ import {
   getActiveReservationsSheetSubPath,
   findReservationsNavTitle,
   getActiveNavModuleSheetSubPath,
+  navModuleChildrenAsSheetSubnav,
   FINANCE_SHEET_SUBNAV,
   FINANCE_SHEET_SETTINGS_SUBNAV,
   getActiveFinanceSheetSubPath,
@@ -1844,7 +1845,8 @@ const FOH_EMENU_PRO_SESSION_KEY = "bplant-emenu-pro-demo";
 const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
 /** 团队管理 → 角色与员工：嵌入 TipOut 员工列表 */
 function isInventoryExpiryIframePath(path: string): boolean {
-  return path === "/operations/inventory-ordering/expiry" || path.startsWith("/operations/inventory-ordering/expiry/");
+  const route = path.split("?")[0].replace(/\/$/, "");
+  return route === "/operations/inventory-ordering/expiry" || route === "/operations/inventory-ordering/expiry/categories";
 }
 
 function isMarketingScreensaverIframePath(path: string): boolean {
@@ -2303,7 +2305,7 @@ function setInventorySecondarySheetOpen(open: boolean): void {
 
 function getInventorySecondaryNavItems(): NavModule["children"] {
   const m = NAV_MODULES.find((x) => x.id === "inventory-ordering");
-  return filterNavItemsByPlatformPreset("inventory-ordering", m?.children ?? []);
+  return filterNavItemsByPlatformPreset("inventory-ordering", m?.children ?? []).filter((item) => item.id !== "inv-settings");
 }
 
 function isProductCenterMainHubPath(path: string): boolean {
@@ -3524,27 +3526,14 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const links = items
-    .map((item) => {
-      const selected = hash === item.path || hash.startsWith(`${item.path}/`);
-      return `
-        <li>
-          <a
-            href="#${item.path}"
-            class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
-              selected ? SBR_ACTIVE : SBR_MUTED_ROW
-            }"
-            ${selected ? 'aria-current="page"' : ""}
-          >
-            <span class="min-w-0 flex-1 truncate">${pick(item.title, item.titleEn)}</span>
-          </a>
-        </li>`;
-    })
-    .join("");
+  const subnav = navModuleChildrenAsSheetSubnav({ ...invMod, children: items });
   const hubBody =
     invSearchActive && items.length === 0
       ? renderHubSheetNavEmpty()
-      : `<ul class="space-y-1" role="list">${links}</ul>`;
+      : renderPcSheetDarkSubnav(hash, subnav,
+          (p) => getActiveNavModuleSheetSubPath(p, invMod),
+          (p, item) => item.sidebarChildren?.find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path ?? "",
+          { brandProductSecondLevel: true, sheetGroupedSubnavAriaLabel: "库存管理中心 · 子导航" });
   return `
     <div
       id="inventory-secondary-sheet"
@@ -11961,6 +11950,13 @@ function renderPlaceholder(
     teamReportsSubnav?: boolean;
   },
 ): string {
+  if (path.startsWith("/operations/inventory-ordering/materials") || path.startsWith("/operations/inventory-ordering/expiry/rules")) {
+    return `<section class="rounded-xl border border-border bg-card p-6" data-inventory-route-placeholder>
+      <h2 class="text-lg font-semibold">${escapeHtml(title)}</h2>
+      <p class="mt-3 text-sm text-muted-foreground">待配置：此功能入口与路由已建立，尚未接入对应库存业务页面。</p>
+      <p class="mt-3 text-sm text-muted-foreground">当前地址：<code>${escapeHtml(path)}</code></p>
+    </section>`;
+  }
   if (path.startsWith("/members/")) {
     return `<section class="rounded-xl border border-border bg-card p-6" data-member-route-placeholder>
       <h2 class="text-lg font-semibold">${escapeHtml(title)}</h2>
