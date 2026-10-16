@@ -245,6 +245,7 @@ function buildCatalog(rows, mapping) {
   canonicalHubByPath.set("/operations/queue-call/brand-menu", "前厅管理中心");
 
   let ts = `/** 由 scripts/build-module-settings-catalog.mjs 根据 docs/配置归类-终版.md + docs/配置归类-分组映射.csv 生成，请勿手改 */\n\n`;
+  ts += `import { isStoreInformationPage, storeInformationItemPath } from "./store-information-navigation";\n\n`;
   ts += `export interface ModuleSettingCatalogItem {\n`;
   ts += `  id: string;\n`;
   ts += `  /** 二级导航与卡片区块标题（映射表 groupTitle） */\n`;
@@ -315,6 +316,7 @@ function buildCatalog(rows, mapping) {
   ts += `};\n\n`;
 
   ts += `export function getModuleSettingsBasePath(path: string): string | undefined {\n`;
+  ts += `  if (isStoreInformationPage(path)) return "/stores/settings";\n`;
   ts += `  for (const settingsPath of Object.keys(MODULE_SETTINGS_BY_PATH)) {\n`;
   ts += `    if (path === settingsPath || path.startsWith(\`\${settingsPath}/\`)) return settingsPath;\n`;
   ts += `  }\n`;
@@ -340,6 +342,7 @@ function buildCatalog(rows, mapping) {
   ts += `  settingsPath: string,\n`;
   ts += `  item: Pick<ModuleSettingCatalogItem, "groupKey" | "id">,\n`;
   ts += `): string {\n`;
+  ts += `  if (settingsPath === "/stores/settings") return \`\${storeInformationItemPath(item)}#\${item.id}\`;\n`;
   ts += `  if (settingsPath === "/operations/queue-call/brand-menu") {\n`;
   ts += `    const page = item.id.startsWith("s547-") ? "brands" : "settings";\n`;
   ts += `    return \`\${settingsPath}/\${page}#\${item.id}\`;\n`;

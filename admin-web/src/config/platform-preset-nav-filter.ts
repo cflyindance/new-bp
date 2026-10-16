@@ -1,6 +1,7 @@
 /**
  * 平台预设 · 侧栏 L1 / 滑层 L2 运行时过滤
  */
+import { storeInformationGateId } from "./store-information-navigation";
 import {
   NAV_MODULES,
   navModuleChildrenAsSheetSubnav,
@@ -22,6 +23,7 @@ import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
 import { filterNavModulesBySubscription, isPathAllowedBySubscription } from "./subscription-service-runtime";
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
+  if (moduleId === "store-mgmt") featureId = storeInformationGateId(featureId);
   return `${moduleId}:${moduleId === "queue-call" && featureId === "qc-tables" ? "qc-floor-plan" : featureId}`;
 }
 

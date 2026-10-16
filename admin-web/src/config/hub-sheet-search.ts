@@ -293,22 +293,26 @@ function buildSettingEntries(
   }
   items = filterCatalogItemsForPreset(settingsPath, items);
   items = filterModuleSettingItemsForProductVersion(items);
-  return items.map((item: ModuleSettingCatalogItem) => ({
-    id: `setting:${settingsPath}:${item.seq}`,
-    kind: "setting" as const,
-    title: item.title,
-    navPath: settingsPath === "/operations/queue-call/brand-menu"
-      ? getModuleSettingsItemHref(settingsPath, item).split("#")[0]
-      : getModuleSettingsCategoryPath(settingsPath, item.groupKey),
-    sheetNavPath: settingsNavPath,
-    breadcrumb: `${hubTitle} › ${t("hubSearch.crumbSettings")} › ${item.groupTitle}`,
-    seq: item.seq,
-    groupTitle: item.groupTitle,
-    moduleName: item.moduleName,
-    feature: item.feature === "（未填写）" ? "" : item.feature,
-    sceneDesc: item.sceneDesc,
-    settingsPath,
-  }));
+  return items.map((item: ModuleSettingCatalogItem) => {
+    const storePage = settingsPath === "/stores/settings" ? getModuleSettingsItemHref(settingsPath, item).split("#")[0] : null;
+    const groupTitle = storePage === "/stores/profile" ? "门店档案" : storePage === "/stores/hours" ? "营业时间" : storePage ? "营业提醒" : item.groupTitle;
+    return {
+      id: `setting:${settingsPath}:${item.seq}`,
+      kind: "setting" as const,
+      title: item.title,
+      navPath: settingsPath === "/operations/queue-call/brand-menu" || settingsPath === "/stores/settings"
+        ? getModuleSettingsItemHref(settingsPath, item).split("#")[0]
+        : getModuleSettingsCategoryPath(settingsPath, item.groupKey),
+      sheetNavPath: settingsPath === "/stores/settings" ? getModuleSettingsItemHref(settingsPath, item).split("#")[0] : settingsNavPath,
+      breadcrumb: storePage ? `${hubTitle} › ${groupTitle}` : `${hubTitle} › ${t("hubSearch.crumbSettings")} › ${item.groupTitle}`,
+      seq: item.seq,
+      groupTitle,
+      moduleName: item.moduleName,
+      feature: item.feature === "（未填写）" ? "" : item.feature,
+      sceneDesc: item.sceneDesc,
+      settingsPath,
+    };
+  });
 }
 
 function resolveSettingsNavPathForCatalog(

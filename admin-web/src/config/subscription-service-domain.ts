@@ -107,7 +107,7 @@ export interface EffectiveRouteSource {
 
 export function getSubscriptionRouteCatalog(modules: NavModule[] = NAV_MODULES): RouteCatalogNode[] {
   return modules.flatMap((module) =>
-    module.children.map((child) => ({
+    module.children.filter((child) => module.id !== "store-mgmt" || (child.id !== "st-profile" && child.id !== "st-hours")).map((child) => ({
       id: child.id,
       title: child.title,
       path: child.path,

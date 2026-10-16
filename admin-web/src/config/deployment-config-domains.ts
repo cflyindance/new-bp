@@ -64,6 +64,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
     pagePaths: [
+      "/stores/profile",
       "/stores/settings",
       "/stores/settings/store-profile",
       "/stores/settings/brand-identity-assets",
@@ -72,7 +73,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   {
     domainKey: "store.hours",
     displayName: "营业时间",
-    navRefs: [{ l1Key: "store-mgmt", l2Key: "store-hours" }],
+    navRefs: [{ l1Key: "store-mgmt", l2Key: "st-hours" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
     pagePaths: [

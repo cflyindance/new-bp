@@ -40,7 +40,7 @@ type StoreBasicInfoSection = {
 
 export const STORE_BASIC_INFO_SECTIONS: StoreBasicInfoSection[] = [
   {
-    title: "",
+    title: "基本资料",
     fields: [
       { fieldId: "417-restaurant-name", label: "餐馆名", readOnly: true },
       { fieldId: "417-merchant-no", label: "商户编号", readOnly: true },
@@ -52,8 +52,6 @@ export const STORE_BASIC_INFO_SECTIONS: StoreBasicInfoSection[] = [
       { fieldId: "417-state-province", label: "州/省", readOnly: true },
       { fieldId: "417-zip", label: "邮编", readOnly: true },
       { fieldId: "417-region", label: "地区", readOnly: true },
-      { fieldId: "417-dealer", label: "经销商", readOnly: true },
-      { fieldId: "417-version-cert", label: "版本证书信息", readOnly: true },
     ],
   },
   {
@@ -75,6 +73,13 @@ export const STORE_BASIC_INFO_SECTIONS: StoreBasicInfoSection[] = [
         label: "ADP CO CODE",
         placeholder: "如：X0L",
       },
+    ],
+  },
+  {
+    title: "服务与授权信息",
+    fields: [
+      { fieldId: "417-dealer", label: "经销商", readOnly: true },
+      { fieldId: "417-version-cert", label: "版本证书信息", readOnly: true },
     ],
   },
 ];
