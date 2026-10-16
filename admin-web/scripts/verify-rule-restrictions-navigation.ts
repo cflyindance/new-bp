@@ -9,7 +9,7 @@ for (const [limits, buffet, count] of [[true,true,3],[true,false,2],[false,true,
   const input = raw.filter(i => (i.id !== 'qc-menu-order-limits' || limits) && (i.id !== 'foh-buffet-rules' || buffet));
   const output = groupRuleRestrictionsSubnav(input);
   assert.equal(output.some(i => i.id === 'foh-buffet-rules'), false);
-  assert.equal(output.some(i => i.id === 'qc-menu-order-limits'), limits);
+  assert.equal(output.some(i => i.id === 'qc-menu-order-limits'), false);
   assert.equal(output.find(i => i.id === 'qc-rule-restrictions')?.sidebarChildren?.length ?? 0, count);
   assert.equal(output.find(i => i.id === 'qc-menu-order-limits')?.sidebarChildren, undefined);
 }
@@ -17,7 +17,8 @@ assert.equal(JSON.stringify(raw), original, 'input must remain unchanged');
 const base = '/operations/queue-call/menu-order-limits';
 const grouped = groupRuleRestrictionsSubnav(raw);
 assert.deepEqual(grouped.find(i => i.id === 'qc-rule-restrictions')!.sidebarChildren!.map(i => i.title), ['每轮菜品互斥/组合','其他设置','自助餐规则']);
-assert.equal(getActiveNavModuleSheetSubPath(base,module),base);
+assert.equal(getActiveNavModuleSheetSubPath(base,module),'');
+assert.ok(module.children.some(i => i.id === 'qc-menu-order-limits' && i.path === base), 'retain legacy route capability');
 for (const path of [base+'/dish-round',base+'/other','/operations/queue-call/buffet-rules']) {
   assert.equal(getActiveNavModuleSheetSubPath(path,module),grouped.find(i=>i.id==='qc-rule-restrictions')!.path);
 }

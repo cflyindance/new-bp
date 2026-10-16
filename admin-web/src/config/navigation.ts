@@ -1343,8 +1343,7 @@ export function groupRuleRestrictionsSubnav(items: ProductCenterSidebarSubItem[]
   return items.flatMap((item) => {
     if (item.id === "foh-buffet-rules") return children.length ? [group] : [];
     if (item.id === "qc-menu-order-limits") {
-      const { sidebarChildren: _children, ...leaf } = item;
-      return !buffet && children.length ? [leaf, group] : [leaf];
+      return !buffet && children.length ? [group] : [];
     }
     return [item];
   });
