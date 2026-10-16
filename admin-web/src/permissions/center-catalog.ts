@@ -60,6 +60,7 @@ export function buildCenterCatalog(): Catalog {
     resources.set(key,{key,title,type:'module'});
     const children = m.id === 'store-mgmt'
       ? m.children.filter(c=>c.id==='st-settings').map(c=>({...c,title:'门店档案、营业时间与设置'}))
+      : m.id === 'orders' ? m.children.filter(c => c.id !== 'orders-discounts' && c.id !== 'orders-surcharges')
       : moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });

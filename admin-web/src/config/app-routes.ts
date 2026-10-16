@@ -13,7 +13,7 @@ export function isNavHomePath(path: string): boolean {
 export function readAppHashPath(): string {
   const raw = location.hash.slice(1);
   if (!raw || raw === "/") return APP_NAV_HOME_PATH;
-  // Store information links retain a second hash as a setting anchor.
-  if (raw.startsWith("/stores/")) return raw.split("#")[0];
+  // Store and order links retain a second hash as a setting anchor.
+  if (raw.startsWith("/stores/") || raw.startsWith("/orders/")) return raw.split("#")[0];
   return raw;
 }

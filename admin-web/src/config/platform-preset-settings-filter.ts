@@ -1,3 +1,4 @@
+import { orderPresetSeq } from "./order-center-navigation";
 /**
  * 平台预设 · 设置页 L3 分组 / L4 设置项过滤
  */
@@ -57,6 +58,7 @@ function getActiveSelection(): Record<string, { enabled: boolean; display?: bool
 }
 
 export function resolveSettingsFeature(settingsPath: string): SettingsFeatureRef | null {
+  if (orderPresetSeq(settingsPath)) return { moduleId: "orders", featureId: "orders-settings" };
   for (const mod of NAV_MODULES) {
     for (const child of mod.children) {
       if (settingsPath === child.path || settingsPath.startsWith(`${child.path}/`)) {
@@ -188,6 +190,11 @@ export function filterCatalogItemsForPreset(
 
 export function isModuleSettingsPathAllowedByPreset(path: string, catalog: ModuleSettingCatalogHub): boolean {
   if (!isSettingsPresetFilterActive()) return true;
+  const presetSeq = orderPresetSeq(path);
+  if (presetSeq) {
+    const item = catalog.items.find(item => item.seq === presetSeq);
+    return Boolean(item && filterCatalogItemForPreset("/orders/settings", item));
+  }
   const feat = resolveSettingsFeature(catalog.settingsPath);
   if (!feat) return true;
 

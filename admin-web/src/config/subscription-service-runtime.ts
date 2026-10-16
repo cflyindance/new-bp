@@ -1,3 +1,4 @@
+import { orderCenterGateId } from "./order-center-navigation";
 import { isStoreInformationPage, storeInformationGateId } from "./store-information-navigation";
 import {
   readChainAnchorStoreId,
@@ -46,7 +47,7 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
   if (!routeIds) return modules;
   return modules
     .map((module) => {
-      const children = module.children.filter((child) => routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : storeInformationGateId(child.id)));
+      const children = module.children.filter((child) => routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id))));
       if (!children.length) return null;
       return { ...module, children };
     })
@@ -64,5 +65,5 @@ export function isPathAllowedBySubscription(path: string): boolean {
     .sort((a, b) => b.path.length - a.path.length);
   if (!candidates.length) return true;
   const id = candidates[0]!.id;
-  return routeIds.has(id === "qc-tables" ? "qc-floor-plan" : storeInformationGateId(id));
+  return routeIds.has(id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(id)));
 }

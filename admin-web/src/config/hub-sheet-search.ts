@@ -295,16 +295,19 @@ function buildSettingEntries(
   items = filterModuleSettingItemsForProductVersion(items);
   return items.map((item: ModuleSettingCatalogItem) => {
     const storePage = settingsPath === "/stores/settings" ? getModuleSettingsItemHref(settingsPath, item).split("#")[0] : null;
-    const groupTitle = storePage === "/stores/profile" ? "门店档案" : storePage === "/stores/hours" ? "营业时间" : storePage ? "营业提醒" : item.groupTitle;
+    const orderGroupTitle = settingsPath === "/orders/settings"
+      ? item.seq === 446 ? "折扣管理" : item.seq === 447 ? "附加费与服务费" : [162, 163, 149, 161, 147].includes(item.seq) ? "金额与结算" : item.groupKey === "order-basics" ? "订单基础与单号" : item.groupTitle
+      : undefined;
+    const groupTitle = orderGroupTitle ?? (storePage === "/stores/profile" ? "门店档案" : storePage === "/stores/hours" ? "营业时间" : storePage ? "营业提醒" : item.groupTitle);
     return {
       id: `setting:${settingsPath}:${item.seq}`,
       kind: "setting" as const,
       title: item.title,
-      navPath: settingsPath === "/operations/queue-call/brand-menu" || settingsPath === "/stores/settings"
+      navPath: settingsPath === "/operations/queue-call/brand-menu" || settingsPath === "/stores/settings" || settingsPath === "/orders/settings"
         ? getModuleSettingsItemHref(settingsPath, item).split("#")[0]
         : getModuleSettingsCategoryPath(settingsPath, item.groupKey),
-      sheetNavPath: settingsPath === "/stores/settings" ? getModuleSettingsItemHref(settingsPath, item).split("#")[0] : settingsNavPath,
-      breadcrumb: storePage ? `${hubTitle} › ${groupTitle}` : `${hubTitle} › ${t("hubSearch.crumbSettings")} › ${item.groupTitle}`,
+      sheetNavPath: settingsPath === "/stores/settings" || settingsPath === "/orders/settings" ? getModuleSettingsItemHref(settingsPath, item).split("#")[0] : settingsNavPath,
+      breadcrumb: storePage || (settingsPath === "/orders/settings" && (item.seq === 446 || item.seq === 447)) ? `${hubTitle} › ${groupTitle}` : `${hubTitle} › ${t("hubSearch.crumbSettings")} › ${groupTitle}`,
       seq: item.seq,
       groupTitle,
       moduleName: item.moduleName,

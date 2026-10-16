@@ -278,6 +278,8 @@ export const NAV_MODULES: NavModule[] = [
     defaultChildPath: "/orders/all",
     children: [
       { id: "orders-list", title: "订单列表", titleEn: "Order list", path: "/orders/all" },
+      { id: "orders-discounts", title: "折扣管理", titleEn: "Discounts", path: "/orders/discounts" },
+      { id: "orders-surcharges", title: "附加费与服务费", titleEn: "Surcharges and service fees", path: "/orders/surcharges" },
       { id: "orders-settings", title: "设置", titleEn: "Settings", path: "/orders/settings" },
     ],
   },

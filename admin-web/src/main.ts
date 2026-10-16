@@ -1,3 +1,4 @@
+import { orderPresetSeq, orderCenterViewGroups, orderCenterLegacyRedirect } from "./config/order-center-navigation";
 import { flattenMemberNavigation } from "./config/member-center-navigation";
 import "./styles/app.css";
 import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
@@ -4383,6 +4384,11 @@ function normalizeTabModuleHashes(): void {
     location.replace("#/orders/settings");
     return;
   }
+  const orderLegacyRedirect = orderCenterLegacyRedirect(raw, window.location.hash);
+  if (orderLegacyRedirect) {
+    replaceHashPath(orderLegacyRedirect);
+    return;
+  }
   /* 订单中心设置 · 迁出项旧书签（方案 A：141/150/155） */
   const orderSettingsMovedSeqPath: Record<number, string> = {
     141: "/operations/queue-call/settings/foh-kitchen-send-timing",
@@ -5578,9 +5584,10 @@ function buildModuleSettingsGroupsForPreset(
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
     : groupCatalogItemsByCategory(items, catalog.groupOrder);
-  return filterModuleSettingGroupsForProductVersion(
+  const filtered = filterModuleSettingGroupsForProductVersion(
     filterModuleSettingsGroupsForPreset(catalog.settingsPath, base, lineId ?? null),
   );
+  return catalog.settingsPath === "/orders/settings" ? orderCenterViewGroups(filtered, readAppHashPath()) : filtered;
 }
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
 /** 设置页左侧二级导航列滚动位置（按 hub settingsPath 记忆，避免点击后重渲染回顶） */
@@ -5606,6 +5613,7 @@ function formatModuleSettingsSubnavLabel(label: string): string {
 }
 
 function isModuleHubSettingsCatalogPath(path: string): boolean {
+  if (orderPresetSeq(path)) return true;
   if (isStoreInformationPage(path)) return true;
   if (path === "/settings/overview") return false;
   if (isPlatformPresetPath(path)) return false;
@@ -5724,6 +5732,7 @@ function syncModuleSettingsScrollSpy(
 }
 
 function bindModuleSettingsScrollSpy(): void {
+  if (orderPresetSeq(readAppHashPath())) return;
   if (isStoreInformationPage(readAppHashPath())) return;
   moduleSettingsScrollSpyActiveKey = undefined;
 
@@ -5932,7 +5941,7 @@ function renderModuleSettingsSubnavList(
       nested,
     );
 
-  if (!catalog.groupNavSections?.length) {
+  if (catalog.settingsPath === "/orders/settings" || !catalog.groupNavSections?.length) {
     return groups.map((group) => renderLink(group)).join("");
   }
 
@@ -5969,6 +5978,7 @@ function renderModuleSettingsSubnavList(
 }
 
 function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
+  if (orderPresetSeq(path)) return "";
   if (isStoreInformationPage(path)) return "";
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog || catalog.items.length === 0) return "";
@@ -10934,7 +10944,9 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   const sections = groups
     .map((group) => {
       const sectionId = moduleSettingsCategoryDomId(group.groupKey);
-      const groupHintHtml = kitchenSettings
+      const groupHintHtml = orderPresetSeq(path)
+        ? `<div class="px-4 py-3"><a class="text-sm text-primary underline" href="#/orders/settings/order-pricing">相关规则：金额与结算</a></div>`
+        : kitchenSettings
         ? renderKitchenSettingsGroupHintHtml(group.groupKey)
         : kdsDisplaySettings
           ? renderKdsDisplaySettingsGroupHintHtml(group.groupKey)
@@ -10982,7 +10994,7 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   return `
     <div class="module-settings-main space-y-4">
       ${
-        isStoreSettingsHub || isTeamSettingsHub || isFohBrandMenuSettings
+        isStoreSettingsHub || isTeamSettingsHub || isFohBrandMenuSettings || Boolean(orderPresetSeq(path))
           ? ""
           : `<div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
         <div>
@@ -13210,7 +13222,7 @@ function mountInitializedPage(): void {
   bindModuleSettingsFormControls();
   const settingsCatalogForRbac = getModuleSettingsCatalog(mountPathForSheet);
   if (settingsCatalogForRbac) {
-    applyModuleSettingsRbacAccess(isStoreInformationPage(mountPathForSheet) ? "/stores/settings" : mountPathForSheet, document);
+    applyModuleSettingsRbacAccess(orderPresetSeq(mountPathForSheet) ? "/orders/settings" : isStoreInformationPage(mountPathForSheet) ? "/stores/settings" : mountPathForSheet, document);
   }
   bindBatchPostPrintChoices();
   bindOrderSameDishDisplayRadios();

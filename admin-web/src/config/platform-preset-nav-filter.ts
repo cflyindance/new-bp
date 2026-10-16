@@ -1,3 +1,4 @@
+import { orderCenterGateId } from "./order-center-navigation";
 /**
  * 平台预设 · 侧栏 L1 / 滑层 L2 运行时过滤
  */
@@ -24,6 +25,7 @@ import { filterNavModulesBySubscription, isPathAllowedBySubscription } from "./s
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
   if (moduleId === "store-mgmt") featureId = storeInformationGateId(featureId);
+  if (moduleId === "orders") featureId = orderCenterGateId(featureId);
   return `${moduleId}:${moduleId === "queue-call" && featureId === "qc-tables" ? "qc-floor-plan" : featureId}`;
 }
 
