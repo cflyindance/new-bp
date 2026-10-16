@@ -5,6 +5,7 @@ import {
   NAV_MODULES,
   navModuleChildrenAsSheetSubnav,
   groupRuleRestrictionsSubnav,
+  groupNotificationSheetSubnav,
   type NavItem,
   type NavModule,
   type ProductCenterSidebarSubItem,
@@ -197,5 +198,6 @@ export function getFilteredNavModuleSheetSubnav(m: NavModule): ProductCenterSide
     items = items.filter((item) => !isMvpHiddenSettingsNavChild(item.id));
   }
   if (m.id === "queue-call") items = groupRuleRestrictionsSubnav(items);
+  if (m.id === "notifications") items = groupNotificationSheetSubnav(items);
   return items;
 }

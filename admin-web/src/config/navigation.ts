@@ -552,6 +552,9 @@ export const NAV_MODULES: NavModule[] = [
       { id: "notif-templates", title: "消息模板", titleEn: "Message templates", path: "/notifications/templates" },
       { id: "notif-scene-config", title: "消息配置", titleEn: "Message configuration", path: "/notifications/scene-config" },
       { id: "notif-quota", title: "消息额度", titleEn: "Message quota", path: "/notifications/quota" },
+      { id: "notif-brand-consumption", title: "额度消费记录", titleEn: "Quota consumption records", path: "/notifications/brand/consumption-records" },
+      { id: "notif-store-quota", title: "消息额度", titleEn: "Message quota", path: "/notifications/store/quota" },
+      { id: "notif-store-consumption", title: "额度消费记录", titleEn: "Quota consumption records", path: "/notifications/store/consumption-records" },
       { id: "notif-settings", title: "设置", titleEn: "Settings", path: "/notifications/settings" },
     ],
   },
@@ -1325,6 +1328,18 @@ export function navModuleChildrenAsSheetSubnav(m: NavModule): ProductCenterSideb
         ? DEVICE_MANAGEMENT_HARDWARE_SUBNAV
       : c.children)?.map((child) => ({ ...child })),
   }));
+}
+
+/** 消息分组仅作用于已过滤菜单，沿用原能力 ID 和业务地址。 */
+export function groupNotificationSheetSubnav(items: ProductCenterSidebarSubItem[]): ProductCenterSidebarSubItem[] {
+  const groups = [
+    { id: "notif-brand", title: "品牌消息", titleEn: "Brand messages", ids: ["notif-templates", "notif-scene-config", "notif-quota", "notif-brand-consumption"] },
+    { id: "notif-store", title: "门店消息", titleEn: "Store messages", ids: ["notif-store-quota", "notif-store-consumption"] },
+  ];
+  return groups.flatMap(({ ids, ...group }) => {
+    const children = ids.flatMap((id) => items.filter((item) => item.id === id));
+    return children.length ? [{ ...group, path: children[0].path, activePrefixes: children.map((item) => item.path), sidebarChildren: children }] : [];
+  });
 }
 
 /** 仅组织已过滤的显示节点；保留原 L2 能力标识及授权边界。 */

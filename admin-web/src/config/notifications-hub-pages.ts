@@ -10,6 +10,9 @@ export const NOTIFICATIONS_HUB_FEATURE_PATHS = [
   NOTIFICATIONS_TEMPLATES_PATH,
   NOTIFICATIONS_SCENE_CONFIG_PATH,
   NOTIFICATIONS_QUOTA_PATH,
+  "/notifications/brand/consumption-records",
+  "/notifications/store/quota",
+  "/notifications/store/consumption-records",
 ] as const;
 
 const TEMPLATES_STORAGE_KEY = "notifications-message-templates-v1";
@@ -773,7 +776,10 @@ export function renderNotificationsHubPageContent(path: string): string {
   if (isNotificationsTemplatesPath(path)) return renderTemplatesPage();
   if (isNotificationsSceneConfigPath(path)) return renderSceneConfigPage();
   if (isNotificationsQuotaPath(path)) return renderQuotaPage();
-  return renderTemplatesPage();
+  return `<section class="rounded-xl border border-border bg-card p-6" data-notifications-pending>
+    <h2 class="text-lg font-semibold">${path === "/notifications/store/quota" ? "门店消息 · 消息额度" : path.startsWith("/notifications/store/") ? "门店消息 · 额度消费记录" : "品牌消息 · 额度消费记录"}</h2>
+    <p class="mt-3 text-sm text-muted-foreground">待配置</p>
+  </section>`;
 }
 
 function fixSceneSelectOptions(root: ParentNode): void {
