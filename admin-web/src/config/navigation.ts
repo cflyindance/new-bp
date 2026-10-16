@@ -568,16 +568,24 @@ export const NAV_MODULES: NavModule[] = [
     defaultChildPath: "/operations/inventory-ordering/expiry",
     children: [
       {
+        id: "inv-materials",
+        title: "物料分类",
+        titleEn: "Material categories",
+        path: "/operations/inventory-ordering/materials",
+        children: [
+          { id: "inv-material-categories", title: "物料分类", titleEn: "Material categories", path: "/operations/inventory-ordering/materials/categories" },
+          { id: "inv-material-list", title: "物料列表", titleEn: "Material list", path: "/operations/inventory-ordering/materials/list" },
+        ],
+      },
+      {
         id: "inv-expiry",
         title: "效期管理",
         titleEn: "Expiry management",
         path: "/operations/inventory-ordering/expiry",
-      },
-      {
-        id: "inv-materials",
-        title: "物料管理",
-        titleEn: "Materials management",
-        path: "/operations/inventory-ordering/materials",
+        children: [
+          { id: "inv-expiry-categories", title: "效期分类", titleEn: "Expiry categories", path: "/operations/inventory-ordering/expiry/categories" },
+          { id: "inv-expiry-rules", title: "效期规则", titleEn: "Expiry rules", path: "/operations/inventory-ordering/expiry/rules" },
+        ],
       },
       { id: "inv-settings", title: "设置", titleEn: "Settings", path: "/operations/inventory-ordering/settings" },
     ],
