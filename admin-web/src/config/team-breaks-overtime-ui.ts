@@ -1,7 +1,7 @@
 /**
  * 团队管理 · 休息与加班
  * 路径：/team/breaks-overtime
- * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
+ * 布局：公共覆盖式子导航 + 独立内容页面，共享原保存与下发会话。
  */
 import {
   buildChangeDetailRows,
@@ -15,7 +15,6 @@ import {
   registerPageSaveDirtyProbe,
   registerPageSavePreCommit,
 } from "./page-save-registry";
-import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
 import { readModuleSettingNumber } from "./module-settings-form-ui";
 import { BREAKS_OVERTIME_NAV_GROUPS } from './team-breaks-overtime-navigation';
 
@@ -112,13 +111,6 @@ const WEEKDAY_OPTIONS = [
 ] as const;
 
 /** 与 main.ts 三级侧栏一致：仅侧栏自身过长时可滚，不随右侧四级内容同步滚动 */
-const SUBNAV_SCROLL_CLASSES =
-  "tertiary-inline-subnav-scroll min-h-0 max-h-[min(52dvh,26rem)] overflow-y-auto overscroll-y-contain sm:max-h-full sm:self-stretch";
-const SUBNAV_LINK_BASE =
-  "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-const SUBNAV_LINK_NESTED = "pl-4";
-const SUBNAV_LINK_SELECTED = "bg-primary/10 font-medium text-primary";
-const SUBNAV_LINK_IDLE = "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
 
 const DEFAULT_CONFIG: BreaksOvertimeConfig = {
   unpaidPresets: [10, 30],
@@ -202,7 +194,6 @@ function ensureSystemCustomBreaks(breaks: CustomBreak[]): CustomBreak[] {
 }
 
 let draftConfig: BreaksOvertimeConfig | null = null;
-let activeBreaksNavKey = "custom-breaks";
 let overtimeRuleEditor: OvertimeRuleEditor | null = null;
 let customBreakEditor: CustomBreakEditor | null = null;
 /** 删除休息确认弹窗中的休息 id；null 表示关闭 */
@@ -855,7 +846,7 @@ function renderBreakRulesSection(config: BreaksOvertimeConfig, paidBreakRowsHtml
           <span>禁止提前结束休息</span>
         </label>
       </div>`;
-  return renderSectionShell("break-rules", "休息规则", "", body);
+  return renderSectionShell("break-rules", "休息设置", "", body);
 }
 
 function renderWorkWeekSection(config: BreaksOvertimeConfig): string {
@@ -902,50 +893,6 @@ function renderOvertimeRulesSection(config: BreaksOvertimeConfig): string {
   return renderSectionShell("overtime-rules", "加班规则", "", body);
 }
 
-function renderBreaksOvertimeSubnav(activeKey: string): string {
-  const groups = BREAKS_OVERTIME_NAV_GROUPS;
-  const parts: string[] = [];
-
-  groups.forEach((group, groupIndex) => {
-    if (groupIndex > 0) {
-      parts.push(`<li aria-hidden="true" class="my-2 list-none border-t border-border" role="presentation"></li>`);
-    }
-    parts.push(`
-      <li class="list-none ${groupIndex > 0 ? "pt-2" : "pt-0.5"} pb-0.5" role="presentation">
-        <p class="${MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS}">${escapeHtml(group.label)}</p>
-      </li>`);
-    for (const item of group.items) {
-      const selected = activeKey === item.key;
-      parts.push(`
-      <li>
-        <a href="#${TEAM_BREAKS_OVERTIME_PATH}/${item.key}"
-          data-breaks-nav="${escapeHtml(item.key)}"
-          data-breaks-subnav-nested="1"
-          class="${SUBNAV_LINK_BASE} ${SUBNAV_LINK_NESTED} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}"
-          ${selected ? 'aria-current="true"' : ""}
-        >
-          <span class="min-w-0 flex-1 truncate">${escapeHtml(item.title)}</span>
-        </a>
-      </li>`);
-    }
-  });
-
-  return `
-    <nav class="breaks-overtime-subnav module-settings-subnav w-56 shrink-0 border-r border-border pr-4 ${SUBNAV_SCROLL_CLASSES}" aria-label="休息与加班">
-      <ul class="space-y-0.5" role="list">${parts.join("")}</ul>
-    </nav>`;
-}
-
-function renderBreaksOvertimeMainContent(config: BreaksOvertimeConfig, paidBreakRowsHtml = ""): string {
-  return `
-    <div class="breaks-overtime-scroll-host module-settings-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto">
-      ${renderCustomBreaksSection(config)}
-      ${renderBreakRulesSection(config, paidBreakRowsHtml)}
-      ${renderWorkWeekSection(config)}
-      ${renderOvertimeRulesSection(config)}
-    </div>`;
-}
-
 export function isTeamBreaksOvertimePath(path: string): boolean {
   return path === TEAM_BREAKS_OVERTIME_PATH || path.startsWith(`${TEAM_BREAKS_OVERTIME_PATH}/`);
 }
@@ -953,26 +900,23 @@ export function isTeamBreaksOvertimePath(path: string): boolean {
 export function getTeamBreaksOvertimeActiveSectionKey(path: string): string | undefined {
   if (!isTeamBreaksOvertimePath(path)) return undefined;
   const suffix = path.slice(TEAM_BREAKS_OVERTIME_PATH.length).replace(/^\//, "");
-  if (!suffix) return undefined;
+  if (!suffix) return "custom-breaks";
+  if (suffix === "break-rules" || suffix === "work-week") return "settings";
   const allKeys = BREAKS_OVERTIME_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.key));
   return allKeys.includes(suffix) ? suffix : undefined;
 }
 
 export function renderTeamBreaksOvertimePage(path?: string, paidBreakRowsHtml = ""): string {
   const config = getDraft();
-  const sectionFromPath = path ? getTeamBreaksOvertimeActiveSectionKey(path) : undefined;
-  if (sectionFromPath) activeBreaksNavKey = sectionFromPath;
-
-  const validKeys = BREAKS_OVERTIME_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.key));
-  if (!validKeys.includes(activeBreaksNavKey)) {
-    activeBreaksNavKey = validKeys[0] ?? "custom-breaks";
-  }
+  const sectionKey = getTeamBreaksOvertimeActiveSectionKey(path ?? TEAM_BREAKS_OVERTIME_PATH) ?? "custom-breaks";
+  const body = sectionKey === "settings"
+    ? renderBreakRulesSection(config, paidBreakRowsHtml) + renderWorkWeekSection(config)
+    : sectionKey === "overtime-rules" ? renderOvertimeRulesSection(config) : renderCustomBreaksSection(config);
 
   return `
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col overflow-hidden" data-team-breaks-overtime-page data-breaks-view="full">
-      <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
-        ${renderBreaksOvertimeSubnav(activeBreaksNavKey)}
-        ${renderBreaksOvertimeMainContent(config, paidBreakRowsHtml)}
+      <div class="breaks-overtime-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto" data-breaks-page="${sectionKey}">
+        ${body}
       </div>
       ${renderCustomBreakDialog(config)}
       ${renderCustomBreakDeleteConfirmDialog(config)}
@@ -1003,83 +947,12 @@ function collectConfigFromDom(root: HTMLElement): BreaksOvertimeConfig {
           (root.querySelector<HTMLInputElement>("[data-break-convert-excess]")?.checked ??
             current.convertExcessPaidToUnpaid)
         : isPaidBreakDurationConfigured() && current.convertExcessPaidToUnpaid,
-    workWeekStartDay: Number(root.querySelector<HTMLSelectElement>("[data-overtime-week-start]")?.value) || 1,
+    workWeekStartDay: root.querySelector<HTMLSelectElement>("[data-overtime-week-start]")
+      ? Number(root.querySelector<HTMLSelectElement>("[data-overtime-week-start]")!.value)
+      : current.workWeekStartDay,
     /** 加班规则仅通过弹窗维护，列表只读展示 */
     overtimeRules: current.overtimeRules,
   });
-}
-
-function syncBreaksOvertimeSubnavActive(root: HTMLElement, key: string): void {
-  activeBreaksNavKey = key;
-  root.querySelectorAll<HTMLAnchorElement>("[data-breaks-nav]").forEach((link) => {
-    const linkKey = link.getAttribute("data-breaks-nav");
-    const selected = linkKey === key;
-    link.className = `${SUBNAV_LINK_BASE} ${SUBNAV_LINK_NESTED} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}`;
-    if (selected) link.setAttribute("aria-current", "true");
-    else link.removeAttribute("aria-current");
-  });
-}
-
-function scrollToBreaksOvertimeSection(root: HTMLElement, sectionKey: string): void {
-  const scrollHost = root.querySelector<HTMLElement>(".breaks-overtime-scroll-host");
-  const section = root.querySelector<HTMLElement>(`#breaks-section-${sectionKey}`);
-  if (!scrollHost || !section) return;
-  const hostRect = scrollHost.getBoundingClientRect();
-  const elRect = section.getBoundingClientRect();
-  scrollHost.scrollTo({
-    top: Math.max(0, scrollHost.scrollTop + (elRect.top - hostRect.top) - 12),
-    behavior: "smooth",
-  });
-}
-
-function bindBreaksOvertimeSubnav(root: HTMLElement): void {
-  const scrollHost = root.querySelector<HTMLElement>(".breaks-overtime-scroll-host");
-  if (!scrollHost) return;
-
-  root.querySelectorAll<HTMLAnchorElement>("[data-breaks-nav]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const key = link.getAttribute("data-breaks-nav");
-      if (!key) return;
-      const href = `#${TEAM_BREAKS_OVERTIME_PATH}/${key}`;
-      if (location.hash !== href) {
-        history.replaceState(null, "", href);
-      }
-      scrollToBreaksOvertimeSection(root, key);
-      syncBreaksOvertimeSubnavActive(root, key);
-    });
-  });
-
-  const sections = root.querySelectorAll<HTMLElement>("[data-breaks-section]");
-  if (sections.length === 0) return;
-
-  let scrollRaf = 0;
-  const onScroll = (): void => {
-    const hostRect = scrollHost.getBoundingClientRect();
-    const anchor = hostRect.top + 80;
-    let currentKey = sections[0]?.getAttribute("data-breaks-section") ?? activeBreaksNavKey;
-    for (const section of sections) {
-      const rect = section.getBoundingClientRect();
-      if (rect.top <= anchor) {
-        currentKey = section.getAttribute("data-breaks-section") ?? currentKey;
-      }
-    }
-    if (currentKey && currentKey !== activeBreaksNavKey) {
-      syncBreaksOvertimeSubnavActive(root, currentKey);
-    }
-  };
-
-  scrollHost.addEventListener(
-    "scroll",
-    () => {
-      if (scrollRaf) return;
-      scrollRaf = requestAnimationFrame(() => {
-        scrollRaf = 0;
-        onScroll();
-      });
-    },
-    { passive: true },
-  );
 }
 
 export function bindTeamBreaksOvertimeUi(remount: () => void): void {
@@ -1089,14 +962,7 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
   if (!root || root.dataset.breaksOvertimeBound === "1") return;
   root.dataset.breaksOvertimeBound = "1";
 
-  bindBreaksOvertimeSubnav(root);
   bindPaidBreakMinutesConvertExcessLink(root);
-
-  const path = location.hash.slice(1) || "/dashboard/overview";
-  const sectionKey = getTeamBreaksOvertimeActiveSectionKey(path);
-  if (sectionKey) {
-    requestAnimationFrame(() => scrollToBreaksOvertimeSection(root, sectionKey));
-  }
 
   root.querySelector("[data-custom-break-add]")?.addEventListener("click", () => {
     draftConfig = collectConfigFromDom(root);
@@ -1129,9 +995,11 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
   bindOvertimeRulesUi(root, remount);
 
   root.addEventListener("input", () => {
+    draftConfig = collectConfigFromDom(root);
     markBreaksOvertimeDirty();
   });
   root.addEventListener("change", () => {
+    draftConfig = collectConfigFromDom(root);
     markBreaksOvertimeDirty();
   });
 }
@@ -1470,7 +1338,6 @@ export function syncTeamBreaksOvertimeSession(path: string): void {
   if (!active) {
     resetDraft();
     breaksOvertimeSessionPath = "";
-    activeBreaksNavKey = "custom-breaks";
   } else if (!breaksOvertimeSessionPath) {
     breaksOvertimeSessionPath = path;
   }
@@ -1480,5 +1347,4 @@ export function syncTeamBreaksOvertimeSession(path: string): void {
 export function resetTeamBreaksOvertimeDraft(): void {
   resetDraft();
   breaksOvertimeSessionPath = "";
-  activeBreaksNavKey = "custom-breaks";
 }

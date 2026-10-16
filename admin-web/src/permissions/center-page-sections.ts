@@ -4,10 +4,10 @@ import type { SettingGroup } from './center-catalog';
 
 const path='/team/breaks-overtime',page=`page:${path}`;
 export const BREAKS_PERMISSION_SETTINGS=[
-  {key:`setting:${path}:paid-break-minutes`,title:'带薪休息时长(分钟)',source:'src/main.ts',control:'329-paid-break-minutes',section:'break-rules'},
-  {key:`setting:${path}:convert-excess`,title:'带薪休息超时部分转为无薪',source:'src/config/team-breaks-overtime-ui.ts',control:'data-break-convert-excess',section:'break-rules'},
-  {key:`setting:${path}:block-early`,title:'禁止提前结束休息',source:'src/config/team-breaks-overtime-ui.ts',control:'data-break-block-early',section:'break-rules'},
-  {key:`setting:${path}:week-start`,title:'工作周开始于',source:'src/config/team-breaks-overtime-ui.ts',control:'data-overtime-week-start',section:'work-week'},
+  {key:`setting:${path}:paid-break-minutes`,title:'带薪休息时长(分钟)',source:'src/main.ts',control:'329-paid-break-minutes',section:'settings'},
+  {key:`setting:${path}:convert-excess`,title:'带薪休息超时部分转为无薪',source:'src/config/team-breaks-overtime-ui.ts',control:'data-break-convert-excess',section:'settings'},
+  {key:`setting:${path}:block-early`,title:'禁止提前结束休息',source:'src/config/team-breaks-overtime-ui.ts',control:'data-break-block-early',section:'settings'},
+  {key:`setting:${path}:week-start`,title:'工作周开始于',source:'src/config/team-breaks-overtime-ui.ts',control:'data-overtime-week-start',section:'settings'},
 ] as const;
 /** Separate page context: never copy legacy team-settings grants or business values. */
 export function registerPageSections(resources:Map<string,Resource>):Map<string,SettingGroup[]> {

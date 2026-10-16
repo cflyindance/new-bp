@@ -4525,6 +4525,14 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/team/reports/tip-summary");
     return;
   }
+  if (raw === "/team/breaks-overtime" || raw === "/team/breaks-overtime/") {
+    replaceHashPath("/team/breaks-overtime/custom-breaks");
+    return;
+  }
+  if (/^\/team\/breaks-overtime\/(break-rules|work-week)\/?$/.test(raw)) {
+    replaceHashPath("/team/breaks-overtime/settings");
+    return;
+  }
   if (raw === "/team/shift-scheduling" || raw === "/team/shift-scheduling/") {
     replaceHashPath("/team/shift-scheduling/schedule");
     return;
@@ -4539,7 +4547,7 @@ function normalizeTabModuleHashes(): void {
   }
   if (raw.startsWith("/team/scheduling/")) {
     if (raw.startsWith("/team/scheduling/overtime-rules")) {
-      replaceHashPath("/team/breaks-overtime");
+      replaceHashPath("/team/breaks-overtime/overtime-rules");
       return;
     }
     requestTeamClockInRecordsTab();
@@ -6224,7 +6232,7 @@ function renderTeamBreaksOvertimePageWithSettings(path: string): string {
   const paidBreakRowsHtml = renderModuleSettingRowsHtml(breakRulesItems);
   const page = renderTeamBreaksOvertimePage(path, paidBreakRowsHtml);
   const bar = renderPageSaveBar(path);
-  // 勿用 wrapPageWithSaveBar：其外层 overflow-y-auto 会让三级导航与四级内容同步滚动
+  // 保持内容独立滚动、保存栏固定；三个子页面共享原保存桶。
   if (!bar) return page;
   return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
     ${page}
@@ -10866,7 +10874,7 @@ function bindModuleSettingsFormControls(): void {
         clamped = Math.round(clamped);
       }
       input.value = String(clamped);
-      writeModuleSettingNumber(fieldId, clamped);
+      writeModuleSettingNumber(fieldId, clamped, fieldId === "329-paid-break-minutes" ? 10 : clamped);
     };
     input.addEventListener("change", persist);
     input.addEventListener("blur", persist);
