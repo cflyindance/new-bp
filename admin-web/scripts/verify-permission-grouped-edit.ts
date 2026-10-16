@@ -12,9 +12,10 @@ const {sourcePageActions,additionalPageActions}=await import('../src/permissions
 assert.equal(Object.values(actionGroups).flat().length,28);
 for(const [path,groups] of Object.entries(actionGroups))for(const group of groups){
   const key=actionKey(path,group.id), resource=catalog.resources.get(key)!;
-  assert.equal(resource.title,group.title);assert.equal(resource.parent,pageKey(path));
+  const owner=path==='/team/roles-employees'?pageKey(path+(group.id==='manage-employee'?'/employees':'/roles')):pageKey(path);
+  assert.equal(resource.title,group.title);assert.equal(resource.parent,owner);
   assert.equal(resource.help,`编辑权限包含${group.members.map(m=>m.operation).join('、')}`);
-  const grants:Record<string,Access>={};let parent:string|undefined=pageKey(path);
+  const grants:Record<string,Access>=path==='/team/roles-employees'?{[pageKey(path)]:'read'}:{};let parent:string|undefined=owner;
   while(parent){grants[parent]='read';parent=catalog.resources.get(parent)?.parent;}
   for(const dependency of resource.requires??[])grants[dependency]='read';
   for(const member of group.members){assert.ok(!catalog.resources.has(actionKey(path,member.id)));grants[actionKey(path,member.id)]='edit';}
@@ -24,8 +25,8 @@ for(const [path,groups] of Object.entries(actionGroups))for(const group of group
   assert.equal(value(key),'hidden','Old full CRUD must not automatically grant the combined point');grants[key]='edit';
   assert.equal(value(key),'edit');assert.equal(resolveAccess(state,'e','b',key,stores,catalog.resources),'hidden');
   state.employees[0].overrides.a={[key]:'hidden'};assert.equal(resolveAccess(state,'e','a',key,stores,catalog.resources),'hidden');delete state.employees[0].overrides.a[key];
-  const options={catalog,page:pageKey(path),group:catalog.sections?.get(pageKey(path))?.find(g=>g.keys.includes(key))?.id??'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
-  const unified=authorizationRows(catalog,pageKey(path)).find(r=>r.editKeys.includes(key))!;assert.ok(unified);applyAuthorization(grants,unified,'edit');
+  const options={catalog,page:owner,group:catalog.sections?.get(owner)?.find(g=>g.keys.includes(key))?.id??'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
+  const unified=authorizationRows(catalog,owner).find(r=>r.editKeys.includes(key))!;assert.ok(unified);applyAuthorization(grants,unified,'edit');
   for(const variant of [{},{preview:true},{staff:true,readonly:true}]){const html=renderPermissionEditor({...options,...variant});assert.ok(html.includes(unified.title));assert.ok(html.includes(resource.help!));assert.match(html,/role="tooltip"/);}
   grants[pageKey(path)]='hidden';assert.equal(value(key),'hidden');assert.equal(grants[key],'edit');grants[pageKey(path)]='read';
   let saved=JSON.stringify(state);persistCenterChange({getItem:()=>saved,setItem:(_k,v)=>{saved=v;}},'test',state,0,'r','更新角色权限','测试',catalog.resources);

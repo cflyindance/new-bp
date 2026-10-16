@@ -10,6 +10,7 @@ import { FINANCE_REGISTER_AUDIT_PAGES } from '../config/finance-register-audit-p
 import { visibilityEntries,contentKey,fieldKey,actionVisibilityDependencies } from './center-visibility';
 import { registerPageSections } from './center-page-sections';
 import { registerClockPages } from './center-clock-pages';
+import { registerEmployeePages } from './center-employee-pages';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
@@ -104,6 +105,7 @@ export function buildCenterCatalog(): Catalog {
   }
   const sections=registerPageSections(resources);
   registerClockPages(tree,resources,sections);
+  registerEmployeePages(tree,resources);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
   return {tree:groupStoreManagementMenus(tree),resources,groups,sections};
 }

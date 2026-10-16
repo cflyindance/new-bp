@@ -5,7 +5,7 @@ export function migrateNavigationPermissions(state:CenterState,resources:Map<str
   if(state.navigationVersion===1)return state;
   if(state.navigationVersion!==undefined)throw Error('导航权限数据版本无法读取；原数据已保留');
   const next=structuredClone(state);
-  const navigation=[...resources.values()].filter(r=>r.type==='navigation');
+  const navigation=[...resources.values()].filter(r=>r.type==='navigation'&&!r.compatibilityOnly);
   // The old model had no intermediate gates. Neutral read gates preserve ALL old
   // results; leaf/action/setting grants and the original module gate remain intact.
   for(const role of next.roles)for(const resource of navigation)role.grants[resource.key]??='read';
@@ -23,7 +23,7 @@ export function migrateNavigationPermissions(state:CenterState,resources:Map<str
         const resource=resources.get(parent);if(!resource)break;
         // Preserve standalone personal allowances without adding redundant
         // exceptions where an applicable legacy role already supplies the gate.
-        if(resource.type==='navigation'&&!roles.some(r=>r.grants[parent!]==='read'))overrides[parent]??='read';
+        if(resource.type==='navigation'&&!resource.compatibilityOnly&&!roles.some(r=>r.grants[parent!]==='read'))overrides[parent]??='read';
         parent=resource.parent;
       }
     }

@@ -3,7 +3,7 @@ import { buildCenterCatalog, pageKey, actionKey } from '../src/permissions/cente
 import { renderPermissionEditor } from '../src/permissions/center-editor';
 import { roleAccess, resolveAccess, type Access, type CenterState } from '../src/permissions/center-domain';
 import { persistCenterChange } from '../src/permissions/center-persistence';
-const catalog=buildCenterCatalog(),path='/team/roles-employees',page=pageKey(path),grants:Record<string,Access>={[page]:'read'};
+const catalog=buildCenterCatalog(),path='/team/roles-employees',page=pageKey(path+'/employees'),grants:Record<string,Access>={[page]:'read',[pageKey(path)]:'read'};
 let parent=catalog.resources.get(page)?.parent;while(parent){grants[parent]='read';parent=catalog.resources.get(parent)?.parent;}
 const role={id:'r',name:'统一授权测试',description:'',system:false,grants};
 const options={catalog,page,group:'',preview:false,readonly:false,staff:false,value:(k:string)=>roleAccess(role,k,catalog.resources),own:(k:string)=>grants[k]??'hidden',search:''} as const;
@@ -11,7 +11,7 @@ let html=renderPermissionEditor(options);
 assert.match(html,/员工管理/,'Same-object content and editing must be represented by a single employee management row');
 assert.doesNotMatch(html,/<h3>页面内容<\/h3>|<h3>页面操作权限<\/h3>/);
 const {authorizationRows,authorizationSelection,applyAuthorization}=await import('../src/permissions/center-authorization');
-const rows=authorizationRows(catalog,page),employee=rows.find(r=>r.title==='员工管理')!,position=rows.find(r=>r.title==='岗位管理')!;
+const rows=authorizationRows(catalog,page),employee=rows.find(r=>r.title==='员工管理')!,position=authorizationRows(catalog,pageKey(path+'/roles')).find(r=>r.title==='岗位管理')!;
 assert.ok(employee&&position);assert.equal(employee.editKeys.length,2);assert.ok(employee.editKeys.includes(actionKey(path,'save-employee')));
 const own=(k:string)=>grants[k]??'hidden';
 assert.equal(authorizationSelection(employee,own),'hidden');
@@ -22,7 +22,7 @@ applyAuthorization(grants,employee,'edit');assert.equal(authorizationSelection(e
 for(const k of employee.editKeys)assert.equal(options.value(k),'edit');assert.equal(own(position.contentKey),'hidden');
 html=renderPermissionEditor({...options,preview:true});assert.equal((html.match(/data-demo/g)??[]).length,1);assert.doesNotMatch(html,/保存员工信息/);
 applyAuthorization(grants,employee,'hidden');for(const k of [employee.contentKey,...employee.editKeys])assert.equal(own(k),'hidden');
-html=renderPermissionEditor({...options,preview:true});assert.doesNotMatch(html,/员工管理|员工记录|data-demo/);
+html=renderPermissionEditor({...options,preview:true});assert.doesNotMatch(html,/员工记录|data-demo/);
 grants[employee.contentKey]='read';grants[employee.editKeys[0]]='edit';assert.equal(authorizationSelection(employee,own),'mixed');
 const before=JSON.stringify(grants);html=renderPermissionEditor(options);assert.match(html,/部分配置，需复核/);assert.equal(JSON.stringify(grants),before);
 applyAuthorization(grants,employee,'edit');grants[page]='hidden';assert.equal(authorizationSelection(employee,own),'edit');for(const k of employee.editKeys)assert.equal(options.value(k),'hidden');

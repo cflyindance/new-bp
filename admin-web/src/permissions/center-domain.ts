@@ -1,6 +1,6 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
-export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[] }
+export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean }
 export interface Store { id: string; title: string; brand: string; region: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
@@ -20,6 +20,7 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   const resource = resources.get(key);
   if (!resource || seen.has(key)) return "hidden";
   seen.add(key);
+  if(resource.legacyGateKey&&roleAccess(role,resource.legacyGateKey,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && roleAccess(role, resource.parent, resources, new Set(seen)) === "hidden") return "hidden";
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
   return validAccess(resource,role.grants[key]);
@@ -28,6 +29,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   const employee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
   if (!employee || !store || !resource || seen.has(key)) return "hidden";
   seen.add(key);
+  if(resource.legacyGateKey&&resolveAccess(state,employeeId,storeId,resource.legacyGateKey,stores,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && resolveAccess(state, employeeId, storeId, resource.parent, stores, resources, new Set(seen)) === "hidden") return "hidden";
   if(resource.requires?.some(k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen))==='hidden'))return 'hidden';
   const override = employee.overrides[storeId]?.[key];

@@ -1,6 +1,7 @@
 import type { Access, Resource } from './center-domain';
 import type { Catalog, MenuNode } from './center-catalog';
 import { authorizationRows, authorizationSelection, type AuthorizationRow } from './center-authorization';
+import { resourceOwn } from './center-employee-pages';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
@@ -28,12 +29,12 @@ export function renderPermissionEditor(o: EditorOptions): string {
     const blocked=parentBlocked||contentBlocked;
     const tag=compact?'span':'div';
     const reason=parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
-    return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${o.own(resource.key)===v}" ${blocked?`disabled title="${reason}"`:''}>${l}</button>`).join('')}</${tag}>`;
+return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${resourceOwn(resource,o.own)===v}" ${blocked?`disabled title="${reason}"`:''}>${l}</button>`).join('')}</${tag}>`;
   }
   const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
   const active=groups.find(g=>g.id===o.group)??groups[0];
   const actions=[...catalog.resources.values()].filter(r=>r.parent===o.page&&r.type==='action');
-  const contents=[...catalog.resources.values()].filter(r=>r.path===page?.path&&(r.type==='content'||r.type==='field'));
+  const contents=[...catalog.resources.values()].filter(r=>(r.type==='content'&&r.parent===o.page)||(r.type==='field'&&catalog.resources.get(r.parent??'')?.parent===o.page));
   const inCategory=(key:string)=>!pageSections||!!active?.keys.includes(key);
   const shownActions=actions.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
   const shownContents=contents.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
@@ -50,7 +51,7 @@ export function renderPermissionEditor(o: EditorOptions): string {
   const row=(r:Resource)=>`<tr${r.type==='field'?' class="pc-content-field"':''}><th scope="row">${r.type==='field'?`<small>敏感字段 · ${esc(catalog.resources.get(r.parent??'')?.title)}</small><br>`:''}${actionTitle(r)}</th><td>${o.preview ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-content-sample">${esc(r.previewValue??'内容示意')}</span>`:r.type==='action'?`<button type="button" data-demo >${esc(r.title)}</button>`:`<span class="pc-tag">${o.value(r.key)==='edit'?'可编辑':'只读'}</span>${o.value(r.key)==='edit'?'<button type="button" data-demo >编辑</button>':''}` : o.readonly ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-tag">${o.value(r.key)==='hidden'?'不可见':'可见'}</span>`:`<span class="pc-tag">${accessLabel(r)}</span>`:control(r)}</td></tr>`;
   const ancestors:string[]=[];let parent=page?.parent;const seen=new Set<string>();
   while(parent&&!seen.has(parent)){seen.add(parent);const r=catalog.resources.get(parent);if(!r)break;ancestors.unshift(r.title);parent=r.parent;}
-  const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&isMenu(r)&&(!o.preview||(menuNodes.has(r.key)?visible(menuNodes.get(r.key)!,true):o.value(r.key)!=='hidden')));
+const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.compatibilityOnly&&isMenu(r)&&(!o.preview||(menuNodes.has(r.key)?visible(menuNodes.get(r.key)!,true):o.value(r.key)!=='hidden')));
   let lastSection='';
   const categories=groups.map(g=>{const section=g.section!==lastSection?`<h4>${esc(g.section)}</h4>`:'';lastSection=g.section;return `${section}<button type="button" data-group="${esc(g.id)}" class="${g.id===active?.id?'active':''}">${esc(g.title)}</button>`}).join('');
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
