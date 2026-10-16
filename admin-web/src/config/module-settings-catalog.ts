@@ -1,5 +1,7 @@
 /** 由 scripts/build-module-settings-catalog.mjs 根据 docs/配置归类-终版.md + docs/配置归类-分组映射.csv 生成，请勿手改 */
 
+import { isStoreInformationPage, storeInformationItemPath } from "./store-information-navigation";
+
 export interface ModuleSettingCatalogItem {
   id: string;
   /** 二级导航与卡片区块标题（映射表 groupTitle） */
@@ -686,6 +688,7 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
 };
 
 export function getModuleSettingsBasePath(path: string): string | undefined {
+  if (isStoreInformationPage(path)) return "/stores/settings";
   for (const settingsPath of Object.keys(MODULE_SETTINGS_BY_PATH)) {
     if (path === settingsPath || path.startsWith(`${settingsPath}/`)) return settingsPath;
   }
@@ -715,6 +718,7 @@ export function getModuleSettingsItemHref(
   settingsPath: string,
   item: Pick<ModuleSettingCatalogItem, "groupKey" | "id">,
 ): string {
+  if (settingsPath === "/stores/settings") return `${storeInformationItemPath(item)}#${item.id}`;
   if (settingsPath === "/operations/queue-call/brand-menu") {
     const page = item.id.startsWith("s547-") ? "brands" : "settings";
     return `${settingsPath}/${page}#${item.id}`;

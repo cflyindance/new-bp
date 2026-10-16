@@ -801,7 +801,7 @@ function renderCategorySchedulePicker(selectedIds: string[]): string {
   if (schedules.length === 0) {
     return `
       <div class="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-        暂无可用营业时间，请先在「营业与运营 → 营业时段」中新建营业时间规则。
+        暂无可用营业时间，请先在「门店信息 → 营业时间」中新建营业时间规则。
       </div>`;
   }
   return `

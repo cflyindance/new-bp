@@ -58,7 +58,9 @@ export function buildCenterCatalog(): Catalog {
     const key = `module:${m.id}`;
     const title=m.id==='group-store-list'?`${m.title} · 集团视角`:m.id==='brand-store-list'?`${m.title} · 品牌视角`:m.title;
     resources.set(key,{key,title,type:'module'});
-    const children = moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
+    const children = m.id === 'store-mgmt'
+      ? m.children.filter(c=>c.id==='st-settings').map(c=>({...c,title:'门店档案、营业时间与设置'}))
+      : moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });
   for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {

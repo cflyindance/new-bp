@@ -376,7 +376,7 @@ export function readModuleSettingText(fieldId: string, defaultValue = ""): strin
 }
 
 export function writeModuleSettingText(fieldId: string, value: string): void {
-  const before = readModuleSettingText(fieldId, value);
+  const before = readModuleSettingText(fieldId, "");
   if (before === value) return;
   if (deferFieldWrite(fieldId, value, "text", before, value)) return;
   try {

@@ -9,6 +9,7 @@ import { createTipsPageContext } from "./team/tips/tips-context";
 import { isTipsFullscreenRoute, parseTipsRoute } from "./team/tips/tips-navigation";
 import { BUILD_STAMP } from "./generated/build-stamp";
 import { embeddedPageSrc as buildEmbeddedPageSrc } from "./shell/embedded-page-src";
+import { isStoreInformationPage, storeInformationItemsForPage, storeInformationLegacyRedirect } from "./config/store-information-navigation";
 import {
   bindLoginPage,
   isAuthenticated,
@@ -4205,6 +4206,11 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath(`/operations/queue-call/brand-menu/${settings ? "settings" : "brands"}${anchor ? `#${anchor}` : ""}`);
     return;
   }
+  const storeInformationRedirect = storeInformationLegacyRedirect(raw, window.location.hash);
+  if (storeInformationRedirect) {
+    replaceHashPath(storeInformationRedirect);
+    return;
+  }
   /* 品牌与菜单已迁前厅管理中心；旧门店管理书签重定向 */
   if (raw === "/stores/brand-menu" || raw === "/stores/brand-menu/" || raw.startsWith("/stores/brand-menu/")) {
     replaceHashPath(raw.replace(/^\/stores\/brand-menu/, "/operations/queue-call/brand-menu"));
@@ -4232,13 +4238,13 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/stores/settings");
     return;
   }
-  /* 旧三级路由 /store/basic|logo|business-hours 废弃 → 门店信息设置分组 */
+  /* 旧三级路由的更深地址兼容到门店信息独立页面 */
   if (raw === "/store/basic" || raw === "/store/basic/" || raw.startsWith("/store/basic/")) {
-    replaceHashPath("/stores/settings/store-profile");
+    replaceHashPath("/stores/profile");
     return;
   }
   if (raw === "/store/logo" || raw === "/store/logo/" || raw.startsWith("/store/logo/")) {
-    replaceHashPath("/stores/settings/brand-identity-assets");
+    replaceHashPath("/stores/profile#s433-brand-identity-assets-餐厅LOGO");
     return;
   }
   if (
@@ -4246,7 +4252,7 @@ function normalizeTabModuleHashes(): void {
     raw === "/store/business-hours/" ||
     raw.startsWith("/store/business-hours/")
   ) {
-    replaceHashPath("/stores/settings/store-hours-operation");
+    replaceHashPath("/stores/hours");
     return;
   }
   /* 侧栏已移除：门店信息旧前缀 /store、智能点餐、支付服务、费用加收 — 旧书签重定向 */
@@ -5600,6 +5606,7 @@ function formatModuleSettingsSubnavLabel(label: string): string {
 }
 
 function isModuleHubSettingsCatalogPath(path: string): boolean {
+  if (isStoreInformationPage(path)) return true;
   if (path === "/settings/overview") return false;
   if (isPlatformPresetPath(path)) return false;
   if (path === "/menu/tax-types/settings") return false;
@@ -5717,6 +5724,7 @@ function syncModuleSettingsScrollSpy(
 }
 
 function bindModuleSettingsScrollSpy(): void {
+  if (isStoreInformationPage(readAppHashPath())) return;
   moduleSettingsScrollSpyActiveKey = undefined;
 
   const scrollHost = document.querySelector<HTMLElement>(".module-settings-scroll-host");
@@ -5961,6 +5969,7 @@ function renderModuleSettingsSubnavList(
 }
 
 function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
+  if (isStoreInformationPage(path)) return "";
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog || catalog.items.length === 0) return "";
   const groups = buildModuleSettingsGroupsForPreset(catalog);
@@ -6139,7 +6148,10 @@ function renderFohHubSettingsLayout(
 function renderModuleSettingRowsHtml(items: ModuleSettingCatalogItem[]): string {
   return items
     .map((item) => {
-      const html = renderModuleSettingRow(item);
+      let html = renderModuleSettingRow(item);
+      if ([417, 418, 433, 582].includes(item.seq)) {
+        html = html.replace('<li ', `<li id="${escapeHtml(item.id)}" `);
+      }
       if (!isFutureVersionDiffModuleSettingSeq(item.seq)) return html;
       if (html.includes("data-future-version-diff")) return html;
       return html.replace(
@@ -9283,7 +9295,7 @@ function renderModuleSettingStoreClosingAlertRow(item: ModuleSettingCatalogItem)
 
 function renderModuleSettingStoreRestaurantLogoRow(item: ModuleSettingCatalogItem): string {
   return `
-        <li class="list-none">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
             ${renderStoreRestaurantLogoHtml(item)}
@@ -9329,7 +9341,7 @@ function renderModuleSettingStoreCountryRegionRow(item: ModuleSettingCatalogItem
 
 function renderModuleSettingStoreBasicInfoRow(item: ModuleSettingCatalogItem): string {
   return `
-        <li class="list-none">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
             ${renderStoreBasicInfoFormHtml()}
@@ -9474,9 +9486,9 @@ function renderModuleSettingStoreBrandManagementRow(_item: ModuleSettingCatalogI
         </li>`;
 }
 
-function renderModuleSettingStoreBusinessHoursRow(_item: ModuleSettingCatalogItem): string {
+function renderModuleSettingStoreBusinessHoursRow(item: ModuleSettingCatalogItem): string {
   return `
-        <li class="list-none">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderStoreBusinessHoursHtml()}
           </div>
@@ -10894,9 +10906,18 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   }
 
   const catalogForGroups = getModuleSettingsCatalog(path);
-  const groups = catalogForGroups
+  let groups = catalogForGroups
     ? buildModuleSettingsGroupsForPreset(catalogForGroups)
     : [];
+  if (isStoreInformationPage(path)) {
+    const storePage = path.split(/[?#]/)[0].replace(/\/$/, "");
+    const items = storeInformationItemsForPage(path, groups.flatMap((group) => group.items));
+    groups = items.length ? [{
+      groupKey: storePage === "/stores/profile" ? "store-profile" : storePage === "/stores/hours" ? "store-hours-operation" : "store-operation-alerts",
+      groupTitle: storePage === "/stores/profile" ? "门店档案" : storePage === "/stores/hours" ? "营业时间" : "营业提醒",
+      items,
+    }] : [];
+  }
   if (groups.length === 0) {
     return `
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -10952,8 +10973,7 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
         : printSettings
           ? renderPrintSettingsHubIntroHtml()
           : t("moduleSettings.intro");
-  const isStoreSettingsHub =
-    path === "/stores/settings" || path.startsWith("/stores/settings/");
+  const isStoreSettingsHub = isStoreInformationPage(path);
   const isTeamSettingsHub = path === "/team/settings";
   const isFohBrandMenuSettings =
     path === "/operations/queue-call/brand-menu" ||
@@ -13174,6 +13194,15 @@ function mountInitializedPage(): void {
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
   bindStoreRestaurantLogoControls();
+  if (isStoreInformationPage(readAppHashPath())) {
+    const anchor = location.hash.slice(1).split("#")[1];
+    if (anchor) {
+      requestAnimationFrame(() => {
+        try { document.getElementById(decodeURIComponent(anchor))?.scrollIntoView({ block: "start" }); }
+        catch { /* Invalid legacy encoding must not prevent opening the page. */ }
+      });
+    }
+  }
   bindIngenicoBluIntegrationUi();
   bindAdvancedServiceSwitchUi();
   bindDeliveryRegionEditor();
@@ -13181,7 +13210,7 @@ function mountInitializedPage(): void {
   bindModuleSettingsFormControls();
   const settingsCatalogForRbac = getModuleSettingsCatalog(mountPathForSheet);
   if (settingsCatalogForRbac) {
-    applyModuleSettingsRbacAccess(mountPathForSheet, document);
+    applyModuleSettingsRbacAccess(isStoreInformationPage(mountPathForSheet) ? "/stores/settings" : mountPathForSheet, document);
   }
   bindBatchPostPrintChoices();
   bindOrderSameDishDisplayRadios();

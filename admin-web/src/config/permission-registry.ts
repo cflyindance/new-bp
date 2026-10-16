@@ -245,6 +245,8 @@ export function buildPermissionModuleGroups(): PermissionModuleGroup[] {
     };
 
     for (const child of mod.children) {
+      // Presentation-only store pages retain st-settings and its L3/L4 grants.
+      if (mod.id === "store-mgmt" && (child.id === "st-profile" || child.id === "st-hours")) continue;
       moduleNode.children.push(buildFeatureNode(mod, child));
     }
 

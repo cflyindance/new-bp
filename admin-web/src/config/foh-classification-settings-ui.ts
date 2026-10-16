@@ -430,7 +430,7 @@ function renderSchedulePicker(selectedIds: string[]): string {
   if (schedules.length === 0) {
     return `
       <div class="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-        暂无可用营业时间，请先在「营业与运营 → 营业时段」中新建营业时间规则。
+        暂无可用营业时间，请先在「门店信息 → 营业时间」中新建营业时间规则。
       </div>`;
   }
   return `
@@ -668,7 +668,7 @@ function renderCategoryDialog(
           </div>
           <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">供应时段</p>
-            <p class="text-xs text-muted-foreground">引用「营业与运营 → 营业时段」中的规则。</p>
+            <p class="text-xs text-muted-foreground">引用「门店信息 → 营业时间」中的规则。</p>
             ${renderSchedulePicker(selectedScheduleIds)}
           </div>
           <p class="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">分类保存到页面草稿后，可从列表配置可下单与仅可查看菜单。</p>

@@ -170,8 +170,10 @@ export const NAV_MODULES: NavModule[] = [
     icon: "storeMgmt",
     path: "/stores",
     subNavPlacement: "sheet",
-    defaultChildPath: "/stores/settings",
+    defaultChildPath: "/stores/profile",
     children: [
+      { id: "st-profile", title: "门店档案", titleEn: "Store profile", path: "/stores/profile" },
+      { id: "st-hours", title: "营业时间", titleEn: "Business hours", path: "/stores/hours" },
       { id: "st-settings", title: "设置", path: "/stores/settings" },
     ],
   },
