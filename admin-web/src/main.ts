@@ -4904,34 +4904,6 @@ function renderStoreMenuSidebar(path: string): string {
   });
 }
 
-function renderDeviceManagementHardwareSidebar(path: string): string {
-  const dmMod = NAV_MODULES.find((x) => x.id === "device-management")!;
-  const hwChild = dmMod.children.find((c) => c.id === "dm-hardware")!;
-  const navLabel = `${pick(dmMod.title, dmMod.titleEn)} · ${pick(hwChild.title, hwChild.titleEn)}`.replace(/"/g, "&quot;");
-  const panelHeading = pick(hwChild.title, hwChild.titleEn);
-  const activeSub = getActiveDeviceManagementHardwareSubPath(path);
-  return `
-    <nav class="device-management-hardware-subnav w-52 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${navLabel}">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${panelHeading}</p>
-      <ul class="space-y-0.5">
-        ${DEVICE_MANAGEMENT_HARDWARE_SUBNAV.map((item) => {
-          const selected = item.path === activeSub;
-          return `
-        <li>
-          <a href="#${item.path}"
-            class="flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-              selected
-                ? "bg-primary/10 font-medium text-primary"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            }"
-            ${selected ? 'aria-current="page"' : ""}
-          >${pick(item.title, item.titleEn)}</a>
-        </li>`;
-        }).join("")}
-      </ul>
-    </nav>
-  `;
-}
 
 function renderSidebarBrandHeader(): string {
   const showGroupSwitcher = shouldShowMerchantGroupSwitcher();
@@ -11805,7 +11777,6 @@ function renderMain(): string {
                                                               deviceManagementHardwareSubnav: true,
                                                             });
                                           return `<div class="${tertiaryRowClass}">
-                    ${renderDeviceManagementHardwareSidebar(path)}
                     <div class="${tertiaryMainClass} min-h-0 overflow-y-auto">${hardwareMain}</div>
                   </div>`;
                                         })()

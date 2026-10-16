@@ -690,7 +690,7 @@ export const NAV_MODULES: NavModule[] = [
   },
 ];
 
-/** 硬件管理中心 →「硬件」：主内容区左侧细项（路由 `/device-management/hardware/...`，交互对齐 Kiosk 点餐左侧导航） */
+/** 硬件管理中心 →「硬件」公共覆盖子导航叶子；与系统设置快捷入口共用原路由。 */
 export interface DeviceManagementHardwareSubItem {
   id: string;
   title: string;
@@ -1318,8 +1318,11 @@ export function navModuleChildrenAsSheetSubnav(m: NavModule): ProductCenterSideb
     titleEn: c.titleEn,
     path: c.path,
     chainOnly: c.chainOnly,
+    activePrefixes: c.id === "dm-hardware" ? DEVICE_MANAGEMENT_HARDWARE_SUBNAV.map((item) => item.path) : undefined,
     sidebarChildren: (c.id === "team-tips"
       ? TIPS_MANAGEMENT_SUBNAV.filter((item) => item.id !== "tips-details")
+      : c.id === "dm-hardware"
+        ? DEVICE_MANAGEMENT_HARDWARE_SUBNAV
       : c.children)?.map((child) => ({ ...child })),
   }));
 }
