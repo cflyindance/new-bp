@@ -2,6 +2,7 @@
  * 设置滑层：整行表单控件（多选 / 单选 / 颜色），原型 localStorage。
  */
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import { isPageInitializing } from "./page-initialization";
 import {
   recordModuleSettingDeploymentChange,
   resolveSettingsPathForChange,
@@ -185,7 +186,12 @@ export function moduleSettingStorageKey(fieldId: string): string {
   return `bplant-module-setting-field:${fieldId}`;
 }
 
+// Defaults observed while displaying a control are the baseline for its first edit.
+const checkboxDefaults = new Map<string, boolean>();
+const radioDefaults = new Map<string, string>();
+
 export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boolean): boolean {
+  if (isPageInitializing()) checkboxDefaults.set(fieldId, defaultChecked);
   const draft = readPageDraftFieldForCurrentPath(fieldId);
   if (draft !== undefined) return draft === "1";
   try {
@@ -223,6 +229,15 @@ function deferFieldWrite(
   }
   const pageKey = resolveDeferPageKey(fieldId);
   if (!pageKey) return false;
+  if (isPageInitializing()) {
+    // Never persist a default over an existing user draft during a remount.
+    if (readPageDraftFieldForCurrentPath(fieldId) === undefined) {
+      try {
+        localStorage.setItem(moduleSettingStorageKey(fieldId), storageValue);
+      } catch { /* unavailable storage */ }
+    }
+    return true;
+  }
   setPageDraftField(pageKey, fieldId, storageValue);
   recordModuleSettingDeploymentChange({
     fieldId,
@@ -236,7 +251,7 @@ function deferFieldWrite(
 }
 
 export function writeModuleSettingCheckbox(fieldId: string, checked: boolean, defaultChecked = checked): void {
-  const before = readModuleSettingCheckbox(fieldId, defaultChecked);
+  const before = readModuleSettingCheckbox(fieldId, checkboxDefaults.get(fieldId) ?? defaultChecked);
   if (before === checked) return;
   if (deferFieldWrite(fieldId, checked ? "1" : "0", "checkbox", before, checked)) return;
   try {
@@ -254,6 +269,7 @@ export function writeModuleSettingCheckbox(fieldId: string, checked: boolean, de
 }
 
 export function readModuleSettingRadio(fieldId: string, defaultValue: string): string {
+  if (isPageInitializing()) radioDefaults.set(fieldId, defaultValue);
   const draft = readPageDraftFieldForCurrentPath(fieldId);
   if (draft !== undefined) return draft;
   try {
@@ -266,7 +282,7 @@ export function readModuleSettingRadio(fieldId: string, defaultValue: string): s
 }
 
 export function writeModuleSettingRadio(fieldId: string, value: string): void {
-  const before = readModuleSettingRadio(fieldId, value);
+  const before = readModuleSettingRadio(fieldId, radioDefaults.get(fieldId) ?? value);
   if (before === value) return;
   if (deferFieldWrite(fieldId, value, "radio", before, value)) return;
   try {
@@ -483,6 +499,15 @@ export function writeModuleSettingDerivedJson(fieldId: string, value: unknown): 
   }
   const pageKey = resolveDeferPageKey(fieldId);
   if (pageKey) {
+    if (isPageInitializing()) {
+      if (readPageDraftFieldForCurrentPath(fieldId) === undefined) {
+        try {
+          localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
+          syncFohLinesMirrorToggle(fieldId, value);
+        } catch { /* unavailable storage */ }
+      }
+      return;
+    }
     setPageDraftField(pageKey, fieldId, afterStr);
     syncFohLinesMirrorToggle(fieldId, value);
     return;

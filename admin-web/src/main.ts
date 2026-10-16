@@ -284,6 +284,7 @@ import { confirmAndTriggerPageSaveAndDeploy } from "./config/deployment-page-tri
 import { getPageSavePendingCount, isPageSavePending } from "./config/page-save-registry";
 import { openHubSearchLeaveConfirmDialog } from "./config/hub-search-leave-confirm-dialog";
 import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-guard";
+import { withPageInitialization } from "./config/page-initialization";
 import { bindIframeSaveDeployBridge } from "./config/iframe-save-deploy-bridge";
 import { bindMarketingScreensaverFullscreenFlow } from "./config/marketing-screensaver-fullscreen";
 import { bindTipOutRulesFullscreenFlow } from "./config/tipout-rules-fullscreen";
@@ -12083,6 +12084,10 @@ function destroyTeamTipsPage(): void {
 }
 
 function mount(): void {
+  withPageInitialization(mountInitializedPage);
+}
+
+function mountInitializedPage(): void {
   // Keep the payroll runtime (drafts, employee selection and export jobs) across sibling views.
   const retainedPayrollRoot = activePayrollPage && isAuthenticated() && isTeamPayrollReportPath(location.hash.slice(1))
     ? document.querySelector<HTMLElement>('[data-team-payroll-root]') : null;

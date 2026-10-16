@@ -7,6 +7,7 @@ import {
   withCollectionSummary,
 } from "./collection-change-diff";
 import type { ChangeDetailRow, DeploymentConfigChange } from "./deployment-types";
+import { isPageInitializing } from "./page-initialization";
 import { listAllModuleSettingCatalogEntries } from "./module-settings-catalog";
 
 const pendingChanges: DeploymentConfigChange[] = [];
@@ -352,6 +353,7 @@ export function recordDeploymentConfigChange(change: DeploymentConfigChange): vo
 
 /** 按页面记录变更（批量保存页） */
 export function recordPageConfigChange(pageKey: string, change: DeploymentConfigChange): void {
+  if (isPageInitializing()) return;
   if (!changeHasDiff(change)) return;
   let bucket = pageBuckets.get(pageKey);
   if (!bucket) {
