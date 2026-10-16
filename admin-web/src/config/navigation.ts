@@ -1,3 +1,4 @@
+import { BREAKS_OVERTIME_NAV_GROUPS } from "./team-breaks-overtime-navigation";
 import { MEMBER_CENTER_NAV, flattenMemberNavigation } from "./member-center-navigation";
 /**
  * 整合后推荐导航树（融合脑图 + 竞品）
@@ -201,7 +202,11 @@ export const NAV_MODULES: NavModule[] = [
         { id: "team-employees", title: "员工管理", titleEn: "Employees", path: "/team/roles-employees/employees" },
         { id: "team-positions", title: "岗位管理", titleEn: "Positions", path: "/team/roles-employees/roles" },
       ] },
-      { id: "team-breaks", title: "休息与加班", path: "/team/breaks-overtime" },
+      { id: "team-breaks", title: "休息与加班", path: "/team/breaks-overtime", children:
+        BREAKS_OVERTIME_NAV_GROUPS.flatMap(group => group.items.map(item => ({
+          id: `team-breaks-${item.key}`, title: item.title, path: `/team/breaks-overtime/${item.key}`,
+        }))),
+      },
       { id: "team-clock", title: "员工打卡", path: "/team/clock-in", children: [
         { id: "team-clock-live", title: "打卡管理", titleEn: "Clock management", path: "/team/clock-in/live" },
         { id: "team-clock-records", title: "考勤记录", titleEn: "Attendance records", path: "/team/clock-in/records" },

@@ -345,8 +345,8 @@ export function readModuleSettingNumber(fieldId: string, defaultValue: number): 
   }
 }
 
-export function writeModuleSettingNumber(fieldId: string, value: number): void {
-  const before = readModuleSettingNumber(fieldId, value);
+export function writeModuleSettingNumber(fieldId: string, value: number, defaultValue = value): void {
+  const before = readModuleSettingNumber(fieldId, defaultValue);
   if (before === value) return;
   if (deferFieldWrite(fieldId, String(value), "number", before, value)) return;
   try {
