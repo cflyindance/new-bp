@@ -13,7 +13,11 @@ export function pagePolicy(c:Catalog,page:string):PagePolicy {
   const covered=new Set(rows.flatMap(r=>[r.contentKey,...(r.additionalContentKeys??[]),...r.editKeys]));
   if(rows.length===1&&rows[0].mode!=='visibility'&&!settings.length&&children.every(r=>covered.has(r.key)))return {kind:'single',row:rows[0],coreKeys};
   if(!rows.length&&settings.length===1&&children.every(r=>r.type==='setting'))return {kind:'single',setting:c.resources.get(settings[0])!,coreKeys};
-  return {kind:coreKeys.length?'complex':'entry',coreKeys};
+  // One page-wide business object may coexist with independently granted utilities.
+  // Promote only when it covers every core; never mistake one of several objects for the page.
+  const primary=rows.filter(r=>r.mode!=='visibility');
+  const row=primary.length===1&&coreKeys.every(k=>[primary[0].contentKey,...(primary[0].additionalContentKeys??[])].includes(k))?primary[0]:undefined;
+  return {kind:coreKeys.length?'complex':'entry',coreKeys,row};
 }
 export function registerPagePolicies(c:Catalog):void {
   for(const r of c.resources.values())if(r.type==='page'){

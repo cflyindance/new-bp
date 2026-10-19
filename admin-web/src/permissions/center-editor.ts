@@ -73,13 +73,13 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const choices:[Access|'inherit',string][]=a.mode==='visibility'?[['hidden','不可见'],['read','可见']]:[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']];if(o.staff)choices.unshift(['inherit','跟随角色']);
     const name=o.preview&&effective!=='edit'?esc(a.title):actionTitle({...content,title:a.title,help:a.help});
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':''}>${l}</button>`).join('')}</div>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
-    return compact?result:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
+    return compact?`<div class="pc-page-authorization">${o.preview&&effective!=='edit'?'':actionTitle({...content,title:a.editTitle,help:a.help})}${result}</div>`:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
-  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
+  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&r.key!==policy?.row?.contentKey).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
   const sensitive=(r:Resource)=>o.page==='page:/team/payroll-report'&&r.type==='field';
   const authorizationBody=visibleContents.filter(r=>!sensitive(r)).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
   const sensitiveBody=visibleContents.filter(sensitive).map(row).join('');
-  const categoryHasAuthorization=contents.some(r=>inCategory(r.key))||actions.some(r=>inCategory(r.key));
+  const categoryHasAuthorization=visibleContents.length>0||shownActions.some(r=>!mergedActions.has(r.key));
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
@@ -94,7 +94,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const settingsLayout=flatStorePage
     ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
     : `<div class="pc-settings"><nav class="pc-categories" data-scroll="categories" tabindex="0" aria-label="${pageSections?esc(page?.title)+'分类':'设置分类'}">${categories}</nav><div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${categoryControls}${categoryBody}</div></div>`;
-  const headerControls=policy?.kind==='single'
+  const headerControls=policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
     ? policy.row?unifiedRow(policy.row,true):!o.preview&&!o.readonly?control(policy.setting!):`<span class="pc-tag">${o.value(policy.setting!.key)==='hidden'?'不可见':o.value(policy.setting!.key)==='edit'?'可编辑':'可见不可编辑'}</span>`
     : page?.type!=='page'||policy?.kind==='complex'||o.preview||o.readonly?menuStatus(o.page):page?control(page):'';
   let blockedAncestor:Resource|undefined,ancestorKey=page?.parent;const checkedAncestors=new Set<string>();

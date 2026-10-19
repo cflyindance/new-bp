@@ -43,3 +43,14 @@ for(const resource of c.resources.values())if(resource.type==='page'){
   if(p.kind==='single'&&p.row)assert.equal((markup.match(/data-authorization=/g)??[]).length,3,`Duplicate single row: ${resource.key}`);
 }
 console.log('PASS all catalog page layouts:',counts);
+for(const path of ['/team/tips/distribution','/team/payroll-report']){
+  const key=pageKey(path),p=pagePolicy(c,key);assert(p.row,'Page-wide core must be promoted even with utilities');
+  for(const mode of ['role','staff','readonly','preview']){
+    const markup=renderPermissionEditor({catalog:c,page:key,group:'',preview:mode==='preview',readonly:mode==='readonly',staff:mode==='staff',value:k=>c.resources.get(k)?.type==='action'?'edit':'read',own:()=> 'read',search:''});
+    const header=markup.split('<header class="pc-detail-heading">')[1].split('</header>')[0],body=markup.split('</header>')[1];
+    assert(!body.includes(`data-authorization="${p.row.contentKey}"`),'Page grant must not appear under feature authorization');
+    if(mode==='role'||mode==='staff')assert.equal((header.match(new RegExp(`data-authorization="${p.row.contentKey}"`,'g'))??[]).length,mode==='staff'?4:3);
+    assert(body.includes('导出操作'),'Independent utilities remain in feature authorization');
+  }
+}
+console.log('PASS page header core authorization, separate utilities, role/staff/readonly/preview');
