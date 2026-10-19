@@ -2,6 +2,7 @@ import { applyCategoryGrant } from './center-category-grants';
 import './center.css';
 import { buildCenterCatalog, type Catalog } from './center-catalog';
 import { esc, renderPermissionEditor } from './center-editor';
+import {effectiveMenuView} from './center-effective-menu';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
@@ -43,7 +44,13 @@ export function bindCenterPage(): void {
   const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
-    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId,staff:false,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
+    if(employeeId){
+      const view=effectiveMenuView(catalog,value,selectedPage);
+      if(view.page!==selectedPage)selectedGroup='';
+      selectedPage=view.page;
+      if(!preview){page=selectedPage;group=selectedGroup;}
+    }
+    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId,staff:false,effectiveOnly:!!employeeId,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
   }
   function logs(objectId?:string):string {
     const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}`.includes(query)));
