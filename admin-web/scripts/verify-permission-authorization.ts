@@ -20,7 +20,7 @@ assert.equal(options.value(employee.contentKey),'read');for(const k of employee.
 html=renderPermissionEditor({...options,preview:true});assert.match(html,/员工管理|可见不可编辑/);assert.doesNotMatch(html,/data-demo/);
 applyAuthorization(grants,employee,'edit');assert.equal(authorizationSelection(employee,own),'edit');
 for(const k of employee.editKeys)assert.equal(options.value(k),'edit');assert.equal(own(position.contentKey),'hidden');
-html=renderPermissionEditor({...options,preview:true});assert.equal((html.match(/data-demo/g)??[]).length,1);assert.doesNotMatch(html,/保存员工信息/);
+html=renderPermissionEditor({...options,preview:true});assert.equal((html.match(/data-demo/g)??[]).length,0,'A page header shows permission status, not a business edit button');assert.match(html,/可编辑/);assert.doesNotMatch(html,/保存员工信息/);
 applyAuthorization(grants,employee,'hidden');for(const k of [employee.contentKey,...employee.editKeys])assert.equal(own(k),'hidden');
 html=renderPermissionEditor({...options,preview:true});assert.doesNotMatch(html,/员工记录|data-demo/);
 grants[employee.contentKey]='read';grants[employee.editKeys[0]]='edit';assert.equal(authorizationSelection(employee,own),'mixed');
