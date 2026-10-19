@@ -13,6 +13,7 @@ import { registerEmployeePages } from './center-employee-pages';
 import { registerScheduleAuthorization } from './center-authorization';
 import { registerTipsPages } from './center-tips-pages';
 import { registerPayrollPages } from './center-payroll-pages';
+import {registerPagePolicies} from './center-page-policy';
 import { STORE_INFORMATION_SETTINGS_PATH, storeInformationItemPath } from '../config/store-information-navigation';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
@@ -149,5 +150,5 @@ export function buildCenterCatalog(): Catalog {
   registerClockPages(tree,resources,sections);
   registerEmployeePages(tree,resources);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  return {tree:groupStoreManagementMenus(tree),resources,groups,sections};
+  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);return catalog;
 }

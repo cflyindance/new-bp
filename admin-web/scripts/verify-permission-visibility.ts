@@ -44,5 +44,5 @@ assert.equal((settingsEditable.match(/data-demo/g)??[]).length,1);
 const cyclic=new Map<string,Resource>([['a',{key:'a',title:'a',type:'action',requires:['b']}],['b',{key:'b',title:'b',type:'action',requires:['a']}]]);
 const cycleRole={...state.roles[0],grants:{a:'edit' as const,b:'edit' as const}};assert.equal(roleAccess(cycleRole,'a',cyclic),'hidden');
 const invalidField={...state.roles[0],grants:{...grants,[ssn]:'edit' as const}};assert.equal(roleAccess(invalidField,ssn,catalog.resources),'read','Compatibility field is driven by parent visibility, but persistence still rejects invalid raw values');
-const staticPreview=renderPermissionEditor({...options,page:pageKey('/brand/overview'),preview:true,value:()=> 'read'});assert.match(staticPreview,/查看页面/);assert.doesNotMatch(staticPreview,/data-demo/);
+const staticPreview=renderPermissionEditor({...options,page:pageKey('/brand/overview'),preview:true,value:()=> 'read'});assert.match(staticPreview,/data-menu-access="read"/);assert.doesNotMatch(staticPreview,/data-demo/);
 console.log('PASS: hidden denied actions, 31 content regions/3 fields, dependency and ancestor restore, sensitive export gating, complete editor, read-only settings, default deny, per-store isolation and persistence');

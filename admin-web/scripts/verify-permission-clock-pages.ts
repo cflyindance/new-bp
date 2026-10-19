@@ -23,12 +23,12 @@ grants[root]='hidden';assert.equal(value(action),'hidden');assert.equal(grants[a
 grants[root]='read';assert.equal(value(action),'edit');
 const opts={catalog:c,page:keys[0],group:'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''};
 let html=renderPermissionEditor(opts);assert.match(html,/补卡/);assert.match(html,/记录休息/);assert.doesNotMatch(html,/登出门禁/);
-grants[keys[1]]='read';html=renderPermissionEditor({...opts,page:keys[1]});assert.match(html,/查看页面/);assert.doesNotMatch(html,/补卡|记录休息|导出/);
+grants[keys[1]]='read';html=renderPermissionEditor({...opts,page:keys[1]});assert(html.includes(`data-grant="${keys[1]}"`));assert.doesNotMatch(html,/补卡|记录休息|导出/);
 assert.equal(c.sections?.get(keys[2])?.length,3);
 assert.equal([...c.resources.values()].filter(r=>r.type==='setting'&&r.parent===keys[2]).length,9);
 html=renderPermissionEditor({...opts,page:keys[2]});assert.match(html,/开收工与工时/);assert.match(html,/登出门禁/);assert.match(html,/打卡凭证/);assert.match(html,/迟到宽限/);
 grants[keys[1]]='hidden';
-html=renderPermissionEditor({...opts,page:root,preview:true});assert.match(html,/打卡管理/);assert.match(html,/规则设置/);assert.doesNotMatch(html,/考勤记录/);
+html=renderPermissionEditor({...opts,page:root,preview:true});assert.match(html,/打卡管理/);assert.doesNotMatch(html,/规则设置|考勤记录/,'Pages with all core content hidden are absent');
 const ruleGroups=c.sections!.get(keys[2])!;
 assert.deepEqual(ruleGroups.map(g=>[g.id,g.title]),TEAM_CLOCK_IN_SETTING_GROUPS.map(g=>[g.key,g.title]));
 for(const g of ruleGroups)for(const k of g.keys)assert.equal(value(k),'hidden');
