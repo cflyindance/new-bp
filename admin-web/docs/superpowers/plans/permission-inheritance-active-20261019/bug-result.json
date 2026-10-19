@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "needs_attention",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "Explicit setting-page edit and absent/hidden legacy page were rendered through different own/effective paths; a second click synchronized the old page key.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": [
+    "src/permissions/center-domain.ts",
+    "src/permissions/center-editor.ts",
+    "src/permissions/center-setting-levels.ts"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "verify-permission-inheritance-active: expected read, actual hidden before change"
+    ],
+    "greenEvidence": [
+      "initial inheritance / denial / no-review / render purity / store isolation passed",
+      "844 page/mode render audit passed"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "not_run",
+    "reason": "Browser execution was restricted earlier; no workaround used; preview navigation is not E2E",
+    "evidence": []
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "No build boundary changed; TypeScript and focused regressions used; CI status unknown"
+  },
+  "unverifiedScopes": [
+    "Live user browser saved permission data",
+    "Actual browser initial load/category switching/save and reload",
+    "Real page screenshots"
+  ]
+}

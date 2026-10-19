@@ -24,7 +24,7 @@ html=renderPermissionEditor({...options,preview:true});assert.equal((html.match(
 applyAuthorization(grants,employee,'hidden');for(const k of [employee.contentKey,...employee.editKeys])assert.equal(own(k),'hidden');
 html=renderPermissionEditor({...options,preview:true});assert.doesNotMatch(html,/员工记录|data-demo/);
 grants[employee.contentKey]='read';grants[employee.editKeys[0]]='edit';assert.equal(authorizationSelection(employee,own),'mixed');
-const before=JSON.stringify(grants);html=renderPermissionEditor(options);assert.match(html,/部分配置，需复核/);assert.equal(JSON.stringify(grants),before);
+const before=JSON.stringify(grants);html=renderPermissionEditor(options);assert.doesNotMatch(html,/部分配置|需复核/);assert.equal(JSON.stringify(grants),before);
 applyAuthorization(grants,employee,'edit');grants[page]='hidden';assert.equal(authorizationSelection(employee,own),'edit');for(const k of employee.editKeys)assert.equal(options.value(k),'hidden');
 grants[page]='read';for(const k of employee.editKeys)assert.equal(options.value(k),'edit');
 const stores=[{id:'a',title:'A',brand:'b',region:'e'},{id:'b',title:'B',brand:'b',region:'e'}];

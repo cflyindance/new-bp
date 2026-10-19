@@ -42,7 +42,7 @@ applyAuthorization(grants,row,'edit');for(const key of row.editKeys)assert.equal
 grants[`action:${base}/rules:copy`]='hidden';assert.equal(authorizationSelection(row,k=>grants[k]??'hidden'),'mixed');
 const html=renderPermissionEditor({catalog:c,page:rules,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});
 assert(!html.includes(`data-grant="action:${base}/rules:copy"`));assert(!html.includes(`data-page="${details}"`));
-assert.match(html,/部分配置，需复核/);
+assert.doesNotMatch(html,/部分配置|需复核/);
 applyAuthorization(grants,row,'read');for(const key of row.editKeys)assert.equal(value(key),'hidden');
 applyAuthorization(grants,row,'inherit');for(const key of [row.contentKey,...row.editKeys])assert.equal(grants[key],undefined);
 console.log('PASS tips: real two-item navigation, nested details permission and gated result actions, unified rule copy/edit, mixed review, no implicit upgrades');

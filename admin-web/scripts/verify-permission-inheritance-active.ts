@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {buildCenterCatalog} from '../src/permissions/center-catalog';
+import {roleAccess,resolveAccess,type Role,type CenterState} from '../src/permissions/center-domain';
+import {renderPermissionEditor} from '../src/permissions/center-editor';
+import {assertSettingChoice,settingCategoryGate} from '../src/permissions/center-setting-levels';
+const c=buildCenterCatalog(),page='page:/team/clock-in:rules',p=c.resources.get(page)!,gate=p.settingPageGate!;
+const role:Role={id:'r',name:'r',description:'',system:false,grants:{}};
+for(const r of c.resources.values())if(['module','navigation'].includes(r.type))role.grants[r.key]='read';
+role.grants['page:/team/clock-in']='read';role.grants[gate]='edit';
+const value=(k:string)=>roleAccess(role,k,c.resources);
+assert.equal(value(page),'read','Explicit page gate must activate a missing legacy page key');
+const render=()=>renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>role.grants[k]??c.resources.get(k)?.defaultAccess??'hidden',parentInherited:k=>!!c.resources.get(k)?.inheritFrom&&role.grants[k]===undefined,search:''});
+const initial=JSON.stringify(role.grants),html=render();
+assert(!html.includes('部分配置'));assert(!html.includes('需复核'));
+const groups=c.sections!.get(page)!,items=groups[0].keys;
+for(const key of items){assert.equal(value(key),'edit');assert(html.includes(`data-grant="${key}" data-value="edit" aria-pressed="true"`));}
+assert.equal(JSON.stringify(role.grants),initial,'Rendering cannot mutate saved grants');
+role.grants[items[0]]='hidden';role.grants[items[1]]='read';assert.equal(value(items[0]),'hidden');assert.equal(value(items[1]),'read');
+role.grants[page]='hidden';const blocked=render();assert.equal(value(page),'hidden');
+assert(blocked.includes(`data-grant="${gate}" data-value="hidden" aria-pressed="true"`),'Header cannot claim editable while legacy page denies');
+assert.throws(()=>assertSettingChoice(c,c.resources.get(items[0])!,'read',value));
+assert.throws(()=>assertSettingChoice(c,c.resources.get(settingCategoryGate(page,groups[0].id))!,'read',value));
+assert.doesNotThrow(()=>assertSettingChoice(c,c.resources.get(gate)!,'edit',value));
+assert(!blocked.includes('部分配置'));delete role.grants[page];
+const stores=[{id:'a',title:'A',brand:'b',region:'r'},{id:'b',title:'B',brand:'b',region:'r'}];
+const state:CenterState={schema:1,version:0,logs:[],roles:[role],employees:[{id:'e',name:'e',email:'e@x.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a','b']}}],overrides:{a:{[page]:'hidden'}}}]};
+assert.equal(resolveAccess(state,'e','a',page,stores,c.resources),'hidden');assert.equal(resolveAccess(state,'e','b',page,stores,c.resources),'read');
+delete role.grants[gate];assert.equal(value(page),'hidden','A default gate alone must not open an ungranted page');
+let audited=0;
+for(const target of c.resources.values())if(target.type==='page')for(const mode of ['role','staff','readonly','preview']){
+  const html=renderPermissionEditor({catalog:c,page:target.key,group:'',preview:mode==='preview',readonly:mode==='readonly',staff:mode==='staff',value:k=>roleAccess(role,k,c.resources),own:k=>mode==='staff'?'inherit':role.grants[k]??c.resources.get(k)?.defaultAccess??'hidden',parentInherited:k=>!!c.resources.get(k)?.inheritFrom&&role.grants[k]===undefined,search:''});
+  assert.doesNotMatch(html,/部分配置|需复核/,target.key);audited++;
+}
+const baseline=JSON.stringify(role.grants);delete role.grants[page];role.grants[gate]='edit';
+delete role.grants[items[0]];delete role.grants[items[1]];
+const persisted=structuredClone(state);persisted.employees[0].overrides.a={};
+persisted.roles[0]=role;
+persisted.employees[0].overrides.a[gate]='read';
+assert.equal(resolveAccess(persisted,'e','a',items[0],stores,c.resources),'read');
+assert.equal(resolveAccess(persisted,'e','b',items[0],stores,c.resources),'edit');
+assert(baseline);
+console.log('PASS all page/mode no-review render audit:',audited);
+console.log('PASS initial inheritance: missing legacy page, explicit gate, deny preservation, selected descendants, no review hints, render purity and store isolation');
