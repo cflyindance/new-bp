@@ -25,7 +25,7 @@ state.roles[0].grants[page]='hidden';assert.equal(value(key),'hidden');assert.eq
 const options={catalog,page,group:'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
 for(const variant of [{},{preview:true},{staff:true,readonly:true}]){
   const html=renderPermissionEditor({...options,...variant});
-  assert.match(html,/编辑分类/);assert.match(html,/编辑权限包含新增、删除、修改/);assert.match(html,/aria-describedby=/);assert.match(html,/role="tooltip"/);
+  assert.match(catalog.resources.get(key)!.help!,/编辑权限包含新增、删除、修改/);assert.doesNotMatch(html,/pc-help|aria-describedby=|role="tooltip"/);
   assert.doesNotMatch(html,/新增分类|删除分类/);
 }
 let saved=JSON.stringify(state);

@@ -53,11 +53,7 @@ return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title
   const mergedActions=new Set(unified.flatMap(r=>r.editKeys));
   const accessLabel=(r:Resource):string=>o.value(r.key)==='hidden'?'不可操作':o.value(r.key)==='edit'?'可操作':'仅查看';
   const isMenu=(r:Resource)=>r.type==='module'||r.type==='navigation'||r.type==='page';
-  const actionTitle=(r:Resource,helpOnly=false):string=>{
-    if(!r.help)return esc(r.title);
-    const id=`pc-help-${o.preview?'preview':o.readonly?'readonly':'editor'}-${encodeURIComponent(r.key)}`;
-    return `<span class="pc-action-name">${helpOnly?'':esc(r.title)}<span class="pc-help"><button type="button" class="pc-help-trigger" aria-label="${esc(r.title)}权限说明" aria-describedby="${esc(id)}">?</button><span class="pc-help-text" role="tooltip" id="${esc(id)}">${esc(r.help)}</span></span></span>`;
-  };
+  const actionTitle=(r:Resource):string=>esc(r.title);
   const isContent=(r:Resource)=>r.type==='content'||r.type==='field';
   const row=(r:Resource)=>`<tr${r.type==='field'?' class="pc-content-field"':''}><th scope="row">${r.type==='field'?`<small>敏感字段 · ${esc(catalog.resources.get(r.parent??'')?.title)}</small><br>`:''}${actionTitle(r)}</th><td>${o.preview ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-content-sample">${esc(r.previewValue??'内容示意')}</span>`:r.type==='action'?`<button type="button" data-demo >${esc(r.title)}</button>`:`<span class="pc-tag">${o.value(r.key)==='edit'?'可编辑':'只读'}</span>${o.value(r.key)==='edit'?'<button type="button" data-demo >编辑</button>':''}` : o.readonly ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-tag">${o.value(r.key)==='hidden'?'不可见':'可见'}</span>`:`<span class="pc-tag">${accessLabel(r)}</span>`:r.type==='page'&&r.pageContentKeys?`${menuStatus(r.key)} <button type="button" data-page="${esc(r.key)}">配置权限</button>`:control(r)}</td></tr>`;
   const ancestors:string[]=[];let parent=page?.parent;const seen=new Set<string>();
@@ -77,7 +73,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const choices:[Access|'inherit',string][]=a.mode==='visibility'?[['hidden','不可见'],['read','可见']]:[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']];if(o.staff)choices.unshift(['inherit','跟随角色']);
     const name=o.preview&&effective!=='edit'?esc(a.title):actionTitle({...content,title:a.title,help:a.help});
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':editBlocked&&(v==='edit'||a.mode==='visibility'&&v==='read')?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</div>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
-    return compact?`<div class="pc-page-authorization">${o.preview?`<span class="pc-tag">${label}</span>`:result}${o.preview&&effective!=='edit'?'':actionTitle({...content,title:`${page?.title??a.title}页面`,help:a.help},true)}</div>`:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
+    return compact?`<div class="pc-page-authorization">${o.preview?`<span class="pc-tag">${label}</span>`:result}</div>`:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
   const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&r.key!==policy?.row?.contentKey).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
   const sensitive=(r:Resource)=>o.page==='page:/team/payroll-report'&&r.type==='field';
