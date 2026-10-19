@@ -27,7 +27,7 @@ const html=renderPermissionEditor(o);
 assert(html.includes('<h2>可访问页面</h2>'));assert(html.includes('继承设置项'));assert(html.includes('已授权分类'));
 for(const name of ['未授权页面','未授权内容','未授权操作','未授权设置项','未授权分类'])assert(!html.includes(name),name);
 assert.doesNotMatch(html,/data-grant=|data-authorization=|data-category-grant=|data-demo/);
-assert.doesNotMatch(renderPermissionEditor({...o,page:'m'}),/data-submenu-visibility=/,'Readonly role directories cannot offer the merged visibility switch');
+assert.doesNotMatch(renderPermissionEditor({...o,page:'m'}),/data-submenu-mode=/,'Readonly role directories cannot offer the merged visibility switch');
 assert(html.includes('仅查看'));assert(html.includes('可操作'));assert(!html.includes('内容示意'));
 assert(!renderPermissionEditor({...o,search:'未授权页面'}).includes('data-page='));
 assert(renderPermissionEditor({...o,effectiveOnly:false,grantedOnly:false,readonly:false,page:'p'}).includes('未授权分类'));
@@ -45,7 +45,7 @@ for(const key of ['export-results','switch-employee','edit-employee']){
 const realBefore=JSON.stringify(all);
 for(const page of [...real.resources.values()].filter(r=>r.type==='page'&&realValue(r.key)!=='hidden')){
  const result=renderPermissionEditor({...o,catalog:real,page:page.key,value:realValue,own:key=>all.grants[key]??'inherit'});
- assert.doesNotMatch(result,/data-grant=|data-authorization=|data-category-grant=|data-demo|data-submenu-visibility=/,page.key);
+ assert.doesNotMatch(result,/data-grant=|data-authorization=|data-category-grant=|data-demo|data-submenu-mode=/,page.key);
 }
 assert.equal(JSON.stringify(all),realBefore);
 const tipPage='page:/team/tips/distribution';

@@ -8,6 +8,7 @@ import {settingCategoryGate} from './center-setting-levels';
 import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navigation';
 import {FOH_PERMISSION_PAGES} from './center-foh-pages';
 import {effectiveMenuView} from './center-effective-menu';
+import {pageMode} from './center-page-mode';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; grantedOnly?: boolean; emptyMessage?: string; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
@@ -80,8 +81,9 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const categories=groups.map(g=>{const section=g.section!==lastSection?`<h4>${esc(g.section)}</h4>`:'';lastSection=g.section;return `${section}<button type="button" data-group="${esc(g.id)}" class="${g.id===active?.id?'active':''}">${esc(g.title)}</button>`}).join('');
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
   const submenuRow=(r:Resource):string=>{
-    const hidden=o.value(r.key)==='hidden',blocked=o.value(o.page)==='hidden';
-    const buttons=o.readonly||o.preview?menuStatus(r.key):`<div class="pc-actions"><div class="pc-segment" role="group" aria-label="${esc(r.title)}查看权限">${(['hidden','read'] as const).map(v=>`<button type="button" data-submenu-visibility="${esc(r.key)}" data-value="${v}" aria-pressed="${hidden===(v==='hidden')}" ${blocked&&v==='read'?'disabled title="上级导航不可见，不能开启子导航"':''}>${v==='hidden'?'不可见':'可见'}</button>`).join('')}</div><button type="button" data-page="${esc(r.key)}">配置权限</button></div>`;
+    const mode=r.type==='page'?pageMode(catalog,r.key,o.value):o.value(r.key),blocked=o.value(o.page)==='hidden';
+    const choices:[string,string][]=r.type==='page'?[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']]:[['hidden','不可见'],['read','可见']];
+    const buttons=o.readonly||o.preview?`<span class="pc-tag">${esc(choices.find(([v])=>v===mode)?.[1]??'不可见')}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(r.title)}权限">${choices.map(([v,label])=>`<button type="button" data-submenu-mode="${esc(r.key)}" data-value="${v}" aria-pressed="${mode===v}" ${blocked&&v!=='hidden'?'disabled title="上级导航不可见，不能开启子导航"':''}>${label}</button>`).join('')}</div>`;
     return `<tr><th scope="row">${esc(r.title)}</th><td>${buttons}</td></tr>`;
   };
   const unifiedRow=(a:AuthorizationRow,compact=false):string=>{
@@ -123,7 +125,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const settingsLayout=flatStorePage
     ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${authorizationSection}${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
     : `<div class="pc-settings"><nav class="pc-categories" data-scroll="categories" tabindex="0" aria-label="${pageSections?esc(page?.title)+'分类':'设置分类'}">${categories}</nav><div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${categoryControls}${categoryBody}</div></div>`;
-  const headerControls=buffetPage&&policy?.row?unifiedRow(policy.row,true):page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag">${o.value(page.settingPageGate)==='hidden'?'不可见':o.value(page.settingPageGate)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
+  const headerControls=page&&(page.type==='module'||page.type==='navigation')?(o.preview||o.readonly?menuStatus(o.page):control(page)):buffetPage&&policy?.row?unifiedRow(policy.row,true):page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag" data-menu-access="${o.value(o.page)}">${pageMode(catalog,o.page,o.value)==='hidden'?'不可见':pageMode(catalog,o.page,o.value)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
     ? policy.row?unifiedRow(policy.row,true):!o.preview&&!o.readonly?control(policy.setting!):`<span class="pc-tag">${o.value(policy.setting!.key)==='hidden'?'不可见':o.value(policy.setting!.key)==='edit'?'可编辑':'可见不可编辑'}</span>`
     : page?.type!=='page'||policy?.kind==='complex'||o.preview||o.readonly?menuStatus(o.page):page?control(page):'';
   let blockedAncestor:Resource|undefined,ancestorKey=page?.parent;const checkedAncestors=new Set<string>();

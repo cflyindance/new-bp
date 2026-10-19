@@ -81,6 +81,8 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   const finish=(value:Access):Access=>capAccess(resource,(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
   if(resource.inheritFrom&&resource.parentChoiceKey&&employee.overrides[storeId]?.[resource.parentChoiceKey]==='read')return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   if (override !== undefined) return finish(validAccess(resource,override));
+  // Supplemental ceilings are neutral until explicitly configured, including legacy standalone personal grants.
+  if(resource.key.startsWith('page-mode:')&&raw(key)===undefined)return finish(resource.defaultAccess??'edit');
   const personalPage=pageGrantFallback(resource,k=>employee.overrides[storeId]?.[k]);
   if(personalPage)return finish(personalPage);
   if(resource.inheritFrom&&raw(key)===undefined)return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));

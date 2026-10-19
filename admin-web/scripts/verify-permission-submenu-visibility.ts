@@ -9,9 +9,9 @@ const role:Role={id:'r',name:'测试',description:'',system:false,grants:{}};
 function allowParents(key:string):void{let p=c.resources.get(key)?.parent;while(p){const r=c.resources.get(p)!;role.grants[p]='read';if(r.legacyGateKey)role.grants[r.legacyGateKey]='read';p=r.parent;}}
 allowParents(employee);const value=(key:string)=>roleAccess(role,key,c.resources);
 const options={catalog:c,page:parent,group:'',preview:false,readonly:false,staff:false,value,own:(key:string)=>role.grants[key]??'hidden' as const,search:''};
-const html=renderPermissionEditor(options);assert(html.includes(`data-submenu-visibility="${employee}"`));assert(html.includes('配置权限'));
-assert(!renderPermissionEditor({...options,readonly:true}).includes('data-submenu-visibility='));
-assert(!renderPermissionEditor({...options,preview:true}).includes('data-submenu-visibility='));
+const html=renderPermissionEditor(options);assert(html.includes(`data-submenu-mode="${employee}"`));assert(!html.includes('配置权限'));
+assert(!renderPermissionEditor({...options,readonly:true}).includes('data-submenu-mode='));
+assert(!renderPermissionEditor({...options,preview:true}).includes('data-submenu-mode='));
 assert(applySubmenuVisibility(c,role,parent,employee,'read'));assert.equal(value(employee),'read');assert.equal(value(position),'hidden');
 const actions=[...c.resources.values()].filter(r=>r.type==='action'&&r.parent===employee);
 for(const r of actions)assert.notEqual(value(r.key),'edit','Visible must not grant actions');
@@ -39,5 +39,5 @@ for(const page of c.resources.values())if(page.type==='page'&&page.parent&&!page
  try{applySubmenuVisibility(c,r,page.parent,page.key,'read');assert.notEqual(roleAccess(r,page.key,c.resources),'hidden',page.key);assert(!Object.values(r.grants).includes('edit'));shown++;}
  catch(e){assert.equal(JSON.stringify(r),before,page.key);assert.match((e as Error).message,/限制|上级|子导航/);limited++;}
 }
-const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('applySubmenuVisibility(catalog,role()!,page'));assert(ui.includes('b.dataset.submenuVisibility'));
+const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('applySubmenuMode(catalog,role()!,page'));assert(ui.includes('b.dataset.submenuMode'));
 console.log('PASS submenu visibility: row controls, readonly isolation, restore/read defaults, no edit grants, sibling/ancestor safety and atomicity',{shown,limited});
