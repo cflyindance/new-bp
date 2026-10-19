@@ -11,7 +11,7 @@ const grants:Record<string,Access>={};for(const r of c.resources.values())if(['m
 const role={id:'r',name:'测试',description:'',system:false,grants},value=(key:string)=>roleAccess(role,key,c.resources),gate=c.resources.get(p.settingPageGate!)!;
 applyPageResourceGrant(c,page,grants,gate,'read');assert.equal(value(cat.key),'read');assert.equal(value(item.key),'read');
 let html=renderPermissionEditor({catalog:c,page,group:groups[0].id,preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',parentInherited:k=>grants[k]===undefined||grants[c.resources.get(k)?.parentChoiceKey??'']==='read',search:''});
-assert.match(html,/继承父级/);assert.match(html,/恢复继承/);assert(html.includes(`data-grant="${item.key}" data-value="read" aria-pressed="true"`));
+assert.doesNotMatch(html,/继承父级|恢复继承|data-setting-parent/);assert(html.includes(`data-grant="${item.key}" data-value="read" aria-pressed="true"`));
 assert(html.includes(`data-grant="${item.key}" data-value="edit" aria-pressed="false" disabled`));
 applyPageResourceGrant(c,page,grants,item,'hidden');applyPageResourceGrant(c,page,grants,gate,'edit');assert.equal(value(item.key),'hidden');assert.equal(value(other.key),'edit');
 applyPageResourceGrant(c,page,grants,cat,'read');assert.equal(value(other.key),'read');assert.equal(grants[other.key],undefined);
