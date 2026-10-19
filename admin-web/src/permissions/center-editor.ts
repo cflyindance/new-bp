@@ -6,7 +6,7 @@ import { resourceOwn } from './center-employee-pages';
 import {pagePolicy} from './center-page-policy';
 import {settingCategoryGate} from './center-setting-levels';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; search: string }
+export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
   const {catalog}=o;
   const menuNodes=new Map<string,MenuNode>();
@@ -29,7 +29,8 @@ export function renderPermissionEditor(o: EditorOptions): string {
     if(resource.type==='setting')vals[0][1]='不可见';
     if(['module','navigation','page'].includes(resource.type)){vals[0][1]='不可见';vals[1][1]='可见';}
     if(o.staff) vals.unshift(['inherit','跟随角色']);
-    const ownSelection=resource.defaultAccess&&o.own(resource.key)==='hidden'&&o.value(resource.key)!=='hidden'?o.value(resource.key):resourceOwn(resource,o.own);
+    const parentInherited=!!resource.inheritFrom&&!!o.parentInherited?.(resource.key);
+    const ownSelection=parentInherited?o.value(resource.inheritFrom!):resource.defaultAccess&&o.own(resource.key)==='hidden'&&o.value(resource.key)!=='hidden'?o.value(resource.key):resourceOwn(resource,o.own);
     const selection=resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys&&o.own(o.page)==='hidden'&&!['hidden','inherit'].includes(ownSelection)?'mixed':ownSelection;
     const parentBlocked=!!resource.parent && (resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys?!!catalog.resources.get(o.page)?.parent&&o.value(catalog.resources.get(o.page)!.parent!)==='hidden':o.value(resource.parent)==='hidden');
     const contentBlocked=resource.requires?.some(k=>o.value(k)==='hidden');
@@ -37,7 +38,7 @@ export function renderPermissionEditor(o: EditorOptions): string {
     const editBlocked=resource.ceilingKeys?.some(k=>o.value(k)!=='edit');
     const tag=compact?'span':'div';
     const reason=parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
-return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?`disabled title="${reason}"`:v==='edit'&&editBlocked?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</${tag}>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}${selection==='edit'&&editBlocked?'<small class="pc-muted">原可编辑配置已保留，当前受上级权限限制。</small>':''}`;
+return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?`disabled title="${reason}"`:v==='edit'&&editBlocked?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</${tag}>${resource.inheritFrom?`<small class="pc-muted">${parentInherited?'继承父级':o.staff&&o.own(resource.key)==='inherit'?'跟随角色':'单独配置'}</small><button type="button" data-setting-parent="${esc(resource.key)}" ${blocked?'disabled':''}>恢复继承</button>`:''}${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}${selection==='edit'&&editBlocked?'<small class="pc-muted">原可编辑配置已保留，当前受上级权限限制。</small>':''}`;
   }
   const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
   const policy=page?.type==='page'?pagePolicy(catalog,o.page):undefined;

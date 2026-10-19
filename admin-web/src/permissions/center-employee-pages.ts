@@ -22,6 +22,7 @@ export function registerEmployeePages(tree:MenuNode[],resources:Map<string,Resou
 }
 /** An explicit parent decision edits both gates; inheritance removes both exceptions. */
 export function applyResourceGrant(grants:Record<string,Access>,resource:Resource,value:Access|'inherit'):void {
+  if(resource.parentChoiceKey)delete grants[resource.parentChoiceKey];
   for(const key of [resource.key,...(resource.relatedGrantKeys??[]),...(resource.legacyGateKey?[resource.legacyGateKey]:[])])
     if(value==='inherit')delete grants[key];else grants[key]=value;
 }
