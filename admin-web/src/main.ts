@@ -1,4 +1,5 @@
 import { settingsCategoryItems, settingsCategoryViewGroups } from "./config/settings-category-model";
+import {hasModuleSettingsCategorySidebar} from './config/settings-category-navigation';
 import { renderSettingsCategoryLayout, bindSettingsCategoryLayouts } from "./config/settings-category-layout";
 import { orderPresetSeq, orderCenterLegacyRedirect } from "./config/order-center-navigation";
 import { flattenMemberNavigation } from "./config/member-center-navigation";
@@ -5967,8 +5968,7 @@ function renderModuleSettingsSubnavList(
 }
 
 function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
-  if (orderPresetSeq(path)) return "";
-  if (isStoreInformationPage(path) && !path.startsWith("/stores/settings")) return "";
+  if (!hasModuleSettingsCategorySidebar(path)) return "";
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog || catalog.items.length === 0) return "";
   const groups = buildModuleSettingsGroupsForPreset(catalog);

@@ -1,7 +1,7 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
 export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean; relatedGrantKeys?:string[]; followParentVisibility?:boolean }
-export interface Resource {pageContentKeys?:string[];settingPageGate?:string;ceilingKeys?:string[];defaultAccess?:Access;inheritFrom?:string;parentChoiceKey?:string}
+export interface Resource {pageContentKeys?:string[];settingPageGate?:string;ceilingKeys?:string[];defaultAccess?:Access;inheritFrom?:string;parentChoiceKey?:string;aggregateRelatedGrants?:boolean}
 /** Raw inheritance is acyclic and deliberately does not traverse the business page. */
 export function configuredAccess(resource:Resource,resources:Map<string,Resource>,own:(key:string)=>Access|undefined,seen=new Set<string>()):Access|undefined {
   if(seen.has(resource.key))return 'hidden';seen.add(resource.key);

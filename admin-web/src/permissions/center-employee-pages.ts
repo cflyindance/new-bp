@@ -28,6 +28,12 @@ export function applyResourceGrant(grants:Record<string,Access>,resource:Resourc
 }
 export function resourceOwn(resource:Resource,own:(key:string)=>Access|'inherit'):Access|'inherit'|'mixed' {
   const value=own(resource.key);
+  if(resource.aggregateRelatedGrants){
+    const values=[value,...(resource.relatedGrantKeys??[]).map(own)];
+    if(values.every(v=>v==='inherit'))return 'inherit';
+    if(values.some(v=>v==='inherit'))return 'mixed';
+    return values.includes('hidden')?'hidden':values.includes('read')?'read':'edit';
+  }
   if(resource.relatedGrantKeys?.some(key=>own(key)!==value))return 'mixed';
   if(!resource.legacyGateKey)return value;
   const legacy=own(resource.legacyGateKey);

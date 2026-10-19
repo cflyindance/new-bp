@@ -5,6 +5,7 @@ import { authorizationRows, authorizationSelection, type AuthorizationRow } from
 import { resourceOwn } from './center-employee-pages';
 import {pagePolicy,pageFeatureBlocked} from './center-page-policy';
 import {settingCategoryGate} from './center-setting-levels';
+import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navigation';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
@@ -85,7 +86,8 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
-  const flatStorePage=!page?.settingPageGate&&['/stores/profile','/stores/hours','/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/shift-scheduling/rules'].includes(page?.path??'');
+  const standalonePage=!!page?.path&&!hasModuleSettingsCategorySidebar(page.path);
+  const flatStorePage=standalonePage||!page?.settingPageGate&&['/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/shift-scheduling/rules'].includes(page?.path??'');
   const flatKeys=[...new Set(groups.flatMap(g=>g.keys))].filter(k=>!o.preview||o.value(k)!=='hidden');
   const categoryKeys=active?categorySettingKeys(catalog,o.page,active.id):[];
   const categorySelection=categoryGrantValue(catalog,categoryKeys,o.own);
@@ -95,7 +97,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const categoryGate=active&&page?.settingPageGate?catalog.resources.get(settingCategoryGate(o.page,active.id)):undefined;
   const categoryControls=categoryGate?`<div class="pc-category-controls"><p class="pc-muted">本分类权限上限</p>${o.preview||o.readonly?`<span class="pc-tag">${o.value(categoryGate.key)==='hidden'?'不可见':o.value(categoryGate.key)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(categoryGate)}</div>`:categoryKeys.length&&!o.preview&&!o.readonly?`<div class="pc-category-controls"><p class="pc-muted">批量设置本分类</p><div class="pc-segment" role="group" aria-label="${esc(active!.title)}分类权限">${categoryChoices.map(([v,l])=>`<button type="button" data-category-grant="${esc(active!.id)}" data-value="${v}" aria-pressed="${categorySelection===v}" ${categoryBlocked?'disabled title="上级页面不可查看"':''}>${l}</button>`).join('')}</div>${categorySelection==='mixed'?'<small class="pc-muted">部分配置，逐项权限见下方</small>':''}</div>`:'';
   const settingsLayout=flatStorePage
-    ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
+    ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${authorizationSection}${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
     : `<div class="pc-settings"><nav class="pc-categories" data-scroll="categories" tabindex="0" aria-label="${pageSections?esc(page?.title)+'分类':'设置分类'}">${categories}</nav><div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${categoryControls}${categoryBody}</div></div>`;
   const headerControls=page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag">${o.value(page.settingPageGate)==='hidden'?'不可见':o.value(page.settingPageGate)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
     ? policy.row?unifiedRow(policy.row,true):!o.preview&&!o.readonly?control(policy.setting!):`<span class="pc-tag">${o.value(policy.setting!.key)==='hidden'?'不可见':o.value(policy.setting!.key)==='edit'?'可编辑':'可见不可编辑'}</span>`
