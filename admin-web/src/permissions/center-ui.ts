@@ -4,6 +4,7 @@ import { buildCenterCatalog, type Catalog } from './center-catalog';
 import { esc, renderPermissionEditor } from './center-editor';
 import {effectiveMenuView} from './center-effective-menu';
 import {rolePageRoute} from './center-role-route';
+import {applySubmenuVisibility} from './center-submenu-visibility';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
@@ -139,7 +140,8 @@ export function bindCenterPage(): void {
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
       if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
-      if(employeeId&&(b.dataset.authorization||b.dataset.categoryGrant||b.dataset.grant))return;
+      if(employeeId&&(b.dataset.authorization||b.dataset.categoryGrant||b.dataset.grant||b.dataset.submenuVisibility))return;
+      if(b.dataset.submenuVisibility){ev.preventDefault();if(!role())return;const v=b.dataset.value;if(v!=='hidden'&&v!=='read')throw Error('子导航状态无效');if(applySubmenuVisibility(catalog,role()!,page,b.dataset.submenuVisibility,v)){mark();render();}return;}
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
