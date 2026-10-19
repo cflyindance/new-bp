@@ -10,7 +10,7 @@ const grants:any={};let cursor:string|undefined=path;while(cursor){grants[cursor
 const original:CenterState={schema:1,navigationVersion:1,version:4,logs:[],roles:[{id:'r',name:'角色',description:'',system:false,grants}],employees:[{id:'e',name:'员工',email:'e@example.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a']}}],overrides:{a:{[path]:'hidden'},b:{[path]:'read'},retired:{[page]:'edit'}}}]};
 const ui=readFileSync('src/permissions/center-ui.ts','utf8');
 assert(!ui.includes('设置个人例外'),'Employee UI must not offer personal exception editing');
-assert(!ui.includes('<th>个人例外</th>'));assert(!ui.includes("case 'exception':"));assert(ui.includes('readonly:!!employeeId,staff:false'));
+assert(!ui.includes('<th>个人例外</th>'));assert(!ui.includes("case 'exception':"));assert(ui.includes('readonly:!!employeeId||roleView,staff:false'));
 assert(!ui.includes('.overrides['));
 const {migrateRoleOnlyState}=await import('../src/permissions/center-role-only');
 const data=new Map([[key,JSON.stringify(original)]]),writes:string[]=[];

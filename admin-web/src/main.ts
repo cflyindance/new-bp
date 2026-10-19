@@ -3601,6 +3601,9 @@ function findTitle(path: string): { title: string; module?: string } {
     const name = id ? `编辑角色 · ${id}` : "编辑角色";
     return { title: name, module: "权限管理中心" };
   }
+  if (path.startsWith("/permissions/roles/view/")) {
+    return { title: "查看角色权限", module: "权限管理中心" };
+  }
   if (path.startsWith("/gift-cards")) {
     const giftMod = NAV_MODULES.find((x) => x.id === "gift-cards")!;
     const sortedGc = [...GIFT_CARDS_SHEET_SUBNAV].sort((a, b) => b.path.length - a.path.length);
