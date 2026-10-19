@@ -69,6 +69,15 @@ for(const readonly of [false,true]) {
   assert.doesNotMatch(editor,/门店档案、营业时间与设置/);
 }
 const profileGroups=center.groups.get('page:/stores/profile')!;
+for(const path of ['/stores/profile','/stores/hours','/stores/settings'])for(const preview of [false,true])for(const readonly of [false,true]) {
+  const html=renderPermissionEditor({catalog:center,page:`page:${path}`,group:'obsolete-group',preview,readonly,staff:true,value:()=> 'read',own:()=> 'read',search:''});
+  assert.doesNotMatch(html,/<nav class="pc-categories"/,'Store pages must not show redundant category sidebar');
+  assert.match(html,/data-scroll="settings"/);
+  assert.match(html,/功能设置项/);
+  for(const key of center.groups.get(`page:${path}`)!.flatMap(g=>g.keys))assert(html.includes(center.resources.get(key)!.title));
+}
+const foh=renderPermissionEditor({catalog:center,page:'page:/operations/queue-call/settings',group:'',preview:false,readonly:false,staff:false,value:()=> 'read',own:()=> 'read',search:''});
+assert.match(foh,/<nav class="pc-categories"/,'Other multi-category pages retain navigation');
 assert.equal(profileGroups.length,1);
 assert.equal(profileGroups[0].title,'门店档案');
 assert.deepEqual(profileGroups[0].keys,['setting:/stores/settings:417']);
