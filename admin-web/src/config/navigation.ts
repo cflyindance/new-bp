@@ -670,14 +670,8 @@ export const NAV_MODULES: NavModule[] = [
     icon: "permissionMgmt",
     path: "/permissions",
     subNavPlacement: "sheet",
-    defaultChildPath: "/permissions/overview",
+    defaultChildPath: "/permissions/roles",
     children: [
-      {
-        id: "perm-overview",
-        title: "权限总览",
-        titleEn: "Overview",
-        path: "/permissions/overview",
-      },
       {
         id: "perm-roles",
         title: "角色与功能权限",
