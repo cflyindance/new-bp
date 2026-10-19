@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "rootCauseStatus": "confirmed",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": [
+    "src/permissions/center-ui.ts: editor / value"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/permissions/center-ui.ts",
+      "to": "src/permissions/center-domain.ts",
+      "evidence": "value calls roleAccess or resolveAccess"
+    },
+    {
+      "from": "src/permissions/center-domain.ts",
+      "to": "src/permissions/center-editor.ts",
+      "evidence": "value and own split caused mixed selection; missing legacy page denied despite explicit gate"
+    }
+  ],
+  "sharedCallers": [
+    "src/permissions/center-ui.ts",
+    "src/permissions/center-editor.ts"
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "clean",
+    "evidence": "Independent worktree from verified main@507616a1; original dirty checkout untouched"
+  },
+  "references": [
+    {
+      "path": "src/permissions/center-domain.ts",
+      "symbol": "roleAccess/resolveAccess",
+      "relation": "definition",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/center-editor.ts",
+      "symbol": "control/unifiedRow",
+      "relation": "consumer",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/center-ui.ts",
+      "symbol": "editor/value",
+      "relation": "direct_caller",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/center-setting-levels.ts",
+      "symbol": "assertSettingChoice",
+      "relation": "definition",
+      "impact": "affected"
+    },
+    {
+      "path": "scripts/verify-permission-inheritance-active.ts",
+      "symbol": "initial inheritance",
+      "relation": "test",
+      "impact": "affected"
+    }
+  ],
+  "deepReadPaths": [
+    "src/permissions/center-domain.ts",
+    "src/permissions/center-editor.ts",
+    "src/permissions/center-ui.ts",
+    "src/permissions/center-setting-levels.ts",
+    "scripts/verify-permission-inheritance-active.ts"
+  ],
+  "expansions": [
+    {
+      "question": "Do hidden-page descendants still accept a read choice?",
+      "trigger": "shared_contract",
+      "addedPaths": [
+        "src/permissions/center-setting-levels.ts"
+      ],
+      "expectedEvidence": "setting-page ceiling guard rejects local visible choices"
+    }
+  ]
+}

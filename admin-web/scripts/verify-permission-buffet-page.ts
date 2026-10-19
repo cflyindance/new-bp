@@ -28,7 +28,7 @@ applyPageAuthorization(c,page,state.employees[0].overrides.a,row,'read');
 for(const key of row.editKeys){assert.equal(resolveAccess(state,'e','a',key,stores,c.resources),'hidden');assert.equal(resolveAccess(state,'e','b',key,stores,c.resources),'edit');}
 applyPageAuthorization(c,page,state.employees[0].overrides.a,row,'inherit');assert.equal(Object.keys(state.employees[0].overrides.a).length,0);
 const gate=c.resources.get(page)!.settingPageGate!;role.grants[gate]='read';
-assert(renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own,search:''}).includes('部分配置，需复核'));
+assert(!renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own,search:''}).includes('部分配置，需复核'));
 applyPageAuthorization(c,page,role.grants,row,'edit');
 role.grants[row.editKeys[1]]='hidden';assert.equal(authorizationSelection(row,own),'mixed');
 const parent=c.resources.get(page)!.parent!;role.grants[parent]='hidden';for(const key of row.editKeys)assert.equal(value(key),'hidden');

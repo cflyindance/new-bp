@@ -34,6 +34,11 @@ function validAccess(resource:Resource,value:Access|undefined):Access {
   if(resource.type==='setting')return value==='read'||value==='edit'?value:'hidden';
   return resource.type==='action' ? value==='edit'?'edit':'hidden' : value==='read'?'read':'hidden';
 }
+/** An explicit page-level grant can replace only an absent legacy page key, never an explicit denial. */
+function pageGrantFallback(resource:Resource,own:(key:string)=>Access|undefined):Access|undefined {
+  const gate=resource.type==='page'&&resource.settingPageGate?own(resource.settingPageGate):undefined;
+  return gate==='read'||gate==='edit'?'read':undefined;
+}
 export function scopeMatches(scope: Scope, store: Store): boolean {
   return scope.ids.includes(scope.mode === "stores" ? store.id : scope.mode === "brands" ? store.brand : store.region);
 }
@@ -46,7 +51,7 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
   if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>role.grants[k]))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
-  const values=[validAccess(resource,configuredAccess(resource,resources,k=>role.grants[k])),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
+  const values=[validAccess(resource,configuredAccess(resource,resources,k=>role.grants[k])??pageGrantFallback(resource,k=>role.grants[k])),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
   return capAccess(resource,values.reduce((a,b)=>rank[a]<rank[b]?a:b),k=>roleAccess(role,k,resources,new Set(seen)));
 }
 export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
@@ -74,13 +79,15 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   const finish=(value:Access):Access=>capAccess(resource,(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
   if(resource.inheritFrom&&resource.parentChoiceKey&&employee.overrides[storeId]?.[resource.parentChoiceKey]==='read')return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   if (override !== undefined) return finish(validAccess(resource,override));
+  const personalPage=pageGrantFallback(resource,k=>employee.overrides[storeId]?.[k]);
+  if(personalPage)return finish(personalPage);
   if(resource.inheritFrom&&raw(key)===undefined)return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   let value: Access = "hidden";
   for (const binding of employee.bindings) {
     if (!scopeMatches(binding.scope, store)) continue;
     const role = state.roles.find(r => r.id === binding.roleId);
     // Union applicable roles first. Ancestor gates use the same effective union above.
-    const inherited=resource.inheritFrom?resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)):resource.defaultAccess;
+    const inherited=resource.inheritFrom?resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)):resource.defaultAccess??(role?pageGrantFallback(resource,k=>role.grants[k]):undefined);
     const grant = validAccess(resource,role?(resource.parentChoiceKey&&role.grants[resource.parentChoiceKey]==='read'?undefined:role.grants[key])??inherited:undefined);
     if (rank[grant] > rank[value]) value = grant;
   }

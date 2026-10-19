@@ -15,7 +15,7 @@ applyPageResourceGrant(c,page,grants,c.resources.get(gate)!,'read');assert.equal
 assert.throws(()=>assertSettingChoice(c,item,'edit',value),/上级权限限制/);
 const html=renderPermissionEditor({catalog:c,page,group:group.id,preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});
 assert.match(html,/<nav class="pc-categories"/);assert(html.split('</header>')[0].includes(`data-grant="${gate}"`));
-for(const key of [category,item.key])assert(html.includes(`data-grant="${key}" data-value="edit" aria-pressed="${grants[key]==='edit'}" disabled`));
+for(const key of [category,item.key]){assert(html.includes(`data-grant="${key}" data-value="edit" aria-pressed="false" disabled`));assert(html.includes(`data-grant="${key}" data-value="read" aria-pressed="true"`));}
 applyPageResourceGrant(c,page,grants,c.resources.get(gate)!,'edit');assert.equal(value(item.key),'edit');
 applyPageResourceGrant(c,page,grants,c.resources.get(category)!,'read');assert.equal(value(item.key),'read');
 const sibling=settingCategoryGate(page,groups[1].id);assert.equal(value(sibling),'edit');

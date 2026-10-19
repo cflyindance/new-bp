@@ -13,7 +13,7 @@ const role={id:'r',name:'r',description:'',system:false,grants},value=(k:string)
 applyAuthorization(grants,row,'edit');for(const key of row.editKeys)assert.equal(value(key),'edit');
 grants[row.editKeys[1]]='hidden';assert.equal(authorizationSelection(row,k=>grants[k]??'hidden'),'mixed');
 const html=renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});
-assert.match(html,/部分配置，需复核/);
+assert.doesNotMatch(html,/部分配置|需复核/);
 for(const key of row.editKeys)assert(!html.includes(`data-grant="${key}"`));
 applyAuthorization(grants,row,'read');for(const key of row.editKeys)assert.equal(value(key),'hidden');
 assert.equal(value(row.contentKey),'read');

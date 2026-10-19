@@ -15,7 +15,7 @@ const {applyPageAuthorization}=await import('../src/permissions/center-page-poli
 applyPageAuthorization(c,page,grants,row,'edit');assert.equal(value(page),'read');for(const k of row.editKeys)assert.equal(value(k),'edit');
 applyPageAuthorization(c,page,grants,row,'hidden');assert.equal(value(page),'hidden');
 grants[page]='hidden';grants[row.contentKey]='read';
-html=renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});assert.match(html,/需复核/);
+html=renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});assert.doesNotMatch(html,/部分配置|需复核/);
 applyPageAuthorization(c,page,grants,row,'read');assert.equal(value(page),'read');
 grants[c.resources.get(page)!.parent!]='hidden';
 html=renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});assert.match(html,/上级.*不可见/);assert.match(html,/配置已保留/);
