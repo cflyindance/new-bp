@@ -26,5 +26,5 @@ assert.equal(c.resources.get(pageKey(path))!.compatibilityOnly,true);
 assert.equal(authorizationRows(c,pageKey(`${path}/shifts`)).length,1);
 const rule=c.resources.get(`setting:${path}:74`)!;assert.equal(rule.parent,pageKey(`${path}/rules`));
 const ruleHtml=renderPermissionEditor({catalog:c,page:rule.parent!,group:'',preview:false,readonly:false,staff:false,value:()=> 'read',own:()=> 'read',search:''});
-assert.match(ruleHtml,/可见不可编辑/);assert.match(ruleHtml,/可编辑/);assert.doesNotMatch(ruleHtml,/<nav class="pc-categories"/);
+assert.match(ruleHtml,/可见不可编辑/);assert.match(ruleHtml,/可编辑/);assert.match(ruleHtml,/<nav class="pc-categories"/,'Settings retain their category even for a single item');
 console.log('PASS schedule unified authorization: all table edits, mixed review, readonly/hidden/inherit, no separate action controls; shift grants untouched');

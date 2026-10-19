@@ -26,7 +26,7 @@ export function registerPagePolicies(c:Catalog):void {
 }
 /** Explicit decisions repair the hidden legacy page gate; never open an ancestor. */
 export function syncPageGrant(c:Catalog,page:string,target:Record<string,Access>,keys:string[],value:Access|'inherit'):void {
-  const resource=c.resources.get(page);if(!resource?.pageContentKeys?.some(k=>keys.includes(k)))return;
+  const resource=c.resources.get(page);if(!resource?.pageContentKeys?.some(k=>keys.includes(k))&&!keys.includes(resource?.settingPageGate??''))return;
   if(value==='inherit')delete target[page];else target[page]='read';
 }
 export function applyPageAuthorization(c:Catalog,page:string,target:Record<string,Access>,row:AuthorizationRow,value:Access|'inherit'):void {

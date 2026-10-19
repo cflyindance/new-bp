@@ -43,7 +43,7 @@ export function bindCenterPage(): void {
   const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
-    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId&&!exception,staff:!!employeeId,value,own:key=>employeeId?(employee()?.overrides[storeId]?.[key]??'inherit'):(role()?.grants[key]??'hidden'),search});
+    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId&&!exception,staff:!!employeeId,value,own:key=>employeeId?(employee()?.overrides[storeId]?.[key]??'inherit'):(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),search});
   }
   function logs(objectId?:string):string {
     const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}`.includes(query)));
@@ -133,9 +133,9 @@ export function bindCenterPage(): void {
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
-      if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyPageAuthorization(catalog,page,employee()!.overrides[storeId]??={},row,v);}else if(role()&&v!=='inherit')applyPageAuthorization(catalog,page,role()!.grants,row,v);else return;mark();render();return;}
+      if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';if(v==='edit'||row.mode==='visibility'&&v==='read')for(const key of [row.contentKey,...row.editKeys])assertSettingChoice(catalog,catalog.resources.get(key)!,'edit',value);if(employeeId){if(!exception||!employee())return;applyPageAuthorization(catalog,page,employee()!.overrides[storeId]??={},row,v);}else if(role()&&v!=='inherit')applyPageAuthorization(catalog,page,role()!.grants,row,v);else return;mark();render();return;}
       if(b.dataset.categoryGrant){ev.preventDefault();const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyCategoryGrant(catalog,page,b.dataset.categoryGrant,employee()!.overrides[storeId]??={},v);}else if(role()&&v!=='inherit')applyCategoryGrant(catalog,page,b.dataset.categoryGrant,role()!.grants,v);else return;mark();render();return;}
-      if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};applyPageResourceGrant(catalog,page,overrides,catalog.resources.get(key)!,v);}else if(role()&&v!=='inherit')applyPageResourceGrant(catalog,page,role()!.grants,catalog.resources.get(key)!,v);mark();render();return;}
+      if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';assertSettingChoice(catalog,catalog.resources.get(key)!,v,value);if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};applyPageResourceGrant(catalog,page,overrides,catalog.resources.get(key)!,v);}else if(role()&&v!=='inherit')applyPageResourceGrant(catalog,page,role()!.grants,catalog.resources.get(key)!,v);mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
       if(b.dataset.members){modal('角色成员',state.employees.filter(e=>e.bindings.some(x=>x.roleId===b.dataset.members)).map(e=>`<p>${link(esc(e.name),`/permissions/staff/${encodeURIComponent(e.id)}`)}</p>`).join('')||'<p>暂无成员</p>',()=>true,'关闭');return;}
@@ -170,3 +170,4 @@ export function bindCenterPage(): void {
   render();
   if(path==='/permissions/roles/new')roleDialog();
 }
+import {assertSettingChoice} from './center-setting-levels';

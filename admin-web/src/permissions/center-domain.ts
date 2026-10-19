@@ -1,11 +1,15 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
 export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean; relatedGrantKeys?:string[]; followParentVisibility?:boolean }
-export interface Resource {pageContentKeys?:string[]}
+export interface Resource {pageContentKeys?:string[];settingPageGate?:string;ceilingKeys?:string[];defaultAccess?:Access}
+function capAccess(resource:Resource,value:Access,read:(key:string)=>Access):Access {
+  for(const key of resource.ceilingKeys??[]){const cap=read(key);if(rank[cap]<rank[value])value=cap;}
+  return resource.type==='action'&&value!=='edit'?'hidden':value;
+}
 function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:string)=>Access|undefined):boolean {
   return resource.pageContentKeys!.some(key=>{
     const r=resources.get(key);if(!r)return false;
-    const visible=(r:Resource)=>r.type==='setting'?own(r.key)==='read'||own(r.key)==='edit':own(r.key)==='read';
+    const visible=(r:Resource)=>(r.type==='setting'?own(r.key)==='read'||own(r.key)==='edit':own(r.key)==='read')&&!(r.ceilingKeys??[]).some(k=>(own(k)??resources.get(k)?.defaultAccess??'hidden')==='hidden');
     return visible(r)&&(r.relatedGrantKeys??[]).every(k=>{const related=resources.get(k);return !!related&&visible(related);});
   });
 }
@@ -33,8 +37,8 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
   if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>role.grants[k]))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
-  const values=[validAccess(resource,role.grants[key]),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
-  return values.reduce((a,b)=>rank[a]<rank[b]?a:b);
+  const values=[validAccess(resource,role.grants[key]??resource.defaultAccess),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
+  return capAccess(resource,values.reduce((a,b)=>rank[a]<rank[b]?a:b),k=>roleAccess(role,k,resources,new Set(seen)));
 }
 export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
   const employee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
@@ -46,19 +50,19 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>{
     const override=employee.overrides[storeId]?.[k];if(override!==undefined)return override;
     let value:Access='hidden';for(const binding of employee.bindings)if(scopeMatches(binding.scope,store)){
-      const v=state.roles.find(r=>r.id===binding.roleId)?.grants[k]??'hidden';if(rank[v]>rank[value])value=v;
+      const v=state.roles.find(r=>r.id===binding.roleId)?.grants[k]??resources.get(k)?.defaultAccess??'hidden';if(rank[v]>rank[value])value=v;
     }return value;
   }))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
   const override = employee.overrides[storeId]?.[key];
-  const finish=(value:Access):Access=>(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value);
+  const finish=(value:Access):Access=>capAccess(resource,(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
   if (override !== undefined) return finish(validAccess(resource,override));
   let value: Access = "hidden";
   for (const binding of employee.bindings) {
     if (!scopeMatches(binding.scope, store)) continue;
     const role = state.roles.find(r => r.id === binding.roleId);
     // Union applicable roles first. Ancestor gates use the same effective union above.
-    const grant = validAccess(resource,role?.grants[key]);
+    const grant = validAccess(resource,role?.grants[key]??resource.defaultAccess);
     if (rank[grant] > rank[value]) value = grant;
   }
   return finish(value);
