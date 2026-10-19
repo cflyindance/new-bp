@@ -7,9 +7,15 @@ import {pagePolicy,pageFeatureBlocked} from './center-page-policy';
 import {settingCategoryGate} from './center-setting-levels';
 import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navigation';
 import {FOH_PERMISSION_PAGES} from './center-foh-pages';
+import {effectiveMenuView} from './center-effective-menu';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
+export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
+  if(o.effectiveOnly){
+    const view=effectiveMenuView(o.catalog,o.value,o.page);
+    if(!view.page)return '<div class="pc-editor"><p class="pc-empty" role="status">该员工在当前门店暂无可访问菜单</p></div>';
+    o={...o,page:view.page,catalog:{...o.catalog,tree:view.tree}};
+  }
   const {catalog}=o;
   const buffetPage=o.page==='page:/operations/queue-call/buffet-rules';
   const menuNodes=new Map<string,MenuNode>();
@@ -63,7 +69,7 @@ return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title
   const row=(r:Resource)=>`<tr${r.type==='field'?' class="pc-content-field"':''}><th scope="row">${r.type==='field'?`<small>敏感字段 · ${esc(catalog.resources.get(r.parent??'')?.title)}</small><br>`:''}${actionTitle(r)}</th><td>${o.preview ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-content-sample">${esc(r.previewValue??'内容示意')}</span>`:r.type==='action'?`<button type="button" data-demo >${esc(r.title)}</button>`:`<span class="pc-tag">${o.value(r.key)==='edit'?'可编辑':'只读'}</span>${o.value(r.key)==='edit'?'<button type="button" data-demo >编辑</button>':''}` : o.readonly ? isMenu(r)?menuStatus(r.key):isContent(r)?`<span class="pc-tag">${o.value(r.key)==='hidden'?'不可见':'可见'}</span>`:`<span class="pc-tag">${accessLabel(r)}</span>`:r.type==='page'&&r.pageContentKeys?`${menuStatus(r.key)} <button type="button" data-page="${esc(r.key)}">配置权限</button>`:control(r)}</td></tr>`;
   const ancestors:string[]=[];let parent=page?.parent;const seen=new Set<string>();
   while(parent&&!seen.has(parent)){seen.add(parent);const r=catalog.resources.get(parent);if(!r)break;ancestors.unshift(r.title);parent=r.parent;}
-const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.compatibilityOnly&&isMenu(r)&&(!o.preview||(menuNodes.has(r.key)?visible(menuNodes.get(r.key)!,true):o.value(r.key)!=='hidden')));
+const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.compatibilityOnly&&isMenu(r)&&(!o.effectiveOnly||menuNodes.has(r.key))&&(!o.preview||(menuNodes.has(r.key)?visible(menuNodes.get(r.key)!,true):o.value(r.key)!=='hidden')));
   let lastSection='';
   const categories=groups.map(g=>{const section=g.section!==lastSection?`<h4>${esc(g.section)}</h4>`:'';lastSection=g.section;return `${section}<button type="button" data-group="${esc(g.id)}" class="${g.id===active?.id?'active':''}">${esc(g.title)}</button>`}).join('');
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
