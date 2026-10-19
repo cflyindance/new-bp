@@ -8,6 +8,10 @@ export function pageFeatureBlocked(page:string,row:AuthorizationRow,effective:(k
   return (row.mode==='visibility'||FOH_PERMISSION_PAGES.includes(page.replace(/^page:/,'')))&&effective(page)==='hidden';
 }
 export function assertPageFeatureChoice(page:string,row:AuthorizationRow,value:Access|'inherit',effective:(key:string)=>Access):void {
+  if(page==='page:/operations/queue-call/buffet-rules'){
+    if(effective('navigation:queue-call:qc-menu-order-limits')==='hidden')throw Error('上级导航不可见，不能修改页面授权');
+    return;
+  }
   if(pageFeatureBlocked(page,row,effective)&&value!=='hidden')throw Error('页面不可见，不能开启功能授权');
 }
 export function pagePolicy(c:Catalog,page:string):PagePolicy {
@@ -37,7 +41,12 @@ export function syncPageGrant(c:Catalog,page:string,target:Record<string,Access>
   if(value==='inherit')delete target[page];else target[page]='read';
 }
 export function applyPageAuthorization(c:Catalog,page:string,target:Record<string,Access>,row:AuthorizationRow,value:Access|'inherit'):void {
+  if(page==='page:/operations/queue-call/buffet-rules'){
+    const gate=c.resources.get(page)?.settingPageGate;
+    if(gate){if(value==='inherit')delete target[gate];else target[gate]=value;}
+  }
   applyAuthorization(target,row,value);syncPageGrant(c,page,target,[row.contentKey],value);
+  if(page==='page:/operations/queue-call/buffet-rules'){if(value==='inherit')delete target[page];else target[page]='read';}
 }
 export function applyPageResourceGrant(c:Catalog,page:string,target:Record<string,Access>,resource:Resource,value:Access|'inherit'):void {
   for(const key of [resource.key,...(resource.relatedGrantKeys??[])]){const marker=c.resources.get(key)?.parentChoiceKey;if(marker)delete target[marker];}
