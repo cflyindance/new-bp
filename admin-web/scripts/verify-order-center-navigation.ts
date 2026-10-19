@@ -37,7 +37,9 @@ for(const id of ['orders-discounts','orders-surcharges']){
 assert.deepEqual(buildPermissionModuleGroups().find(m=>m.moduleId==='orders')!.tree.children.map(n=>n.resource.key),['orders:orders-list','orders:orders-settings']);
 assert.deepEqual(getSubscriptionRouteCatalog().filter(n=>n.moduleId==='orders').map(n=>n.id),['orders-list','orders-settings']);
 const center=buildCenterCatalog();
-assert(!center.resources.has('page:/orders/discounts'));
+assert(center.resources.has('page:/orders/discounts'));
+assert.equal(center.resources.get('setting:/orders/settings:446')?.parent,'page:/orders/discounts');
+assert.equal(center.resources.get('setting:/orders/settings:447')?.parent,'page:/orders/surcharges');
 assert(center.resources.has('setting:/orders/settings:446'));
 const memory=new Map<string,string>();
 const storage={getItem:(k:string)=>memory.get(k)??null,setItem:(k:string,v:string)=>memory.set(k,v),removeItem:(k:string)=>memory.delete(k)};

@@ -20,7 +20,7 @@ export function storeInformationItemPath(item: Pick<ModuleSettingCatalogItem, "i
 
 export function storeInformationItemsForPage(path: string, items: ModuleSettingCatalogItem[]): ModuleSettingCatalogItem[] {
   const clean = path.split(/[?#]/)[0].replace(/\/$/, "");
-  return items.filter((item) => storeInformationItemPath(item) === clean);
+  return items.filter((item) => { const base=storeInformationItemPath(item); return clean===base || clean.startsWith(`${base}/`); });
 }
 
 export function storeInformationLegacyRedirect(path: string, hash: string): string | undefined {

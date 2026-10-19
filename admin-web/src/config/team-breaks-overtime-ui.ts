@@ -16,7 +16,8 @@ import {
   registerPageSavePreCommit,
 } from "./page-save-registry";
 import { readModuleSettingNumber } from "./module-settings-form-ui";
-import { BREAKS_OVERTIME_NAV_GROUPS } from './team-breaks-overtime-navigation';
+import { renderSettingsCategoryLayout } from './settings-category-layout';
+import { BREAKS_OVERTIME_SETTING_GROUPS, BREAKS_OVERTIME_NAV_GROUPS } from './team-breaks-overtime-navigation';
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
 
@@ -901,7 +902,7 @@ export function getTeamBreaksOvertimeActiveSectionKey(path: string): string | un
   if (!isTeamBreaksOvertimePath(path)) return undefined;
   const suffix = path.slice(TEAM_BREAKS_OVERTIME_PATH.length).replace(/^\//, "");
   if (!suffix) return "custom-breaks";
-  if (suffix === "break-rules" || suffix === "work-week") return "settings";
+  if (suffix === "break-rules" || suffix === "work-week" || suffix.startsWith("settings/")) return "settings";
   const allKeys = BREAKS_OVERTIME_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.key));
   return allKeys.includes(suffix) ? suffix : undefined;
 }
@@ -910,12 +911,12 @@ export function renderTeamBreaksOvertimePage(path?: string, paidBreakRowsHtml = 
   const config = getDraft();
   const sectionKey = getTeamBreaksOvertimeActiveSectionKey(path ?? TEAM_BREAKS_OVERTIME_PATH) ?? "custom-breaks";
   const body = sectionKey === "settings"
-    ? renderBreakRulesSection(config, paidBreakRowsHtml) + renderWorkWeekSection(config)
+    ? renderSettingsCategoryLayout(`${TEAM_BREAKS_OVERTIME_PATH}/settings`, BREAKS_OVERTIME_SETTING_GROUPS.map(g=>({...g, targetId: `breaks-section-${g.key}`})), renderBreakRulesSection(config, paidBreakRowsHtml) + renderWorkWeekSection(config))
     : sectionKey === "overtime-rules" ? renderOvertimeRulesSection(config) : renderCustomBreaksSection(config);
 
   return `
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col overflow-hidden" data-team-breaks-overtime-page data-breaks-view="full">
-      <div class="breaks-overtime-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto" data-breaks-page="${sectionKey}">
+      <div class="breaks-overtime-scroll-host min-w-0 min-h-0 flex-1 ${sectionKey === "settings" ? "flex flex-col overflow-hidden" : "space-y-4 overflow-y-auto"}" data-breaks-page="${sectionKey}">
         ${body}
       </div>
       ${renderCustomBreakDialog(config)}

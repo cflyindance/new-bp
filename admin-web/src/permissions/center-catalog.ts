@@ -1,8 +1,6 @@
+import { settingsCategoryItems, settingsCategoryViewGroups } from '../config/settings-category-model';
 import * as navigation from "../config/navigation";
 import { MODULE_SETTINGS_BY_PATH, groupCatalogItemsByCategory } from "../config/module-settings-catalog";
-import { normalizeFohCatalogItemsForGrouping } from "../config/foh-settings-group-keys";
-import { FINANCE_SETTINGS_PATH, normalizeFinanceCatalogItemsForGrouping } from "../config/finance-settings-group-keys";
-import { ORDER_SETTINGS_PATH, normalizeOrderCatalogItemsForGrouping } from "../config/order-settings-group-keys";
 import { t, type MessageKey } from "../i18n";
 import type { Resource } from "./center-domain";
 import { additionalPageActions } from './center-actions';
@@ -59,8 +57,7 @@ export function buildCenterCatalog(): Catalog {
     const key = `module:${m.id}`;
     const title=m.id==='group-store-list'?`${m.title} · 集团视角`:m.id==='brand-store-list'?`${m.title} · 品牌视角`:m.title;
     resources.set(key,{key,title,type:'module'});
-    const children = m.id === 'orders' ? m.children.filter(c => c.id !== 'orders-discounts' && c.id !== 'orders-surcharges')
-      : moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
+    const children = moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });
   for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
@@ -71,8 +68,10 @@ export function buildCenterCatalog(): Catalog {
       resources.set(key,{key,title:'设置',type:'page',parent:`module:${owner.id}`,path:hub.settingsPath});
       tree.find(m=>m.id===owner.id)?.children.push({id:key,title:'设置',key,children:[]});
     }
-    const items = hub.settingsPath === '/operations/queue-call/settings' ? normalizeFohCatalogItemsForGrouping(hub.items) : hub.settingsPath === FINANCE_SETTINGS_PATH ? normalizeFinanceCatalogItemsForGrouping(hub.items) : hub.settingsPath === ORDER_SETTINGS_PATH ? normalizeOrderCatalogItemsForGrouping(hub.items) : hub.items;
-    const grouped = groupCatalogItemsByCategory(items,hub.groupOrder);
+    // Retain every stored setting resource even when a current business view filters it out.
+    for(const item of hub.items){const k=settingKey(hub.settingsPath,item.seq);resources.set(k,{key:k,title:item.title,type:'setting',parent:key,path:hub.settingsPath,seq:item.seq});}
+    const items = settingsCategoryItems(hub);
+    const grouped = hub.settingsPath === STORE_INFORMATION_SETTINGS_PATH ? groupCatalogItemsByCategory(items,hub.groupOrder) : settingsCategoryViewGroups(hub,hub.settingsPath,groupCatalogItemsByCategory(items,hub.groupOrder));
     const order = hub.groupNavSections?.flatMap(s=>s.groupKeys) ?? hub.groupOrder ?? grouped.map(g=>g.groupKey);
     const ordered = [...new Set([...order,...grouped.map(g=>g.groupKey)])].flatMap(id => {
       const group = grouped.find(g=>g.groupKey===id); if (!group) return [];
@@ -92,13 +91,21 @@ export function buildCenterCatalog(): Catalog {
       }
       for(const child of navigation.NAV_MODULES.find(m=>m.id==='store-mgmt')!.children){
         const target=pageKey(child.path);
-        groups.set(target,ordered.map(g=>({...g,keys:g.keys.filter(k=>resources.get(k)?.parent===target)})).filter(g=>g.keys.length));
+        const viewGroups=settingsCategoryViewGroups(hub,child.path,groupCatalogItemsByCategory(items,hub.groupOrder));
+        groups.set(target,viewGroups.map(g=>({id:g.groupKey,title:label(g.groupTitle),section:'',keys:g.items.map(item=>settingKey(hub.settingsPath,item.seq))})));
       }
       const profile=resources.get(settingKey(hub.settingsPath,417))!;
       profile.title='门店档案';
       profile.relatedGrantKeys=[settingKey(hub.settingsPath,433)];
       groups.set(pageKey('/stores/profile'),[{id:'store-profile',title:'门店档案',section:'',keys:[profile.key]}]);
     }else groups.set(key,ordered);
+    if(hub.settingsPath==='/orders/settings'){
+      for(const [seq,path,title] of [[446,'/orders/discounts','折扣管理'],[447,'/orders/surcharges','附加费与服务费']] as const){
+        const field=resources.get(settingKey(hub.settingsPath,seq))!;
+        field.parent=pageKey(path);field.path=path;
+        groups.set(pageKey(path),[{id:`order-preset-${seq}`,title,section:'',keys:[field.key]}]);
+      }
+    }
   }
   const registered = new Map<string, [string,string][]>();
   for(const [path,actions] of Object.entries(auditedActions))registered.set(path,[...actions]);

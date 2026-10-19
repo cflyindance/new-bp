@@ -19,9 +19,9 @@ for(const [i,id] of ['manage-break','manage-overtime'].entries()) {
 for(const s of BREAKS_PERMISSION_SETTINGS){assert.equal(c.resources.get(s.key)!.parent,keys[2]);grants[s.key]='edit';}
 for(const key of keys)for(const preview of [false,true])for(const readonly of [false,true]) {
   const html=renderPermissionEditor({catalog:c,page:key,group:'obsolete',preview,readonly,staff:false,value,own:k=>grants[k]??'hidden',search:''});
-  assert.doesNotMatch(html,/<nav class="pc-categories"/);
+  if(key===keys[2])assert.match(html,/<nav class="pc-categories"/);else assert.doesNotMatch(html,/<nav class="pc-categories"/);
   assert.match(html,/data-scroll="settings"/);
-  if(key===keys[2])for(const s of BREAKS_PERMISSION_SETTINGS)assert(html.includes(s.title));
+  if(key===keys[2]){for(const s of BREAKS_PERMISSION_SETTINGS.slice(0,3))assert(html.includes(s.title));assert(!html.includes('data-grant="'+BREAKS_PERMISSION_SETTINGS[3].key+'"'));}
 }
 grants[keys[0]]='hidden';assert.equal(value(`action:${path}:manage-break`),'hidden');assert.equal(value(`action:${path}:manage-overtime`),'edit');
 grants[root]='hidden';assert.equal(value(BREAKS_PERMISSION_SETTINGS[0].key),'hidden');

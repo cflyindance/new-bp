@@ -1,3 +1,4 @@
+import { applyCategoryGrant } from './center-category-grants';
 import './center.css';
 import { buildCenterCatalog, type Catalog } from './center-catalog';
 import { esc, renderPermissionEditor } from './center-editor';
@@ -133,6 +134,7 @@ export function bindCenterPage(): void {
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
       if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyAuthorization(employee()!.overrides[storeId]??={},row,v);}else if(role()&&v!=='inherit')applyAuthorization(role()!.grants,row,v);else return;mark();render();return;}
+      if(b.dataset.categoryGrant){ev.preventDefault();const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyCategoryGrant(catalog,page,b.dataset.categoryGrant,employee()!.overrides[storeId]??={},v);}else if(role()&&v!=='inherit')applyCategoryGrant(catalog,page,b.dataset.categoryGrant,role()!.grants,v);else return;mark();render();return;}
       if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};applyResourceGrant(overrides,catalog.resources.get(key)!,v);}else if(role()&&v!=='inherit')applyResourceGrant(role()!.grants,catalog.resources.get(key)!,v);mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}

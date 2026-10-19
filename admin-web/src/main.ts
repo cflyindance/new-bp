@@ -1,4 +1,6 @@
-import { orderPresetSeq, orderCenterViewGroups, orderCenterLegacyRedirect } from "./config/order-center-navigation";
+import { settingsCategoryItems, settingsCategoryViewGroups } from "./config/settings-category-model";
+import { renderSettingsCategoryLayout, bindSettingsCategoryLayouts } from "./config/settings-category-layout";
+import { orderPresetSeq, orderCenterLegacyRedirect } from "./config/order-center-navigation";
 import { flattenMemberNavigation } from "./config/member-center-navigation";
 import "./styles/app.css";
 import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
@@ -10,7 +12,7 @@ import { createTipsPageContext } from "./team/tips/tips-context";
 import { isTipsFullscreenRoute, parseTipsRoute } from "./team/tips/tips-navigation";
 import { BUILD_STAMP } from "./generated/build-stamp";
 import { embeddedPageSrc as buildEmbeddedPageSrc } from "./shell/embedded-page-src";
-import { isStoreInformationPage, storeInformationItemsForPage, storeInformationLegacyRedirect } from "./config/store-information-navigation";
+import { isStoreInformationPage, storeInformationLegacyRedirect } from "./config/store-information-navigation";
 import {
   bindLoginPage,
   isAuthenticated,
@@ -235,12 +237,8 @@ import {
   type FohLineViewGroup,
 } from "./config/foh-settings-by-line-ui";
 import {
-  normalizeFohCatalogItemsForGrouping,
   normalizeLegacyFohSettingsPath,
 } from "./config/foh-settings-group-keys";
-import { normalizePrintCatalogItemsForGrouping } from "./config/print-settings-group-keys";
-import { normalizeFinanceCatalogItemsForGrouping } from "./config/finance-settings-group-keys";
-import { normalizeOrderCatalogItemsForGrouping } from "./config/order-settings-group-keys";
 import {
   applyFohByLineUiSuppressions,
   getActiveFohByLineIdFromDom,
@@ -4543,7 +4541,7 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (/^\/team\/breaks-overtime\/(break-rules|work-week)\/?$/.test(raw)) {
-    replaceHashPath("/team/breaks-overtime/settings");
+    replaceHashPath(`/team/breaks-overtime/settings/${raw.includes("work-week") ? "work-week" : "break-rules"}`);
     return;
   }
   if (raw === "/team/shift-scheduling" || raw === "/team/shift-scheduling/") {
@@ -5569,18 +5567,8 @@ function buildModuleSettingsGroupsForPreset(
   catalog: ModuleSettingCatalogHub,
   lineId?: FohLineNavId | null,
 ): ModuleSettingsGroup[] {
-  const isFohHub = catalog.settingsPath === FOH_SETTINGS_PATH;
-  const rawItems = isFohHub
-    ? normalizeFohCatalogItemsForGrouping(catalog.items)
-    : isPrintSettingsPath(catalog.settingsPath)
-      ? normalizePrintCatalogItemsForGrouping(catalog.items)
-      : catalog.settingsPath === "/finance/settings"
-        ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
-        : catalog.settingsPath === "/orders/settings"
-          ? normalizeOrderCatalogItemsForGrouping(catalog.items)
-          : catalog.settingsPath === "/transactions/settings"
-            ? filterCardFeesCatalogItemsForDualPricing(catalog.items)
-            : catalog.items;
+  const rawItems = catalog.settingsPath === "/transactions/settings"
+    ? filterCardFeesCatalogItemsForDualPricing(settingsCategoryItems(catalog)) : settingsCategoryItems(catalog);
   const items = filterModuleSettingItemsForProductVersion(rawItems);
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
@@ -5588,7 +5576,7 @@ function buildModuleSettingsGroupsForPreset(
   const filtered = filterModuleSettingGroupsForProductVersion(
     filterModuleSettingsGroupsForPreset(catalog.settingsPath, base, lineId ?? null),
   );
-  return catalog.settingsPath === "/orders/settings" ? orderCenterViewGroups(filtered, readAppHashPath()) : filtered;
+  return settingsCategoryViewGroups(catalog, readAppHashPath(), filtered);
 }
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
 /** 设置页左侧二级导航列滚动位置（按 hub settingsPath 记忆，避免点击后重渲染回顶） */
@@ -5734,7 +5722,7 @@ function syncModuleSettingsScrollSpy(
 
 function bindModuleSettingsScrollSpy(): void {
   if (orderPresetSeq(readAppHashPath())) return;
-  if (isStoreInformationPage(readAppHashPath())) return;
+  if (isStoreInformationPage(readAppHashPath()) && !readAppHashPath().startsWith("/stores/settings")) return;
   moduleSettingsScrollSpyActiveKey = undefined;
 
   const scrollHost = document.querySelector<HTMLElement>(".module-settings-scroll-host");
@@ -5980,7 +5968,7 @@ function renderModuleSettingsSubnavList(
 
 function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
   if (orderPresetSeq(path)) return "";
-  if (isStoreInformationPage(path)) return "";
+  if (isStoreInformationPage(path) && !path.startsWith("/stores/settings")) return "";
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog || catalog.items.length === 0) return "";
   const groups = buildModuleSettingsGroupsForPreset(catalog);
@@ -6291,10 +6279,9 @@ function renderTeamClockInRulesSectionsHtml(items: ModuleSettingCatalogItem[]): 
 
 function renderTeamClockInPageWithSettings(): string {
   const items = getTeamSettingItemsBySeqs(TEAM_CLOCK_IN_SETTING_SEQS);
-  const rulesPanel = renderTeamSettingsTabPanel({
-    description: "按开收工、登出门禁与打卡凭证分组配置；修改后需保存并下发。",
-    sectionsHtml: renderTeamClockInRulesSectionsHtml(items),
-  });
+  const sectionsHtml = renderTeamClockInRulesSectionsHtml(items);
+  const categories = TEAM_CLOCK_IN_SETTING_GROUPS.filter(g=>sectionsHtml.includes(`id="${moduleSettingsCategoryDomId(g.key)}"`));
+  const rulesPanel = renderSettingsCategoryLayout("/team/clock-in/rules", categories.map(g=>({...g,targetId:moduleSettingsCategoryDomId(g.key)})), sectionsHtml);
   const page = renderTeamClockInPage(rulesPanel);
   // 考勤记录 / 实时打卡不需要底部保存栏；规则设置仍走页脚保存并下发
   if (!shouldShowTeamClockInSaveBar()) return page;
@@ -10920,15 +10907,6 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   let groups = catalogForGroups
     ? buildModuleSettingsGroupsForPreset(catalogForGroups)
     : [];
-  if (isStoreInformationPage(path)) {
-    const storePage = path.split(/[?#]/)[0].replace(/\/$/, "");
-    const items = storeInformationItemsForPage(path, groups.flatMap((group) => group.items));
-    groups = items.length ? [{
-      groupKey: storePage === "/stores/profile" ? "store-profile" : storePage === "/stores/hours" ? "store-hours-operation" : "store-operation-alerts",
-      groupTitle: storePage === "/stores/profile" ? "门店档案" : storePage === "/stores/hours" ? "营业时间" : "营业提醒",
-      items,
-    }] : [];
-  }
   if (groups.length === 0) {
     return `
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -13311,6 +13289,7 @@ function mountInitializedPage(): void {
   bindNotificationsHubUi(mount);
   bindTeamShiftSchedulingUi(mount);
   bindTeamBreaksOvertimeUi(mount);
+  bindSettingsCategoryLayouts();
   bindTeamClockInUi(mount);
   bindTeamReportsCloudNoticeUi(mount);
   bindTeamTrainingPerformanceUi(mount);
