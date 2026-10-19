@@ -23,7 +23,7 @@ export function renderPermissionEditor(o: EditorOptions): string {
     return n.children.length ? `<details data-menu-node="${esc(n.id)}" open><summary class="pc-tree-menu-row">${n.key?`<button type="button" class="pc-tree-group-label ${o.page===n.key?'active':''}" data-page="${esc(n.key)}" title="${esc(n.title)}">${esc(n.title)}</button>`:`<span class="pc-tree-group-label" title="${esc(n.title)}">${esc(n.title)}</span>`}${n.key&&!o.preview?`<span class="pc-menu-controls">${o.readonly?menuStatus(n.key):control(catalog.resources.get(n.key)!,true)}</span>`:''}</summary><div class="pc-tree-children">${tree(n.children,matches)}</div></details>` : `<button type="button" class="pc-tree-item ${o.page===n.key?'active':''}" data-page="${esc(n.key)}">${esc(n.title)}</button>`;
   }).join('');
   function control(resource:Resource, compact=false): string {
-    const vals: [Access|'inherit',string][] = resource.type==='action' ? [['hidden','禁止'],['edit','允许']] : resource.type==='setting' ? [['hidden','隐藏'],['read','可见不可编辑'],['edit','可编辑']] : resource.type==='content'||resource.type==='field' ? [['hidden','不可见'],['read','可见']] : [['hidden','不可查看'],['read','可查看']];
+    const vals: [Access|'inherit',string][] = resource.type==='action' ? [['hidden','禁止'],['edit','允许']] : resource.type==='setting' ? [['hidden',resource.path==='/team/shift-scheduling/rules'?'不可见':'隐藏'],['read','可见不可编辑'],['edit','可编辑']] : resource.type==='content'||resource.type==='field' ? [['hidden','不可见'],['read','可见']] : [['hidden','不可查看'],['read','可查看']];
     if(o.staff) vals.unshift(['inherit','跟随角色']);
     const parentBlocked=!!resource.parent && o.value(resource.parent)==='hidden';
     const contentBlocked=resource.requires?.some(k=>o.value(k)==='hidden');
@@ -70,7 +70,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
-  const flatStorePage=['/stores/profile','/stores/hours','/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules'].includes(page?.path??'');
+  const flatStorePage=['/stores/profile','/stores/hours','/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/shift-scheduling/rules'].includes(page?.path??'');
   const flatKeys=[...new Set(groups.flatMap(g=>g.keys))].filter(k=>!o.preview||o.value(k)!=='hidden');
   const categoryKeys=active?categorySettingKeys(catalog,o.page,active.id):[];
   const categorySelection=categoryGrantValue(catalog,categoryKeys,o.own);
