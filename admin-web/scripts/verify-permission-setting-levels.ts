@@ -26,7 +26,7 @@ const state:CenterState={schema:1,version:0,logs:[],roles:[role],employees:[{id:
 assert.equal(resolveAccess(state,'e','a',item.key,stores,c.resources),'read');assert.equal(resolveAccess(state,'e','b',item.key,stores,c.resources),'edit');
 delete state.employees[0].overrides.a[gate];assert.equal(resolveAccess(state,'e','a',item.key,stores,c.resources),'edit');
 const single=pageKey('/stores/profile'),singleHtml=renderPermissionEditor({catalog:c,page:single,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});
-assert.match(singleHtml,/<nav class="pc-categories"/,'Single-item pages retain all three levels');
+assert.doesNotMatch(singleHtml,/<nav class="pc-categories"/,'Independent store profile mirrors the real page without a duplicate category sidebar');
 assert(singleHtml.includes(`data-grant="${c.resources.get(single)!.settingPageGate}"`));
 assert.equal(JSON.parse(saved)[item.key],'edit');
 console.log('PASS setting levels: page/category/item caps, readonly disabled edits, retained grants, sibling isolation, staff store overrides and single-item layout');
