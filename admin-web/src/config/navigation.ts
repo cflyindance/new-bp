@@ -15,6 +15,12 @@ export interface NavItem {
   children?: NavItem[];
 }
 
+/** 财务收银审计的独立查询页；保留原路由及权限资源键。 */
+const FINANCE_REGISTER_AUDIT_NAV_ITEMS: NavItem[] = [
+  { id: "/finance/register-audit/payments", title: "付款记录", titleEn: "Payment records", path: "/finance/register-audit/payments" },
+  { id: "/finance/register-audit/cash-drawer", title: "钱箱登入／退出记录", titleEn: "Cash drawer session log", path: "/finance/register-audit/cash-drawer" },
+];
+
 export interface NavModule {
   id: string;
   title: string;
@@ -533,6 +539,7 @@ export const NAV_MODULES: NavModule[] = [
         title: "收银记录与审计",
         titleEn: "Register audit",
         path: "/finance/register-audit/payments",
+        children: FINANCE_REGISTER_AUDIT_NAV_ITEMS,
       },
       { id: "fin-settings", title: "设置", titleEn: "Settings", path: "/finance/settings" },
     ],
@@ -1237,7 +1244,7 @@ export const REPORTS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   { id: "rpt-settings", title: "设置", titleEn: "Settings", path: "/reports/settings" },
 ];
 
-/** 财务中心侧滑层 · 业务（收银记录与审计；页内 Tab 切换支付/钱箱） */
+/** 财务中心侧滑层 · 业务（收银记录与审计；公共覆盖子导航） */
 export const FINANCE_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   {
     id: "fin-register-audit",
@@ -1245,6 +1252,7 @@ export const FINANCE_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
     titleEn: "Register audit",
     path: "/finance/register-audit/payments",
     activePrefix: "/finance/register-audit",
+    sidebarChildren: FINANCE_REGISTER_AUDIT_NAV_ITEMS,
   },
 ];
 

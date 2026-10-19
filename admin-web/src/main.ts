@@ -3341,7 +3341,8 @@ function renderFinanceSecondarySheet(hash: string, open: boolean): string {
           ${
             finMain.length > 0
               ? `<section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, finMain, getActiveFinanceSheetSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, finMain, getActiveFinanceSheetSubPath, (p, item) =>
+              item.sidebarChildren?.find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path ?? "", {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: finGroupedAria,
             })}

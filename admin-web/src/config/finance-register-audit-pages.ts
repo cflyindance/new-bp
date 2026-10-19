@@ -29,7 +29,7 @@ export const FINANCE_REGISTER_AUDIT_PAGES = [
   {
     seq: 450,
     path: FINANCE_REGISTER_AUDIT_CASH_DRAWER_PATH,
-    title: "钱箱登入退出记录",
+    title: "钱箱登入／退出记录",
     titleEn: "Cash drawer session log",
     sceneDesc:
       "查看收银员开启、关闭钱箱（登入/退出）的操作记录，用于现金内控审计。钱箱容差规则见设置 · 钱箱备款与平账。",
@@ -569,20 +569,6 @@ function closeRegisterAuditAddDialog(): void {
 export function renderFinanceRegisterAuditPageContent(path: string): string {
   const active = getActiveFinanceRegisterAuditSubPath(path);
   const isPayments = active === FINANCE_REGISTER_AUDIT_PAYMENTS_PATH;
-  const tabs = FINANCE_REGISTER_AUDIT_PAGES.map((page) => {
-    const selected = page.path === active;
-    return `
-      <a href="#${page.path}"
-        role="tab"
-        class="inline-flex min-h-10 items-center border-b-2 px-4 text-sm font-medium transition-colors ${
-          selected
-            ? "border-primary text-primary"
-            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-        }"
-        ${selected ? 'aria-selected="true"' : 'aria-selected="false"'}
-      >${escapeHtml(page.title)}</a>`;
-  }).join("");
-
   const paymentRows = filterPayments();
   const drawerRows = filterCashDrawerSessions();
   const needsStore = usesInPageStorePicker() && !selectedStoreId();
@@ -615,10 +601,6 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
 
   return `
     <div class="finance-register-audit-page flex min-h-0 flex-1 flex-col gap-4" data-register-audit-page="${isPayments ? "payments" : "cash-drawer"}">
-      <div role="tablist" aria-label="收银记录与审计" class="flex shrink-0 border-b border-border">
-        ${tabs}
-      </div>
-
       <div class="flex shrink-0 flex-wrap items-end gap-3">
         ${renderCompactStoreFilter()}
         <label class="text-sm">
