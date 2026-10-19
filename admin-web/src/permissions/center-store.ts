@@ -6,6 +6,7 @@ import { buildCenterCatalog, pageKey, settingKey } from "./center-catalog";
 import { type CenterState, type Store, type Scope, type Access } from "./center-domain";
 import { persistCenterChange } from './center-persistence';
 import { migrateNavigationPermissions } from './center-navigation-migration';
+import {migrateRoleOnlyState} from './center-role-only';
 
 export const CENTER_KEY = 'menusifu:permission-center-local:v4';
 export const centerStores = (): Store[] => listMPlatformStoreScopeEntries().map(s=>({id:s.storeId,title:s.storeName,brand:s.merchantId,region:s.regionName}));
@@ -14,7 +15,7 @@ export function readCenterState(): CenterState {
   if (raw) {
     const state = JSON.parse(raw) as CenterState;
     if(state.schema!==1 || !Array.isArray(state.roles) || !Array.isArray(state.employees) || !Array.isArray(state.logs)) throw Error('权限数据版本无法读取；原数据已保留，请联系管理员');
-    return migrateNavigationPermissions(state,buildCenterCatalog().resources,centerStores());
+    return migrateNavigationPermissions(migrateRoleOnlyState(localStorage,CENTER_KEY,state,raw),buildCenterCatalog().resources,centerStores());
   }
   const legacy = getRbacSnapshot(), accounts = listStaffLoginAccounts(), catalog = buildCenterCatalog();
   const registry = buildPermissionResourceIndex();
@@ -29,7 +30,7 @@ export function readCenterState(): CenterState {
     return {id:r.id,name:r.name,description:r.description,system:r.isSystem,grants};
   });
   const ids = new Set([...legacy.staff.map(e=>e.employeeId),...accounts.map(a=>a.employeeId)]);
-  const state: CenterState = {schema:1,version:0,roles,employees:[...ids].map(id=>{
+  const state: CenterState = {schema:1,employeeAuthorization:'roles-only',version:0,roles,employees:[...ids].map(id=>{
     const row=legacy.staff.find(e=>e.employeeId===id),account=accounts.find(a=>a.employeeId===id);
     const known = row?.storeAccess && row.storeAccess.mode!=='all' && row.storeAccess.ids.length;
     const scope: Scope | undefined = known ? {mode:row!.storeAccess.mode as Scope['mode'],ids:[...row!.storeAccess.ids]} : undefined;

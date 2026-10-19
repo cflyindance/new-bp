@@ -29,6 +29,7 @@ export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }
 export interface Audit { id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
 export interface CenterState { schema: 1; navigationVersion?: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
+export interface CenterState {employeeAuthorization?:'roles-only'}
 export const rank: Record<Access, number> = { hidden: 0, read: 1, edit: 2 };
 function validAccess(resource:Resource,value:Access|undefined):Access {
   if(resource.type==='setting')return value==='read'||value==='edit'?value:'hidden';
@@ -55,7 +56,8 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   return capAccess(resource,values.reduce((a,b)=>rank[a]<rank[b]?a:b),k=>roleAccess(role,k,resources,new Set(seen)));
 }
 export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
-  const employee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
+  const savedEmployee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
+  const employee=savedEmployee&&state.employeeAuthorization==='roles-only'?{...savedEmployee,overrides:{}}:savedEmployee;
   if (!employee || !store || !resource || seen.has(key)) return "hidden";
   seen.add(key);
   if(resource.legacyGateKey&&resolveAccess(state,employeeId,storeId,resource.legacyGateKey,stores,resources,new Set(seen))==='hidden')return 'hidden';
