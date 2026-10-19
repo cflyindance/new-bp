@@ -22,11 +22,13 @@ export function registerEmployeePages(tree:MenuNode[],resources:Map<string,Resou
 }
 /** An explicit parent decision edits both gates; inheritance removes both exceptions. */
 export function applyResourceGrant(grants:Record<string,Access>,resource:Resource,value:Access|'inherit'):void {
-  for(const key of [resource.key,...(resource.legacyGateKey?[resource.legacyGateKey]:[])])
+  for(const key of [resource.key,...(resource.relatedGrantKeys??[]),...(resource.legacyGateKey?[resource.legacyGateKey]:[])])
     if(value==='inherit')delete grants[key];else grants[key]=value;
 }
-export function resourceOwn(resource:Resource,own:(key:string)=>Access|'inherit'):Access|'inherit' {
-  const value=own(resource.key);if(!resource.legacyGateKey)return value;
+export function resourceOwn(resource:Resource,own:(key:string)=>Access|'inherit'):Access|'inherit'|'mixed' {
+  const value=own(resource.key);
+  if(resource.relatedGrantKeys?.some(key=>own(key)!==value))return 'mixed';
+  if(!resource.legacyGateKey)return value;
   const legacy=own(resource.legacyGateKey);
   if(value==='hidden'||legacy==='hidden')return 'hidden';
   return value==='inherit'?legacy:value;

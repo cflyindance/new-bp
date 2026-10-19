@@ -11,6 +11,7 @@ import { visibilityEntries,contentKey,fieldKey,actionVisibilityDependencies } fr
 import { registerPageSections } from './center-page-sections';
 import { registerClockPages } from './center-clock-pages';
 import { registerEmployeePages } from './center-employee-pages';
+import { STORE_INFORMATION_SETTINGS_PATH, storeInformationItemPath } from '../config/store-information-navigation';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
@@ -58,9 +59,7 @@ export function buildCenterCatalog(): Catalog {
     const key = `module:${m.id}`;
     const title=m.id==='group-store-list'?`${m.title} · 集团视角`:m.id==='brand-store-list'?`${m.title} · 品牌视角`:m.title;
     resources.set(key,{key,title,type:'module'});
-    const children = m.id === 'store-mgmt'
-      ? m.children.filter(c=>c.id==='st-settings').map(c=>({...c,title:'门店档案、营业时间与设置'}))
-      : m.id === 'orders' ? m.children.filter(c => c.id !== 'orders-discounts' && c.id !== 'orders-surcharges')
+    const children = m.id === 'orders' ? m.children.filter(c => c.id !== 'orders-discounts' && c.id !== 'orders-surcharges')
       : moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });
@@ -84,7 +83,22 @@ export function buildCenterCatalog(): Catalog {
       });
       return [{id,title:label(group.groupTitle),section:section ? t(section.labelKey as MessageKey) : '',keys}];
     });
-    groups.set(key,ordered);
+    if(hub.settingsPath===STORE_INFORMATION_SETTINGS_PATH){
+      // Share source grouping with the real pages; never rename stored grant keys.
+      for(const item of hub.items){
+        const resource=resources.get(settingKey(hub.settingsPath,item.seq))!;
+        resource.path=storeInformationItemPath(item);
+        resource.parent=pageKey(resource.path);
+      }
+      for(const child of navigation.NAV_MODULES.find(m=>m.id==='store-mgmt')!.children){
+        const target=pageKey(child.path);
+        groups.set(target,ordered.map(g=>({...g,keys:g.keys.filter(k=>resources.get(k)?.parent===target)})).filter(g=>g.keys.length));
+      }
+      const profile=resources.get(settingKey(hub.settingsPath,417))!;
+      profile.title='门店档案';
+      profile.relatedGrantKeys=[settingKey(hub.settingsPath,433)];
+      groups.set(pageKey('/stores/profile'),[{id:'store-profile',title:'门店档案',section:'',keys:[profile.key]}]);
+    }else groups.set(key,ordered);
   }
   const registered = new Map<string, [string,string][]>();
   for(const [path,actions] of Object.entries(auditedActions))registered.set(path,[...actions]);
