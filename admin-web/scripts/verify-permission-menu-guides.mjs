@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const css=readFileSync(new URL('../src/permissions/center.css',import.meta.url),'utf8');
+const rules=[...css.matchAll(/\.pc \.pc-tree-children\s*\{([^}]+)\}/g)];
+assert.equal(rules.length,1);
+assert.doesNotMatch(rules[0][1],/border-left|border-inline-start|background/,'Menu nesting must not draw vertical guide lines');
+assert.match(rules[0][1],/padding-left:\s*13px/,'Preserve original content offset: 12px padding plus retired 1px border');
+assert.match(rules[0][1],/margin-left:\s*3px/);
+assert.match(css,/\.pc \.pc-tree\s*\{[^}]*border-right:\s*1px/,'Keep the menu/detail panel separator');
+assert.match(css,/pc-tree-menu-row::before\s*\{[^}]*content:\s*'▸'/);
+assert.match(css,/details\[open\] > \.pc-tree-menu-row::before\s*\{[^}]*content:\s*'▾'/);
+console.log('PASS: no menu guide lines; original nesting offset, arrows and panel separator retained');
