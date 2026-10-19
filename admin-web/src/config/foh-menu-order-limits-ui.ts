@@ -1,3 +1,6 @@
+import { MENU_ORDER_OTHER_SETTINGS_PATH, MENU_ORDER_OTHER_SETTINGS_SECTIONS as OTHER_SETTINGS_SECTIONS } from './menu-order-other-settings-navigation';
+import { renderSettingsCategoryLayout, bindSettingsCategoryLayouts } from './settings-category-layout';
+type SettingMeta = { seq: number; title: string; sceneDesc: string };
 /**
  * 前厅 · 菜单下单限制业务页：独立 hash 子路由，集中维护下单限制与命中后授权。
  */
@@ -81,69 +84,6 @@ export const MENU_ORDER_LIMIT_MIGRATED_SETTING_SEQS = [
   MEMBER_POINTS_ONLY_ORDER_SEQ,
 ] as const;
 
-
-type SettingMeta = { seq: number; title: string; sceneDesc: string };
-
-const INTERVAL_SETTINGS: SettingMeta[] = [
-  {
-    seq: GUEST_ORDER_PLACE_INTERVAL_SEQ,
-    title: "订单下单时间间隔",
-    sceneDesc:
-      "按产线（POS、PayPad、POS GO、eMenu、SDI）分别配置两次订单提交的最小时间间隔（秒）；小于间隔时需服务员授权。",
-  },
-  {
-    seq: GUEST_ORDER_INTERVAL_ALLOW_CART_SEQ,
-    title: "间隔时间内允许加购（订单）",
-    sceneDesc:
-      "各产线可分别设置间隔内是否允许加购及授权触发条件；选择「达到阈值需授权」时需填写累计加购菜品数。",
-  },
-  {
-    seq: GUEST_MENU_ORDER_INTERVAL_SEQ,
-    title: "菜品下单时间间隔",
-    sceneDesc:
-      "新增规则后，按产线选择适用商品并配置最小下单时间间隔（分钟）；小于间隔时需服务员授权。",
-  },
-  {
-    seq: GUEST_MENU_INTERVAL_ALLOW_CART_SEQ,
-    title: "间隔时间内允许加购（菜品）",
-    sceneDesc:
-      "各产线可分别设置间隔内是否允许加入购物车及授权触发条件；选择「达到阈值需授权」时需填写累计加购菜品数。",
-  },
-];
-
-const AUTH_SETTINGS: SettingMeta[] = [
-  {
-    seq: RULE_HIT_PASSWORD_AUTH_SEQ,
-    title: "命中任意规则后,弹出密码授权",
-    sceneDesc:
-      "各产线可分别启用，并选择「每次命中均需授权」或「授权一次后本单放行」。",
-  },
-  {
-    seq: VIEWONLY_DISH_CART_SEQ,
-    title: "允许可看不可点的菜添加至购物车",
-    sceneDesc:
-      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置是否允许可看不可点的菜添加至购物车，关闭时需密码授权。",
-  },
-  {
-    seq: VIEWONLY_DISH_AUTH_SEQ,
-    title: "可看不可点的菜弹出服务员授权",
-    sceneDesc:
-      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置可看不可点的菜是否弹出服务员授权。",
-  },
-];
-
-const POINTS_SETTINGS: SettingMeta[] = [
-  {
-    seq: POINTS_DISH_AUTH_ORDER_SEQ,
-    title: "需要权限下单的积分菜",
-    sceneDesc: "勾选产线后，食客兑换积分菜须服务员输入密码授权。",
-  },
-  {
-    seq: MEMBER_POINTS_ONLY_ORDER_SEQ,
-    title: "订单仅有积分商品可以兑换",
-    sceneDesc: "勾选产线允许订单仅含积分商品时直接下单兑换。",
-  },
-];
 
 const SEQ_TO_TAB: Record<number, MenuOrderLimitTabId> = {
   [MENU_ORDER_LIMIT_DISH_MUTEX_SEQ]: "dish-round",
@@ -310,32 +250,12 @@ function renderDishRoundTabPanel(activeTab: MenuOrderLimitTabId): string {
     </section>`;
 }
 
-type SettingsSection = { title: string; desc: string; settings: SettingMeta[] };
-
-const OTHER_SETTINGS_SECTIONS: SettingsSection[] = [
-  {
-    title: "下单时间间隔",
-    desc: "配置订单级与菜品级提交间隔，以及间隔内是否允许加购及授权触发条件。",
-    settings: INTERVAL_SETTINGS,
-  },
-  {
-    title: "命中后授权",
-    desc: "配置限制命中后的统一授权方式，以及「可看不可点」菜品在购物车中的行为。",
-    settings: AUTH_SETTINGS,
-  },
-  {
-    title: "积分菜限制",
-    desc: "配置积分菜兑换授权与纯积分订单是否允许直接下单。",
-    settings: POINTS_SETTINGS,
-  },
-];
-
 function renderOtherSettingsTabPanel(activeTab: MenuOrderLimitTabId): string {
   if (activeTab !== "other") return "";
   const sections = OTHER_SETTINGS_SECTIONS.map((section) => {
     const rows = section.settings.map((meta) => renderSettingListRow(meta)).join("");
     return `
-      <section class="rounded-xl border border-border bg-card px-4 py-4 shadow-sm">
+      <section id="menu-order-other-${section.key}" class="rounded-xl border border-border bg-card px-4 py-4 shadow-sm" data-menu-order-other-category="${section.key}">
         <div class="min-w-0">
           <h3 class="m-0 text-sm font-semibold text-card-foreground">${escapeHtml(section.title)}</h3>
           <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">${escapeHtml(section.desc)}</p>
@@ -352,9 +272,7 @@ function renderOtherSettingsTabPanel(activeTab: MenuOrderLimitTabId): string {
       class="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-menu-order-limit-panel="other"
     >
-      <div class="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain pr-0.5">
-        ${sections}
-      </div>
+      ${renderSettingsCategoryLayout(MENU_ORDER_OTHER_SETTINGS_PATH, OTHER_SETTINGS_SECTIONS.map(section=>({...section,targetId:`menu-order-other-${section.key}`})), sections)}
     </section>`;
 }
 
@@ -379,6 +297,7 @@ export function bindFohMenuOrderLimitsUi(): void {
   if (!root || root.getAttribute("data-foh-menu-limits-bound") === "1") return;
   root.setAttribute("data-foh-menu-limits-bound", "1");
   bindModuleSettingSceneDescHelp(root);
+  bindSettingsCategoryLayouts(root);
   bindDishRoundUnifiedWorkspace(root);
   bindOrderLimitFullscreenFlow(root);
 }
