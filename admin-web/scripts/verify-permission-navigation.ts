@@ -68,10 +68,12 @@ assert.match(renderPermissionEditor({...options,readonly:true,staff:true}),/data
 const stores:Store[]=[{id:'a',title:'A',brand:'b',region:'east'},{id:'b',title:'B',brand:'b',region:'west'}];
 const legacyResources=new Map<string,Resource>();
 for(const [key,r] of catalog.resources){
-  if(r.type==='navigation')continue;
+  if(r.type==='navigation'||key.startsWith('page-mode:'))continue;
   let parent=r.parent;
   while(parent&&catalog.resources.get(parent)?.type==='navigation')parent=catalog.resources.get(parent)!.parent;
-  legacyResources.set(key,{...r,parent});
+  const legacy={...r,parent,ceilingKeys:r.ceilingKeys?.filter(k=>!k.startsWith('page-mode:'))};
+  if(legacy.settingPageGate?.startsWith('page-mode:'))delete legacy.settingPageGate;
+  legacyResources.set(key,legacy);
 }
 const old:CenterState={schema:1,version:7,logs:[],roles:[
   {id:'r',name:'旧角色',description:'',system:false,grants:{[moduleKey]:'read',[seasoningPage]:'read',[tagPage]:'read',[objectContent]:'read',[create]:'edit'}},

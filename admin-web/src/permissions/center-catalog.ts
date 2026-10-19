@@ -154,6 +154,7 @@ export function buildCenterCatalog(): Catalog {
   registerMarketingPages(resources);
   registerFohPages(tree,resources,groups,sections);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);registerFohPageGates(catalog);return catalog;
+  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);registerFohPageGates(catalog);registerPageModes(catalog);return catalog;
 }
 import {registerSettingLevels} from './center-setting-levels';
+import {registerPageModes} from './center-page-mode';
