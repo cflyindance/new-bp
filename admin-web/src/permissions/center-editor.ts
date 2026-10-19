@@ -73,6 +73,11 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   let lastSection='';
   const categories=groups.map(g=>{const section=g.section!==lastSection?`<h4>${esc(g.section)}</h4>`:'';lastSection=g.section;return `${section}<button type="button" data-group="${esc(g.id)}" class="${g.id===active?.id?'active':''}">${esc(g.title)}</button>`}).join('');
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const submenuRow=(r:Resource):string=>{
+    const hidden=o.value(r.key)==='hidden',blocked=o.value(o.page)==='hidden';
+    const buttons=o.readonly||o.preview?menuStatus(r.key):`<div class="pc-actions"><div class="pc-segment" role="group" aria-label="${esc(r.title)}查看权限">${(['hidden','read'] as const).map(v=>`<button type="button" data-submenu-visibility="${esc(r.key)}" data-value="${v}" aria-pressed="${hidden===(v==='hidden')}" ${blocked&&v==='read'?'disabled title="上级导航不可见，不能开启子导航"':''}>${v==='hidden'?'不可见':'可见'}</button>`).join('')}</div><button type="button" data-page="${esc(r.key)}">配置权限</button></div>`;
+    return `<tr><th scope="row">${esc(r.title)}</th><td>${buttons}</td></tr>`;
+  };
   const unifiedRow=(a:AuthorizationRow,compact=false):string=>{
     const content=catalog.resources.get(a.contentKey)!;
     const conflict=o.own(o.page)==='hidden'&&[a.contentKey,...(a.additionalContentKeys??[])].some(k=>o.own(k)==='read');
@@ -120,6 +125,6 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const ancestorNotice=!o.preview&&blockedAncestor?`<p class="pc-muted" role="status">上级“${esc(blockedAncestor.title)}”不可见，配置已保留，暂不生效。</p>`:'';
   const legacyNotice='';
   const singleBody=!page?.settingPageGate&&policy?.kind==='single'?`<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="${policy.setting?'功能设置项':'页面权限说明'}">${policy.setting&&policy.setting.title!==page?.title?`<h3>${esc(policy.setting.title)}</h3>`:''}<p class="pc-muted">${esc(policy.row?.help??'不可见：隐藏页面及内容；可见不可编辑：仅查看；可编辑：允许编辑。')}</p></div>`:undefined;
-const body=!page || o.preview&&o.value(o.page)==='hidden' ? '<div class="pc-empty">请选择可查看的页面</div>' : `<header class="pc-detail-heading"><div><small>${esc(ancestors.join(' / '))}</small><h2>${esc(page.title)}</h2></div>${headerControls}</header>${ancestorNotice}${legacyNotice}${page.type==='module'||page.type==='navigation'?`<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="子导航查看权限"><h3>子导航查看权限</h3>${table('子导航',submenus.map(row).join('')||'<tr><td colspan="2" class="pc-empty">没有可显示的子导航</td></tr>')}</div>`:singleBody??(allGroups.length ? settingsLayout:`<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能授权">${authorizationSection}</div>`)}`;
+const body=!page || o.preview&&o.value(o.page)==='hidden' ? '<div class="pc-empty">请选择可查看的页面</div>' : `<header class="pc-detail-heading"><div><small>${esc(ancestors.join(' / '))}</small><h2>${esc(page.title)}</h2></div>${headerControls}</header>${ancestorNotice}${legacyNotice}${page.type==='module'||page.type==='navigation'?`<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="子导航查看权限"><h3>子导航查看权限</h3>${table('子导航',submenus.map(submenuRow).join('')||'<tr><td colspan="2" class="pc-empty">没有可显示的子导航</td></tr>')}</div>`:singleBody??(allGroups.length ? settingsLayout:`<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能授权">${authorizationSection}</div>`)}`;
   return `<div class="pc-editor"><aside class="pc-tree" data-scroll="tree"><label class="pc-search">搜索菜单<input data-menu-search aria-label="搜索菜单" value="${esc(o.search)}" placeholder="搜索菜单名称"></label>${tree(catalog.tree)||'<p class="pc-empty">没有可显示的菜单</p>'}</aside><section class="pc-detail" data-scroll="detail">${body}</section></div>`;
 }
