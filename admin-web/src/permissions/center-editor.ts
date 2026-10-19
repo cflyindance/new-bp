@@ -40,6 +40,7 @@ return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title
   const shownActions=actions.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
   const shownContents=contents.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
   const unified=authorizationRows(catalog,o.page),unifiedByContent=new Map(unified.map(r=>[r.contentKey,r]));
+  const mergedContents=new Set(unified.flatMap(r=>r.additionalContentKeys??[]));
   const mergedActions=new Set(unified.flatMap(r=>r.editKeys));
   const accessLabel=(r:Resource):string=>o.value(r.key)==='hidden'?'不可操作':o.value(r.key)==='edit'?'可操作':'仅查看';
   const isMenu=(r:Resource)=>r.type==='module'||r.type==='navigation'||r.type==='page';
@@ -65,9 +66,12 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':''}>${l}</button>`).join('')}</div>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
     return `<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
-  const authorizationBody=shownContents.filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit')).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
+  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
+  const sensitive=(r:Resource)=>o.page==='page:/team/payroll-report'&&r.type==='field';
+  const authorizationBody=visibleContents.filter(r=>!sensitive(r)).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
+  const sensitiveBody=visibleContents.filter(sensitive).map(row).join('');
   const categoryHasAuthorization=contents.some(r=>inCategory(r.key))||actions.some(r=>inCategory(r.key));
-  const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}`:'';
+  const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
   const flatStorePage=['/stores/profile','/stores/hours','/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/shift-scheduling/rules'].includes(page?.path??'');
