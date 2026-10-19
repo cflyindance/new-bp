@@ -4,8 +4,8 @@ import {authorizationRows,applyAuthorization,authorizationSelection} from '../sr
 import {roleAccess,resolveAccess,type Access,type CenterState} from '../src/permissions/center-domain';
 import {renderPermissionEditor} from '../src/permissions/center-editor';
 const c=buildCenterCatalog(),path='/team/payroll-report',page=pageKey(path);
-const rows=authorizationRows(c,page);assert.deepEqual(rows.map(r=>r.title),['薪资管理','导出操作','切换员工']);
-const [payroll,exports,switcher]=rows;assert.equal(exports.editKeys.length,7);assert.equal(switcher.mode,'visibility');
+const rows=authorizationRows(c,page);assert.deepEqual(rows.map(r=>r.title),['薪资管理','导出操作','切换员工','编辑员工']);
+const [payroll,exports,switcher,editor]=rows;assert.equal(exports.editKeys.length,7);assert.equal(switcher.mode,'visibility');assert.equal(editor.mode,'visibility');
 for(const [suffix,id] of [['schedule-settings','manage-pay-schedule'],['declaration-settings','manage-declaration']]) {
   const key=pageKey(`${path}/${suffix}`),r=authorizationRows(c,key);assert.equal(r.length,1);assert(r[0].editKeys.includes(`action:${path}:${id}`));
   for(const action of r[0].editKeys)assert.equal(c.resources.get(action)!.parent,key);
@@ -14,8 +14,10 @@ const grants:Record<string,Access>={};for(const r of c.resources.values())if(['m
 const role={id:'r',name:'r',description:'',system:false,grants},value=(k:string)=>roleAccess(role,k,c.resources);
 applyAuthorization(grants,payroll,'read');applyAuthorization(grants,exports,'read');applyAuthorization(grants,switcher,'read');
 for(const key of payroll.editKeys)assert.equal(value(key),'hidden');
-assert.equal(value(exports.editKeys[0]),'hidden','Sensitive fields still deny exports');
-for(const id of ['ssn','adp-id','salary-amount'])grants[`field:${path}:${id}`]='read';
+for(const id of ['ssn','adp-id','salary-amount']){grants[`field:${path}:${id}`]='hidden';assert.equal(value(`field:${path}:${id}`),'read');}
+assert.equal(value(editor.editKeys[0]),'hidden');applyAuthorization(grants,editor,'read');assert.equal(value(editor.editKeys[0]),'edit','Readonly payroll permits separately authorized employee editing');
+applyAuthorization(grants,editor,'hidden');assert.equal(value(editor.editKeys[0]),'hidden');
+applyAuthorization(grants,payroll,'edit');assert.equal(value(editor.editKeys[0]),'hidden','Payroll editing must not grant employee editing');applyAuthorization(grants,payroll,'read');
 for(const key of exports.editKeys)assert.equal(value(key),'edit');
 assert.equal(value(switcher.editKeys[0]),'edit');
 applyAuthorization(grants,payroll,'edit');for(const key of payroll.editKeys)assert.equal(value(key),'edit');
@@ -27,6 +29,7 @@ grants[page]='hidden';for(const key of declaration.editKeys)assert.equal(value(k
 grants[page]='read';
 const html=renderPermissionEditor({catalog:c,page,group:'',preview:false,readonly:false,staff:false,value,own:k=>grants[k]??'hidden',search:''});
 assert.match(html,/薪资管理/);assert.match(html,/切换员工/);
+assert.doesNotMatch(html,/敏感字段权限|data-grant="field:/);assert.match(html,/编辑员工/);
 for(const key of rows.flatMap(r=>r.editKeys))assert(!html.includes(`data-grant="${key}"`));
 assert(!html.includes('薪资声明 · 保存并发布'));
 const overrides:Record<string,Access>={};applyAuthorization(overrides,exports,'hidden');
@@ -34,9 +37,11 @@ const stores=[{id:'a',title:'A',brand:'b',region:'r'},{id:'b',title:'B',brand:'b
 const state:CenterState={schema:1,navigationVersion:1,version:0,roles:[role],logs:[],employees:[{id:'e',name:'e',email:'e@example.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a','b']}}],overrides:{a:overrides}}]};
 assert.equal(resolveAccess(state,'e','a',exports.editKeys[0],stores,c.resources),'hidden');assert.equal(resolveAccess(state,'e','b',exports.editKeys[0],stores,c.resources),'edit');
 applyAuthorization(overrides,exports,'inherit');assert.deepEqual(overrides,{});
+applyAuthorization(overrides,editor,'read');assert.equal(resolveAccess(state,'e','a',editor.editKeys[0],stores,c.resources),'edit');assert.equal(resolveAccess(state,'e','b',editor.editKeys[0],stores,c.resources),'hidden');
+applyAuthorization(overrides,editor,'inherit');assert.deepEqual(overrides,{});
 const {persistCenterChange}=await import('../src/permissions/center-persistence');
 let saved=JSON.stringify(state);const storage={getItem:()=>saved,setItem:(_k:string,v:string)=>{saved=v;}};
 persistCenterChange(storage,'test',state,0,'r','编辑权限','测试',c.resources);
 assert.equal(JSON.parse(saved).roles[0].grants[exports.contentKey],'read');
 const before=saved;assert.throws(()=>persistCenterChange({getItem:()=>saved,setItem:()=>{throw Error('quota');}},'test',{...state,version:1},1,'r','编辑权限','测试',c.resources));assert.equal(saved,before);
-console.log('PASS payroll: three report controls, correct settings ownership, readonly export/switch, sensitive gates, sibling independence, mixed review and store inheritance');
+console.log('PASS payroll: independent employee editing, parent-driven retired fields, readonly export/switch, setting ownership, mixed review and per-store inheritance');

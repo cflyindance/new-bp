@@ -35,7 +35,7 @@ return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title
   const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
   const active=groups.find(g=>g.id===o.group)??groups[0];
   const actions=[...catalog.resources.values()].filter(r=>r.parent===o.page&&r.type==='action');
-  const contents=[...catalog.resources.values()].filter(r=>(r.type==='content'&&r.parent===o.page)||(r.type==='field'&&catalog.resources.get(r.parent??'')?.parent===o.page));
+  const contents=[...catalog.resources.values()].filter(r=>!r.compatibilityOnly&&((r.type==='content'&&r.parent===o.page)||(r.type==='field'&&catalog.resources.get(r.parent??'')?.parent===o.page)));
   const inCategory=(key:string)=>!pageSections||!!active?.keys.includes(key);
   const shownActions=actions.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
   const shownContents=contents.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
