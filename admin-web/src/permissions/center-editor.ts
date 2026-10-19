@@ -69,7 +69,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
-  const flatStorePage=['/stores/profile','/stores/hours','/stores/settings'].includes(page?.path??'');
+  const flatStorePage=['/stores/profile','/stores/hours','/stores/settings','/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/breaks-overtime/settings'].includes(page?.path??'');
   const flatKeys=[...new Set(groups.flatMap(g=>g.keys))].filter(k=>!o.preview||o.value(k)!=='hidden');
   const settingsLayout=flatStorePage
     ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
