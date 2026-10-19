@@ -52,7 +52,7 @@ assert.equal(catalog.resources.get(pageKey('/group-stores/list'))?.parent,'modul
 assert.equal(catalog.resources.get(pageKey('/brand-stores/list'))?.parent,'module:brand-store-list');
 for(const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
   assert.ok(catalog.resources.has(pageKey(hub.settingsPath)),`Missing hub: ${hub.settingsPath}`);
-  const paths=hub.settingsPath==='/stores/settings'?['/stores/profile','/stores/hours','/stores/settings']:[hub.settingsPath];
+  const paths=hub.settingsPath==='/stores/settings'?['/stores/profile','/stores/hours','/stores/settings']:hub.settingsPath==='/orders/settings'?['/orders/settings','/orders/discounts','/orders/surcharges']:[hub.settingsPath];
   const keys=paths.flatMap(path=>catalog.groups.get(pageKey(path))!.flatMap(g=>g.keys)).flatMap(k=>[k,...catalog.resources.get(k)!.relatedGrantKeys??[]]);
   assert.equal(new Set(keys).size,hub.items.length,`Missing/duplicate setting: ${hub.settingsPath}`);
 }

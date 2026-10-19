@@ -1452,7 +1452,7 @@ function renderAttendanceRecordsPanel(): string {
 }
 
 export function renderTeamClockInPage(rulesPanelHtml = ""): string {
-  const section = location.hash.split("?")[0].split("/").pop();
+  const section = location.hash.split("?")[0].replace(/^#\/team\/clock-in\/?/, "").split("/")[0];
   const nextTab: ClockTab = section === "records" ? "records" : section === "rules" ? "rules" : "live";
   if (nextTab !== clockTab) {
     adjustDialog = null;

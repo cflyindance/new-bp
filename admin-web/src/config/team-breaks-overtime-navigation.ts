@@ -6,3 +6,9 @@ export const BREAKS_OVERTIME_NAV_GROUPS: ReadonlyArray<{label: string; items: Re
     {key: 'settings', title: '设置'},
   ]},
 ] as const;
+
+/** Category IDs and labels are shared by merchant settings and permission editing. */
+export const BREAKS_OVERTIME_SETTING_GROUPS = [
+  { key: 'break-rules', title: '休息设置', fields: ['paid-break-minutes', 'convert-excess', 'block-early'] },
+  { key: 'work-week', title: '工作周设置', fields: ['week-start'] },
+] as const;

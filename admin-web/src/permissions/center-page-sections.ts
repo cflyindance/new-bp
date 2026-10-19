@@ -1,4 +1,4 @@
-import { BREAKS_OVERTIME_NAV_GROUPS } from '../config/team-breaks-overtime-navigation';
+import { BREAKS_OVERTIME_NAV_GROUPS, BREAKS_OVERTIME_SETTING_GROUPS } from '../config/team-breaks-overtime-navigation';
 import type { Resource } from './center-domain';
 import type { SettingGroup,MenuNode } from './center-catalog';
 
@@ -37,7 +37,10 @@ export function registerBreaksPages(tree:MenuNode[],resources:Map<string,Resourc
       resource.parent=key;
     }
     const settingKeys=group.keys.filter(k=>resources.get(k)?.type==='setting');
-    if(settingKeys.length)sections.set(key,[{...group,section:'',keys:settingKeys}]);
+    if(settingKeys.length)sections.set(key,BREAKS_OVERTIME_SETTING_GROUPS.map(category=>({
+      id:category.key,title:category.title,section:'',
+      keys:category.fields.map(field=>`setting:${path}:${field}`).filter(k=>settingKeys.includes(k)),
+    })).filter(category=>category.keys.length));
     return {id:`breaks-${group.id}`,title:group.title,key,children:[]};
   });
   sections.delete(page);
