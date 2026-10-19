@@ -9,14 +9,20 @@ import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navi
 import {FOH_PERMISSION_PAGES} from './center-foh-pages';
 import {effectiveMenuView} from './center-effective-menu';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
+export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; grantedOnly?: boolean; emptyMessage?: string; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
   if(o.effectiveOnly){
     const view=effectiveMenuView(o.catalog,o.value,o.page);
-    if(!view.page)return '<div class="pc-editor"><p class="pc-empty" role="status">该员工在当前门店暂无可访问菜单</p></div>';
+    if(!view.page)return `<div class="pc-editor"><p class="pc-empty" role="status">${esc(o.emptyMessage??'该员工在当前门店暂无可访问菜单')}</p></div>`;
     o={...o,page:view.page,catalog:{...o.catalog,tree:view.tree}};
   }
   const {catalog}=o;
+  const featureRows=authorizationRows(catalog,o.page);
+  const featureVisible=(key:string):boolean=>{
+    if(o.value(key)==='hidden')return false;
+    const row=featureRows.find(r=>r.contentKey===key);
+    return row?.mode!=='visibility'||row.editKeys.every(k=>o.value(k)==='edit');
+  };
   const buffetPage=o.page==='page:/operations/queue-call/buffet-rules';
   const menuNodes=new Map<string,MenuNode>();
   const indexNodes=(nodes:MenuNode[]):void=>{for(const node of nodes){if(node.key)menuNodes.set(node.key,node);indexNodes(node.children);}};
@@ -51,14 +57,14 @@ export function renderPermissionEditor(o: EditorOptions): string {
     const reason=pageBlocked?'页面不可见，不能开启功能授权':parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
 return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?`disabled title="${reason}"`:v==='edit'&&editBlocked?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</${tag}>${resource.inheritFrom&&!parentInherited&&o.staff&&o.own(resource.key)==='inherit'?'<small class="pc-muted">跟随角色</small>':''}${selection==='edit'&&editBlocked?'<small class="pc-muted">原可编辑配置已保留，当前受上级权限限制。</small>':''}`;
   }
-  const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
+  const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!(o.preview||o.grantedOnly) || g.keys.some(k=>o.grantedOnly?featureVisible(k):o.value(k)!=='hidden'));
   const policy=page?.type==='page'?pagePolicy(catalog,o.page):undefined;
   const active=groups.find(g=>g.id===o.group)??groups[0];
   const actions=[...catalog.resources.values()].filter(r=>r.parent===o.page&&r.type==='action');
   const contents=[...catalog.resources.values()].filter(r=>!r.compatibilityOnly&&((r.type==='content'&&r.parent===o.page)||(r.type==='field'&&catalog.resources.get(r.parent??'')?.parent===o.page)));
   const inCategory=(key:string)=>!pageSections||!!active?.keys.includes(key);
-  const shownActions=actions.filter(r=>!buffetPage&&inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
-  const shownContents=contents.filter(r=>!buffetPage&&inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
+  const shownActions=actions.filter(r=>!buffetPage&&inCategory(r.key)&&(!(o.preview||o.grantedOnly)||o.value(r.key)==='edit'));
+  const shownContents=contents.filter(r=>!buffetPage&&inCategory(r.key)&&(!(o.preview||o.grantedOnly)||featureVisible(r.key)));
   const unified=authorizationRows(catalog,o.page),unifiedByContent=new Map(unified.map(r=>[r.contentKey,r]));
   const mergedContents=new Set(unified.flatMap(r=>r.additionalContentKeys??[]));
   const mergedActions=new Set(unified.flatMap(r=>r.editKeys));
@@ -91,17 +97,17 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':editBlocked&&(v==='edit'||a.mode==='visibility'&&v==='read')?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</div>`;
     return compact?`<div class="pc-page-authorization">${o.preview?`<span class="pc-tag">${label}</span>`:result}</div>`:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
-  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&(page?.settingPageGate||r.key!==policy?.row?.contentKey)).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
+  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&(page?.settingPageGate||r.key!==policy?.row?.contentKey)).filter(r=>!(o.preview||o.grantedOnly)||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
   const sensitive=(r:Resource)=>o.page==='page:/team/payroll-report'&&r.type==='field';
   const authorizationBody=visibleContents.filter(r=>!sensitive(r)).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
   const sensitiveBody=visibleContents.filter(sensitive).map(row).join('');
   const categoryHasAuthorization=visibleContents.length>0||shownActions.some(r=>!mergedActions.has(r.key));
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
-  const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!o.preview||o.value(k)!=='hidden').map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
+  const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!(o.preview||o.grantedOnly)||featureVisible(k)).map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!(o.preview||o.grantedOnly)||featureVisible(k)).map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
   const standalonePage=!!page?.path&&!hasModuleSettingsCategorySidebar(page.path);
   const flatStorePage=standalonePage||!page?.settingPageGate&&['/team/breaks-overtime/custom-breaks','/team/breaks-overtime/overtime-rules','/team/shift-scheduling/rules'].includes(page?.path??'');
-  const flatKeys=[...new Set(groups.flatMap(g=>g.keys))].filter(k=>!o.preview||o.value(k)!=='hidden');
+  const flatKeys=[...new Set(groups.flatMap(g=>g.keys))].filter(k=>!(o.preview||o.grantedOnly)||featureVisible(k));
   const categoryKeys=active?categorySettingKeys(catalog,o.page,active.id):[];
   const categorySelection=categoryGrantValue(catalog,categoryKeys,o.own);
   const categoryBlocked=!!page&&(page.pageContentKeys?!!page.parent&&o.value(page.parent)==='hidden':o.value(page.key)==='hidden');

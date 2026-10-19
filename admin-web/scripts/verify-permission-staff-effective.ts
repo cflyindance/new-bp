@@ -63,5 +63,5 @@ const fullBefore=JSON.stringify(full);
 assert.equal(effectiveMenuView(real,key=>resolveAccess(full,'e','s2',key,stores,real.resources),realProjection.page).page,'');
 assert.equal(effectiveMenuView(real,realValue,'').page,realProjection.page);
 assert.equal(JSON.stringify(full),fullBefore);
-const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('effectiveOnly:!!employeeId'));assert(ui.includes('effectiveMenuView(catalog,value,selectedPage)'));
+const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('effectiveOnly:!!employeeId||roleView'));assert(ui.includes('effectiveMenuView(catalog,value,selectedPage)'));
 console.log('PASS staff effective menus: role union, scope/store switch, denied ancestors, pruning, fallback, empty/search, readonly and unchanged role editor');

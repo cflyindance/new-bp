@@ -3,6 +3,7 @@ import './center.css';
 import { buildCenterCatalog, type Catalog } from './center-catalog';
 import { esc, renderPermissionEditor } from './center-editor';
 import {effectiveMenuView} from './center-effective-menu';
+import {rolePageRoute} from './center-role-route';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
@@ -31,7 +32,7 @@ export function bindCenterPage(): void {
   if(path==='/permissions/staff-accounts')path='/permissions/staff';
   let draft=structuredClone(state),dirty=false,storeId=stores[0]?.id??'',tab='permissions';
   let page=[...catalog.resources.values()].find(r=>r.type==='page')?.key??'',group='',menuSearch='',query='',filter='';
-  const roleId=path.startsWith('/permissions/roles/edit/')?decodeURIComponent(path.slice('/permissions/roles/edit/'.length)):'';
+  const roleRoute=rolePageRoute(path),roleId=roleRoute?.id??'',roleView=roleRoute?.readonly??false;
   const employeeId=path.startsWith('/permissions/staff/')?decodeURIComponent(path.slice('/permissions/staff/'.length)):'';
   const isDetail=!!roleId||!!employeeId;
   const role=()=>draft.roles.find(r=>r.id===roleId);
@@ -44,13 +45,13 @@ export function bindCenterPage(): void {
   const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
-    if(employeeId){
+    if(employeeId||roleView){
       const view=effectiveMenuView(catalog,value,selectedPage);
       if(view.page!==selectedPage)selectedGroup='';
       selectedPage=view.page;
       if(!preview){page=selectedPage;group=selectedGroup;}
     }
-    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId,staff:false,effectiveOnly:!!employeeId,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
+    return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId||roleView,staff:false,effectiveOnly:!!employeeId||roleView,grantedOnly:roleView,emptyMessage:roleView?'该角色暂无可访问菜单':undefined,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
   }
   function logs(objectId?:string):string {
     const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}`.includes(query)));
@@ -69,10 +70,10 @@ export function bindCenterPage(): void {
     const scroll=new Map([...root!.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));
     const expanded=new Map([...root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]')].map(el=>[el.dataset.menuNode!,el.open]));
     if(isDetail){
-      root!.innerHTML=`<section class="pc-full"><header class="pc-heading"><div class="pc-actions">${btn('← 返回','back')}<h1>${esc(role()?.name??employee()?.name??'记录不存在')}</h1><span class="pc-tag">${roleId?'编辑权限':'员工管理'}</span></div><span class="pc-muted">本地配置 · 业务鉴权尚未切换</span></header><div class="pc-content">${roleId?(role()?`<div class="pc-toolbar"><h3>功能权限</h3>${btn('查看菜单效果','preview')}</div>${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div><footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span><div class="pc-actions">${btn('取消','cancel')}${btn('保存更改','save','primary')}</div></footer></section>`;
+      root!.innerHTML=`<section class="pc-full"><header class="pc-heading"><div class="pc-actions">${btn('← 返回','back')}<h1>${esc(role()?.name??employee()?.name??'记录不存在')}</h1><span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':'员工管理'}</span></div><span class="pc-muted">本地配置 · 业务鉴权尚未切换</span></header><div class="pc-content">${roleId?(role()?`<div class="pc-toolbar"><h3>${roleView?'当前角色生效权限':'功能权限'}</h3><div class="pc-actions">${roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):''}${btn('查看菜单效果','preview')}</div></div>${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span>${btn('返回角色列表','back')}</footer>`:`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span><div class="pc-actions">${btn('取消','cancel')}${btn('保存更改','save','primary')}</div></footer>`}</section>`;
     }else{
       let body='';
-      if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${esc(r.name)}</strong>${r.system?'<span class="pc-tag">系统</span>':''}</td><td>${esc(r.description)||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}" ${r.system||memberCount(r.id)?'disabled title="系统角色或有关联员工不能删除"':''}>删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
+      if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong>${r.system?'<span class="pc-tag">系统</span>':''}</td><td>${esc(r.description)||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}" ${r.system||memberCount(r.id)?'disabled title="系统角色或有关联员工不能删除"':''}>删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('邀请员工','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||'—'}</td><td><span class="pc-tag">${statusLabels[e.status]}</span></td><td>${e.migrationReview?'待复核':e.bindings.map(b=>esc(state.roles.find(r=>r.id===b.roleId)?.name??'失效角色')).join('、')||'未授权'}</td><td>${link('管理详情',`/permissions/staff/${encodeURIComponent(e.id)}`)}</td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
       else body=`<div class="pc-stats">${[['角色',state.roles.length],['员工',state.employees.length],['已授权员工',state.employees.filter(e=>e.bindings.length).length]].map(([l,n])=>`<div class="pc-stat">${l}<strong>${n}</strong></div>`).join('')}</div><section class="pc-card"><h2>最近变更</h2>${logs()}</section>`;
@@ -137,6 +138,7 @@ export function bindCenterPage(): void {
   root.addEventListener('click',ev=>{
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
+      if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
       if(employeeId&&(b.dataset.authorization||b.dataset.categoryGrant||b.dataset.grant))return;
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
