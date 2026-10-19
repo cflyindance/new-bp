@@ -138,6 +138,7 @@ export function findRbacPageTitle(
 ): { title: string; module: string } | null {
   if (!path.startsWith(scope.routePrefix)) return null;
   const sub = stripRbacRoutePrefix(path, scope);
+  if(scope.scope==='merchant'&&(sub==='/overview'||sub===''))return {title:'角色与功能权限',module:scope.moduleLabel};
   if (sub === "/overview" || sub === "") return { title: "权限总览", module: scope.moduleLabel };
   if (sub === "/roles") return { title: "角色与权限", module: scope.moduleLabel };
   if (sub === "/staff") return { title: "员工授权", module: scope.moduleLabel };

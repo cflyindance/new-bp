@@ -4,6 +4,7 @@ import { buildCenterCatalog, type Catalog } from './center-catalog';
 import { esc, renderPermissionEditor } from './center-editor';
 import {effectiveMenuView} from './center-effective-menu';
 import {rolePageRoute} from './center-role-route';
+import {normalizePermissionCenterPath} from './center-routes';
 import {applySubmenuMode} from './center-page-mode';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
@@ -29,7 +30,7 @@ export function bindCenterPage(): void {
   let state:CenterState;
   try{state=readCenterState();}catch(e){root.innerHTML=`<div class="pc-error">${esc((e as Error).message)}</div>`;return;}
   const catalog:Catalog=buildCenterCatalog(),stores=centerStores();
-  let path=root.dataset.path??'/permissions/overview';
+  let path=normalizePermissionCenterPath(root.dataset.path??'/permissions/roles');
   if(path==='/permissions/staff-accounts')path='/permissions/staff';
   let draft=structuredClone(state),dirty=false,storeId=stores[0]?.id??'',tab='permissions';
   let page=[...catalog.resources.values()].find(r=>r.type==='page')?.key??'',group='',menuSearch='',query='',filter='';
@@ -42,7 +43,7 @@ export function bindCenterPage(): void {
   const memberCount=(id:string)=>state.employees.filter(e=>e.bindings.some(b=>b.roleId===id)).length;
   const btn=(label:string,action:string,cls='')=>`<button type="button" class="${cls}" data-do="${action}">${label}</button>`;
   const link=(label:string,url:string)=>`<a class="pc-link" href="#${url}">${label}</a>`;
-  const title=path.includes('/roles')?'角色与功能权限':path.includes('/staff')?'员工与账号':path.includes('/change-log')?'变更记录':'权限总览';
+  const title=path.includes('/roles')?'角色与功能权限':path.includes('/staff')?'员工与账号':path.includes('/change-log')?'变更记录':'权限管理中心';
   const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
@@ -77,7 +78,7 @@ export function bindCenterPage(): void {
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong>${r.system?'<span class="pc-tag">系统</span>':''}</td><td>${esc(r.description)||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}" ${r.system||memberCount(r.id)?'disabled title="系统角色或有关联员工不能删除"':''}>删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('邀请员工','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||'—'}</td><td><span class="pc-tag">${statusLabels[e.status]}</span></td><td>${e.migrationReview?'待复核':e.bindings.map(b=>esc(state.roles.find(r=>r.id===b.roleId)?.name??'失效角色')).join('、')||'未授权'}</td><td>${link('管理详情',`/permissions/staff/${encodeURIComponent(e.id)}`)}</td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
-      else body=`<div class="pc-stats">${[['角色',state.roles.length],['员工',state.employees.length],['已授权员工',state.employees.filter(e=>e.bindings.length).length]].map(([l,n])=>`<div class="pc-stat">${l}<strong>${n}</strong></div>`).join('')}</div><section class="pc-card"><h2>最近变更</h2>${logs()}</section>`;
+      else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
     }
     for(const el of root!.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=scroll.get(el.dataset.scroll!)??0;
@@ -119,7 +120,7 @@ export function bindCenterPage(): void {
       const roleId=field(d,'role'),mode=field(d,'mode') as Scope['mode'];
       const ids=[...d.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value);
       if(!roleId||!ids.length)throw Error('请选择角色及至少一个授权范围');
-      modal('确认分配角色',`<p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>范围：${esc(ids.map(id=>mode==='stores'?stores.find(s=>s.id===id)?.title??id:id).join('、'))}</p>${mode!=='stores'?'<p class="pc-notice">动态范围包含未来新增或纳入的门店。</p>':''}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope:{mode,ids}});employee()!.migrationReview=false;mark();render();return true;},'加入草稿');return true;
+      modal('确认分配角色',`<p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>范围：${esc(ids.map(id=>mode==='stores'?stores.find(s=>s.id===id)?.title??id:id).join('、'))}</p>${mode!=='stores'?'<p class="pc-notice">动态范围包含未来新增或纳入的门店。</p>':''}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope:{mode,ids}});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
     },'下一步');
     const options=()=>{const mode=field(dialog,'mode');const list=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set(stores.map(s=>mode==='brands'?s.brand:s.region).filter(Boolean))].map(v=>[v,v]);dialog.querySelector('[data-scope-options]')!.innerHTML=`<div class="pc-choice-list">${list.map(([id,title])=>`<label><input type="checkbox" name="scope" value="${esc(id)}" ${mode==='stores'&&id===storeId?'checked':''}>${esc(title)}</label>`).join('')}</div>`;};
     dialog.querySelector('[name="mode"]')!.addEventListener('change',options);options();

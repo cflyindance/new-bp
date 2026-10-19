@@ -250,6 +250,7 @@ import {
 } from "./config/foh-settings-by-line-toggle";
 import { fohLineNavLabel, type FohLineNavId } from "./config/foh-settings-line-scope";
 import { bindPermissionsRbac, isPermissionsRbacPath, renderPermissionsRbacPage } from "./permissions/rbac-ui";
+import {normalizePermissionCenterPath} from './permissions/center-routes';
 import { applyModuleSettingsRbacAccess } from "./permissions/rbac-setting-access";
 import {
   bindPlatformPreset,
@@ -3576,7 +3577,7 @@ function findTitle(path: string): { title: string; module?: string } {
     return { title: t("shell.navHomeTitle"), module: t("shell.appName") };
   }
   if (path === "/permissions/overview") {
-    return { title: "权限总览", module: "权限管理中心" };
+    return { title: "角色与功能权限", module: "权限管理中心" };
   }
   if (path === "/permissions/roles") {
     return { title: "角色与功能权限", module: "权限管理中心" };
@@ -3874,6 +3875,8 @@ function rememberSidebarNavScroll(scrollTop: number): void {
 /** 将 `#/menu`、`#/reports` 等仅一级路径规范为各自 defaultChildPath（单页模块 path===default 时不跳转） */
 function normalizeTabModuleHashes(): void {
   const raw = location.hash.slice(1);
+  const permissionPath=normalizePermissionCenterPath(raw);
+  if(permissionPath!==raw){replaceHashPath(permissionPath);return;}
   if (raw === "/team/roles-employees" || raw === "/team/roles-employees/") {
     replaceHashPath("/team/roles-employees/employees");
     return;
@@ -4182,7 +4185,7 @@ function normalizeTabModuleHashes(): void {
     raw === "/permissions/settings/" ||
     raw.startsWith("/permissions/settings/")
   ) {
-    replaceHashPath("/permissions/overview");
+    replaceHashPath("/permissions/roles");
     return;
   }
   if (raw === "/product-center-main" || raw === "/product-center-main/") {
@@ -11034,7 +11037,7 @@ function renderAiAssistantChat(): string {
         <button type="button" class="${quickClass}" data-ai-quick-prompt="开班备款金额设为500">${escapeHtml(t("ai.quick.config"))}</button>
         <button type="button" class="${quickClass}" data-ai-quick-prompt="产线Kiosk开启展示订单类型选择页面">${escapeHtml(t("ai.quick.line"))}</button>
         <button type="button" class="${quickClass}" data-ai-quick-prompt="不需要厨房单的单类勾选外带">${escapeHtml(t("ai.quick.multi"))}</button>
-        <a href="#/permissions/overview" class="inline-flex items-center rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/35 hover:text-foreground">${escapeHtml(t("ai.link.permissions"))}</a>
+        <a href="#/permissions/roles" class="inline-flex items-center rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/35 hover:text-foreground">${escapeHtml(t("ai.link.permissions"))}</a>
       </div>
       <div
         id="ai-assistant-thread"
