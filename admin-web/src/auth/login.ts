@@ -11,6 +11,7 @@ const AUTH_EMAIL_KEY = "menusifu-admin-auth-email";
 
 /** 演示环境固定密码 */
 export const DEMO_LOGIN_PASSWORD = "Menusifu666";
+export const DEMO_LOGIN_ACCOUNT = "demo.menusifu.cn";
 
 export function getAuthenticatedEmail(): string | null {
   try {
@@ -53,9 +54,9 @@ export { isMenusifuEmail } from "./email-utils";
 
 export function validateLoginCredentials(email: string, password: string): string | null {
   const trimmedEmail = email.trim();
-  if (!trimmedEmail) return "请输入邮箱账号";
-  if (!isMenusifuEmail(trimmedEmail)) {
-    return "邮箱格式须为 *@menusifu.cn 或 *@menusifu.com";
+  if (!trimmedEmail) return "请输入登录账号";
+  if (trimmedEmail.toLowerCase() !== DEMO_LOGIN_ACCOUNT && !isMenusifuEmail(trimmedEmail)) {
+    return "请输入演示账号 demo.menusifu.cn 或 Menusifu 企业邮箱";
   }
 
   const maintained = getStaffLoginAccountByEmail(trimmedEmail);
@@ -90,19 +91,20 @@ export function renderLoginPage(): string {
         >
           <div class="space-y-4">
             <div>
-              <label for="login-email" class="mb-1.5 block text-sm font-medium text-card-foreground">邮箱账号</label>
+              <label for="login-email" class="mb-1.5 block text-sm font-medium text-card-foreground">登录账号</label>
               <input
                 id="login-email"
                 name="email"
                 type="text"
                 inputmode="email"
                 autocomplete="username"
+                value="${DEMO_LOGIN_ACCOUNT}"
                 required
-                placeholder="输入Menusifu企业邮箱"
+                placeholder="输入演示账号或 Menusifu 企业邮箱"
                 class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 data-login-email
               />
-              <p class="mt-1.5 text-xs text-muted-foreground">请输入 Menusifu 企业邮箱（*@menusifu.cn/com）</p>
+              <p class="mt-1.5 text-xs text-muted-foreground">默认演示账号，也支持 Menusifu 企业邮箱（*@menusifu.cn/com）</p>
             </div>
             <div>
               <label for="login-password" class="mb-1.5 block text-sm font-medium text-card-foreground">密码</label>
@@ -111,6 +113,7 @@ export function renderLoginPage(): string {
                 name="password"
                 type="password"
                 autocomplete="current-password"
+                value="${DEMO_LOGIN_PASSWORD}"
                 required
                 class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 data-login-password
