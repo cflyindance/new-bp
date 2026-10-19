@@ -27,7 +27,7 @@ for(const [path,groups] of Object.entries(actionGroups))for(const group of group
   state.employees[0].overrides.a={[key]:'hidden'};assert.equal(resolveAccess(state,'e','a',key,stores,catalog.resources),'hidden');delete state.employees[0].overrides.a[key];
   const options={catalog,page:owner,group:catalog.sections?.get(owner)?.find(g=>g.keys.includes(key))?.id??'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
   const unified=authorizationRows(catalog,owner).find(r=>r.editKeys.includes(key))!;assert.ok(unified);applyAuthorization(grants,unified,'edit');
-  for(const variant of [{},{preview:true},{staff:true,readonly:true}]){const html=renderPermissionEditor({...options,...variant});assert.ok(html.includes(unified.title));assert.ok(html.includes(resource.help!));assert.match(html,/role="tooltip"/);}
+  for(const variant of [{},{preview:true},{staff:true,readonly:true}]){const html=renderPermissionEditor({...options,...variant});assert.ok(html.includes(catalog.resources.get(owner)!.title));assert.ok(resource.help);assert.doesNotMatch(html,/pc-help|role="tooltip"|aria-describedby=/);}
   grants[pageKey(path)]='hidden';assert.equal(value(key),'hidden');assert.equal(grants[key],'edit');grants[pageKey(path)]='read';
   let saved=JSON.stringify(state);persistCenterChange({getItem:()=>saved,setItem:(_k,v)=>{saved=v;}},'test',state,0,'r','更新角色权限','测试',catalog.resources);
   assert.equal(JSON.parse(saved).roles[0].grants[actionKey(path,group.members[0].id)],'edit');
