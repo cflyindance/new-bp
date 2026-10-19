@@ -29,7 +29,7 @@ export function renderPermissionEditor(o: EditorOptions): string {
     const blocked=parentBlocked||contentBlocked;
     const tag=compact?'span':'div';
     const reason=parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
-return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${resourceOwn(resource,o.own)===v}" ${blocked?`disabled title="${reason}"`:''}>${l}</button>`).join('')}</${tag}>`;
+return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${resourceOwn(resource,o.own)===v}" ${blocked?`disabled title="${reason}"`:''}>${l}</button>`).join('')}</${tag}>${resourceOwn(resource,o.own)==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
   }
   const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
   const active=groups.find(g=>g.id===o.group)??groups[0];

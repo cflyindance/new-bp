@@ -29,6 +29,6 @@ const stores=[{id:'a',title:'A',brand:'b',region:'e'},{id:'b',title:'B',brand:'b
 const state:CenterState={schema:1,navigationVersion:1,version:0,logs:[],roles:[role],employees:[{id:'e',name:'员工',email:'e@example.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a','b']}}],overrides:{a:{[paid]:'hidden'}}}]};
 assert.equal(resolveAccess(state,'e','a',paid,stores,catalog.resources),'hidden');assert.equal(resolveAccess(state,'e','b',paid,stores,catalog.resources),'edit');
 let saved=JSON.stringify(state);persistCenterChange({getItem:()=>saved,setItem:(_k,v)=>{saved=v;}},'test',state,0,'r','更新角色权限','测试',catalog.resources);assert.equal(JSON.parse(saved).roles[0].grants[paid],'edit');
-assert.equal(catalog.groups.size,26,'Original settings page registry must not be overwritten');
+assert.equal(catalog.groups.size,28,'Settings page registry includes the three real store information pages');
 assert.match(readFileSync('src/permissions/center-ui.ts','utf8'),/previewGroup[\s\S]*?focus\(\{preventScroll:true\}\)/,'Preview redraw must restore focus for Escape draft protection');
 console.log('PASS: shared real breaks/overtime navigation, three categories, isolated content mapping, four source-backed setting grants, filtered preview, parent restore, store overrides and persistence');

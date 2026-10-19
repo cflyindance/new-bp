@@ -1,6 +1,6 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
-export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean }
+export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean; relatedGrantKeys?:string[] }
 export interface Store { id: string; title: string; brand: string; region: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
@@ -23,7 +23,8 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   if(resource.legacyGateKey&&roleAccess(role,resource.legacyGateKey,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && roleAccess(role, resource.parent, resources, new Set(seen)) === "hidden") return "hidden";
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
-  return validAccess(resource,role.grants[key]);
+  const values=[validAccess(resource,role.grants[key]),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
+  return values.reduce((a,b)=>rank[a]<rank[b]?a:b);
 }
 export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
   const employee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
@@ -33,7 +34,8 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if (resource.parent && resolveAccess(state, employeeId, storeId, resource.parent, stores, resources, new Set(seen)) === "hidden") return "hidden";
   if(resource.requires?.some(k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen))==='hidden'))return 'hidden';
   const override = employee.overrides[storeId]?.[key];
-  if (override !== undefined) return validAccess(resource,override);
+  const finish=(value:Access):Access=>(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value);
+  if (override !== undefined) return finish(validAccess(resource,override));
   let value: Access = "hidden";
   for (const binding of employee.bindings) {
     if (!scopeMatches(binding.scope, store)) continue;
@@ -42,7 +44,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
     const grant = validAccess(resource,role?.grants[key]);
     if (rank[grant] > rank[value]) value = grant;
   }
-  return value;
+  return finish(value);
 }
 export function deniedStores(state: CenterState, employeeId: string, storeIds: string[], key: string, stores: Store[], resources: Map<string, Resource>): string[] {
   return [...new Set(storeIds)].filter(id => resolveAccess(state, employeeId, id, key, stores, resources) !== "edit");
