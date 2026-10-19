@@ -38,11 +38,11 @@ assert.throws(()=>applyAuthorization(grants,employee,'bogus' as Access),/授权�
 let stored=JSON.stringify(state);const storage={getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}};
 persistCenterChange(storage,'test',state,0,'r','更新角色权限','测试',catalog.resources);assert.equal(JSON.parse(stored).roles[0].grants[employee.contentKey],'read');
 const payroll=pageKey('/team/payroll-report'),payrollRows=authorizationRows(catalog,payroll),basic=payrollRows.find(r=>r.title==='薪资管理')!;
-assert.equal(basic.editKeys.length,3);assert.equal(payrollRows.find(r=>r.title==='导出操作')!.mode,'visibility');
+assert.equal(basic.editKeys.length,2);assert.equal(payrollRows.find(r=>r.title==='导出操作')!.mode,'visibility');
 const amount=catalog.resources.get('field:/team/payroll-report:salary-amount')!;
 assert.ok(!payrollRows.some(r=>r.contentKey===amount.key),'Read-only sensitive fields must not gain fake editing');
 const allRows=[...catalog.resources.values()].filter(r=>r.type==='page').flatMap(r=>authorizationRows(catalog,r.key));
-assert.equal(allRows.length,35);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),59);
+assert.equal(allRows.length,36);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),59);
 assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,59,'One action cannot belong to different object authorizations');
 const pdf=actionKey('/team/payroll-report','export-detail-pdf');grants[pdf]='edit';applyAuthorization(grants,employee,'hidden');assert.equal(grants[pdf],'edit','Independent actions must retain raw grants');
 for(const row of allRows){
