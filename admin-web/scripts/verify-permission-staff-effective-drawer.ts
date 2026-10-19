@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const ui=readFileSync('src/permissions/center-ui.ts','utf8'),roles=readFileSync('src/permissions/center-staff-roles.ts','utf8'),css=readFileSync('src/permissions/center.css','utf8');
+const detail=ui.slice(ui.indexOf('  function staffDetail()'),ui.indexOf('  function render()'));
+assert(!detail.includes('pc-staff-effective'));assert(!detail.includes('editor()'));assert(detail.includes('renderStaffRoles(e,draft.roles,stores)'));
+assert(roles.includes('查看员工生效权限'));assert(roles.includes('data-do="staff-effective"'));
+const drawer=ui.slice(ui.indexOf('  function showStaffEffective()'),ui.indexOf('  function preview()'));
+assert(drawer.includes('pc-effective-drawer'));assert(drawer.includes('匹配到'));assert(drawer.includes('暂无适用角色'));assert(drawer.includes('暂无可选门店'));
+assert(drawer.includes('data-effective-store'));assert(drawer.includes('data-effective-preview'));assert(drawer.includes('返回权限详情'));assert(drawer.includes('当前未保存草稿'));
+assert(!drawer.includes('mark('));assert(!drawer.includes('saveCenterState'));assert(!drawer.includes('render();'));
+assert(css.includes('.pc-dialog.pc-effective-drawer'));assert(css.includes('height: 100dvh'));assert(css.includes('margin: 0 0 0 auto'));
+console.log('PASS effective drawer: on-demand entry, no permanent panel, local store/menu/preview, readonly/no writes, precise empty states, right drawer layout');
