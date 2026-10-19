@@ -14,6 +14,7 @@ import { registerScheduleAuthorization } from './center-authorization';
 import { registerTipsPages } from './center-tips-pages';
 import { registerPayrollPages } from './center-payroll-pages';
 import {registerPagePolicies} from './center-page-policy';
+import {registerMarketingPages} from './center-marketing-pages';
 import { STORE_INFORMATION_SETTINGS_PATH, storeInformationItemPath } from '../config/store-information-navigation';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
@@ -149,6 +150,7 @@ export function buildCenterCatalog(): Catalog {
   registerBreaksPages(tree,resources,sections);
   registerClockPages(tree,resources,sections);
   registerEmployeePages(tree,resources);
+  registerMarketingPages(resources);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
   const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);return catalog;
 }
