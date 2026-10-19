@@ -5,9 +5,10 @@ import { esc, renderPermissionEditor } from './center-editor';
 import {effectiveMenuView} from './center-effective-menu';
 import {rolePageRoute} from './center-role-route';
 import {normalizePermissionCenterPath} from './center-routes';
-import {applySubmenuMode} from './center-page-mode';
+import {applySubmenuMode,pageMode} from './center-page-mode';
+import {renderStaffRoles,renderScope,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
-import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
+import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
 import { authorizationRows } from './center-authorization';
 import {applyPageAuthorization,applyPageResourceGrant,assertPageFeatureChoice} from './center-page-policy';
@@ -61,12 +62,10 @@ export function bindCenterPage(): void {
   }
   function staffDetail():string {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
-    const current=stores.find(s=>s.id===storeId);
-    const bindings=e.bindings.filter(b=>current&&scopeMatches(b.scope,current));
     const tabs=`<div class="pc-tabs">${[['permissions','门店与权限'],['account','登录与安全'],['logs','变更记录']].map(([v,l])=>`<button data-tab="${v}" class="${tab===v?'active':''}">${l}</button>`).join('')}</div>`;
     if(tab==='logs')return tabs+`<div class="pc-card">${logs(e.id)}</div>`;
     if(tab==='account')return tabs+`<section class="pc-card"><h2>登录与安全</h2><p>登录邮箱：${esc(e.email)||'—'}</p><p>账号状态：<span class="pc-tag">${statusLabels[e.status]}</span></p><div class="pc-actions">${e.status==='pending'||e.status==='revoked'?btn('重新发送邀请','resend'):''}${e.status==='pending'?btn('撤销邀请','revoke','danger'):''}${e.status==='enabled'||e.status==='disabled'?btn(e.status==='enabled'?'停用账号':'启用账号','toggle-account'):''}</div><p class="pc-muted">账号变更仅保存在本地权限工作台；实际登录、凭据及会话服务尚未接入。</p></section>`;
-    return tabs+`<section class="pc-card"><div class="pc-toolbar"><label>查看门店<select data-store>${stores.map(s=>`<option value="${esc(s.id)}" ${s.id===storeId?'selected':''}>${esc(s.title)}</option>`).join('')}</select></label><div class="pc-actions">${btn('分配角色','assign','primary')}</div></div>${e.migrationReview?'<p class="pc-notice">旧授权范围需复核：请明确门店范围后重新分配，旧数据未删除。</p>':''}${bindings.map(b=>`<div class="pc-binding"><div><strong>${esc(draft.roles.find(r=>r.id===b.roleId)?.name??'已失效角色')}</strong><span class="pc-tag">${b.scope.mode==='stores'?'指定门店':b.scope.mode==='brands'?'动态品牌':'动态区域'}</span><small>${esc(b.scope.ids.join('、'))}</small></div><button data-remove-binding="${esc(b.id)}">移除</button></div>`).join('')||'<p class="pc-muted">本门店暂无角色授权</p>'}</section><div class="pc-toolbar"><h3>当前门店生效权限</h3>${btn('查看菜单效果','preview')}</div>${editor()}`;
+    return tabs+renderStaffRoles(e,draft.roles,stores);
   }
   function render():void {
     const scroll=new Map([...root!.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));
@@ -116,14 +115,63 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const dialog=modal('分配角色 · 选择范围',`<label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><label>授权范围<select name="mode"><option value="stores">指定门店</option><option value="brands">动态品牌</option><option value="regions">动态区域</option></select></label><div data-scope-options></div>`,d=>{
+    const dialog=modal('分配角色 · 选择范围',`<label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><div data-role-summary></div><label>授权范围<select name="mode"><option value="stores">指定门店</option><option value="brands">动态品牌</option><option value="regions">动态区域</option></select></label><div data-scope-options></div>`,d=>{
       const roleId=field(d,'role'),mode=field(d,'mode') as Scope['mode'];
       const ids=[...d.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value);
       if(!roleId||!ids.length)throw Error('请选择角色及至少一个授权范围');
-      modal('确认分配角色',`<p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>范围：${esc(ids.map(id=>mode==='stores'?stores.find(s=>s.id===id)?.title??id:id).join('、'))}</p>${mode!=='stores'?'<p class="pc-notice">动态范围包含未来新增或纳入的门店。</p>':''}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope:{mode,ids}});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
+      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${esc(scopeLabel({mode,ids}))}</p>${renderScope({mode,ids},stores,true)}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope:{mode,ids}});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
     },'下一步');
-    const options=()=>{const mode=field(dialog,'mode');const list=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set(stores.map(s=>mode==='brands'?s.brand:s.region).filter(Boolean))].map(v=>[v,v]);dialog.querySelector('[data-scope-options]')!.innerHTML=`<div class="pc-choice-list">${list.map(([id,title])=>`<label><input type="checkbox" name="scope" value="${esc(id)}" ${mode==='stores'&&id===storeId?'checked':''}>${esc(title)}</label>`).join('')}</div>`;};
-    dialog.querySelector('[name="mode"]')!.addEventListener('change',options);options();
+    bindScopeOptions(dialog,{mode:'stores',ids:storeId?[storeId]:[]});
+    dialog.querySelector('[name="role"]')!.addEventListener('change',()=>{const r=draft.roles.find(r=>r.id===field(dialog,'role'));dialog.querySelector('[data-role-summary]')!.innerHTML=r?`<p>${esc(r.description)||'该角色暂无描述'}</p><button type="button" data-view-selected-role>查看角色权限</button>`:'';});
+    dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('[data-view-selected-role]'))showRolePermissions(field(dialog,'role'));});
+  }
+  function bindScopeOptions(dialog:HTMLDialogElement,initial:Scope):void {
+    const selected=new Map<Scope['mode'],Set<string>>([[initial.mode,new Set(initial.ids)]]);
+    let mode=field(dialog,'mode') as Scope['mode'];
+    const remember=()=>selected.set(mode,new Set([...dialog.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)));
+    const options=()=>{
+      mode=field(dialog,'mode') as Scope['mode'];const chosen=selected.get(mode)??new Set<string>();
+      const known=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set(stores.map(s=>mode==='brands'?s.brand:s.region).filter(Boolean))].map(v=>[v,v]);
+      const ids=new Set(known.map(([id])=>id));const list=[...known,...[...chosen].filter(id=>!ids.has(id)).map(id=>[id,'原授权范围（当前无候选，配置保留）'])];
+      dialog.querySelector('[data-scope-options]')!.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label><p class="pc-muted">${mode==='stores'?'选择该角色适用的门店。':'动态范围包含未来新增或纳入的门店。'}搜索不会清除已选项。</p><div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
+    };
+    dialog.querySelector('[name="mode"]')!.addEventListener('change',()=>{remember();options();});
+    dialog.addEventListener('input',ev=>{const input=ev.target as HTMLInputElement;if(input.hasAttribute('data-scope-search'))for(const label of dialog.querySelectorAll<HTMLElement>('[data-scope-label]'))label.hidden=!label.textContent?.toLowerCase().includes(input.value.trim().toLowerCase());});options();
+  }
+  function editBinding(id:string):void {
+    const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
+    const dialog=modal('修改授权门店',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${[['stores','指定门店'],['brands','动态品牌'],['regions','动态区域']].map(([v,l])=>`<option value="${v}" ${v===binding.scope.mode?'selected':''}>${l}</option>`).join('')}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,d=>{
+      const scope:Scope={mode:field(d,'mode') as Scope['mode'],ids:[...d.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)};
+      if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;
+    },'确定');bindScopeOptions(dialog,binding.scope);
+  }
+  function showRolePermissions(id:string):void {
+    const r=draft.roles.find(r=>r.id===id);if(!r){error('角色不存在');return;}
+    const roleValue=(key:string)=>roleAccess(r,key,catalog.resources);
+    let selected=effectiveMenuView(catalog,roleValue,'').page,category='',search='';
+    const body=()=>renderPermissionEditor({catalog,page:selected,group:category,search,preview:false,readonly:true,staff:false,effectiveOnly:true,grantedOnly:true,emptyMessage:'该角色暂无可访问菜单',value:roleValue,own:key=>r.grants[key]??'hidden'});
+    const dialog=modal(`${r.name} · 角色权限`,`<p>${esc(r.description)||'该角色暂无描述'}</p><p class="pc-muted">仅查看此角色有权限的菜单及功能，不修改员工授权。</p><div data-role-permissions>${body()}</div>`,()=>true,'关闭');dialog.classList.add('pc-role-permissions');
+    const area=dialog.querySelector<HTMLElement>('[data-role-permissions]')!;
+    area.addEventListener('click',ev=>{const b=(ev.target as Element).closest<HTMLElement>('[data-page],[data-group]');if(!b)return;ev.preventDefault();if(b.dataset.page){selected=b.dataset.page;category='';}if(b.dataset.group)category=b.dataset.group;area.innerHTML=body();[...area.querySelectorAll<HTMLButtonElement>('[data-page],[data-group]')].find(x=>b.dataset.group?x.dataset.group===category:x.dataset.page===selected)?.focus({preventScroll:true});});
+    area.addEventListener('input',ev=>{const input=ev.target as HTMLInputElement;if(!input.hasAttribute('data-menu-search'))return;search=input.value;const pos=input.selectionStart;area.innerHTML=body();const next=area.querySelector<HTMLInputElement>('[data-menu-search]');next?.focus();next?.setSelectionRange(pos,pos);});
+  }
+  function showStaffEffective():void {
+    const e=employee();if(!e)return;
+    let selected=page,category='',search='',menuPreview=false;
+    const labels:Record<Access,string>={hidden:'不可见',read:'可见不可编辑',edit:'可编辑'};
+    const content=()=>{
+      selected=effectiveMenuView(catalog,value,selected).page;
+      const current=stores.find(s=>s.id===storeId),roles=applicableRoles(e,draft.roles,current);
+      const empty=!current?'暂无可选门店，暂时无法查看门店生效权限':roles.length?`当前门店匹配到 ${roles.length} 个角色，但合并后暂无可访问菜单，请检查角色权限配置。`:'该员工在当前门店暂无适用角色，请先分配角色。';
+      const modes=roles.map(r=>`${esc(r.name)}：${labels[pageMode(catalog,selected,k=>roleAccess(r,k,catalog.resources))]}`);
+      return `<div class="pc-toolbar"><label>查看门店<select data-effective-store ${stores.length?'':'disabled'}>${stores.length?stores.map(s=>`<option value="${esc(s.id)}" ${s.id===storeId?'selected':''}>${esc(s.title)}</option>`).join(''):'<option>暂无可选门店</option>'}</select></label><button type="button" data-effective-preview ${selected?'':'disabled'}>${menuPreview?'返回权限详情':'查看菜单效果'}</button></div><p>当前生效角色：${roles.map(r=>`<span class="pc-tag">${esc(r.name)}</span>`).join('')||'<span class="pc-muted">暂无适用角色</span>'}</p><p class="pc-muted">${esc(e.name)} · ${esc(current?.title??'未选择门店')} · ${dirty?'当前未保存草稿':'已保存配置'}；仅供查看，不执行真实业务操作。</p>${selected&&modes.length&&!menuPreview?`<p class="pc-role-contributions">当前查看：${esc(catalog.resources.get(selected)?.title)} · 各角色单独权限：${modes.join('；')}。实际权限以合并结果为准。</p>`:''}${renderPermissionEditor({catalog,page:selected,group:category,search,preview:menuPreview,readonly:true,staff:false,effectiveOnly:true,emptyMessage:empty,value,own:()=> 'inherit'})}`;
+    };
+    const dialog=modal(`${e.name} · 员工生效权限`,`<div data-effective-content>${content()}</div>`,()=>true,'关闭');dialog.classList.add('pc-effective-drawer');
+    const area=dialog.querySelector<HTMLElement>('[data-effective-content]')!;
+    const redraw=()=>{const scroll=new Map([...area.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));area.innerHTML=content();for(const el of area.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=scroll.get(el.dataset.scroll!)??0;};
+    area.addEventListener('change',ev=>{const input=ev.target as HTMLSelectElement;if(!input.hasAttribute('data-effective-store'))return;storeId=input.value;category='';search='';redraw();area.querySelector<HTMLSelectElement>('[data-effective-store]')?.focus();});
+    area.addEventListener('click',ev=>{const b=(ev.target as Element).closest<HTMLElement>('[data-page],[data-group],[data-effective-preview]');if(!b||b.hasAttribute('disabled'))return;ev.preventDefault();if(b.hasAttribute('data-effective-preview'))menuPreview=!menuPreview;if(b.dataset.page){selected=b.dataset.page;category='';}if(b.dataset.group)category=b.dataset.group;redraw();const selector=b.hasAttribute('data-effective-preview')?'[data-effective-preview]':b.dataset.group?'[data-group]':'[data-page]';[...area.querySelectorAll<HTMLButtonElement>(selector)].find(x=>b.dataset.group?x.dataset.group===category:b.dataset.page?x.dataset.page===selected:true)?.focus({preventScroll:true});});
+    area.addEventListener('input',ev=>{const input=ev.target as HTMLInputElement;if(!input.hasAttribute('data-menu-search'))return;search=input.value;const pos=input.selectionStart;redraw();const next=area.querySelector<HTMLInputElement>('[data-menu-search]');next?.focus();next?.setSelectionRange(pos,pos);});
   }
   function preview():void {
     let previewPage=page,previewGroup=group,previewSearch='';
@@ -150,15 +198,18 @@ export function bindCenterPage(): void {
       if(b.dataset.categoryGrant){ev.preventDefault();if(employeeId)return;const v=b.dataset.value as Access|'inherit';if(role()&&v!=='inherit')applyCategoryGrant(catalog,page,b.dataset.categoryGrant,role()!.grants,v);else return;mark();render();return;}
       if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(catalog.resources.get(key)?.type==='action'&&value(page)==='hidden'&&v!=='hidden')throw Error('页面不可见，不能开启功能授权');assertSettingChoice(catalog,catalog.resources.get(key)!,v,value);if(employeeId)return;if(role()&&v!=='inherit')applyPageResourceGrant(catalog,page,role()!.grants,catalog.resources.get(key)!,v);else return;mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
+      if(b.dataset.viewRole){showRolePermissions(b.dataset.viewRole);return;}
+      if(b.dataset.editBinding){editBinding(b.dataset.editBinding);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
       if(b.dataset.members){modal('角色成员',state.employees.filter(e=>e.bindings.some(x=>x.roleId===b.dataset.members)).map(e=>`<p>${link(esc(e.name),`/permissions/staff/${encodeURIComponent(e.id)}`)}</p>`).join('')||'<p>暂无成员</p>',()=>true,'关闭');return;}
       if(b.dataset.delete){const id=b.dataset.delete;modal('删除角色','<p>删除后无法恢复，确定删除此角色？</p>',()=>{const next=structuredClone(state);next.roles=next.roles.filter(r=>r.id!==id);commit(next,id,'删除角色');return true;},'删除');return;}
-      if(b.dataset.removeBinding){const binding=employee()?.bindings.find(x=>x.id===b.dataset.removeBinding);if(!binding)return;modal('移除角色',`<p>${binding.scope.mode==='stores'?'将移除此指定门店绑定。':'将影响该动态范围内的全部门店。'}其他角色绑定保留。</p>`,()=>{employee()!.bindings=employee()!.bindings.filter(x=>x.id!==binding.id);mark();render();return true;},'移除');return;}
+      if(b.dataset.removeBinding){const binding=employee()?.bindings.find(x=>x.id===b.dataset.removeBinding);if(!binding)return;modal('解除角色授权',`<p>员工：${esc(employee()!.name)}</p><p>解除角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><p>影响这条授权的完整范围，不只是当前查看门店：</p>${renderScope(binding.scope,stores,true)}<p>其他角色授权保留。保存员工详情后生效。</p>`,()=>{employee()!.bindings=employee()!.bindings.filter(x=>x.id!==binding.id);mark();render();return true;},'解除角色');return;}
       switch(b.dataset.do){
         case 'create-role':roleDialog();break;
         case 'invite':invite();break;
         case 'preview':preview();break;
         case 'assign':assign();break;
+        case 'staff-effective':showStaffEffective();break;
 
         case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
         case 'save':{
