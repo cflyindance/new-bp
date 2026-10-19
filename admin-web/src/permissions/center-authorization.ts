@@ -2,8 +2,9 @@ import type { Catalog,MenuNode,SettingGroup } from './center-catalog';
 import {getTeamEmbeddedSettingItems} from '../config/module-settings-catalog';
 import {TEAM_SHIFT_SCHEDULING_SETTING_SEQS} from '../config/team-settings-embed-ui';
 import type { Access,Resource } from './center-domain';
+import {payrollAuthorizationRows} from './center-payroll-pages';
 
-export interface AuthorizationRow { contentKey:string; title:string; editKeys:string[]; editTitle:string; help:string; mode?:'visibility' }
+export interface AuthorizationRow { contentKey:string; title:string; editKeys:string[]; editTitle:string; help:string; mode?:'visibility'; additionalContentKeys?:string[] }
 /** Only same-object editing and its corresponding save are grouped. Other actions remain independent. */
 const saveActions:Record<string,string[]>={
   'action:/team/roles-employees:manage-employee':['save-employee'],
@@ -35,6 +36,7 @@ export function registerScheduleAuthorization(resources:Map<string,Resource>,tre
   })}]);
 }
 export function authorizationRows(catalog:Catalog,page:string):AuthorizationRow[] {
+  const payroll=payrollAuthorizationRows(page);if(payroll)return payroll;
   if(page==='page:/team/tips/distribution')return [
     {contentKey:'page:/team/tips/details',title:'小费分配',editKeys:[...['refresh-tip-data','confirm-allocation','confirm-payout'].map(id=>`action:/team/tips/details:${id}`),...['batch-allocate','cancel-allocation'].map(id=>`action:/team/tips/distribution:${id}`)],editTitle:'编辑小费分配',help:'不可见：隐藏分配内容及所有操作；可见不可编辑：仅查看；可编辑：允许更新小费数据、确认分配、确认已发放、批量分配及取消分配。导出单独授权。'},
     {contentKey:'content:/team/tips/distribution:export-results',title:'导出操作',editKeys:['export-pdf','export-csv','email-result'].map(id=>`action:/team/tips/distribution:${id}`),editTitle:'导出或发送结果',help:'可见：允许导出PDF、CSV及发送到邮箱；不可见：隐藏全部导出入口。小费分配不可见时不生效。',mode:'visibility'},
@@ -54,6 +56,7 @@ export function authorizationRows(catalog:Catalog,page:string):AuthorizationRow[
 }
 export function authorizationSelection(row:AuthorizationRow,own:(key:string)=>Access|'inherit'):Access|'inherit'|'mixed' {
   const content=own(row.contentKey),edits=row.editKeys.map(own);
+  if(row.additionalContentKeys?.some(key=>own(key)!==content))return 'mixed';
   if(content==='inherit'&&edits.every(v=>v==='inherit'))return 'inherit';
   if(content==='hidden'&&edits.every(v=>v==='hidden'))return 'hidden';
   if(row.mode==='visibility')return content==='read'&&edits.every(v=>v==='edit')?'read':'mixed';
@@ -64,8 +67,9 @@ export function authorizationSelection(row:AuthorizationRow,own:(key:string)=>Ac
 export function applyAuthorization(target:Record<string,Access>,row:AuthorizationRow,value:Access|'inherit'):void {
   if(!['hidden','read','edit','inherit'].includes(value)||!row.editKeys.length)throw Error('授权状态无效');
   if(row.mode==='visibility'&&value==='edit')throw Error('导出仅支持可见或不可见');
-  for(const key of [row.contentKey,...row.editKeys]){
+  const contentKeys=[row.contentKey,...(row.additionalContentKeys??[])];
+  for(const key of [...contentKeys,...row.editKeys]){
     if(value==='inherit')delete target[key];
-    else target[key]=key===row.contentKey?(value==='hidden'?'hidden':'read'):(value==='edit'||row.mode==='visibility'&&value==='read'?'edit':'hidden');
+    else target[key]=contentKeys.includes(key)?(value==='hidden'?'hidden':'read'):(value==='edit'||row.mode==='visibility'&&value==='read'?'edit':'hidden');
   }
 }

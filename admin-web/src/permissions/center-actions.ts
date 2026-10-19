@@ -88,6 +88,7 @@ export const sourcePageActions:Record<string,ActionRegistration[]> = {
   '/team/payroll-report':[
     ...from('src/team/payroll/payroll-template.html',[
       ['edit-employee','编辑员工信息','open-employee-identity-edit'],
+      ['switch-employee','切换员工','ws-employee-switch'],
       ['save-payroll','保存员工薪资','confirm-employee'],
       ['refresh-attendance','更新考勤数据','refresh-employee-data'],
       ['export-detail-pdf','导出薪资明细 PDF','data-export-type="pdf"'],

@@ -37,13 +37,13 @@ applyAuthorization(overrides,employee,'inherit');assert.deepEqual(overrides,{});
 assert.throws(()=>applyAuthorization(grants,employee,'bogus' as Access),/授权状态无效/);assert.equal(authorizationSelection(employee,own),'edit');
 let stored=JSON.stringify(state);const storage={getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}};
 persistCenterChange(storage,'test',state,0,'r','更新角色权限','测试',catalog.resources);assert.equal(JSON.parse(stored).roles[0].grants[employee.contentKey],'read');
-const payroll=pageKey('/team/payroll-report'),payrollRows=authorizationRows(catalog,payroll),basic=payrollRows.find(r=>r.contentKey.endsWith(':employee-info'))!;
-assert.equal(basic.editKeys.length,1);assert.ok(payrollRows.every(r=>!r.editKeys.some(k=>/export|publish|print|email/.test(k))));
+const payroll=pageKey('/team/payroll-report'),payrollRows=authorizationRows(catalog,payroll),basic=payrollRows.find(r=>r.title==='薪资管理')!;
+assert.equal(basic.editKeys.length,3);assert.equal(payrollRows.find(r=>r.title==='导出操作')!.mode,'visibility');
 const amount=catalog.resources.get('field:/team/payroll-report:salary-amount')!;
 assert.ok(!payrollRows.some(r=>r.contentKey===amount.key),'Read-only sensitive fields must not gain fake editing');
 const allRows=[...catalog.resources.values()].filter(r=>r.type==='page').flatMap(r=>authorizationRows(catalog,r.key));
-assert.equal(allRows.length,33);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),45);
-assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,45,'One action cannot belong to different object authorizations');
+assert.equal(allRows.length,35);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),59);
+assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,59,'One action cannot belong to different object authorizations');
 const pdf=actionKey('/team/payroll-report','export-detail-pdf');grants[pdf]='edit';applyAuthorization(grants,employee,'hidden');assert.equal(grants[pdf],'edit','Independent actions must retain raw grants');
 for(const row of allRows){
   assert.ok(row.editKeys.length>0);assert.ok(catalog.resources.has(row.contentKey));for(const k of row.editKeys)assert.equal(catalog.resources.get(k)?.type,'action');
