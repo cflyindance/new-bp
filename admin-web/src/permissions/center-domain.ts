@@ -1,6 +1,14 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
 export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean; relatedGrantKeys?:string[]; followParentVisibility?:boolean }
+export interface Resource {pageContentKeys?:string[]}
+function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:string)=>Access|undefined):boolean {
+  return resource.pageContentKeys!.some(key=>{
+    const r=resources.get(key);if(!r)return false;
+    const visible=(r:Resource)=>r.type==='setting'?own(r.key)==='read'||own(r.key)==='edit':own(r.key)==='read';
+    return visible(r)&&(r.relatedGrantKeys??[]).every(k=>{const related=resources.get(k);return !!related&&visible(related);});
+  });
+}
 export interface Store { id: string; title: string; brand: string; region: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
@@ -23,6 +31,7 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   if(resource.legacyGateKey&&roleAccess(role,resource.legacyGateKey,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && roleAccess(role, resource.parent, resources, new Set(seen)) === "hidden") return "hidden";
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
+  if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>role.grants[k]))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
   const values=[validAccess(resource,role.grants[key]),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
   return values.reduce((a,b)=>rank[a]<rank[b]?a:b);
@@ -34,6 +43,12 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if(resource.legacyGateKey&&resolveAccess(state,employeeId,storeId,resource.legacyGateKey,stores,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && resolveAccess(state, employeeId, storeId, resource.parent, stores, resources, new Set(seen)) === "hidden") return "hidden";
   if(resource.requires?.some(k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen))==='hidden'))return 'hidden';
+  if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>{
+    const override=employee.overrides[storeId]?.[k];if(override!==undefined)return override;
+    let value:Access='hidden';for(const binding of employee.bindings)if(scopeMatches(binding.scope,store)){
+      const v=state.roles.find(r=>r.id===binding.roleId)?.grants[k]??'hidden';if(rank[v]>rank[value])value=v;
+    }return value;
+  }))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
   const override = employee.overrides[storeId]?.[key];
   const finish=(value:Access):Access=>(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value);
