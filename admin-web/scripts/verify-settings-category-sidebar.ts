@@ -8,6 +8,7 @@ import { TEAM_CLOCK_IN_SETTING_GROUPS } from '../src/config/team-clock-in-naviga
 import { MODULE_SETTINGS_BY_PATH } from '../src/config/module-settings-catalog';
 import { settingsCatalogGroups } from '../src/config/settings-category-model';
 import { persistCenterChange } from '../src/permissions/center-persistence';
+import {settingCategoryGate} from '../src/permissions/center-setting-levels';
 const catalog=buildCenterCatalog(),page=pageKey('/team/breaks-overtime/settings');
 const groups=catalog.sections!.get(page)!;
 assert.deepEqual(groups.map(g=>[g.id,g.title]),BREAKS_OVERTIME_SETTING_GROUPS.map(g=>[g.key,g.title]));
@@ -15,8 +16,9 @@ assert.deepEqual(catalog.sections!.get('page:/team/clock-in:rules')!.map(g=>[g.i
 let total=0;
 for(const hub of Object.values(MODULE_SETTINGS_BY_PATH)){
   const expected=settingsCatalogGroups(hub);
-  const actual=catalog.groups.get(pageKey(hub.settingsPath))!;
-  assert.deepEqual(actual.map(g=>[g.id,g.keys]),expected.map(g=>[g.groupKey,g.items.map(i=>settingKey(hub.settingsPath,i.seq))]),hub.settingsPath);
+  const actual=catalog.groups.get(pageKey(hub.settingsPath))??[];
+  const retained=expected.map(g=>[g.groupKey,g.items.map(i=>settingKey(hub.settingsPath,i.seq)).filter(k=>catalog.resources.get(k)?.parent===pageKey(hub.settingsPath))] as const).filter(([,keys])=>keys.length);
+  assert.deepEqual(actual.map(g=>[g.id,g.keys]),retained,hub.settingsPath);
   for(const item of hub.items)assert(catalog.resources.has(settingKey(hub.settingsPath,item.seq)),'Stored keys must remain addressable');
   total+=actual.length;
 }
@@ -29,7 +31,7 @@ assert.equal(breakKeys.length,3);assert.equal(weekKeys.length,1);
 const before=structuredClone(grants);applyCategoryGrant(catalog,page,'break-rules',grants,'read');
 for(const k of breakKeys)assert.equal(value(k),'read');for(const k of weekKeys)assert.equal(grants[k],before[k]);
 assert.equal(categoryGrantValue(catalog,breakKeys,own),'read');
-assert.match(renderPermissionEditor(options),/data-category-grant="break-rules"/);
+assert(renderPermissionEditor(options).includes(`data-grant="${settingCategoryGate(page,'break-rules')}"`));
 const html=renderPermissionEditor({...options,group:'work-week'});assert.match(html,/工作周开始于/);assert(!html.includes('data-grant="'+breakKeys[0]+'"'));
 applyCategoryGrant(catalog,page,'break-rules',grants,'hidden');
 const preview=renderPermissionEditor({...options,preview:true});assert(!preview.includes('data-group="break-rules"'));assert(preview.includes('data-group="work-week"'));assert(!preview.includes('data-category-grant='));

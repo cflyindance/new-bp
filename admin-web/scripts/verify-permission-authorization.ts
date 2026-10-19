@@ -42,8 +42,8 @@ assert.equal(basic.editKeys.length,2);assert.equal(payrollRows.find(r=>r.title==
 const amount=catalog.resources.get('field:/team/payroll-report:salary-amount')!;
 assert.ok(!payrollRows.some(r=>r.contentKey===amount.key),'Read-only sensitive fields must not gain fake editing');
 const allRows=[...catalog.resources.values()].filter(r=>r.type==='page').flatMap(r=>authorizationRows(catalog,r.key));
-assert.equal(allRows.length,40);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),67);
-assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,67,'One action cannot belong to different object authorizations');
+assert.equal(allRows.length,39);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),66);
+assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,66,'One action cannot belong to different object authorizations');
 const pdf=actionKey('/team/payroll-report','export-detail-pdf');grants[pdf]='edit';applyAuthorization(grants,employee,'hidden');assert.equal(grants[pdf],'edit','Independent actions must retain raw grants');
 for(const row of allRows){
   assert.ok(row.editKeys.length>0);assert.ok(catalog.resources.has(row.contentKey));for(const k of row.editKeys)assert.equal(catalog.resources.get(k)?.type,'action');

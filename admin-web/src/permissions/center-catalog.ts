@@ -15,6 +15,7 @@ import { registerTipsPages } from './center-tips-pages';
 import { registerPayrollPages } from './center-payroll-pages';
 import {registerPagePolicies} from './center-page-policy';
 import {registerMarketingPages} from './center-marketing-pages';
+import {registerFohPages,registerFohPageGates} from './center-foh-pages';
 import { STORE_INFORMATION_SETTINGS_PATH, storeInformationItemPath } from '../config/store-information-navigation';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
@@ -151,7 +152,8 @@ export function buildCenterCatalog(): Catalog {
   registerClockPages(tree,resources,sections);
   registerEmployeePages(tree,resources);
   registerMarketingPages(resources);
+  registerFohPages(tree,resources,groups,sections);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);return catalog;
+  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);registerFohPageGates(catalog);return catalog;
 }
 import {registerSettingLevels} from './center-setting-levels';

@@ -1377,7 +1377,7 @@ export function groupRuleRestrictionsSubnav(items: ProductCenterSidebarSubItem[]
   ];
   const group: ProductCenterSidebarSubItem = {
     id: "qc-rule-restrictions",
-    title: "菜单下单规则",
+    title: "菜单下单限制",
     titleEn: "Menu ordering rules",
     path: "/operations/queue-call/rule-restrictions",
     activePrefixes: children.map((child) => child.path),
