@@ -150,5 +150,6 @@ export function buildCenterCatalog(): Catalog {
   registerClockPages(tree,resources,sections);
   registerEmployeePages(tree,resources);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);return catalog;
+  const catalog={tree:groupStoreManagementMenus(tree),resources,groups,sections};registerPagePolicies(catalog);registerSettingLevels(catalog);return catalog;
 }
+import {registerSettingLevels} from './center-setting-levels';
