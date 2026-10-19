@@ -1,3 +1,4 @@
+import { MENU_ORDER_OTHER_SETTINGS_PATH, MENU_ORDER_OTHER_SETTINGS_SECTIONS } from '../config/menu-order-other-settings-navigation';
 import { settingsCategoryItems, settingsCategoryViewGroups } from '../config/settings-category-model';
 import * as navigation from "../config/navigation";
 import { MODULE_SETTINGS_BY_PATH, groupCatalogItemsByCategory } from "../config/module-settings-catalog";
@@ -128,6 +129,16 @@ export function buildCenterCatalog(): Catalog {
     action.requires=[...new Set(requires)];
   }
   const sections=registerPageSections(resources);
+  const otherPage=pageKey(MENU_ORDER_OTHER_SETTINGS_PATH);
+  if(!resources.has(otherPage))throw Error('菜单下单规则其他设置页面不存在');
+  sections.set(otherPage,MENU_ORDER_OTHER_SETTINGS_SECTIONS.map(category=>({
+    id:category.key,title:category.title,section:'',keys:category.settings.map(item=>{
+      const key=settingKey('/operations/queue-call/menu-order-limits',item.seq);
+      if(resources.has(key))throw Error(`重复其他设置权限：${key}`);
+      resources.set(key,{key,title:item.title,type:'setting',parent:otherPage,path:MENU_ORDER_OTHER_SETTINGS_PATH,seq:item.seq});
+      return key;
+    }),
+  })));
   registerBreaksPages(tree,resources,sections);
   registerClockPages(tree,resources,sections);
   registerEmployeePages(tree,resources);
