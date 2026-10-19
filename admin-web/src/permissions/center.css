@@ -68,6 +68,8 @@
 .pc .pc-menu-controls .pc-segment button { padding: 5px 7px; font-weight: 400; white-space: nowrap; }
 .pc .pc-menu-controls .pc-tag { margin: 0; white-space: nowrap; }
 .pc .pc-action-name { display: inline-flex; align-items: center; gap: 8px; }
+.pc .pc-page-authorization { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.pc .pc-page-authorization .pc-help-text { left: auto; right: 0; }
 .pc .pc-help { position: relative; display: inline-flex; }
 .pc .pc-help-trigger { width: 24px; height: 24px; padding: 0; border-radius: 50%; color: #62778f; font-size: 12px; }
 .pc .pc-help-text { display: none; position: absolute; bottom: calc(100% + 7px); left: 0; z-index: 2; width: max-content; max-width: 240px; padding: 9px 12px; border: 1px solid var(--pc-line); border-radius: 6px; background: #20334b; color: white; font-size: 12px; font-weight: 400; line-height: 1.5; white-space: normal; box-shadow: 0 4px 12px #15294e1a; }
