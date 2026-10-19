@@ -3,6 +3,12 @@ import type {Access,Resource} from './center-domain';
 import {authorizationRows,applyAuthorization,type AuthorizationRow} from './center-authorization';
 import {applyResourceGrant} from './center-employee-pages';
 export interface PagePolicy {kind:'single'|'complex'|'entry'; row?:AuthorizationRow; setting?:Resource; coreKeys:string[]}
+export function pageFeatureBlocked(page:string,row:AuthorizationRow,effective:(key:string)=>Access):boolean {
+  return row.mode==='visibility'&&effective(page)==='hidden';
+}
+export function assertPageFeatureChoice(page:string,row:AuthorizationRow,value:Access|'inherit',effective:(key:string)=>Access):void {
+  if(pageFeatureBlocked(page,row,effective)&&value!=='hidden')throw Error('页面不可见，不能开启功能授权');
+}
 export function pagePolicy(c:Catalog,page:string):PagePolicy {
   const rows=authorizationRows(c,page),groups=c.sections?.get(page)??c.groups.get(page)??[];
   const children=[...c.resources.values()].filter(r=>r.parent===page&&!r.compatibilityOnly);

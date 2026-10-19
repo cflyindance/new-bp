@@ -3,7 +3,7 @@ import type { Access, Resource } from './center-domain';
 import type { Catalog, MenuNode } from './center-catalog';
 import { authorizationRows, authorizationSelection, type AuthorizationRow } from './center-authorization';
 import { resourceOwn } from './center-employee-pages';
-import {pagePolicy} from './center-page-policy';
+import {pagePolicy,pageFeatureBlocked} from './center-page-policy';
 import {settingCategoryGate} from './center-setting-levels';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
@@ -31,13 +31,14 @@ export function renderPermissionEditor(o: EditorOptions): string {
     if(o.staff) vals.unshift(['inherit','跟随角色']);
     const parentInherited=!!resource.inheritFrom&&!!o.parentInherited?.(resource.key);
     const ownSelection=parentInherited?o.value(resource.inheritFrom!):resource.defaultAccess&&o.own(resource.key)==='hidden'&&o.value(resource.key)!=='hidden'?o.value(resource.key):resourceOwn(resource,o.own);
-    const selection=resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys&&o.own(o.page)==='hidden'&&!['hidden','inherit'].includes(ownSelection)?'mixed':ownSelection;
+    const pageBlocked=resource.type==='action'&&o.value(o.page)==='hidden';
+    const selection=pageBlocked?'hidden':resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys&&o.own(o.page)==='hidden'&&!['hidden','inherit'].includes(ownSelection)?'mixed':ownSelection;
     const parentBlocked=!!resource.parent && (resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys?!!catalog.resources.get(o.page)?.parent&&o.value(catalog.resources.get(o.page)!.parent!)==='hidden':o.value(resource.parent)==='hidden');
     const contentBlocked=resource.requires?.some(k=>o.value(k)==='hidden');
-    const blocked=parentBlocked||contentBlocked||resource.ceilingKeys?.some(k=>o.value(k)==='hidden');
+    const blocked=pageBlocked||parentBlocked||contentBlocked||resource.ceilingKeys?.some(k=>o.value(k)==='hidden');
     const editBlocked=resource.ceilingKeys?.some(k=>o.value(k)!=='edit');
     const tag=compact?'span':'div';
-    const reason=parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
+    const reason=pageBlocked?'页面不可见，不能开启功能授权':parentBlocked?(catalog.resources.get(resource.parent!)?.type==='content'?'所属内容不可见':'上级导航不可查看'):'所需页面内容不可见';
 return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?`disabled title="${reason}"`:v==='edit'&&editBlocked?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</${tag}>${resource.inheritFrom&&!parentInherited?`<small class="pc-muted">${o.staff&&o.own(resource.key)==='inherit'?'跟随角色':'单独配置'}</small>`:''}${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}${selection==='edit'&&editBlocked?'<small class="pc-muted">原可编辑配置已保留，当前受上级权限限制。</small>':''}`;
   }
   const page=catalog.resources.get(o.page),pageSections=catalog.sections?.get(o.page),allGroups=pageSections??catalog.groups.get(o.page)??[], groups=allGroups.filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
@@ -65,8 +66,9 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const unifiedRow=(a:AuthorizationRow,compact=false):string=>{
     const content=catalog.resources.get(a.contentKey)!;
     const conflict=o.own(o.page)==='hidden'&&[a.contentKey,...(a.additionalContentKeys??[])].some(k=>o.own(k)==='read');
-    const selection=conflict?'mixed':authorizationSelection(a,o.own);
-    const blocked=!!content.parent&&(content.parent===o.page&&page?.pageContentKeys?!!page.parent&&o.value(page.parent)==='hidden':o.value(content.parent)==='hidden');
+    const pageBlocked=!compact&&pageFeatureBlocked(o.page,a,o.value);
+    const selection=pageBlocked?'hidden':conflict?'mixed':authorizationSelection(a,o.own);
+    const blocked=pageBlocked||!!content.parent&&(content.parent===o.page&&page?.pageContentKeys?!!page.parent&&o.value(page.parent)==='hidden':o.value(content.parent)==='hidden');
     const editBlocked=[content,...a.editKeys.map(k=>catalog.resources.get(k)!)].some(r=>r.ceilingKeys?.some(k=>o.value(k)!=='edit'));
     const effective=o.value(a.contentKey)==='hidden'?'hidden':a.editKeys.every(k=>o.value(k)==='edit')?'edit':a.mode==='visibility'?'hidden':'read';
     const label=effective==='hidden'?'不可见':a.mode==='visibility'?'可见':effective==='edit'?'可编辑':'可见不可编辑';
