@@ -6,6 +6,7 @@ import { resourceOwn } from './center-employee-pages';
 import {pagePolicy,pageFeatureBlocked} from './center-page-policy';
 import {settingCategoryGate} from './center-setting-levels';
 import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navigation';
+import {FOH_PERMISSION_PAGES} from './center-foh-pages';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
@@ -32,7 +33,7 @@ export function renderPermissionEditor(o: EditorOptions): string {
     if(o.staff) vals.unshift(['inherit','跟随角色']);
     const parentInherited=!!resource.inheritFrom&&!!o.parentInherited?.(resource.key);
     const ownSelection=parentInherited?o.value(resource.inheritFrom!):resource.defaultAccess&&o.own(resource.key)==='hidden'&&o.value(resource.key)!=='hidden'?o.value(resource.key):resourceOwn(resource,o.own);
-    const pageBlocked=resource.type==='action'&&o.value(o.page)==='hidden';
+    const pageBlocked=(resource.type==='action'||FOH_PERMISSION_PAGES.includes(page?.path??'')&&resource.parent===o.page)&&o.value(o.page)==='hidden';
     const selection=pageBlocked?'hidden':resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys&&o.own(o.page)==='hidden'&&!['hidden','inherit'].includes(ownSelection)?'mixed':ownSelection;
     const parentBlocked=!!resource.parent && (resource.parent===o.page&&catalog.resources.get(o.page)?.pageContentKeys?!!catalog.resources.get(o.page)?.parent&&o.value(catalog.resources.get(o.page)!.parent!)==='hidden':o.value(resource.parent)==='hidden');
     const contentBlocked=resource.requires?.some(k=>o.value(k)==='hidden');
@@ -67,7 +68,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const unifiedRow=(a:AuthorizationRow,compact=false):string=>{
     const content=catalog.resources.get(a.contentKey)!;
     const conflict=o.own(o.page)==='hidden'&&[a.contentKey,...(a.additionalContentKeys??[])].some(k=>o.own(k)==='read');
-    const pageBlocked=!compact&&pageFeatureBlocked(o.page,a,o.value);
+    const pageBlocked=!compact&&(pageFeatureBlocked(o.page,a,o.value)||FOH_PERMISSION_PAGES.includes(page?.path??'')&&o.value(o.page)==='hidden');
     const selection=pageBlocked?'hidden':conflict?'mixed':authorizationSelection(a,o.own);
     const blocked=pageBlocked||!!content.parent&&(content.parent===o.page&&page?.pageContentKeys?!!page.parent&&o.value(page.parent)==='hidden':o.value(content.parent)==='hidden');
     const editBlocked=[content,...a.editKeys.map(k=>catalog.resources.get(k)!)].some(r=>r.ceilingKeys?.some(k=>o.value(k)!=='edit'));
@@ -78,7 +79,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':editBlocked&&(v==='edit'||a.mode==='visibility'&&v==='read')?'disabled title="上级只读或不可见，不能配置可编辑"':''}>${l}</button>`).join('')}</div>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
     return compact?`<div class="pc-page-authorization">${o.preview?`<span class="pc-tag">${label}</span>`:result}</div>`:`<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
-  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&r.key!==policy?.row?.contentKey).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
+  const visibleContents=shownContents.filter(r=>!mergedContents.has(r.key)&&(page?.settingPageGate||r.key!==policy?.row?.contentKey)).filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit'));
   const sensitive=(r:Resource)=>o.page==='page:/team/payroll-report'&&r.type==='field';
   const authorizationBody=visibleContents.filter(r=>!sensitive(r)).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
   const sensitiveBody=visibleContents.filter(sensitive).map(row).join('');

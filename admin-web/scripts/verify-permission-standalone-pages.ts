@@ -6,9 +6,10 @@ import {roleAccess,resolveAccess,type Access,type CenterState} from '../src/perm
 import {applyPageResourceGrant} from '../src/permissions/center-page-policy';
 import {resourceOwn} from '../src/permissions/center-employee-pages';
 import {renderPermissionEditor} from '../src/permissions/center-editor';
+import {FOH_PERMISSION_PAGES} from '../src/permissions/center-foh-pages';
 const c=buildCenterCatalog(),expected=['/orders/discounts','/orders/surcharges','/stores/profile','/stores/hours'].sort();
 const matches=[...c.resources.values()].filter(r=>r.type==='page'&&r.path&&!hasModuleSettingsCategorySidebar(r.path));
-assert.deepEqual(matches.map(r=>r.path).sort(),expected);
+assert.deepEqual(matches.map(r=>r.path).sort(),[...expected,...FOH_PERMISSION_PAGES.filter(p=>!p.endsWith('/other'))].sort());
 let singleGroups=0;
 for(const p of c.resources.values())if(p.type==='page'){
   const groups=c.sections?.get(p.key)??c.groups.get(p.key)??[];if(groups.length===1)singleGroups++;
@@ -21,7 +22,7 @@ for(const p of c.resources.values())if(p.type==='page'){
     }else assert.match(html,/<nav class="pc-categories"/,`Actual settings category lost: ${p.key}`);
   }
 }
-assert.equal(singleGroups,14);
+assert.equal(singleGroups,15);
 for(const path of expected){
   assert.equal(hasModuleSettingsCategorySidebar(path+'/?q=1#field'),false);
   const page=pageKey(path),p=c.resources.get(page)!,gate=c.resources.get(p.settingPageGate!)!,alias=gate.relatedGrantKeys![0];
@@ -40,4 +41,4 @@ for(const path of expected){
   grants[alias]='read';assert.equal(resolveAccess(state,'e','a',item.key,stores,c.resources),'read');
 }
 assert.match(readFileSync('src/main.ts','utf8'),/if \(!hasModuleSettingsCategorySidebar\(path\)\) return ""/);
-console.log('PASS standalone audit: 215 pages, 14 single-group candidates, four flat pages; shared real navigation, retained settings categories and historical gates');
+console.log(`PASS standalone audit: ${[...c.resources.values()].filter(r=>r.type==='page').length} pages, ${singleGroups} single-group candidates, ${matches.length} flat pages; shared real navigation, retained settings categories and historical gates`);

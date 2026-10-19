@@ -10,6 +10,7 @@ assert.equal(catalog.resources.get(key)?.help,'编辑权限包含新增、删除
 for(const id of ['create','edit','delete'])assert.ok(!catalog.resources.has(actionKey(path,id)));
 const grants:Record<string,Access>={};let parent:string|undefined=page;
 while(parent){grants[parent]='read';parent=catalog.resources.get(parent)?.parent;}
+parent=catalog.resources.get(key)!.parent;while(parent){grants[parent]='read';parent=catalog.resources.get(parent)?.parent;}
 for(const dependency of catalog.resources.get(key)!.requires??[])grants[dependency]='read';
 for(const id of ['create','edit','delete'])grants[actionKey(path,id)]='edit';
 const state:CenterState={schema:1,navigationVersion:1,version:0,logs:[],roles:[{id:'r',name:'分类测试',description:'',system:false,grants}],employees:[{id:'e',name:'员工',email:'test@example.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a']}}],overrides:{a:{[actionKey(path,'delete')]:'edit'}}}]};
@@ -22,7 +23,7 @@ assert.equal(value(key),'edit');assert.equal(value(menu),'hidden');
 assert.equal(resolveAccess(state,'e','a',key,stores,catalog.resources),'edit');assert.equal(resolveAccess(state,'e','b',key,stores,catalog.resources),'hidden');
 state.employees[0].overrides.a[key]='hidden';assert.equal(resolveAccess(state,'e','a',key,stores,catalog.resources),'hidden');delete state.employees[0].overrides.a[key];
 state.roles[0].grants[page]='hidden';assert.equal(value(key),'hidden');assert.equal(state.roles[0].grants[key],'edit');state.roles[0].grants[page]='read';
-const options={catalog,page,group:'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
+const options={catalog,page:catalog.resources.get(key)!.parent!,group:'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
 for(const variant of [{},{preview:true},{staff:true,readonly:true}]){
   const html=renderPermissionEditor({...options,...variant});
   assert.match(catalog.resources.get(key)!.help!,/编辑权限包含新增、删除、修改/);assert.doesNotMatch(html,/pc-help|aria-describedby=|role="tooltip"/);

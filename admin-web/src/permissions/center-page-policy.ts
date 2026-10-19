@@ -2,9 +2,10 @@ import type {Catalog} from './center-catalog';
 import type {Access,Resource} from './center-domain';
 import {authorizationRows,applyAuthorization,type AuthorizationRow} from './center-authorization';
 import {applyResourceGrant} from './center-employee-pages';
+import {applyFohPageDefaults,FOH_PERMISSION_PAGES} from './center-foh-pages';
 export interface PagePolicy {kind:'single'|'complex'|'entry'; row?:AuthorizationRow; setting?:Resource; coreKeys:string[]}
 export function pageFeatureBlocked(page:string,row:AuthorizationRow,effective:(key:string)=>Access):boolean {
-  return row.mode==='visibility'&&effective(page)==='hidden';
+  return (row.mode==='visibility'||FOH_PERMISSION_PAGES.includes(page.replace(/^page:/,'')))&&effective(page)==='hidden';
 }
 export function assertPageFeatureChoice(page:string,row:AuthorizationRow,value:Access|'inherit',effective:(key:string)=>Access):void {
   if(pageFeatureBlocked(page,row,effective)&&value!=='hidden')throw Error('页面不可见，不能开启功能授权');
@@ -41,4 +42,5 @@ export function applyPageAuthorization(c:Catalog,page:string,target:Record<strin
 export function applyPageResourceGrant(c:Catalog,page:string,target:Record<string,Access>,resource:Resource,value:Access|'inherit'):void {
   for(const key of [resource.key,...(resource.relatedGrantKeys??[])]){const marker=c.resources.get(key)?.parentChoiceKey;if(marker)delete target[marker];}
   applyResourceGrant(target,resource,value);syncPageGrant(c,page,target,[resource.key],value);
+  applyFohPageDefaults(c,target,resource,value);
 }

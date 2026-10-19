@@ -1,6 +1,7 @@
 import type {Catalog} from './center-catalog';
 import type {Access,Resource} from './center-domain';
 import {hasModuleSettingsCategorySidebar} from '../config/settings-category-navigation';
+import {FOH_PERMISSION_PAGES} from './center-foh-pages';
 export const settingPageGate=(page:string)=>`setting-page:${page}`;
 export const settingCategoryGate=(page:string,id:string)=>`setting-category:${page}:${id}`;
 export const settingParentChoice=(key:string)=>`setting-parent-choice:${key}`;
@@ -35,5 +36,7 @@ export function applySettingParentChoice(c:Catalog,grants:Record<string,Access>,
   for(const key of [resource.key,...(resource.relatedGrantKeys??[])]){delete grants[key];const r=c.resources.get(key);if(r?.parentChoiceKey)grants[r.parentChoiceKey]='read';}
 }
 export function assertSettingChoice(c:Catalog,resource:Resource,value:Access|'inherit',effective:(key:string)=>Access):void {
+  const parent=resource.parent?c.resources.get(resource.parent):undefined;
+  if(value!=='hidden'&&parent?.type==='page'&&FOH_PERMISSION_PAGES.includes(parent.path??'')&&effective(parent.key)==='hidden')throw Error('页面不可见，不能开启局部权限');
   if(value==='edit'&&resource.ceilingKeys?.some(k=>effective(k)!=='edit'))throw Error('上级权限限制，不能配置可编辑');
 }
