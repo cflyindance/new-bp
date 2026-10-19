@@ -11,6 +11,7 @@ export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>
 export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
   const {catalog}=o;
+  const buffetPage=o.page==='page:/operations/queue-call/buffet-rules';
   const menuNodes=new Map<string,MenuNode>();
   const indexNodes=(nodes:MenuNode[]):void=>{for(const node of nodes){if(node.key)menuNodes.set(node.key,node);indexNodes(node.children);}};
   indexNodes(catalog.tree);
@@ -49,8 +50,8 @@ return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title
   const actions=[...catalog.resources.values()].filter(r=>r.parent===o.page&&r.type==='action');
   const contents=[...catalog.resources.values()].filter(r=>!r.compatibilityOnly&&((r.type==='content'&&r.parent===o.page)||(r.type==='field'&&catalog.resources.get(r.parent??'')?.parent===o.page)));
   const inCategory=(key:string)=>!pageSections||!!active?.keys.includes(key);
-  const shownActions=actions.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
-  const shownContents=contents.filter(r=>inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
+  const shownActions=actions.filter(r=>!buffetPage&&inCategory(r.key)&&(!o.preview||o.value(r.key)==='edit'));
+  const shownContents=contents.filter(r=>!buffetPage&&inCategory(r.key)&&(!o.preview||o.value(r.key)!=='hidden'));
   const unified=authorizationRows(catalog,o.page),unifiedByContent=new Map(unified.map(r=>[r.contentKey,r]));
   const mergedContents=new Set(unified.flatMap(r=>r.additionalContentKeys??[]));
   const mergedActions=new Set(unified.flatMap(r=>r.editKeys));
@@ -69,9 +70,12 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
     const content=catalog.resources.get(a.contentKey)!;
     const conflict=o.own(o.page)==='hidden'&&[a.contentKey,...(a.additionalContentKeys??[])].some(k=>o.own(k)==='read');
     const pageBlocked=!compact&&(pageFeatureBlocked(o.page,a,o.value)||FOH_PERMISSION_PAGES.includes(page?.path??'')&&o.value(o.page)==='hidden');
-    const selection=pageBlocked?'hidden':conflict?'mixed':authorizationSelection(a,o.own);
-    const blocked=pageBlocked||!!content.parent&&(content.parent===o.page&&page?.pageContentKeys?!!page.parent&&o.value(page.parent)==='hidden':o.value(content.parent)==='hidden');
-    const editBlocked=[content,...a.editKeys.map(k=>catalog.resources.get(k)!)].some(r=>r.ceilingKeys?.some(k=>o.value(k)!=='edit'));
+    const rowSelection=authorizationSelection(a,o.own);
+    const legacyGateSelection=buffetPage&&page?.settingPageGate?o.own(page.settingPageGate):undefined;
+    const gateConflict=buffetPage&&legacyGateSelection!==undefined&&legacyGateSelection!==rowSelection;
+    const selection=pageBlocked?'hidden':conflict||gateConflict?'mixed':rowSelection;
+    const blocked=pageBlocked||!!content.parent&&(content.parent===o.page&&(page?.pageContentKeys||buffetPage&&compact)?!!page?.parent&&o.value(page.parent)==='hidden':o.value(content.parent)==='hidden');
+    const editBlocked=!(buffetPage&&compact)&&[content,...a.editKeys.map(k=>catalog.resources.get(k)!)].some(r=>r.ceilingKeys?.some(k=>o.value(k)!=='edit'));
     const effective=o.value(a.contentKey)==='hidden'?'hidden':a.editKeys.every(k=>o.value(k)==='edit')?'edit':a.mode==='visibility'?'hidden':'read';
     const label=effective==='hidden'?'不可见':a.mode==='visibility'?'可见':effective==='edit'?'可编辑':'可见不可编辑';
     const choices:[Access|'inherit',string][]=a.mode==='visibility'?[['hidden','不可见'],['read','可见']]:[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']];if(o.staff)choices.unshift(['inherit','跟随角色']);
@@ -100,7 +104,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const settingsLayout=flatStorePage
     ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${authorizationSection}${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
     : `<div class="pc-settings"><nav class="pc-categories" data-scroll="categories" tabindex="0" aria-label="${pageSections?esc(page?.title)+'分类':'设置分类'}">${categories}</nav><div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${categoryControls}${categoryBody}</div></div>`;
-  const headerControls=page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag">${o.value(page.settingPageGate)==='hidden'?'不可见':o.value(page.settingPageGate)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
+  const headerControls=buffetPage&&policy?.row?unifiedRow(policy.row,true):page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag">${o.value(page.settingPageGate)==='hidden'?'不可见':o.value(page.settingPageGate)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
     ? policy.row?unifiedRow(policy.row,true):!o.preview&&!o.readonly?control(policy.setting!):`<span class="pc-tag">${o.value(policy.setting!.key)==='hidden'?'不可见':o.value(policy.setting!.key)==='edit'?'可编辑':'可见不可编辑'}</span>`
     : page?.type!=='page'||policy?.kind==='complex'||o.preview||o.readonly?menuStatus(o.page):page?control(page):'';
   let blockedAncestor:Resource|undefined,ancestorKey=page?.parent;const checkedAncestors=new Set<string>();

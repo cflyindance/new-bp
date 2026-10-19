@@ -12,6 +12,7 @@ const saveActions:Record<string,string[]>={
   'action:/team/shift-scheduling:save-schedule':['clear-schedule','reset-schedule','copy-week'],
   'action:/team/payroll-report:manage-declaration':['save-declaration'],
   'action:/team/tips/rules:manage-rule':['copy'],
+  'action:/operations/queue-call/buffet-rules:manage-rule':['copy','toggle'],
 };
 /** Schedule-table writes share one object; shift-definition editing is separate. */
 export function registerScheduleAuthorization(resources:Map<string,Resource>,tree:MenuNode[],groups:Map<string,SettingGroup[]>):void {
@@ -51,6 +52,7 @@ export function authorizationRows(catalog:Catalog,page:string):AuthorizationRow[
     for(const key of editKeys){const r=catalog.resources.get(key);if(!r||r.type!=='action'||r.parent!==page||!r.requires?.includes(content.key))throw Error(`统一授权缺少对应操作：${key}`);}
     const object=action.title.replace(/^编辑/,'');
     if(action.key==='action:/team/tips/rules:manage-rule')return [{contentKey:content.key,title:'分配规则管理',editKeys,editTitle:'编辑分配规则',help:'不可见：隐藏规则及编辑入口；可见不可编辑：仅查看；可编辑：允许新增、修改、删除及复制分配规则。不包含小费分配、确认结果、确认发放或导出操作。'}];
+    if(action.key==='action:/operations/queue-call/buffet-rules:manage-rule')return [{contentKey:content.key,title:'自助餐规则',editKeys,editTitle:'编辑自助餐规则',help:'不可见：隐藏整页及全部操作；可见不可编辑：仅查看；可编辑：允许新增、修改、删除、复制、启用及禁用自助餐规则，全部操作统一授权。'}];
     if(action.key==='action:/team/shift-scheduling:save-schedule')return [{contentKey:content.key,title:'排班管理',editKeys,editTitle:'编辑排班',help:'不可见：隐藏排班内容与全部操作；可见不可编辑：仅查看；可编辑：允许排班表内全部变更，包括调整、保存/批量保存、清除、恢复默认及同步下周排班。不包含班次或规则设置的编辑权限。'}];
     return [{contentKey:content.key,title:content.key.endsWith(':employee-info')?'员工信息管理':`${object}管理`,editKeys,editTitle:action.title,
       help:`不可见：隐藏内容及编辑入口；可见不可编辑：仅查看；可编辑：${action.title}，${action.help??`允许${action.title}`}${editKeys.length>1?'，包含对应保存操作':''}。导出、发布等特殊操作独立授权。`}];
