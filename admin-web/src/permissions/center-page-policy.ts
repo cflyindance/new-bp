@@ -33,5 +33,6 @@ export function applyPageAuthorization(c:Catalog,page:string,target:Record<strin
   applyAuthorization(target,row,value);syncPageGrant(c,page,target,[row.contentKey],value);
 }
 export function applyPageResourceGrant(c:Catalog,page:string,target:Record<string,Access>,resource:Resource,value:Access|'inherit'):void {
+  for(const key of [resource.key,...(resource.relatedGrantKeys??[])]){const marker=c.resources.get(key)?.parentChoiceKey;if(marker)delete target[marker];}
   applyResourceGrant(target,resource,value);syncPageGrant(c,page,target,[resource.key],value);
 }

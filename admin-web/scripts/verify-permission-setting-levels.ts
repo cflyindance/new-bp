@@ -7,7 +7,7 @@ import {renderPermissionEditor} from '../src/permissions/center-editor';
 const c=buildCenterCatalog(),page='page:/team/clock-in:rules',p=c.resources.get(page)!,gate=p.settingPageGate!;
 assert(gate);const groups=c.sections!.get(page)!,group=groups[0],category=settingCategoryGate(page,group.id),item=c.resources.get(group.keys[0])!;
 const grants:Record<string,Access>={};for(const r of c.resources.values())if(['module','navigation','page'].includes(r.type))grants[r.key]='read';
-assert.equal(roleAccess({id:'empty',name:'empty',description:'',system:false,grants},item.key,c.resources),'hidden','Neutral defaults cannot grant an unassigned item');
+assert.equal(roleAccess({id:'empty',name:'empty',description:'',system:false,grants},item.key,c.resources),'edit','Unconfigured items now inherit the accessible parent');
 grants[item.key]='edit';const role={id:'r',name:'r',description:'',system:false,grants};const value=(k:string)=>roleAccess(role,k,c.resources);
 assert.equal(value(item.key),'edit','Neutral ceiling must preserve existing grants');
 const saved=JSON.stringify(grants);
