@@ -11,6 +11,7 @@ import { registerPageSections,registerBreaksPages } from './center-page-sections
 import { registerClockPages } from './center-clock-pages';
 import { registerEmployeePages } from './center-employee-pages';
 import { registerScheduleAuthorization } from './center-authorization';
+import { registerTipsPages } from './center-tips-pages';
 import { STORE_INFORMATION_SETTINGS_PATH, storeInformationItemPath } from '../config/store-information-navigation';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
@@ -129,6 +130,7 @@ export function buildCenterCatalog(): Catalog {
     for(const dependency of requires)if(!['content','field'].includes(resources.get(dependency)?.type??''))throw Error(`操作关联缺少内容：${dependency}`);
     action.requires=[...new Set(requires)];
   }
+  registerTipsPages(tree,resources);
   registerScheduleAuthorization(resources,tree,groups);
   const sections=registerPageSections(resources);
   const otherPage=pageKey(MENU_ORDER_OTHER_SETTINGS_PATH);
