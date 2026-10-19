@@ -58,14 +58,14 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
   const unifiedRow=(a:AuthorizationRow):string=>{
     const content=catalog.resources.get(a.contentKey)!,selection=authorizationSelection(a,o.own),blocked=!!content.parent&&o.value(content.parent)==='hidden';
-    const effective=o.value(a.contentKey)==='hidden'?'hidden':a.editKeys.every(k=>o.value(k)==='edit')?'edit':'read';
-    const label=effective==='hidden'?'不可见':effective==='edit'?'可编辑':'可见不可编辑';
-    const choices:[Access|'inherit',string][]=[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']];if(o.staff)choices.unshift(['inherit','跟随角色']);
+    const effective=o.value(a.contentKey)==='hidden'?'hidden':a.editKeys.every(k=>o.value(k)==='edit')?'edit':a.mode==='visibility'?'hidden':'read';
+    const label=effective==='hidden'?'不可见':a.mode==='visibility'?'可见':effective==='edit'?'可编辑':'可见不可编辑';
+    const choices:[Access|'inherit',string][]=a.mode==='visibility'?[['hidden','不可见'],['read','可见']]:[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']];if(o.staff)choices.unshift(['inherit','跟随角色']);
     const name=o.preview&&effective!=='edit'?esc(a.title):actionTitle({...content,title:a.title,help:a.help});
     const result=o.preview?`<span class="pc-content-sample">${esc(content.previewValue)}</span><span class="pc-tag">${label}</span>${effective==='edit'?`<button type="button" data-demo >${esc(a.editTitle)}</button>`:''}`:o.readonly?`<span class="pc-tag">${label}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(a.title)}授权">${choices.map(([v,l])=>`<button type="button" data-authorization="${esc(a.contentKey)}" data-value="${v}" aria-pressed="${selection===v}" ${blocked?'disabled title="上级导航不可查看"':''}>${l}</button>`).join('')}</div>${selection==='mixed'?'<small class="pc-muted">部分配置，需复核</small>':''}`;
     return `<tr><th scope="row">${name}</th><td>${result}</td></tr>`;
   };
-  const authorizationBody=shownContents.map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
+  const authorizationBody=shownContents.filter(r=>!o.preview||unifiedByContent.get(r.key)?.mode!=='visibility'||unifiedByContent.get(r.key)!.editKeys.every(k=>o.value(k)==='edit')).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
   const categoryHasAuthorization=contents.some(r=>inCategory(r.key))||actions.some(r=>inCategory(r.key));
   const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}`:'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];

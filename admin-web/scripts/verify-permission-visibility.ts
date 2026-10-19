@@ -15,7 +15,7 @@ assert.doesNotMatch(renderPermissionEditor({...options,preview:true}),/导出薪
 const {contentKey,fieldKey,visibilityEntries}=await import('../src/permissions/center-visibility');
 const basic=contentKey(path,'employee-info'),detail=contentKey(path,'payroll-detail'),ssn=fieldKey(path,'ssn'),adp=fieldKey(path,'adp-id'),amount=fieldKey(path,'salary-amount');
 for(const key of [basic,detail,ssn,adp,amount])assert.ok(catalog.resources.has(key));
-assert.equal([...catalog.resources.values()].filter(r=>r.type==='content').length,32);
+assert.equal([...catalog.resources.values()].filter(r=>r.type==='content').length,34);
 assert.equal([...catalog.resources.values()].filter(r=>r.type==='field').length,3);
 for(const entries of Object.values(visibilityEntries))for(const entry of entries)assert.ok(readFileSync(entry.source,'utf8').includes(entry.control));
 const edit=actionKey(path,'edit-employee'),pdf=actionKey(path,'export-detail-pdf');grants[edit]='edit';grants[pdf]='edit';
