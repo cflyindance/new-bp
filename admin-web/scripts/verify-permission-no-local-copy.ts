@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const ui=readFileSync('src/permissions/center-ui.ts','utf8'),roles=readFileSync('src/permissions/center-staff-roles.ts','utf8');
+assert(!ui.includes('账号变更仅保存在本地权限工作台；实际登录、凭据及会话服务尚未接入。'));
+assert(!ui.includes('本地配置 · 业务鉴权尚未切换'));
+assert(!roles.includes('查看该员工的全部角色及授权门店。'));
+for(const label of ['登录与安全','登录邮箱','账号状态','停用账号','保存更改'])assert(ui.includes(label));
+for(const label of ['已分配角色','分配角色','查看员工生效权限','修改门店','解除角色'])assert(roles.includes(label));
+assert(ui.includes('仅修改本地工作台状态，不调用真实账号服务。'),'Account confirmation semantics stay unchanged');
+console.log('PASS removed three requested copy fragments; account/role actions and save semantics retained');

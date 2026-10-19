@@ -6,7 +6,10 @@ assert(!detail.includes('pc-staff-effective'));assert(!detail.includes('editor()
 assert(roles.includes('查看员工生效权限'));assert(roles.includes('data-do="staff-effective"'));
 const drawer=ui.slice(ui.indexOf('  function showStaffEffective()'),ui.indexOf('  function preview()'));
 assert(drawer.includes('pc-effective-drawer'));assert(drawer.includes('匹配到'));assert(drawer.includes('暂无适用角色'));assert(drawer.includes('暂无可选门店'));
-assert(drawer.includes('data-effective-store'));assert(drawer.includes('data-effective-preview'));assert(drawer.includes('返回权限详情'));assert(drawer.includes('当前未保存草稿'));
+assert(drawer.includes('data-effective-store'));assert(drawer.includes('当前生效角色'));
+for(const removed of ['data-effective-preview','返回权限详情','查看菜单效果','当前未保存草稿','已保存配置','仅供查看，不执行真实业务操作','各角色单独权限','实际权限以合并结果为准','pc-role-contributions','menuPreview'])assert(!drawer.includes(removed),removed);
+assert(drawer.includes('preview:false'));assert(drawer.includes('readonly:true'));assert(drawer.includes('effectiveOnly:true'));
+assert(ui.slice(ui.indexOf('  function preview()')).includes('菜单效果预览'),'Other preview flows must be retained');
 assert(!drawer.includes('mark('));assert(!drawer.includes('saveCenterState'));assert(!drawer.includes('render();'));
 assert(css.includes('.pc-dialog.pc-effective-drawer'));assert(css.includes('height: 100dvh'));assert(css.includes('margin: 0 0 0 auto'));
-console.log('PASS effective drawer: on-demand entry, no permanent panel, local store/menu/preview, readonly/no writes, precise empty states, right drawer layout');
+console.log('PASS effective drawer: on-demand entry, no permanent panel, removed requested copy/preview only, retained store/roles/menu/search, readonly/no writes, empty states and layout');

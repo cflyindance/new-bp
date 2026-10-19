@@ -27,7 +27,6 @@
 .pc-effective-drawer footer [data-close] { display: none; }
 .pc-effective-drawer [data-effective-content] > .pc-toolbar { align-items: end; }
 @media(max-width:760px){.pc-dialog.pc-effective-drawer{width:100vw;border-radius:0}.pc-effective-drawer > form.pc{padding:14px}}
-.pc .pc-role-contributions { color: #597088; font-size: 12px; margin: 10px 0; }
 .pc-dialog.pc-role-permissions { width: min(1250px, 96vw); }
 .pc-dialog.pc-role-permissions .pc-editor { height: min(60vh, 650px); min-height: 320px; }
 .pc [data-scope-label][hidden] { display: none; }
