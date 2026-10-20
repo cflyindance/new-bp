@@ -117,13 +117,14 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const dialog=modal('分配角色 · 选择范围',`<label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><div data-role-summary></div><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,d=>{
+    const dialog=modal('分配角色 · 选择范围',`<div class="pc-role-picker"><label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><button type="button" data-view-selected-role disabled>查看角色权限</button></div><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,d=>{
       const roleId=field(d,'role'),scope=readScope();
       if(!roleId)throw Error('请选择角色');
-      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${field(d,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
+      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${field(d,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope});employee()!.migrationReview=false;mark();render();return true;},'确定').classList.add('pc-assignment-confirm');return true;
     },'下一步');
     const readScope=bindScopePicker(dialog,{mode:'stores',ids:storeId?[storeId]:[]},stores,brandNames);
-    dialog.querySelector('[name="role"]')!.addEventListener('change',()=>{const r=draft.roles.find(r=>r.id===field(dialog,'role'));dialog.querySelector('[data-role-summary]')!.innerHTML=r?`<p>${esc(r.description)||'该角色暂无描述'}</p><button type="button" data-view-selected-role>查看角色权限</button>`:'';});
+    dialog.classList.add('pc-assignment-dialog');
+    dialog.querySelector('[name="role"]')!.addEventListener('change',()=>{(dialog.querySelector('[data-view-selected-role]') as HTMLButtonElement).disabled=!draft.roles.some(r=>r.id===field(dialog,'role'));});
     dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('[data-view-selected-role]'))showRolePermissions(field(dialog,'role'));});
   }
   function editBinding(id:string):void {
