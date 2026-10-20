@@ -14,7 +14,7 @@ export function renderScope(scope:Scope,stores:Store[],expanded=false):string {
   const items=scope.mode==='stores'?scope.ids.map(id=>({id,title:stores.find(s=>s.id===id)?.title??'已失效门店'})):matched.map(s=>({id:s.id,title:s.title}));
   const item=(s:{id:string;title:string})=>`<span class="pc-store-name">${esc(s.title)}<small>${esc(s.id)}</small></span>`;
   const list=items.map(item);
-  const dynamic=scope.mode==='stores'?'':`<p class="pc-muted">${scopeLabel(scope)}：${esc(scope.ids.join('、'))}；包括未来新增或纳入的门店。</p>`;
+  const dynamic=scope.mode!=='regions'?'':`<p class="pc-muted">${scopeLabel(scope)}：${esc(scope.ids.join('、'))}；包括未来新增或纳入的门店。</p>`;
   const shown=expanded||list.length<=2?list.join(''):list.slice(0,2).join('')+`<details class="pc-scope-more"><summary>共 ${list.length} 家，查看全部</summary>${list.join('')}</details>`;
   return `<div class="pc-scope-list">${shown||'<span class="pc-muted">当前无匹配门店</span>'}</div>${dynamic}`;
 }

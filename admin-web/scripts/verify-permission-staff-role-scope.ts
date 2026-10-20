@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {bindingStores,renderStaffRoles,updateBindingScope,applicableRoles} from '../src/permissions/center-staff-roles';
+import {bindingStores,renderScope,renderStaffRoles,updateBindingScope,applicableRoles} from '../src/permissions/center-staff-roles';
 import type {Employee,Role,Store} from '../src/permissions/center-domain';
 const stores:Store[]=[{id:'s1',title:'茶语一家',brand:'b',region:'华东'},{id:'s2',title:'广州天河店',brand:'b',region:'华南'},{id:'s3',title:'上海店',brand:'c',region:'华东'}];
 const roles:Role[]=[{id:'r',name:'店长',description:'',system:false,grants:{}},{id:'ops',name:'运营',description:'',system:false,grants:{}}];
 const employee:Employee={id:'e',name:'王小明',email:'e@example.com',status:'enabled',overrides:{},bindings:[{id:'one',roleId:'r',scope:{mode:'stores',ids:['s1','s2']}},{id:'two',roleId:'ops',scope:{mode:'brands',ids:['b']}},{id:'three',roleId:'r',scope:{mode:'stores',ids:['s3','missing']}},{id:'lost',roleId:'missing',scope:{mode:'regions',ids:['华东']}}]};
 const before=JSON.stringify(employee);
+const brandHtml=renderScope({mode:'brands',ids:['b']},stores);
+assert(!brandHtml.includes('动态品牌：')&&!brandHtml.includes('包括未来新增或纳入的门店'));
+assert(brandHtml.includes('茶语一家')&&brandHtml.includes('广州天河店'));
+assert(renderScope({mode:'regions',ids:['华东']},stores).includes('动态区域：'));
 const html=renderStaffRoles(employee,roles,stores);
 assert.match(html,/已分配角色/);assert.match(html,/茶语一家/);assert.match(html,/广州天河店/);assert.match(html,/上海店/);assert.match(html,/已失效门店/);assert.match(html,/已失效角色/);
 assert.equal((html.match(/data-edit-binding=/g)??[]).length,4);assert.match(html,/data-view-role="r"/);assert.match(html,/解除角色/);assert(!html.includes('data-store'));
