@@ -1,3 +1,4 @@
+import {auditEmployeeName} from './center-audit-employee';
 import {renderAuditDiff} from './center-audit-diff';
 import { applyCategoryGrant } from './center-category-grants';
 import {deleteUnassignedRole,roleBoundEmployees} from './center-role-delete';
@@ -61,8 +62,9 @@ export function bindCenterPage(): void {
     return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId||roleView,staff:false,effectiveOnly:!!employeeId||roleView,grantedOnly:roleView,emptyMessage:roleView?'该角色暂无可访问菜单':undefined,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
   }
   function logs(objectId?:string):string {
-    const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}`.includes(query)));
-    return `<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td><button type="button" data-log-id="${esc(l.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+    const showEmployee=!objectId&&path.includes('/change-log');
+    const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}${showEmployee?' '+auditEmployeeName(l,state):''}`.includes(query)));
+    return `<table><thead><tr><th>时间</th><th>操作人</th>${showEmployee?'<th>授权员工</th>':''}<th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td>${showEmployee?`<td>${esc(auditEmployeeName(l,state))}</td>`:''}<td>${esc(l.action)}</td><td><button type="button" data-log-id="${esc(l.id)}">查看前后值</button></td></tr>`).join('')||`<tr><td colspan="${showEmployee?5:4}" class="pc-empty">暂无变更记录</td></tr>`}</tbody></table>`;
   }
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
@@ -91,7 +93,7 @@ export function bindCenterPage(): void {
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(r.description)||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('邀请员工','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||'—'}</td><td><span class="pc-tag">${statusLabels[e.status]}</span></td><td>${e.migrationReview?'待复核':e.bindings.map(b=>esc(state.roles.find(r=>r.id===b.roleId)?.name??'失效角色')).join('、')||'未授权'}</td><td>${link('管理详情',`/permissions/staff/${encodeURIComponent(e.id)}`)}</td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
-      else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
+      else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、授权员工、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
     }

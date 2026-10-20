@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {auditEmployeeName} from '../src/permissions/center-audit-employee';
+import type {Audit,CenterState} from '../src/permissions/center-domain';
+const state:CenterState={schema:1,version:0,roles:[{id:'role',name:'店长',description:'',system:false,grants:{}}],employees:[{id:'e',name:'当前姓名',email:'e@example.com',status:'enabled',bindings:[],overrides:{}}],logs:[]};
+const log=(before:unknown,after:unknown,id='e'):Audit=>({id:'l',at:'2026-10-20',actor:'管理员',objectId:id,action:'更新',before:JSON.stringify(before),after:JSON.stringify(after)});
+assert.equal(auditEmployeeName(log({name:'旧姓名',bindings:[]},{name:'历史姓名',bindings:[]}),state),'历史姓名');
+assert.equal(auditEmployeeName(log({name:'已删除员工',bindings:[]},null,'deleted'),state),'已删除员工');
+assert.equal(auditEmployeeName(log(null,{name:'新员工',email:'new@example.com'},'new'),state),'新员工');
+assert.equal(auditEmployeeName(log({name:'店长',grants:{}},null,'role'),state),'—');
+assert.equal(auditEmployeeName(log({name:'已删除角色',grants:{}},null,'deleted-role'),state),'—');
+assert.equal(auditEmployeeName({...log(null,null),before:'invalid',after:'invalid'},state),'当前姓名');
+assert.equal(auditEmployeeName(log({bindings:[]},null,'missing'),state),'名称不可用（missing）');
+assert.equal(auditEmployeeName(log({},null,'unknown'),state),'—');
+assert.equal(auditEmployeeName(log({name:'保留姓名',bindings:[]},{name:'',bindings:[]}),state),'保留姓名');
+assert.equal(auditEmployeeName(log(null,{name:'<img src=x>',bindings:[]}),state),'<img src=x>');
+console.log('PASS: audit employee snapshots, rename/deletion, roles excluded, fallback and missing names');
