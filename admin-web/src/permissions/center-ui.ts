@@ -126,7 +126,7 @@ export function bindCenterPage(): void {
     },'保存');
   }
   function invite():void {
-    modal('邀请员工',`<p class="pc-muted">通过邮箱建立员工账号。本地模式仅记录邀请，不发送邮件。</p><label>员工姓名<input name="name" required maxlength="30" autocomplete="name"></label><label>员工邮箱<input name="email" required type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></label>`,d=>{
+    modal('邀请员工',`<label>员工姓名<input name="name" required maxlength="30" autocomplete="name"></label><label>员工邮箱<input name="email" required type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></label>`,d=>{
       const name=field(d,'name').trim(),email=field(d,'email').trim().toLowerCase();validateInvite(state,name,email);
       const id=crypto.randomUUID(),next=structuredClone(state);next.employees.push({id,name,email,status:'pending',bindings:[],overrides:{}});commit(next,id,'发起邀请（本地模拟，未发送邮件）');return true;
     },'记录邀请');
