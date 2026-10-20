@@ -19,7 +19,7 @@ const next=migrateRoleOnlyState(storage,key,original,JSON.stringify(original));
 assert.equal(next.employeeAuthorization,'roles-only');assert.deepEqual(next.employees[0].overrides,{});
 assert.deepEqual(next.roles,original.roles);assert.deepEqual(next.employees[0].bindings,original.employees[0].bindings);
 assert.equal(next.version,5);assert.equal(original.version,4);assert(Object.keys(original.employees[0].overrides).length);
-assert(next.logs[0].action.includes('清除个人例外'));assert.equal(next.logs.length,original.logs.length+1);
+assert.deepEqual(next.logs,original.logs,'Migration must not generate a default audit entry');
 assert.equal(data.get(key+':before-roles-only:v4'),JSON.stringify(original));assert.equal(writes[0],key+':before-roles-only:v4');
 const beforeWrites=writes.length;assert.equal(migrateRoleOnlyState(storage,key,next,JSON.stringify(next)),next);assert.equal(writes.length,beforeWrites);
 const stores=[{id:'a',title:'A',brand:'b',region:'r'},{id:'b',title:'B',brand:'b',region:'r'}];
@@ -63,3 +63,14 @@ assert.equal(runtimeData.get(CENTER_KEY+':before-roles-only:v4'),JSON.stringify(
 const writesAfterLoad=permissionWrites.filter(k=>k===CENTER_KEY).length;
 readCenterState();assert.equal(permissionWrites.filter(k=>k===CENTER_KEY).length,writesAfterLoad);
 console.log('PASS role-only staff: migration, backup, idempotence, failures, version guard, residual rejection, roles and store scope');
+
+const {isRoleOnlyMigrationAudit}=await import('../src/permissions/center-audit-visibility');
+const migration={actor:'系统迁移',objectId:'employee-authorization',action:'清除个人例外，员工仅按角色与门店范围授权'};
+assert(isRoleOnlyMigrationAudit(migration));
+assert(!isRoleOnlyMigrationAudit({...migration,actor:'本地管理员'}));
+assert(!isRoleOnlyMigrationAudit({...migration,objectId:'employee-1'}));
+assert(!isRoleOnlyMigrationAudit({...migration,action:'更新员工授权'}));
+const real={...migration,actor:'本地管理员',action:'更新员工授权'};
+assert.deepEqual([migration,real].filter(l=>!isRoleOnlyMigrationAudit(l)),[real]);
+assert.equal([migration].filter(l=>!isRoleOnlyMigrationAudit(l)).length,0);
+console.log('PASS: migration creates no audit entry, exact legacy entry hidden, real records preserved');

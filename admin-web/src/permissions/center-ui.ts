@@ -1,3 +1,4 @@
+import {isRoleOnlyMigrationAudit} from './center-audit-visibility';
 import {auditEmployeeName} from './center-audit-employee';
 import {renderAuditDiff} from './center-audit-diff';
 import { applyCategoryGrant } from './center-category-grants';
@@ -63,7 +64,7 @@ export function bindCenterPage(): void {
   }
   function logs(objectId?:string):string {
     const showEmployee=!objectId&&path.includes('/change-log');
-    const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}${showEmployee?' '+auditEmployeeName(l,state):''}`.includes(query)));
+    const rows=state.logs.filter(l=>!isRoleOnlyMigrationAudit(l)&&(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}${showEmployee?' '+auditEmployeeName(l,state):''}`.includes(query)));
     return `<table><thead><tr><th>时间</th><th>操作人</th>${showEmployee?'<th>授权员工</th>':''}<th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td>${showEmployee?`<td>${esc(auditEmployeeName(l,state))}</td>`:''}<td>${esc(l.action)}</td><td><button type="button" data-log-id="${esc(l.id)}">查看前后值</button></td></tr>`).join('')||`<tr><td colspan="${showEmployee?5:4}" class="pc-empty">暂无变更记录</td></tr>`}</tbody></table>`;
   }
   function logDetail(id:string):void {

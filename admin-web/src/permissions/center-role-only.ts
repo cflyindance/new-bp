@@ -10,10 +10,8 @@ export function migrateRoleOnlyState(storage:Pick<Storage,'getItem'|'setItem'>,k
   const existing=storage.getItem(backupKey);
   if(existing!==null&&existing!==raw)throw Error('个人例外备份已存在且内容不同；原数据已保留，请先导出备份');
   if(existing===null)storage.setItem(backupKey,raw);
-  const counts=state.employees.map(e=>({id:e.id,stores:Object.keys(e.overrides??{}).length,items:Object.values(e.overrides??{}).reduce((n,g)=>n+Object.keys(g??{}).length,0)}));
   for(const e of next.employees)e.overrides={};
   next.employeeAuthorization='roles-only';next.version=state.version+1;
-  next.logs=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor:'系统迁移',objectId:'employee-authorization',action:'清除个人例外，员工仅按角色与门店范围授权',before:JSON.stringify({backupKey,counts}),after:JSON.stringify({employeeAuthorization:'roles-only',personalOverrides:0})},...state.logs];
   if(storage.getItem(key)!==raw)throw Error('权限数据已被其他窗口修改，迁移备份已保留，请刷新');
   storage.setItem(key,JSON.stringify(next));
   return next;
