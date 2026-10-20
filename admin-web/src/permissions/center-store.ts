@@ -1,3 +1,4 @@
+import {seedDemoAudit} from './center-demo-audit';
 import { getRbacSnapshot } from "./rbac-store";
 import { listStaffLoginAccounts } from "./staff-account-store";
 import { buildPermissionResourceIndex } from "../config/permission-registry";
@@ -18,7 +19,15 @@ export function readCenterState(): CenterState {
   if (raw) {
     const state = JSON.parse(raw) as CenterState;
     if(state.schema!==1 || !Array.isArray(state.roles) || !Array.isArray(state.employees) || !Array.isArray(state.logs)) throw Error('权限数据版本无法读取；原数据已保留，请联系管理员');
-    return migrateNavigationPermissions(migrateRoleOnlyState(localStorage,CENTER_KEY,state,raw),buildCenterCatalog().resources,centerStores());
+    const roleOnly=migrateRoleOnlyState(localStorage,CENTER_KEY,state,raw);
+    const expectedRaw=roleOnly===state?raw:JSON.stringify(roleOnly);
+    const migrated=migrateNavigationPermissions(roleOnly,buildCenterCatalog().resources,centerStores());
+    const seeded=seedDemoAudit(migrated,centerStores());
+    if(seeded!==migrated){
+      if(localStorage.getItem(CENTER_KEY)!==expectedRaw)throw Error('权限数据已被其他窗口修改，请刷新后初始化演示记录');
+      localStorage.setItem(CENTER_KEY,JSON.stringify(seeded));
+    }
+    return seeded;
   }
   const legacy = getRbacSnapshot(), accounts = listStaffLoginAccounts(), catalog = buildCenterCatalog();
   const registry = buildPermissionResourceIndex();
@@ -40,7 +49,7 @@ export function readCenterState(): CenterState {
     return {id,name:row?.employeeName??account?.employeeName??id,email:account?.loginEmail??'',status:account ? account.enabled?'enabled':'disabled':'unopened',bindings:scope ? (row?.roleIds??[]).map(roleId=>({id:crypto.randomUUID(),roleId,scope:structuredClone(scope)})) : [],overrides:{},migrationReview:!scope && !!row?.roleIds.length};
   }),logs:[]};
   // Keep all legacy keys untouched. Fail visibly if persistence is unavailable.
-  const migrated=migrateNavigationPermissions(state,catalog.resources,centerStores());
+  const migrated=seedDemoAudit(migrateNavigationPermissions(state,catalog.resources,centerStores()),centerStores());
   localStorage.setItem(CENTER_KEY,JSON.stringify(migrated));
   return migrated;
 }

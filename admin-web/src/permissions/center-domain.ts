@@ -27,7 +27,7 @@ export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
 export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }
-export interface Audit { id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
+export interface Audit { source?:'demo'; id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
 export interface CenterState { schema: 1; navigationVersion?: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
 export interface CenterState {employeeAuthorization?:'roles-only'}
 export const rank: Record<Access, number> = { hidden: 0, read: 1, edit: 2 };
@@ -110,3 +110,5 @@ export function validateInvite(state: CenterState, name: string, email: string):
   if (email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw Error("请输入有效的员工邮箱");
   if (state.employees.some(e => e.email.toLowerCase() === email.trim().toLowerCase())) throw Error("邮箱已存在，请管理原员工账号");
 }
+
+export interface CenterState {demoAuditSeedVersion?:1}
