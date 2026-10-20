@@ -61,7 +61,15 @@ export function bindCenterPage(): void {
   }
   function logs(objectId?:string):string {
     const rows=state.logs.filter(l=>(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}`.includes(query)));
-    return `<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td><details><summary>查看前后值</summary><p>变更前</p><pre class="pc-log-json">${esc(l.before)}</pre><p>变更后</p><pre class="pc-log-json">${esc(l.after)}</pre></details></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+    return `<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td><button type="button" data-log-id="${esc(l.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+  }
+  function logDetail(id:string):void {
+    const log=state.logs.find(row=>row.id===id);
+    if(!log){error('该变更记录不存在，请刷新后重试');return;}
+    const dialog=modal('变更详情',`<dl class="pc-log-meta"><div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div><div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl><div class="pc-log-comparison"><section><h3>变更前</h3><pre class="pc-log-json">${esc(log.before)||'无数据'}</pre></section><section><h3>变更后</h3><pre class="pc-log-json">${esc(log.after)||'无数据'}</pre></section></div>`,()=>true,'关闭');
+    dialog.classList.add('pc-log-dialog');
+    dialog.setAttribute('aria-label','变更详情');
+    dialog.querySelector('footer [data-close]')?.remove();
   }
   function staffDetail():string {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
@@ -181,6 +189,7 @@ export function bindCenterPage(): void {
   root.addEventListener('click',ev=>{
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
+      if(b.dataset.logId){logDetail(b.dataset.logId);return;}
       if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
       if(employeeId&&(b.dataset.authorization||b.dataset.categoryGrant||b.dataset.grant||b.dataset.submenuMode))return;
       if(b.dataset.submenuMode){ev.preventDefault();if(!role())return;const v=b.dataset.value;if(v!=='hidden'&&v!=='read'&&v!=='edit')throw Error('子导航状态无效');if(applySubmenuMode(catalog,role()!,page,b.dataset.submenuMode,v)){mark();render();}return;}

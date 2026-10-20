@@ -126,3 +126,13 @@
 .pc .pc-page-authorization { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 @media(max-width:760px){.pc .pc-editor:has(.pc-menu-controls){grid-template-columns:360px minmax(300px,1fr)}}
 @media(max-width:760px){.pc .pc-full{padding:0 12px}.pc .pc-editor{grid-template-columns:180px minmax(300px,1fr);overflow:auto}.pc .pc-settings{grid-template-columns:132px minmax(0,1fr);gap:12px}.pc .pc-stats{grid-template-columns:repeat(2,1fr)}.pc .pc-nav{overflow:auto;white-space:nowrap}.pc td,.pc th{padding:10px}.pc .pc-full h1{font-size:19px}}
+
+.pc-log-dialog{width:min(1080px,calc(100vw - 32px))}
+.pc .pc-log-meta{display:flex;gap:20px 40px;flex-wrap:wrap;margin:0}
+.pc .pc-log-meta dt{color:#687b91;font-size:12px}
+.pc .pc-log-meta dd{margin:4px 0 0;overflow-wrap:anywhere}
+.pc .pc-log-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.pc .pc-log-comparison section{min-width:0}
+.pc .pc-log-comparison h3{margin:0 0 10px}
+.pc .pc-log-comparison .pc-log-json{margin:0;padding:16px;border:1px solid var(--pc-line);border-radius:6px;background:#f8fafc;max-height:48vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+@media(max-width:760px){.pc .pc-log-comparison{grid-template-columns:1fr}.pc .pc-log-comparison .pc-log-json{max-height:30vh}}
