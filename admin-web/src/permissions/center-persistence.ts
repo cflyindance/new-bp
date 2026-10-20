@@ -31,7 +31,7 @@ export function persistCenterChange(storage:Pick<Storage,'getItem'|'setItem'>,ke
   if(current.version!==expectedVersion)throw Error('数据已被其他窗口修改。请保留当前内容，刷新后重新编辑');
   if(current.employeeAuthorization==='roles-only'&&next.employeeAuthorization!=='roles-only')throw Error('不能回退员工角色授权模式，请刷新后重新编辑');
   validateCenterState(next,resources);
-  for(const old of current.roles)if(!next.roles.some(r=>r.id===old.id)&&(old.system||next.employees.some(e=>e.bindings.some(b=>b.roleId===old.id))))throw Error('系统角色或有关联员工的角色不能删除');
+  for(const old of current.roles)if(!next.roles.some(r=>r.id===old.id)&&[...current.employees,...next.employees].some(e=>e.bindings.some(b=>b.roleId===old.id)))throw Error('请先解除员工的角色分配，再删除角色');
   const saved=structuredClone(next);
   const object=(s:CenterState)=>s.roles.find(r=>r.id===objectId)??s.employees.find(e=>e.id===objectId)??null;
   saved.logs=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor,objectId,action,before:JSON.stringify(object(current)),after:JSON.stringify(object(next))},...current.logs];
