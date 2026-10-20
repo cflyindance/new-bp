@@ -11,7 +11,7 @@ import {rolePageRoute} from './center-role-route';
 import {normalizePermissionCenterPath} from './center-routes';
 import {applySubmenuMode} from './center-page-mode';
 import {bindDialogBackdropClose} from './center-dialog-backdrop';
-import {renderStaffRoles,renderScope,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
+import {renderStaffRoles,renderScope,scopeStoreItems,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
 import { readCenterState, saveCenterState, centerStores,centerBrands } from './center-store';
 import {bindScopePicker,scopePickerOptions,renderGroupedScope} from './center-scope-picker';
 import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Audit, type Employee, type Role } from './center-domain';
@@ -154,6 +154,15 @@ export function bindCenterPage(): void {
       return apply();
     },'确定');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames);
   }
+  function showBindingStores(id:string):void {
+    const binding=employee()?.bindings.find(b=>b.id===id);
+    if(!binding){error('该角色授权不存在，请重新打开员工详情');return;}
+    const name=draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色';
+    const count=scopeStoreItems(binding.scope,stores).length;
+    const dialog=modal('授权门店',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(binding.scope))} · 共 ${count} 家门店</p><div class="pc-authorized-stores">${renderScope(binding.scope,stores,true)}</div>`,()=>true,'关闭');
+    dialog.classList.add('pc-scope-dialog');dialog.setAttribute('aria-label','授权门店');
+    dialog.querySelector('footer [data-close]')?.remove();
+  }
   function showRolePermissions(id:string):void {
     const r=draft.roles.find(r=>r.id===id);if(!r){error('角色不存在');return;}
     const roleValue=(key:string)=>roleAccess(r,key,catalog.resources);
@@ -207,6 +216,7 @@ export function bindCenterPage(): void {
       if(b.dataset.categoryGrant){ev.preventDefault();if(employeeId)return;const v=b.dataset.value as Access|'inherit';if(role()&&v!=='inherit')applyCategoryGrant(catalog,page,b.dataset.categoryGrant,role()!.grants,v);else return;mark();render();return;}
       if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(catalog.resources.get(key)?.type==='action'&&value(page)==='hidden'&&v!=='hidden')throw Error('页面不可见，不能开启功能授权');assertSettingChoice(catalog,catalog.resources.get(key)!,v,value);if(employeeId)return;if(role()&&v!=='inherit')applyPageResourceGrant(catalog,page,role()!.grants,catalog.resources.get(key)!,v);else return;mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
+      if(b.dataset.viewBindingStores){showBindingStores(b.dataset.viewBindingStores);return;}
       if(b.dataset.viewRole){showRolePermissions(b.dataset.viewRole);return;}
       if(b.dataset.editBinding){editBinding(b.dataset.editBinding);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
