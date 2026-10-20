@@ -131,8 +131,8 @@ export function bindCenterPage(): void {
     const dialog=modal('修改授权门店',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
       const scope=readScope();
       const apply=()=>{if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;};
-      if(binding.scope.mode==='brands'&&scope.mode!=='brands'){
-        modal('确认更改授权范围',`<p>原授权为动态品牌，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>${scope.mode==='stores'?'按已选门店授权，未来新增门店不自动加入。':'未来门店将按新的动态区域归属匹配，不再按原品牌匹配。'}保存员工详情后生效。</p>`,apply,'确定');return true;
+      if((binding.scope.mode==='brands'||binding.scope.mode==='regions')&&scope.mode!==binding.scope.mode){
+        modal('确认更改授权范围',`<p>原授权为${esc(scopeLabel(binding.scope))}，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>按已选门店授权，未来新增门店不自动加入。保存员工详情后生效。</p>`,apply,'确定');return true;
       }
       return apply();
     },'确定');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames);
