@@ -12,7 +12,7 @@ import {bindDialogBackdropClose} from './center-dialog-backdrop';
 import {renderStaffRoles,renderScope,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
 import { readCenterState, saveCenterState, centerStores,centerBrands } from './center-store';
 import {bindScopePicker,scopePickerOptions,renderGroupedScope} from './center-scope-picker';
-import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role } from './center-domain';
+import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Audit, type Employee, type Role } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
 import { authorizationRows } from './center-authorization';
 import {applyPageAuthorization,applyPageResourceGrant,assertPageFeatureChoice} from './center-page-policy';
@@ -67,7 +67,10 @@ export function bindCenterPage(): void {
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
     if(!log){error('该变更记录不存在，请刷新后重试');return;}
-    const dialog=modal('变更详情',`<dl class="pc-log-meta"><div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div><div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
+    changeDetail(log);
+  }
+  function changeDetail(log:Audit,pending=false):void {
+    const dialog=modal('变更详情',`<dl class="pc-log-meta"><div><dt>时间</dt><dd>${pending?'未保存':esc(new Date(log.at).toLocaleString())}</dd></div><div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
@@ -218,7 +221,10 @@ export function bindCenterPage(): void {
         case 'save':{
           if(!dirty)return;
           const id=roleId||employeeId,old=roleId?state.roles.find(r=>r.id===id):state.employees.find(e=>e.id===id),next=roleId?role():employee();
-          modal('确认保存更改',`<p>${roleId?`影响 ${memberCount(id)} 位已绑定员工。`:'仅更新当前员工的草稿，包含已编辑的各门店。'}</p><details><summary>查看变更前后值</summary><p>变更前</p><pre class="pc-log-json">${esc(JSON.stringify(old,null,2))}</pre><p>变更后</p><pre class="pc-log-json">${esc(JSON.stringify(next,null,2))}</pre></details>`,()=>{commit(draft,id,roleId?'更新角色权限':'更新员工授权');return true;},'确认保存');break;
+          const action=roleId?'更新角色权限':'更新员工授权';
+          const pendingChange:Audit={id:'draft',at:'',actor:actor(),objectId:id,action,before:JSON.stringify(old??null),after:JSON.stringify(next??null)};
+          const confirmation=modal('确认保存更改',`<p>${roleId?`影响 ${memberCount(id)} 位已绑定员工。`:'仅更新当前员工的草稿，包含已编辑的各门店。'}</p><button type="button" data-view-pending-change>查看变更前后值</button>`,()=>{commit(draft,id,action);return true;},'确认保存');
+          confirmation.querySelector('[data-view-pending-change]')!.addEventListener('click',()=>changeDetail(pendingChange,true));break;
         }
         case 'resend':case 'revoke':case 'toggle-account':{
           const e=employee();if(!e)return;const action=b.dataset.do;
