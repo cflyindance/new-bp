@@ -60,4 +60,5 @@ const ui=readFileSync('src/permissions/center-ui.ts','utf8');
 assert(ui.includes("link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)"));
 assert(ui.includes('grantedOnly:roleView'));assert(ui.includes('if(roleView &&'));
 assert(ui.includes("roleView?'查看权限'"));
+assert(ui.includes("roleView?'':btn('查看菜单效果','preview')"),'Readonly role page must not render menu preview; editing retains it');
 console.log('PASS role readonly detail: routes, effective inherited menus, hidden functions/categories, readonly controls, edit isolation, search, empty state and immutable grants');
