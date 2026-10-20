@@ -36,7 +36,7 @@ export function bindScopePicker(dialog:HTMLDialogElement,initial:Scope,stores:St
       const chosen=choices.get(mode)??new Set<string>();
       const known=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set([...stores.map(s=>s.brand).filter(Boolean),...chosen])].map(id=>[id,names.find(b=>b.id===id)?.name??'原授权品牌']);
       const ids=new Set(known.map(([id])=>id));const list=[...known,...[...chosen].filter(id=>!ids.has(id)).map(id=>[id,'原授权范围（当前无候选，配置保留）'])];
-      area.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label>${mode==='stores'?'':'<p class="pc-muted">原授权保持动态品牌；选择品牌选项并确认后才改为指定门店。</p>'}<div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
+      area.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label><div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
       return;
     }
     const active=brands.groups.find(g=>g.id===brands.active&&brands.visited.has(g.id));
