@@ -153,7 +153,7 @@ export function bindCenterPage(): void {
     const roleValue=(key:string)=>roleAccess(r,key,catalog.resources);
     let selected=effectiveMenuView(catalog,roleValue,'').page,category='',search='';
     const body=()=>renderPermissionEditor({catalog,page:selected,group:category,search,preview:false,readonly:true,staff:false,effectiveOnly:true,grantedOnly:true,emptyMessage:'该角色暂无可访问菜单',value:roleValue,own:key=>r.grants[key]??'hidden'});
-    const dialog=modal(`${r.name} · 角色权限`,`<p>${esc(r.description)||'该角色暂无描述'}</p><p class="pc-muted">仅查看此角色有权限的菜单及功能，不修改员工授权。</p><div data-role-permissions>${body()}</div>`,()=>true,'关闭');dialog.classList.add('pc-role-permissions');
+    const dialog=modal(`${r.name} · 角色权限`,`<p>${esc(r.description)||'该角色暂无描述'}</p><div data-role-permissions>${body()}</div>`,()=>true,'关闭');dialog.classList.add('pc-role-permissions');
     const area=dialog.querySelector<HTMLElement>('[data-role-permissions]')!;
     area.addEventListener('click',ev=>{const b=(ev.target as Element).closest<HTMLElement>('[data-page],[data-group]');if(!b)return;ev.preventDefault();if(b.dataset.page){selected=b.dataset.page;category='';}if(b.dataset.group)category=b.dataset.group;area.innerHTML=body();[...area.querySelectorAll<HTMLButtonElement>('[data-page],[data-group]')].find(x=>b.dataset.group?x.dataset.group===category:x.dataset.page===selected)?.focus({preventScroll:true});});
     area.addEventListener('input',ev=>{const input=ev.target as HTMLInputElement;if(!input.hasAttribute('data-menu-search'))return;search=input.value;const pos=input.selectionStart;area.innerHTML=body();const next=area.querySelector<HTMLInputElement>('[data-menu-search]');next?.focus();next?.setSelectionRange(pos,pos);});
