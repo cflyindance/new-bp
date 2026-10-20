@@ -73,7 +73,7 @@ export function bindCenterPage(): void {
     changeDetail(log);
   }
   function changeDetail(log:Audit,pending=false):void {
-    const dialog=modal('变更详情',`<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
+    const dialog=modal('变更详情',`${log.source==='demo'?'<p class="pc-notice">演示记录，仅用于展示示例，不代表真实操作历史。</p>':''}<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
