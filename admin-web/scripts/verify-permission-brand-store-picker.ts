@@ -21,10 +21,14 @@ assert.deepEqual(scopeFromPicker('stores',['a1','a1'],model),{mode:'stores',ids:
 const original={mode:'brands' as const,ids:['a']};const before=JSON.stringify(original);new BrandStoreSelection(stores,names);assert.equal(JSON.stringify(original),before);
 const partial=new BrandStoreSelection(stores,names,['a2']);partial.activate('a');assert.deepEqual(partial.scope().ids,['a2'],'existing partial initialization not expanded');
 assert(!scopePickerOptions().includes('value="brands"'),'new assignment does not offer dynamic brand');
+assert(!scopePickerOptions().includes('value="regions"'),'new assignment does not offer dynamic region');
+const legacyRegion=scopePickerOptions({mode:'regions',ids:['east']});assert(legacyRegion.includes('value="regions" selected disabled'));assert(!legacyRegion.includes('动态区域'));
 assert(scopePickerOptions(original).includes('value="brands" selected'),'legacy editor preserves original mode');
 const summary=renderGroupedScope({mode:'stores',ids:['a1','b1','missing']},stores,names);assert(summary.includes('张记火锅'));assert(summary.includes('茶语'));assert(summary.includes('上海店'));assert(summary.includes('missing'));assert(!summary.includes('杭州店'));
 assert(!renderGroupedScope({mode:'stores',ids:['a1']},[{...stores[0],title:'<script>'}],names).includes('<script>'));
 const unknown=new BrandStoreSelection([{id:'unknown',title:'无品牌店',brand:'',region:''}],[]);unknown.activate('');assert.deepEqual(unknown.scope().ids,['unknown']);
 const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('bindScopePicker'));assert(ui.includes('readScope()'));assert(ui.includes('确认更改授权范围'));assert(ui.includes('scope.mode'));assert(ui.includes('品牌'));
 const picker=readFileSync('src/permissions/center-scope-picker.ts','utf8');assert(picker.includes('indeterminate'));assert(picker.includes('全选该品牌'));assert(picker.includes('原授权'));assert(picker.includes('未来新增门店不自动加入'));
+assert(picker.includes("classList.add('pc-brand-scope-dialog')"));assert(!picker.includes("classList.toggle('pc-brand-scope-dialog'"));
+assert(picker.includes("mode!=='brand-stores'&&mode!=='regions'"),'readonly legacy region must not be cleared by checkbox capture');
 console.log('PASS brand/store picker: real names, default all, partial/clear/revisit/multi-brand, snapshot future isolation, legacy unchanged, no foreign IDs, empty validation and shared integration');

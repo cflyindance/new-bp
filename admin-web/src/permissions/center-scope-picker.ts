@@ -4,9 +4,10 @@ import type {Scope,Store} from './center-domain';
 import {BrandStoreSelection,scopeFromPicker,type ScopeBrand,type ScopePickerMode} from './center-brand-store-selection';
 
 export function scopePickerOptions(initial?:Scope):string {
-  const options:[ScopePickerMode,string][]=[['stores','指定门店'],['brand-stores','品牌'],['regions','动态区域']];
+  const options:[ScopePickerMode,string][]=[['stores','指定门店'],['brand-stores','品牌']];
   if(initial?.mode==='brands')options.push(['brands','动态品牌（原授权）']);
-  return options.map(([id,label])=>`<option value="${id}" ${initial?.mode===id?'selected':''}>${label}</option>`).join('');
+  if(initial?.mode==='regions')options.push(['regions','原授权范围（保留）']);
+  return options.map(([id,label])=>`<option value="${id}" ${initial?.mode===id?'selected':''}${id==='regions'?' disabled':''}>${label}</option>`).join('');
 }
 export function renderGroupedScope(scope:Scope,stores:Store[],names:ScopeBrand[]):string {
   if(scope.mode!=='stores')return scope.mode==='brands'?`<p>动态品牌：${scope.ids.map(id=>esc(names.find(b=>b.id===id)?.name??id)).join('、')}</p>${renderScope(scope,stores,true)}`:renderScope(scope,stores,true);
@@ -24,14 +25,18 @@ export function bindScopePicker(dialog:HTMLDialogElement,initial:Scope,stores:St
   const brands=new BrandStoreSelection(stores,names);
   let mode=select.value as ScopePickerMode,brandSearch='',storeSearch='';
   const matches=(text:string,query:string)=>text.toLowerCase().includes(query.trim().toLowerCase());
-  const remember=()=>{if(mode!=='brand-stores')choices.set(mode,new Set([...area.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)));};
+  const remember=()=>{if(mode!=='brand-stores'&&mode!=='regions')choices.set(mode,new Set([...area.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)));};
+  dialog.classList.add('pc-brand-scope-dialog');
   const render=()=>{
-    dialog.classList.toggle('pc-brand-scope-dialog',mode==='brand-stores');
+    if(mode==='regions'){
+      area.innerHTML=`<p>原授权范围（保留）：${initial.ids.map(id=>esc(id)).join('、')}</p><p class="pc-muted">当前范围保持不变；如需调整，请选择指定门店或品牌。</p>`;
+      return;
+    }
     if(mode!=='brand-stores'){
       const chosen=choices.get(mode)??new Set<string>();
-      const known=mode==='stores'?stores.map(s=>[s.id,s.title]):mode==='brands'?[...new Set([...stores.map(s=>s.brand).filter(Boolean),...chosen])].map(id=>[id,names.find(b=>b.id===id)?.name??'原授权品牌']):[...new Set(stores.map(s=>s.region).filter(Boolean))].map(id=>[id,id]);
+      const known=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set([...stores.map(s=>s.brand).filter(Boolean),...chosen])].map(id=>[id,names.find(b=>b.id===id)?.name??'原授权品牌']);
       const ids=new Set(known.map(([id])=>id));const list=[...known,...[...chosen].filter(id=>!ids.has(id)).map(id=>[id,'原授权范围（当前无候选，配置保留）'])];
-      area.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label>${mode==='stores'?'':`<p class="pc-muted">${mode==='brands'?'原授权保持动态品牌；选择品牌选项并确认后才改为指定门店。':'动态区域包含未来新增或纳入的门店。'}</p>`}<div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
+      area.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label>${mode==='stores'?'':'<p class="pc-muted">原授权保持动态品牌；选择品牌选项并确认后才改为指定门店。</p>'}<div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
       return;
     }
     const active=brands.groups.find(g=>g.id===brands.active&&brands.visited.has(g.id));
