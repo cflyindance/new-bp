@@ -1,3 +1,4 @@
+import {renderAuditDiff} from './center-audit-diff';
 import { applyCategoryGrant } from './center-category-grants';
 import {deleteUnassignedRole,roleBoundEmployees} from './center-role-delete';
 import './center.css';
@@ -66,7 +67,7 @@ export function bindCenterPage(): void {
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
     if(!log){error('该变更记录不存在，请刷新后重试');return;}
-    const dialog=modal('变更详情',`<dl class="pc-log-meta"><div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div><div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl><div class="pc-log-comparison"><section><h3>变更前</h3><pre class="pc-log-json">${esc(log.before)||'无数据'}</pre></section><section><h3>变更后</h3><pre class="pc-log-json">${esc(log.after)||'无数据'}</pre></section></div>`,()=>true,'关闭');
+    const dialog=modal('变更详情',`<dl class="pc-log-meta"><div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div><div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();

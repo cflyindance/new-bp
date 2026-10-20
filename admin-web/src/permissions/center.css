@@ -136,3 +136,14 @@
 .pc .pc-log-comparison h3{margin:0 0 10px}
 .pc .pc-log-comparison .pc-log-json{margin:0;padding:16px;border:1px solid var(--pc-line);border-radius:6px;background:#f8fafc;max-height:48vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
 @media(max-width:760px){.pc .pc-log-comparison{grid-template-columns:1fr}.pc .pc-log-comparison .pc-log-json{max-height:30vh}}
+
+.pc .pc-audit-object{margin:0;font-size:16px}
+.pc .pc-audit-group{min-width:0;overflow:auto}
+.pc .pc-audit-group h3{margin:0 0 12px}
+.pc .pc-audit-group table{table-layout:fixed;min-width:520px;border:1px solid var(--pc-line)}
+.pc .pc-audit-group th:first-child{width:32%}
+.pc .pc-audit-group td,.pc .pc-audit-group th{vertical-align:top;overflow-wrap:anywhere}
+.pc .pc-audit-values{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.pc .pc-audit-added{background:#eaf7ef;color:#17663a;border-radius:4px;padding:6px 8px}
+.pc .pc-audit-removed{background:#fff0ef;color:#a3372d;border-radius:4px;padding:6px 8px}
+.pc .pc-audit-badge{font-size:11px;white-space:nowrap;font-weight:600}
