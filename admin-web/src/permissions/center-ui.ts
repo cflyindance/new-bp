@@ -8,8 +8,9 @@ import {normalizePermissionCenterPath} from './center-routes';
 import {applySubmenuMode} from './center-page-mode';
 import {bindDialogBackdropClose} from './center-dialog-backdrop';
 import {renderStaffRoles,renderScope,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
-import { readCenterState, saveCenterState, centerStores } from './center-store';
-import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
+import { readCenterState, saveCenterState, centerStores,centerBrands } from './center-store';
+import {bindScopePicker,scopePickerOptions,renderGroupedScope} from './center-scope-picker';
+import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
 import { authorizationRows } from './center-authorization';
 import {applyPageAuthorization,applyPageResourceGrant,assertPageFeatureChoice} from './center-page-policy';
@@ -31,7 +32,7 @@ export function bindCenterPage(): void {
   const root=document.getElementById('permission-center');if(!root)return;
   let state:CenterState;
   try{state=readCenterState();}catch(e){root.innerHTML=`<div class="pc-error">${esc((e as Error).message)}</div>`;return;}
-  const catalog:Catalog=buildCenterCatalog(),stores=centerStores();
+  const catalog:Catalog=buildCenterCatalog(),stores=centerStores(),brandNames=centerBrands();
   let path=normalizePermissionCenterPath(root.dataset.path??'/permissions/roles');
   if(path==='/permissions/staff-accounts')path='/permissions/staff';
   let draft=structuredClone(state),dirty=false,storeId=stores[0]?.id??'',tab='permissions';
@@ -116,35 +117,25 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const dialog=modal('分配角色 · 选择范围',`<label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><div data-role-summary></div><label>授权范围<select name="mode"><option value="stores">指定门店</option><option value="brands">动态品牌</option><option value="regions">动态区域</option></select></label><div data-scope-options></div>`,d=>{
-      const roleId=field(d,'role'),mode=field(d,'mode') as Scope['mode'];
-      const ids=[...d.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value);
-      if(!roleId||!ids.length)throw Error('请选择角色及至少一个授权范围');
-      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${esc(scopeLabel({mode,ids}))}</p>${renderScope({mode,ids},stores,true)}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope:{mode,ids}});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
+    const dialog=modal('分配角色 · 选择范围',`<label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><div data-role-summary></div><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,d=>{
+      const roleId=field(d,'role'),scope=readScope();
+      if(!roleId)throw Error('请选择角色');
+      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${field(d,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}<p>确认后加入草稿，保存员工详情后生效。</p>`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope});employee()!.migrationReview=false;mark();render();return true;},'确定');return true;
     },'下一步');
-    bindScopeOptions(dialog,{mode:'stores',ids:storeId?[storeId]:[]});
+    const readScope=bindScopePicker(dialog,{mode:'stores',ids:storeId?[storeId]:[]},stores,brandNames);
     dialog.querySelector('[name="role"]')!.addEventListener('change',()=>{const r=draft.roles.find(r=>r.id===field(dialog,'role'));dialog.querySelector('[data-role-summary]')!.innerHTML=r?`<p>${esc(r.description)||'该角色暂无描述'}</p><button type="button" data-view-selected-role>查看角色权限</button>`:'';});
     dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('[data-view-selected-role]'))showRolePermissions(field(dialog,'role'));});
   }
-  function bindScopeOptions(dialog:HTMLDialogElement,initial:Scope):void {
-    const selected=new Map<Scope['mode'],Set<string>>([[initial.mode,new Set(initial.ids)]]);
-    let mode=field(dialog,'mode') as Scope['mode'];
-    const remember=()=>selected.set(mode,new Set([...dialog.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)));
-    const options=()=>{
-      mode=field(dialog,'mode') as Scope['mode'];const chosen=selected.get(mode)??new Set<string>();
-      const known=mode==='stores'?stores.map(s=>[s.id,s.title]):[...new Set(stores.map(s=>mode==='brands'?s.brand:s.region).filter(Boolean))].map(v=>[v,v]);
-      const ids=new Set(known.map(([id])=>id));const list=[...known,...[...chosen].filter(id=>!ids.has(id)).map(id=>[id,'原授权范围（当前无候选，配置保留）'])];
-      dialog.querySelector('[data-scope-options]')!.innerHTML=`<label>搜索${mode==='stores'?'门店':'范围'}<input type="search" data-scope-search placeholder="输入名称或编号"></label><p class="pc-muted">${mode==='stores'?'选择该角色适用的门店。':'动态范围包含未来新增或纳入的门店。'}搜索不会清除已选项。</p><div class="pc-choice-list">${list.map(([id,title])=>`<label data-scope-label><input type="checkbox" name="scope" value="${esc(id)}" ${chosen.has(id)?'checked':''}>${esc(title)}${id!==title?`<small>${esc(id)}</small>`:''}</label>`).join('')||'<p class="pc-muted">暂无可选范围</p>'}</div>`;
-    };
-    dialog.querySelector('[name="mode"]')!.addEventListener('change',()=>{remember();options();});
-    dialog.addEventListener('input',ev=>{const input=ev.target as HTMLInputElement;if(input.hasAttribute('data-scope-search'))for(const label of dialog.querySelectorAll<HTMLElement>('[data-scope-label]'))label.hidden=!label.textContent?.toLowerCase().includes(input.value.trim().toLowerCase());});options();
-  }
   function editBinding(id:string):void {
     const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
-    const dialog=modal('修改授权门店',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${[['stores','指定门店'],['brands','动态品牌'],['regions','动态区域']].map(([v,l])=>`<option value="${v}" ${v===binding.scope.mode?'selected':''}>${l}</option>`).join('')}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,d=>{
-      const scope:Scope={mode:field(d,'mode') as Scope['mode'],ids:[...d.querySelectorAll<HTMLInputElement>('[name="scope"]:checked')].map(x=>x.value)};
-      if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;
-    },'确定');bindScopeOptions(dialog,binding.scope);
+    const dialog=modal('修改授权门店',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
+      const scope=readScope();
+      const apply=()=>{if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;};
+      if(binding.scope.mode==='brands'&&scope.mode!=='brands'){
+        modal('确认更改授权范围',`<p>原授权为动态品牌，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>${scope.mode==='stores'?'按已选门店授权，未来新增门店不自动加入。':'未来门店将按新的动态区域归属匹配，不再按原品牌匹配。'}保存员工详情后生效。</p>`,apply,'确定');return true;
+      }
+      return apply();
+    },'确定');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames);
   }
   function showRolePermissions(id:string):void {
     const r=draft.roles.find(r=>r.id===id);if(!r){error('角色不存在');return;}

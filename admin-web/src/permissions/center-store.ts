@@ -7,9 +7,12 @@ import { type CenterState, type Store, type Scope, type Access } from "./center-
 import { persistCenterChange } from './center-persistence';
 import { migrateNavigationPermissions } from './center-navigation-migration';
 import {migrateRoleOnlyState} from './center-role-only';
+import {getEnterpriseMerchantSnapshot} from '../config/enterprise-merchant-store';
+import type {ScopeBrand} from './center-brand-store-selection';
 
 export const CENTER_KEY = 'menusifu:permission-center-local:v4';
 export const centerStores = (): Store[] => listMPlatformStoreScopeEntries().map(s=>({id:s.storeId,title:s.storeName,brand:s.merchantId,region:s.regionName}));
+export const centerBrands = (): ScopeBrand[] => getEnterpriseMerchantSnapshot().merchants.map(m=>({id:m.merchantId,name:m.name}));
 export function readCenterState(): CenterState {
   const raw = localStorage.getItem(CENTER_KEY);
   if (raw) {
