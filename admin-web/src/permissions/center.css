@@ -147,3 +147,12 @@
 .pc .pc-audit-added{background:#eaf7ef;color:#17663a;border-radius:4px;padding:6px 8px}
 .pc .pc-audit-removed{background:#fff0ef;color:#a3372d;border-radius:4px;padding:6px 8px}
 .pc .pc-audit-badge{font-size:11px;white-space:nowrap;font-weight:600}
+
+/* Keep role permission actions visible while only its content scrolls. */
+.pc-dialog.pc-role-permissions{height:min(88vh,calc(100dvh - 32px));overflow:hidden}
+.pc-role-permissions > form.pc{height:100%;min-height:0;box-sizing:border-box;display:flex;flex-direction:column}
+.pc-role-permissions > form.pc > .pc-heading,
+.pc-role-permissions > form.pc > footer{flex:0 0 auto}
+.pc-role-permissions > form.pc > .pc-form{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
+.pc-role-permissions [data-role-permissions]{flex:1;min-height:320px;display:flex;flex-direction:column}
+.pc-dialog.pc-role-permissions .pc-editor{flex:1;height:auto}
