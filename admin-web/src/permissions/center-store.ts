@@ -1,8 +1,9 @@
+import {seedDemoBindings} from './center-demo-bindings';
 import {seedDemoAudit} from './center-demo-audit';
 import { getRbacSnapshot } from "./rbac-store";
 import { listStaffLoginAccounts } from "./staff-account-store";
 import { buildPermissionResourceIndex } from "../config/permission-registry";
-import { listMPlatformStoreScopeEntries } from "./m-platform-store-scope";
+import { DEFAULT_DEMO_STORE_ID, listMPlatformStoreScopeEntries } from "./m-platform-store-scope";
 import { buildCenterCatalog, pageKey, settingKey } from "./center-catalog";
 import { type CenterState, type Store, type Scope, type Access } from "./center-domain";
 import { persistCenterChange } from './center-persistence';
@@ -22,7 +23,7 @@ export function readCenterState(): CenterState {
     const roleOnly=migrateRoleOnlyState(localStorage,CENTER_KEY,state,raw);
     const expectedRaw=roleOnly===state?raw:JSON.stringify(roleOnly);
     const migrated=migrateNavigationPermissions(roleOnly,buildCenterCatalog().resources,centerStores());
-    const seeded=seedDemoAudit(migrated,centerStores());
+    const seeded=seedDemoAudit(seedDemoBindings(migrated,centerStores(),DEFAULT_DEMO_STORE_ID),centerStores());
     if(seeded!==migrated){
       if(localStorage.getItem(CENTER_KEY)!==expectedRaw)throw Error('权限数据已被其他窗口修改，请刷新后初始化演示记录');
       localStorage.setItem(CENTER_KEY,JSON.stringify(seeded));
@@ -49,7 +50,7 @@ export function readCenterState(): CenterState {
     return {id,name:row?.employeeName??account?.employeeName??id,email:account?.loginEmail??'',status:account ? account.enabled?'enabled':'disabled':'unopened',bindings:scope ? (row?.roleIds??[]).map(roleId=>({id:crypto.randomUUID(),roleId,scope:structuredClone(scope)})) : [],overrides:{},migrationReview:!scope && !!row?.roleIds.length};
   }),logs:[]};
   // Keep all legacy keys untouched. Fail visibly if persistence is unavailable.
-  const migrated=seedDemoAudit(migrateNavigationPermissions(state,catalog.resources,centerStores()),centerStores());
+  const migrated=seedDemoAudit(seedDemoBindings(migrateNavigationPermissions(state,catalog.resources,centerStores()),centerStores(),DEFAULT_DEMO_STORE_ID),centerStores());
   localStorage.setItem(CENTER_KEY,JSON.stringify(migrated));
   return migrated;
 }

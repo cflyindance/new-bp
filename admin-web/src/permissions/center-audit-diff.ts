@@ -38,7 +38,7 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
     for(const key of new Set([...Object.keys(left),...Object.keys(right)]))scalar(group,prefix+resourceName(key),left[key],right[key],true);
   };
   for(const key of new Set([...Object.keys(a),...Object.keys(b)])){
-    if(key==='id')continue;
+    if(key==='id'||key==='demoAuthorization')continue;
     if(key==='bindings'){
       const left=Array.isArray(a.bindings)?a.bindings.map(object):[],right=Array.isArray(b.bindings)?b.bindings.map(object):[];
       for(const id of new Set([...left,...right].map(x=>x.id))){
