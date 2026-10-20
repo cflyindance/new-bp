@@ -24,3 +24,13 @@ const hostile=structuredClone(employee);hostile.bindings[0].scope.ids=['<script>
 const long=structuredClone(employee);long.bindings[0].scope.ids=['s1','s2','s3'];assert.match(renderStaffRoles(long,roles,stores),/共 3 家/);
 const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('renderStaffRoles(e,draft.roles,stores)'));assert(ui.includes('员工生效权限'));assert(ui.includes('dataset.viewRole'));assert(ui.includes('dataset.editBinding'));assert(ui.includes('保存员工详情后生效'));
 console.log('PASS staff role scope: all bindings, named stores, dynamic scope, lost references, safe no-op/atomic edit, readonly role entry, separated store filter');
+
+const longHtml=renderStaffRoles(long,roles,stores);
+assert(longHtml.includes('data-view-binding-stores="one"'));assert(!longHtml.includes('<details class="pc-scope-more">'));
+const fullScope=renderScope({mode:'stores',ids:['s1','s2','s3','missing']},stores,true);
+assert(fullScope.includes('上海店')&&fullScope.includes('已失效门店'));assert(!fullScope.includes('data-view-binding-stores'));
+const {scopeStoreItems}=await import('../src/permissions/center-staff-roles');
+assert.equal(scopeStoreItems({mode:'brands',ids:['b','c']},stores).length,3);
+assert.equal(scopeStoreItems({mode:'stores',ids:['s1','missing']},stores).length,2);
+assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes("modal('授权门店'"));
+console.log('PASS: scope preview button, full dialog items, dynamic and invalid store counts');

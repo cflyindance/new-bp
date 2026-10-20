@@ -156,3 +156,11 @@
 .pc-role-permissions > form.pc > .pc-form{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
 .pc-role-permissions [data-role-permissions]{flex:1;min-height:320px;display:flex;flex-direction:column}
 .pc-dialog.pc-role-permissions .pc-editor{flex:1;height:auto}
+
+.pc-dialog.pc-scope-dialog{overflow:hidden}
+.pc-scope-dialog>form.pc{display:flex;flex-direction:column;max-height:min(88vh,calc(100dvh - 32px));box-sizing:border-box}
+.pc-scope-dialog .pc-heading,.pc-scope-dialog footer{flex:0 0 auto}
+.pc-scope-dialog .pc-form{min-height:0;overflow:auto;overscroll-behavior:contain}
+.pc .pc-authorized-stores .pc-scope-list{display:grid;gap:0}
+.pc .pc-authorized-stores .pc-store-name{padding:12px 0;border-bottom:1px solid var(--pc-line);overflow-wrap:anywhere}
+.pc button.pc-scope-more{color:var(--pc-blue);border:0;background:transparent;padding:4px 0}
