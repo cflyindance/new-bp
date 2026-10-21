@@ -17,6 +17,7 @@ import {
   buildMerchantServiceTreeIndex,
   isPaidServiceModuleId,
   brandStoreSelectableCeiling,
+  brandStorePerspectiveCeiling,
   migrateLegacyMerchantServices,
   resolveMerchantServiceProductLine,
   serviceSelectionsToSubscriptions,
@@ -1781,9 +1782,14 @@ export function getStoreById(storeId: string): MerchantOrgStore | undefined {
   return readSnapshot().stores.find((s) => s.storeId === storeId);
 }
 
+function effectiveStoreCapability(snap:EnterpriseMerchantSnapshot,stored:StoreCapabilitySnapshot):StoreCapabilitySnapshot {
+  if(stored.menuMode!=='inherit')return stored;
+  const store=snap.stores.find(s=>s.storeId===stored.storeId&&s.merchantId===stored.merchantId),cap=store&&snap.capabilities.find(c=>c.merchantId===store.merchantId);
+  return {...stored,enabledKeys:cap?[...brandStorePerspectiveCeiling(cap)].sort():[]};
+}
 export function getStoreCapability(storeId: string): StoreCapabilitySnapshot | undefined {
-  const list = readSnapshot().storeCapabilities ?? [];
-  return list.find((c) => c.storeId === storeId);
+  const snap=readSnapshot(),stored=snap.storeCapabilities?.find(c=>c.storeId===storeId);
+  return stored?effectiveStoreCapability(snap,stored):undefined;
 }
 
 /** 按品牌上限裁剪该品牌下各门店的 enabledKeys */
@@ -1795,7 +1801,7 @@ function pruneStoreCapabilitiesForMerchant(
   if (!snap.storeCapabilities) snap.storeCapabilities = [];
   let pruned = 0;
   for (const sc of snap.storeCapabilities) {
-    if (sc.merchantId !== merchantId) continue;
+    if (sc.merchantId !== merchantId || sc.menuMode === "inherit") continue;
     const next = sc.enabledKeys.filter((k) => ceiling.has(k));
     if (next.length !== sc.enabledKeys.length) {
       sc.enabledKeys = next;
@@ -1833,7 +1839,7 @@ export function saveStoreCapability(
 
   if (!snap.storeCapabilities) snap.storeCapabilities = [];
   let sc = snap.storeCapabilities.find((c) => c.storeId === storeId);
-  const prevKeys = sc ? [...sc.enabledKeys] : [];
+  const prevKeys = sc ? [...effectiveStoreCapability(snap,sc).enabledKeys] : [];
   if (!sc) {
     sc = {
       storeId,
@@ -1842,6 +1848,7 @@ export function saveStoreCapability(
     };
     snap.storeCapabilities.push(sc);
   }
+  sc.menuMode = "independent";
   sc.enabledKeys = enabledKeys;
   sc.merchantId = store.merchantId;
   sc.updatedAt = nowIso();
@@ -2160,6 +2167,10 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     store.mountedAt = nowIso();
     snap.storeCapabilities = (snap.storeCapabilities ?? []).filter(c => c.storeId !== id);
   }
+  snap.storeCapabilities??=[];
+  for(const store of snap.stores.filter(s=>s.merchantId===merchantId)){
+    if(!snap.storeCapabilities.some(c=>c.storeId===store.storeId))snap.storeCapabilities.push({storeId:store.storeId,merchantId,menuMode:'inherit',enabledKeys:[],updatedAt:nowIso(),updatedBy:operatorEmail});
+  }
   appendChangelog(snap, {
     merchantId,
     action: "merchant.create",
@@ -2240,26 +2251,27 @@ export function saveExplicitBrandMenus(id:string,keys:string[],expected:string,a
   const before=[...cap.services.filter(s=>s.enabled).map(s=>s.nodeKey??s.serviceId)];
   cap.menuGrantMode='explicit';cap.services=explicitServices(validated);cap.menuResourceKeys=[...centerKeysForRaw(new Set(validated))];
   const removedStores=pruneStoreCapabilitiesForMerchant(snap,id,new Set(validated));
-  appendChangelog(snap,{merchantId:id,action:'brand.menu.update',operatorEmail:actor,detail:`品牌菜单 ${before.length} → ${validated.length} 项；裁剪 ${removedStores} 家门店；新增路由不自动开通`});
+  appendChangelog(snap,{merchantId:id,action:'brand.menu.update',operatorEmail:actor,detail:`品牌菜单 ${before.length} → ${validated.length} 项；裁剪 ${removedStores} 家门店；继承模式自动同步品牌开通范围，独立配置不自动新增`});
   persistBrandConfiguration(snap);
 }
 
-export function saveBrandStoreMenus(id:string,storeIds:string[],keys:string[],mode:'add'|'replace',expected:string,actor:string,source:string):void {
+export function saveBrandStoreMenus(id:string,storeIds:string[],keys:string[],mode:'add'|'replace'|'inherit',expected:string,actor:string,source:string):void {
+  if(!['add','replace','inherit'].includes(mode))throw Error('门店菜单配置方式无效。');
   if(brandConfigurationVersion(id)!==expected)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
   const snap=structuredClone(readSnapshot()),cap=snap.capabilities.find(c=>c.merchantId===id);
   if(!cap)throw Error('品牌菜单配置不存在。');
   const ceiling=new Set(cap.productLineIds.flatMap(pl=>[...brandStoreSelectableCeiling(cap,resolveMerchantServiceProductLine([pl]))]));
   if(!storeIds.length || storeIds.some(sid=>!snap.stores.some(s=>s.storeId===sid&&s.merchantId===id)))throw Error('请选择当前品牌所属门店。');
-  if(keys.some(k=>!ceiling.has(k)))throw Error('包含品牌未开通的菜单，请刷新后重新选择。');
+  if(mode!=='inherit'&&keys.some(k=>!ceiling.has(k)))throw Error('包含品牌未开通的菜单，请刷新后重新选择。');
   snap.storeCapabilities??=[];
   for(const sid of [...new Set(storeIds)]){
     const old=snap.storeCapabilities.find(c=>c.storeId===sid);
-    const prev=old?.enabledKeys??[];
-    const enabledKeys=[...new Set([...(mode==='add'?prev:[]),...keys])].filter(k=>ceiling.has(k)).sort();
-    const next={storeId:sid,merchantId:id,enabledKeys,updatedAt:nowIso(),updatedBy:actor};
+    const prev=old?effectiveStoreCapability(snap,old).enabledKeys:[];
+    const enabledKeys=mode==='inherit'?[...brandStorePerspectiveCeiling(cap)].sort():[...new Set([...(mode==='add'?prev:[]),...keys])].filter(k=>ceiling.has(k)).sort();
+    const next:StoreCapabilitySnapshot={storeId:sid,merchantId:id,menuMode:mode==='inherit'?'inherit':'independent',enabledKeys:mode==='inherit'?[]:enabledKeys,updatedAt:nowIso(),updatedBy:actor};
     if(old)Object.assign(old,next);else snap.storeCapabilities.push(next);
     const added=enabledKeys.filter(k=>!prev.includes(k)),removed=prev.filter(k=>!enabledKeys.includes(k));
-    appendChangelog(snap,{merchantId:id,storeId:sid,action:'store.capability.update',operatorEmail:actor,detail:`${source} · ${mode==='add'?'增量开通':'替换配置'} · 新增 ${added.length} 项 [${added.join(', ')}]；关闭 ${removed.length} 项 [${removed.join(', ')}]`});
+    appendChangelog(snap,{merchantId:id,storeId:sid,action:'store.capability.update',operatorEmail:actor,detail:`${source} · ${mode==='inherit'?'继承品牌菜单（自动同步门店视角）':mode==='add'?'独立配置增量开通':'独立配置替换'} · 新增 ${added.length} 项 [${added.join(', ')}]；关闭 ${removed.length} 项 [${removed.join(', ')}]`});
   }
   persistBrandConfiguration(snap);
 }
@@ -2276,7 +2288,8 @@ export function associateBrandStores(id:string,storeIds:string[],expected:string
     const s=snap.stores.find(s=>s.storeId===sid)!;
     s.merchantId=id;s.brandId=brand.brandId;s.regionId=region.regionId;s.mountedAt=nowIso();
     snap.storeCapabilities=(snap.storeCapabilities??[]).filter(c=>c.storeId!==sid);
-    appendChangelog(snap,{merchantId:id,storeId:sid,action:'org.store.associate',operatorEmail:actor,detail:`关联已有门店「${s.name}」；保留 MID，新归属下菜单默认关闭`});
+    snap.storeCapabilities.push({storeId:sid,merchantId:id,menuMode:'inherit',enabledKeys:[],updatedAt:nowIso(),updatedBy:actor});
+    appendChangelog(snap,{merchantId:id,storeId:sid,action:'org.store.associate',operatorEmail:actor,detail:`关联已有门店「${s.name}」；保留 MID，新归属下默认继承品牌门店视角菜单`});
   }
   persistBrandConfiguration(snap);notifyChainBrandOrgSyncForMerchant(id);
 }

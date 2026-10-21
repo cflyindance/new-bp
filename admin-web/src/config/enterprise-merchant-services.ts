@@ -1,3 +1,5 @@
+import { isStorePerspectiveModule } from '../auth/menu-perspective-rules';
+import { NAV_MODULES } from './navigation';
 import { DEFAULT_NAV_BLUEPRINT_ID, getPublishedNavBlueprint } from './nav-blueprint-store';
 import { buildNavBlueprintIndexFromSnapshot } from './nav-blueprint-tree';
 /**
@@ -367,4 +369,21 @@ export function cascadeStoreServiceSelection(
     next[dk] = syncNodeDisplayWithEnabled(next[dk], enabled);
   }
   return next;
+}
+
+/** Brand grant intersection with actual store perspective; release/preset gates remain runtime gates. */
+export function brandStorePerspectiveCeiling(cap:MerchantCapabilitySnapshot):Set<string> {
+  const allowed=new Set<string>();
+  const excludedPaths=NAV_MODULES.filter(m=>!isStorePerspectiveModule(m.id)).map(m=>m.path).filter(Boolean);
+  for(const line of cap.productLineIds){
+    const product=resolveMerchantServiceProductLine([line]),ceiling=brandStoreSelectableCeiling(cap,product),index=buildMerchantServiceTreeIndex(product);
+    const visit=(node:typeof index.groups[number]['tree'],blocked=false)=>{
+      const r=node.resource,path=r.path?.split(/[?#]/)[0];
+      const hidden=blocked||!isStorePerspectiveModule(r.moduleId)||!!path&&excludedPaths.some(base=>path===base||path.startsWith(base+'/'));
+      if(!hidden&&ceiling.has(r.key))allowed.add(r.key);
+      node.children.forEach(child=>visit(child,hidden));
+    };
+    index.groups.forEach(g=>visit(g.tree));
+  }
+  return allowed;
 }
