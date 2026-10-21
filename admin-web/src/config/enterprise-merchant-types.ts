@@ -152,7 +152,13 @@ export interface UpdateStoreCapabilityInput {
   paidSelection?: Record<string, import("./platform-preset-node-selection").PlatformPresetNodeSelection>;
 }
 
+export interface MerchantMenuChange {
+  operationId:string; source:string; mode:string; beforeMode:string;
+  storeName?:string; added:string[]; removed:string[];
+  choices:import('./brand-menu-choices').MenuChoice[];
+}
 export interface MerchantChangeLogEntry {
+  menuChange?:MerchantMenuChange;
   id: string;
   enterpriseId?: string;
   merchantId: string;
