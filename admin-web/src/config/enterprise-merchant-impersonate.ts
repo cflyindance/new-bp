@@ -2,6 +2,7 @@
  * M 平台 · 代登录商家后台（演示）
  */
 import { getAuthenticatedEmail } from "../auth/login";
+import { brandPrimaryAdminEmail } from '../auth/brand-access-runtime';
 import { markPlatformPresetOnboardingComplete, ONBOARDING_PATH, resetPlatformPresetOnboarding } from "./platform-preset-onboarding";
 import {
   appendImpersonationLogEnd,
@@ -68,6 +69,7 @@ function writeImpersonationSession(session: MerchantImpersonationSession | null)
 }
 
 export function canImpersonateMerchant(merchant: EnterpriseMerchant): boolean {
+  if(merchant.accountProvisioningRequired && !brandPrimaryAdminEmail(merchant.merchantId))return false;
   return merchant.status !== "closed" && merchant.status !== "draft";
 }
 
@@ -85,7 +87,7 @@ function applyImpersonationScopeLock(merchant: EnterpriseMerchant): void {
 }
 
 function prepareImpersonatedMerchantContext(merchant: EnterpriseMerchant): void {
-  const email = merchant.primaryAdminEmail?.trim();
+  const email = brandPrimaryAdminEmail(merchant.merchantId).trim();
   if (!email) return;
   if (merchant.status === "onboarding") {
     resetPlatformPresetOnboarding(email);
@@ -106,7 +108,7 @@ export function startMerchantImpersonation(
   if (!canImpersonateMerchant(merchant)) return null;
 
   const operator = operatorEmail?.trim() || "hq.admin@menusifu.cn";
-  const impersonatedAsEmail = merchant.primaryAdminEmail?.trim() || operator;
+  const impersonatedAsEmail = brandPrimaryAdminEmail(merchant.merchantId).trim() || operator;
   const session: MerchantImpersonationSession = {
     sessionId: genSessionId(),
     merchantId: merchant.merchantId,

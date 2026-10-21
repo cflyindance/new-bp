@@ -53,6 +53,12 @@ export const MERCHANT_PAID_SERVICE_MODULES: {
 
 const PAID_MODULE_IDS = new Set(MERCHANT_PAID_SERVICE_MODULES.map((m) => m.moduleId));
 const LEGACY_TO_MODULE = new Map(MERCHANT_PAID_SERVICE_MODULES.map((m) => [m.serviceId, m.moduleId]));
+const tickIndexes=new Map<string,FourColumnTreeIndex>();
+function indexForTick(key:string,build:()=>FourColumnTreeIndex):FourColumnTreeIndex {
+  const cached=tickIndexes.get(key);if(cached)return cached;
+  const index=build();tickIndexes.set(key,index);
+  queueMicrotask(()=>tickIndexes.clear());return index;
+}
 
 export function isPaidServiceModuleId(moduleId: string): boolean {
   return PAID_MODULE_IDS.has(moduleId);
@@ -65,9 +71,11 @@ export function resolveMerchantServiceProductLine(productLineIds: string[]): Pro
 }
 
 export function buildMerchantServiceTreeIndex(productLineId: ProductLineId): FourColumnTreeIndex {
+  return indexForTick(`all:${productLineId}`,()=>{
   const treeOptions = resolvePlatformPresetTreeOptions("enterprise", { blueprintVersion: undefined });
   const full = buildPlatformPresetIndex(productLineId, treeOptions);
   return { groups: full.groups, getDescendantKeys: full.getDescendantKeys.bind(full) };
+  });
 }
 
 function filterIndexByModules(
@@ -89,11 +97,11 @@ function filterIndexByModules(
 }
 
 export function buildIncludedServiceTreeIndex(productLineId: ProductLineId): FourColumnTreeIndex {
-  return filterIndexByModules(productLineId, (id) => !PAID_MODULE_IDS.has(id));
+  return indexForTick(`included:${productLineId}`,()=>filterIndexByModules(productLineId, (id) => !PAID_MODULE_IDS.has(id)));
 }
 
 export function buildPaidServiceTreeIndex(productLineId: ProductLineId): FourColumnTreeIndex {
-  return filterIndexByModules(productLineId, (id) => PAID_MODULE_IDS.has(id));
+  return indexForTick(`paid:${productLineId}`,()=>filterIndexByModules(productLineId, (id) => PAID_MODULE_IDS.has(id)));
 }
 
 export function migrateLegacyMerchantServices(services: MerchantServiceSubscription[]): MerchantServiceSubscription[] {
@@ -177,7 +185,7 @@ export function capabilityToServiceSelections(
   applyEnabledFromServices(paid, services, "paid", paidIndex);
 
   const hasIncluded = services.some((s) => s.enabled && (s.billingType ?? "included") === "included");
-  if (!hasIncluded && cap.businessTypeIds.length > 0) {
+  if (cap.menuGrantMode !== 'explicit' && !hasIncluded && cap.businessTypeIds.length > 0) {
     const defaults = buildDefaultIncludedSelection(cap.businessTypeIds, productLineId, includedIndex);
     for (const [key, node] of Object.entries(defaults)) {
       if (node.enabled) included[key] = node;
@@ -259,7 +267,8 @@ export function brandStoreSelectableCeiling(
   cap: MerchantCapabilitySnapshot,
   productLineId: ProductLineId,
 ): Set<string> {
-  return expandCeilingWithDescendants(brandCapabilityCeilingKeys(cap, productLineId), productLineId);
+  const keys = brandCapabilityCeilingKeys(cap, productLineId);
+  return cap.menuGrantMode === 'explicit' ? keys : expandCeilingWithDescendants(keys, productLineId);
 }
 
 /** 将已开通键扩展为包含全树子孙，供门店四级勾选 */

@@ -18,6 +18,8 @@ import { isFinanceStoreScopedNavigationPath } from "../config/finance-store-scop
 import { isFohStoreScopedNavigationPath } from "../config/foh-store-scope";
 import { isTeamStoreScopedNavigationPath } from "../config/team-store-scope";
 import { getUiLocale, t, tf } from "../i18n";
+import { currentBrandPrincipal } from '../config/brand-access-store';
+import { readAppHashPath } from '../config/app-routes';
 
 function escapeHtml(s: string): string {
   return s
@@ -169,6 +171,7 @@ function persistPageStore(storeId: string, onMount: () => void): void {
 
 export function bindPageStorePicker(onMount: () => void): void {
   if (!usesInPageStorePicker()) return;
+  if(currentBrandPrincipal() && !isStoreConfigNavigationPath(readAppHashPath()))return;
 
   if (ensureInPageDefaultStoreSelected()) {
     onMount();

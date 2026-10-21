@@ -1,3 +1,4 @@
+import { validateBrandLogin } from './brand-access-runtime';
 /** 演示登录：员工维护账号优先，兼容 Menusifu 企业邮箱 + 演示密码 */
 
 import { recordSystemLoginLog } from "./login-log-store";
@@ -59,6 +60,8 @@ export function validateLoginCredentials(email: string, password: string): strin
     return "请输入演示账号 demo.menusifu.cn 或 Menusifu 企业邮箱";
   }
 
+  const brandLogin = validateBrandLogin(trimmedEmail, password);
+  if (brandLogin !== undefined) return brandLogin;
   const maintained = getStaffLoginAccountByEmail(trimmedEmail);
   if (maintained) {
     if (!maintained.enabled) return "该账号已停用，请联系管理员";

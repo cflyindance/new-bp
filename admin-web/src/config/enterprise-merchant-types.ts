@@ -32,6 +32,8 @@ export interface EnterpriseGroup {
 }
 
 export interface EnterpriseMerchant {
+  /** 新开通品牌在账号页显式设置登录凭据；历史品牌维持原登录规则。 */
+  accountProvisioningRequired?: boolean;
   merchantId: string;
   enterpriseId: string;
   /** 所属集团 */
@@ -116,6 +118,9 @@ export interface MerchantServiceSubscription {
 }
 
 export interface MerchantCapabilitySnapshot {
+  menuGrantMode?: 'explicit';
+  /** Frozen resource identities; newly registered routes require another explicit grant. */
+  menuResourceKeys?: string[];
   merchantId: string;
   businessTypeIds: string[];
   productLineIds: string[];
@@ -336,6 +341,9 @@ export interface SubmitPosStoreRequestInput {
 }
 
 export interface CreateMerchantInput {
+  initialMenuKeys?: string[];
+  initialStoreIds?: string[];
+  accountProvisioningRequired?: boolean;
   name: string;
   code: string;
   groupId: string;

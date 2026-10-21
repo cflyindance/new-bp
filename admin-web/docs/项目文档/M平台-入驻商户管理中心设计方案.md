@@ -1,27 +1,27 @@
 # M 平台 · 入驻商户管理中心 — 设计方案
 
-> 版本：草案 v1  
-> 适用范围：M 平台（企业级）· 入驻商户全生命周期与组织治理  
-> 关联模块：平台预设、菜单路由、权限管理、硬件资产中心、商家后台 onboarding / 品牌管理 / 门店管理
+> 版本：V1.1 · 2026-10-21；职责：产品范围与业务决策权威。
+> 状态：本次品牌权限方案已确认，功能分支本地演示验收通过；生产服务未接入。
+> 配对：[研发交付版 V1.0](./M平台-入驻商户管理中心业务规格说明书（研发交付版）.md) · [个人规范版 V1.0](./M平台-入驻商户管理中心需求文档（个人规范版）.md)。
+> 共同业务基线：用户确认的品牌、门店、角色、账号四层模型；变更编号 BRAND-ACCESS-20261021-01。
+> 本次实现基线：main@f848526b，codex/brand-menu-access-20261021；本次获授权提交并合入本地 main。
+
+## 版本记录
+
+| 版本 | 日期 | 变更 | 配对版本 |
+| --- | --- | --- | --- |
+| V1.1 | 2026-10-21 | 明确品牌菜单上限、门店双入口配置、品牌 Admin、逐角色门店绑定；优化品牌创建和配置交互 | 研发 V1.0 / 个人 V1.0 |
+| 草案 v1 | 历史 | 入驻商户全生命周期和组织治理初稿；未在本次确认的后续能力仍属于历史建议 | 原无配对文件 |
 
 ---
 
 ## 1. 背景与定位
 
-### 1.1 现状
+### 1.1 现状与本次问题
 
-当前 M 平台已具备 **配置与策略** 能力，但缺少 **商户运营** 能力：
+当前原型已具备 M 平台品牌列表、门店列表、组织主数据、品牌/门店能力配置及商家权限工作台。本次把分散入口整理为品牌创建、品牌菜单、所属门店、账号与角色的连续流程，明确菜单开通与人员授权的边界。
 
-| 已有能力 | 实现 | 缺口 |
-|----------|------|------|
-| 企业级平台预设 | `enterprise-platform-preset-store` | 预设面向「抽象租户」，无具体商户实体 |
-| 导航蓝图 | `nav-blueprint-store` | 不能按商户单独下发 |
-| 企业 RBAC | `enterprise-rbac-store` | 员工数据范围为 demo 品牌/区域/门店，非真实商户树 |
-| 硬件资产中心 | `enterprise-hardware-store` | 设备挂 demo 门店，无商户归属主数据 |
-| 商家 onboarding | `/onboarding` | 仅在**商家侧**自助完成，M 平台不能代开商户 |
-| 品牌 / 门店管理 | 商家后台 `/brand/*`、`/stores/*` | **单商户内**维护，非企业跨商户治理 |
-
-演示环境中：`enterpriseId`、`merchantId` 未建模；顶栏 scope 使用硬编码 `DEMO_SCOPE_*`；全浏览器仅模拟**一个**商家实例。
+旧方案里“Merchant 内再建 Brand”的概念与当前入驻品牌页面不一致，本次以第 2 节已确认模型统一。旧生命周期、硬件、申请流程不因本次重设计自动重构。生产接口和凭据服务仍属于未接入能力。
 
 ### 1.2 企业视角的核心诉求
 
@@ -37,7 +37,7 @@ M 平台面向 **软件服务商 / 餐饮集团总部**，需要管理其名下�
 
 ### 1.3 模块定位
 
-在 M 平台侧栏新增一级 **「商户管理中心」**（建议 `merchant-mgmt`），与现有模块关系：
+沿用 M 平台现有 **「品牌管理中心」**，与现有模块关系：
 
 ```
 M 平台
@@ -57,51 +57,34 @@ M 平台
 
 ## 2. 概念模型
 
-### 2.1 组织层级（五层）
+### 2.1 本次有效组织模型
 
-```mermaid
-flowchart TB
-  E[企业 Enterprise<br/>Menusifu 客户 / 集团总部]
-  M[入驻商户 Merchant<br/>签约租户 · 独立数据隔离]
-  B[品牌 Brand<br/>连锁下的品牌线]
-  R[区域 Region<br/>华东 / 华南 / 美国西等]
-  S[门店 Store<br/>最小经营与数据单元]
+M 平台菜单路由定义平台已有的后台功能。集团包含品牌，品牌包含门店；品牌账号属于一个品牌，角色在该品牌内复用。现有代码中的 EnterpriseMerchant 对应本次页面上的入驻品牌；不是再新增一层同名 Brand 租户。原 MerchantOrgBrand/Region 保留兼容与区域组织信息，不在本流程重复要求运营选择第二个品牌。
 
-  E --> M
-  M --> B
-  B --> R
-  R --> S
-  M --> S
-```
+| 关系 | 定义 |
+| --- | --- |
+| 品牌—门店 | 门店归属，与哪个账号能够管理门店分离；门店 MID 保持稳定 |
+| 品牌—菜单 | 品牌获准使用的功能上限，从菜单路由中选择；不是菜品菜单 |
+| 门店—菜单 | 本店实际开通范围，不得超出品牌上限；未配置默认关闭 |
+| 品牌—角色 | 品牌内复用的岗位定义，包含菜单、内容、设置与操作权限 |
+| 账号—角色—门店 | 每一次角色分配都有自己的生效门店；禁止将所有角色与所有门店交叉组合 |
 
-| 层级 | 说明 | 示例 |
-|------|------|------|
-| **Enterprise** | M 平台登录主体；一个集团或 SaaS 运营方 | 米聚餐饮集团 |
-| **Merchant** | 独立租户；拥有独立商家后台、数据隔离、License | 「张记火锅」连锁客户 |
-| **Brand** | 商户内品牌线；影响菜单、视觉、多品牌首页 | 张记火锅 / 张记小面 |
-| **Region** | 可选中间层；区域督导、区域报表 | 华东大区 |
-| **Store** | 物理门店；scope 最小单元、硬件绑定、日结 | 上海陆家嘴店 |
+### 2.2 生效规则
 
-**单店商户**：Merchant 下仅 1 个 Store，`orgTier = store`，隐藏品牌/区域管理入口（与现有 `AccountOrgTier` 一致）。
+普通账号在某店的权限 = 品牌开通范围 ∩ 门店开通范围 ∩ 该账号在该店生效的角色权限。仍保留既有发布、产线、订阅等限制。普通账号品牌视角可查看其至少一家授权门店可用的页面，业务数据范围按当前页面再次裁剪；跨店操作只能在全部目标店均授权时执行。
 
-**连锁商户**：Merchant 下多 Store，可挂 Brand / Region，`orgTier = chain`。
+品牌 Admin 是明确的账号身份：品牌视角看到全部所属门店及品牌菜单，自动覆盖后续加入的门店；切换门店业务视角后遵守该店菜单开通范围。普通账号不能编辑门店开通、品牌账号或品牌角色。
 
-### 2.2 商户 vs 门店 vs 账号
+### 2.3 开通分工
 
-| 对象 | 归属 | 用途 |
-|------|------|------|
-| **Merchant 租户** | Enterprise | 数据隔离边界、License、平台预设实例、服务订阅 |
-| **Store 门店** | Merchant | 经营数据、硬件、日结、员工排班 |
-| **Staff 员工** | Merchant（数据范围可限 brand/region/store） | 商家后台登录与 RBAC |
-| **Enterprise Staff** | Enterprise | M 平台运营人员；可访问部分或全部商户 |
+| 配置 | M 平台运营 | 品牌 Admin |
+| --- | --- | --- |
+| 品牌资料及门店归属 | 在既有运营权限范围维护 | 查看 |
+| 品牌菜单上限 | 维护 | 查看，不能扩大 |
+| 各店菜单 | 维护 | 维护，同一份配置 |
+| 品牌账号、角色及生效门店 | 代配置并留痕 | 维护 |
 
-### 2.3 三类「开通」（避免混淆）
-
-| 类型 | 含义 | 配置位置 | 影响 |
-|------|------|----------|------|
-| **账号开通** | 创建商户管理员 / 员工登录账号 | 商户详情 · 账号；或商家后台权限中心 | 能否登录 |
-| **组织开通** | 创建门店 / 区域 / 品牌节点 | 商户详情 · 组织树 | 数据范围与 scope |
-| **能力开通** | 启用模块、产线、增值服务 | 商户详情 · 能力与服務；联动平台预设 | 侧栏可见性、功能可用性 |
+运营普通关闭与 Admin 普通关闭具有相同配置语义。未新增隐藏的平台锁定规则。
 
 ---
 
@@ -133,25 +116,13 @@ stateDiagram-v2
 
 ### 3.2 开通方式
 
-**方式 A · 商户自助（现有延伸）**
+新建品牌采用三步：品牌信息 → 选择所属门店 → 开通品牌菜单。确认前展示集团、门店数、菜单节点数；全部校验后创建。账号开通独立进行，创建成功进入账号与角色页，先开通品牌 Admin，再建立角色、开通普通账号并逐次分配角色及门店。
 
-1. M 平台创建 Merchant（`onboarding`）并邮件邀请初始管理员
-2. 管理员首次登录 `#/onboarding` → 选业态 / 产线 → 确认功能
-3. `seedMerchantPresetsFromEnterprise()` 写入商家预设
-4. M 平台回调更新 Merchant → `active`
+可关联同集团可挂接的独立门店；无候选时允许创建零店品牌，后续继续关联。关联保持 MID，新的品牌归属下门店菜单默认关闭。已有其他品牌归属的门店不通过普通勾选直接转移。本轮不新增跨品牌迁移流程。
 
-**方式 B · M 平台代开通（企业运营常用）**
+旧自助入驻、POS 申请及生命周期入口保留，不自动批量修改既有账号与角色数据。
 
-1. M 平台运营在「新建商户」向导中一次性填写：基本信息、业态产线、初始管理员、首店信息
-2. 系统自动：创建 Merchant + Store + 管理员账号 + seed 预设 + 跳过或完成 onboarding
-3. 商户收到「账号已就绪」通知，直接登录经营
-
-**方式 C · 连锁批量开新店**
-
-1. 在已有 Merchant 下选择「批量新增门店」
-2. 导入 CSV / 表单：门店名、地址、区域、复制模板店配置
-3. 可选：复制支付模板、菜单模板、硬件清单、平台预设 combo
-4. 批量创建 Store + 可选门店店长账号
+---
 
 ### 3.3 关闭与合规
 
@@ -161,110 +132,29 @@ stateDiagram-v2
 
 ---
 
-## 4. 连锁多门店管理
+## 4. 所属门店与双入口菜单管理
 
-### 4.1 组织树管理（M 平台 · 商户详情）
+M 平台：品牌列表 → 所属门店 → 配置菜单。商家后台：品牌 Admin → 门店管理 → 所属门店 → 配置菜单。两个入口读取与更新同一份门店配置。
 
-```
-张记火锅（Merchant）
-├── 品牌：张记火锅
-│   ├── 区域：华东
-│   │   ├── 上海陆家嘴店 [active]
-│   │   └── 杭州西湖店 [active]
-│   └── 区域：华南
-│       └── 广州天河店 [preparing]
-└── 品牌：张记小面
-    └── 区域：华东
-        └── 南京新街口店 [active]
-```
+支持按名称/MID 搜索、勾选门店、逐店配置、批量增量开通及批量替换。批量默认增量，保留各店原有菜单；替换要求在预览中逐店列出关闭项。取消不写入，保存失败保留选择。候选店归属、品牌上限或门店配置已变化时，旧版本保存失败，运营保留草稿后刷新重试。
 
-**能力**：
+品牌页可查看门店状态、已开通页面数、最近修改时间与操作人。零菜单展示未开通，不等同于门店停业。
 
-- 拖拽调整归属（品牌 ↔ 区域 ↔ 门店）
-- 门店状态：筹备中 / 营业中 / 停业 / 已关闭
-- 从模板店「复制配置」到新店（菜单结构、支付、打印、部分设置）
-- 区域级汇总：门店数、在线设备、未处理告警（接硬件资产中心）
-
-### 4.2 与商家后台的分工
-
-| 操作 | M 平台 | 商家后台 |
-|------|--------|----------|
-| 新建 Merchant | ✅ | ❌ |
-| 新建 Store（连锁） | ✅ 可批量 | ✅ 单店视角可申请/维护档案 |
-| 品牌主数据 CRUD | ✅ 主数据 | ✅ 连锁账号只读或受限编辑 |
-| 门店营业参数 | 模板下发 | ✅ 店长维护 |
-| 顶栏 scope | 企业运营按商户过滤 | 商户员工按 brand/region/store |
-
-### 4.3 组织层级与导航布局
-
-继承 `导航维度-连锁与单店.md`：
-
-- Merchant 创建时指定 **默认组织层级** `store | chain`
-- 单店 Merchant：强制 `store`，侧栏隐藏 `brand-mgmt` 等连锁模块
-- 连锁 Merchant：默认 `chain`，可切换门店版/连锁版布局
+集团、区域与历史组织树保持既有入口，本轮不新增拖拽换归属。
 
 ---
 
-## 5. 能力与服務开通
+## 5. 品牌菜单上限与人员授权
 
-### 5.1 能力模型（三层）
+品牌菜单来自当前菜单路由，按已选择产线合并可选节点。目录勾选级联选择现有下级，单选下级补齐必要父目录；取消目录移除其下级。目录不与页面混合计入已开通页面数。
 
-```mermaid
-flowchart LR
-  subgraph L0 [L0 · 企业能力池]
-    NAV[导航蓝图 + 企业平台预设<br/>系统最大能力边界]
-  end
-  subgraph L1 [L1 · 商户订阅]
-    SUB[商户能力包 · 业态产线 combo<br/>增值服务 License]
-  end
-  subgraph L2 [L2 · 商家运行时]
-    EFF[商家有效预设<br/>侧栏 / 设置可见性]
-  end
-  NAV --> SUB
-  SUB --> EFF
-```
+新授权保存为显式节点与资源身份快照。品牌新增菜单后 Admin 品牌视角可见，门店不自动开通；新增路由不自动授予既有品牌。清空品牌菜单后保持关闭，不回填默认服务。历史未显式配置的品牌保留既有默认与兼容行为，首次编辑时展示实际解析结果供确认。
 
-| 层级 | 内容 | 示例 |
-|------|------|------|
-| **L0 企业能力池** | M 平台已配置的导航 + 企业预设 | 火锅业态 × POS 产线：开启报表、厨打、会员 |
-| **L1 商户订阅** | 该 Merchant 被允许使用的 combo + 增值模块 | 仅开通「火锅×POS」「火锅×Kiosk」；加购「高级报表」 |
-| **L2 商家有效预设** | sync 到 `menusifu:platform-preset-v1` 的实际 selection | 商家可在 L1 范围内关闭部分叶子节点 |
+收回品牌菜单前展示增减项及受影响门店；保存后裁剪各店超出上限的菜单，原角色授权保留审计记录但不越过上限。再次给品牌开通不自动恢复各店已裁剪项。
 
-### 5.2 能力与服務清单（建议字段）
+角色在品牌内维护，同名重复校验；可分别配置页面、内容、设置只读/可编辑和已注册的操作。账号分配角色时必须选择至少一家本品牌门店。示例：张三的店长角色仅在 A/B 店有效，财务角色仅在 C 店有效，张三不能在 C 店凭店长角色使用订单。
 
-**基础能力（与平台预设 combo 绑定）**
-
-| 字段 | 说明 |
-|------|------|
-| `businessTypeIds` | 经营业态（火锅、快餐…） |
-| `productLineIds` | 产线（POS、Kiosk、eMenu…） |
-| `presetCombos` | 具体 combo 列表及版本 |
-| `navLayoutDefault` | 默认门店版 / 连锁版 |
-
-**增值服务 / 模块 License（可独立于 combo）**
-
-| 服务 ID | 名称 | 说明 |
-|---------|------|------|
-| `svc-advanced-report` | 高级报表 | 多店对比、自定义报表 |
-| `svc-member-plus` | 会员 Plus | 等级、储值、营销自动化 |
-| `svc-delivery-hub` | 外卖聚合 | 多平台订单接入 |
-| `svc-hardware-monitor` | 硬件监控 | 企业级硬件资产中心只读 |
-| `svc-api-open` | Open API | 第三方对接配额 |
-
-**字段**：开通状态、生效/到期日、门店范围（全商户 / 指定区域 / 指定门店 list）
-
-### 5.3 开通联动（与现有 sync 对接）
-
-```
-M 平台 · 商户详情 · 保存能力
-  → 计算 MerchantCapabilitySnapshot
-  → 裁剪 EnterprisePlatformPreset（不超过 L0）
-  → syncEnterprisePresetsToMerchant(merchantId)   // 扩展现有 sync，按商户写入
-  → 可选：触发商家侧 onboarding 已完成标记
-  → 写 MerchantChangeLog
-```
-
-商家后台 **不能** 开通 L0 中未包含的模块；**可以** 在 L1 范围内关闭叶子功能（现有平台预设规则不变）。
+新品牌先显式开通账号，首次登录使用品牌配置，不重新执行商家自选功能引导。普通账号停用后不能登录且已有会话不继续获得授权。必须保留至少一名启用的品牌 Admin；密码与登录约束沿用当前演示登录契约。
 
 ---
 
@@ -291,44 +181,19 @@ M 平台 · 商户详情 · 保存能力
 
 **路由**：`/m-platform/merchants/overview`
 
-### 6.3 商户列表（核心）
+### 6.3 品牌列表
 
-统一表格，支持：
+品牌名称/BID、品牌状态、所属集团、品牌已开通页面数、所属门店数、主管理员、开通时间、账号与角色及代登录入口。品牌状态与菜单配置状态独立展示。
 
-- **筛选**：状态、业态、产线、品牌、区域、合同到期、能力包
-- **列（默认）**：商户名称、商户 ID、组织类型（单店/连锁）、门店数、状态、主管理员、能力摘要、开通时间、操作
-- **批量**：导出、批量暂停、批量续费提醒
-- **行操作**：查看详情、进入商家后台（impersonate / 深链）、暂停、关闭
+### 6.4 品牌详情
 
-**路由**：`/m-platform/merchants`
+基本信息 / 所属门店 / 品牌菜单 / 账号与角色 / 变更记录。商家 Admin 的门店管理页提供所属门店、品牌菜单、账号与角色、变更记录，品牌菜单只读，门店归属只读。
 
-### 6.4 商户详情（Tab 结构）
+### 6.5 品牌创建与配置弹框
 
-**路由**：`/m-platform/merchants/:merchantId`
+三步创建保留输入；只在真实编辑后提示放弃修改。菜单弹框为分类侧栏、搜索、层级勾选、已选数量、变更预览和固定底部操作。角色弹框区分菜单与页面操作；账号弹框按每次角色分配展示独立门店选择。每次保存先预览，再确认提交。
 
-| Tab | 内容 |
-|-----|------|
-| **概览** | 状态、License、门店数、最近登录、告警摘要 |
-| **基本信息** | 名称、编码、联系人、合同、时区、默认语言 |
-| **组织** | 品牌 / 区域 / 门店树；新增门店、批量导入 |
-| **账号** | 初始管理员、企业对接人；跳转企业/商家 RBAC |
-| **能力与服務** | 业态产线 combo、增值模块、到期日；保存触发 preset sync |
-| **平台预设** | 该商户 effective preset 只读预览 + 「与企业默认 diff」+ 强制同步 |
-| **硬件** | 跳转硬件资产中心并带 `merchantId` 筛选 |
-| **变更记录** | 该商户审计日志 |
-
-### 6.5 新建 / 开通向导
-
-步骤建议：
-
-1. **基本信息**：商户名称、类型（单店/连锁）、联系人
-2. **能力与业态**：选择业态、产线 combo（从企业 L0 能力池多选）
-3. **增值服务**：勾选增值模块与有效期
-4. **首店信息**（单店必填；连锁可跳过或填样板店）
-5. **初始管理员**：邮箱（Menusifu 企业邮箱规则复用）、姓名、是否发送邀请
-6. **确认**：预览将开通的功能树摘要 → 提交
-
-**路由**：`/m-platform/merchants/new`
+---
 
 ### 6.6 组织树视图（跨商户）
 
@@ -342,84 +207,13 @@ M 平台 · 商户详情 · 保存能力
 
 ## 7. 数据模型（草案）
 
-### 7.1 核心实体
+### 7.1 本次新增与复用对象
 
-```typescript
-type MerchantStatus = "draft" | "onboarding" | "active" | "suspended" | "closing" | "closed";
-type MerchantOrgType = "single-store" | "chain";
-type StoreStatus = "preparing" | "open" | "closed" | "archived";
+具体字段、默认值、持久化与测试算例见配对研发版。复用 EnterpriseMerchant、MerchantOrgStore 和 MerchantCapabilitySnapshot；新增品牌隔离的 BrandAccessState，包含品牌内角色、账号、逐角色门店绑定和审计。菜单上限、门店配置与账号授权不存入同一个混合角色对象。
 
-interface EnterpriseMerchant {
-  merchantId: string;
-  enterpriseId: string;
-  name: string;
-  code: string;                    // 企业内唯一编码
-  orgType: MerchantOrgType;
-  status: MerchantStatus;
-  timezone: string;
-  locale: string;
-  contractExpiresAt?: string;
-  primaryAdminEmail?: string;
-  createdAt: string;
-  updatedAt: string;
-  activatedAt?: string;
-  closedAt?: string;
-}
+本地演示使用 localStorage；账号密码沿用当前原型的本地演示机制，不代表已上线凭据服务。生产接口、服务端鉴权、密码哈希和跨设备同步仍未接入。
 
-interface MerchantOrgBrand {
-  brandId: string;
-  merchantId: string;
-  name: string;
-  code: string;
-  status: "active" | "inactive";
-}
-
-interface MerchantOrgRegion {
-  regionId: string;
-  merchantId: string;
-  brandId: string;
-  name: string;
-  code: string;
-}
-
-interface MerchantOrgStore {
-  storeId: string;
-  merchantId: string;
-  brandId: string;
-  regionId: string;
-  name: string;
-  code: string;
-  status: StoreStatus;
-  address?: string;
-  openedAt?: string;
-}
-
-interface MerchantCapabilitySnapshot {
-  merchantId: string;
-  businessTypeIds: string[];
-  productLineIds: string[];
-  presetCombos: { businessTypeId: string; productLineId: string; version: number }[];
-  services: {
-    serviceId: string;
-    enabled: boolean;
-    effectiveFrom?: string;
-    effectiveTo?: string;
-    storeScope: "all" | "regions" | "stores";
-    scopeIds?: string[];
-  }[];
-  syncedPresetAt?: string;
-  enterprisePresetVersion?: number;
-}
-
-interface MerchantChangeLogEntry {
-  id: string;
-  merchantId: string;
-  action: string;
-  operatorEmail: string;
-  detail: string;
-  at: string;
-}
-```
+---
 
 ### 7.2 与现有模型的映射
 
@@ -461,7 +255,7 @@ interface MerchantChangeLogEntry {
 
 ### 8.2 代登录（Impersonate）
 
-- M 平台运营点击「进入商家后台」→ 生成短期 impersonation token
+- M 平台运营点击代登录，沿用当前本地演示会话；新品牌需先有已启用 Admin。生产短期 token 服务未接入。
 - 商家后台顶栏显示「代管模式 · 操作人 xxx · 退出」
 - 所有写操作写入审计日志
 
@@ -488,15 +282,15 @@ flowchart TB
 
 | 集成点 | 行为 |
 |--------|------|
-| **平台预设** | 商户保存能力 → 裁剪企业预设 → per-merchant sync |
+| **平台预设** | 保留既有发布/订阅/预设过滤；品牌菜单开通另外写入显式上限，不以默认预设替代品牌授权 |
 | **导航蓝图** | 能力池上限不超过蓝图已发布节点 |
-| **权限管理** | 商户初始管理员 ↔ 商家 RBAC 超管角色自动绑定 |
+| **权限管理** | 新品牌显式开通品牌 Admin；既有管理员保留原登录方式，不向普通账号自动绑定超管 |
 | **硬件资产** | scope 筛选改为 Enterprise → Merchant → Brand/Region/Store |
-| **onboarding** | `draft/onboarding` 商户跳转或跳过引导 |
+| **onboarding** | 本次显式开通账号直接采用品牌配置；旧自助入驻仍沿用原流程 |
 
 ---
 
-## 10. 分阶段实施建议
+## 10. 历史分阶段实施建议（保留，不作为本次新增承诺）
 
 ### P0 · 可演示闭环（建议 2～3 周）
 
@@ -544,8 +338,8 @@ flowchart TB
 | 存储键（演示） | 内容 |
 |----------------|------|
 | `menusifu:enterprise-merchants-v1` | Merchant + 组织树 |
-| `menusifu:enterprise-merchant-capabilities-v1` | 能力快照 |
-| `menusifu:enterprise-merchant-changelog-v1` | 变更日志 |
+| `menusifu:brand-access:v1:<merchantId>` | 品牌账号、角色、门店绑定与审计 |
+| `menusifu:enterprise-merchants-v1` 内 capabilities / storeCapabilities / changelog | 品牌菜单、门店菜单与变更日志 |
 
 ---
 
@@ -580,3 +374,10 @@ flowchart TB
 4. **怎么衔接**：复用现有平台预设 sync、RBAC 双轨、scope 模型与 onboarding，仅新增 Merchant 主数据层与 M 平台 UI
 
 建议 **P0 优先落地商户列表 + 详情 + 组织树演示数据**，与硬件资产中心、企业 RBAC 共用同一套组织主数据，避免 demo scope 多处硬编码。
+
+## 本次交付验证
+
+- TypeScript、品牌授权领域断言、岗位门店范围回归、订阅默认导航、订阅服务、递归导航及宿主 Vite 构建通过。
+- 浏览器覆盖创建品牌、三店关联、开通 Admin、分店角色分配、批量增量/单店菜单、Admin 实际登录、双入口保存、并发冲突、刷新保持、普通账号与窄屏布局；实际结果见 `assets/brand-menu-access/verification.json`。
+- 既有 `verify-permission-center.ts` 在 `/team/shift-scheduling` 断言失败；在干净 main@f848526b 重现相同结果，未作为本次回归修复。
+- 本次获授权提交并合入本地 main，未授权推送；CI、生产鉴权和嵌入子应用内部权限未在本轮验收。

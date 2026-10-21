@@ -1,3 +1,4 @@
+import { currentBrandPrincipal } from './brand-access-runtime';
 /**
  * 商家后台 · 连锁数据范围视角（集团总部 / 品牌多门店 / 门店）
  */
@@ -49,14 +50,14 @@ export function clearChainDataPerspectiveState(): void {
 
 /** 默认连锁数据视角（登录 / 切到连锁版布局时） */
 export function getDefaultChainDataPerspective(): ChainDataPerspective {
-  if (readActiveImpersonation()) return "brand";
+  if (readActiveImpersonation() || currentBrandPrincipal()) return "brand";
   return "group-hq";
 }
 
 /** 解析当前生效的数据范围视角（结合布局层与存储；演示环境不按 storeAccess 降级） */
 export function resolveChainDataPerspective(): ChainDataPerspective {
   if (readSidebarNavLayoutPreset() === "store") return "store";
-  if (readActiveImpersonation()) return "brand";
+  if (readActiveImpersonation() || currentBrandPrincipal()) return "brand";
 
   const stored = readStoredChainDataPerspective();
   if (stored === "group-hq" || stored === "brand") return stored;
@@ -65,7 +66,7 @@ export function resolveChainDataPerspective(): ChainDataPerspective {
 
 /** 顶栏视角菜单是否可选（演示：已登录即可切换；代登录仅品牌视角） */
 export function canUseChainDataPerspective(perspective: "group-hq" | "brand"): boolean {
-  if (readActiveImpersonation()) return perspective === "brand";
+  if (readActiveImpersonation() || currentBrandPrincipal()) return perspective === "brand";
   return true;
 }
 
