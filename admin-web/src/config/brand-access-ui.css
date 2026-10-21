@@ -40,3 +40,5 @@
 
 .ba-store-menu-preview{width:min(1180px,94vw)}.ba-preview-metrics{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;color:var(--color-muted-foreground);font-size:12px}.ba-preview-metrics strong{font-size:18px;color:var(--color-foreground);margin:0 4px}
 .ba-preview-filters{margin-bottom:14px}.ba-preview-filters [aria-pressed=true]{border-color:var(--color-primary);color:var(--color-primary);font-weight:600}.ba-store-menu-preview .ba-opened-menu{height:clamp(300px,44vh,480px)}
+
+.ba-discard-dialog{width:min(460px,94vw)}.ba-discard-dialog .ba-footer{justify-content:flex-end}.ba-discard-dialog .ba-dialog-body p{margin:0}

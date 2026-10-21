@@ -7,19 +7,19 @@ try{
  const fixture=await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts'),b=await import('/src/config/brand-access-store.ts'),scope=await import('/src/config/enterprise-merchant-scope.ts');const group=s.getGroupsForSelect({allEnterprises:false})[0].groupId;s.ensureBrandCreationDemoStores(group);const stores=s.listBrandAssociationCandidates(group).slice(0,2),keys=b.brandMenuChoices(['pos']).map(c=>c.key),m=s.createMerchant({name:'门店预览弹框验收',code:'',groupId:group,orgType:'chain',timezone:'Asia/Shanghai',contactName:'测试',primaryAdminEmail:'',businessTypeIds:[s.getBusinessTypeOptions()[0].id],productLineIds:['pos'],initialMenuKeys:keys,initialStoreIds:stores.map(s=>s.storeId),accountProvisioningRequired:true,activateImmediately:true});return{id:m.merchantId,stores:stores.map(s=>s.storeId),keys,url:scope.merchantDetailHref(m.merchantId,'org')};});
  const snapshot=()=>p.evaluate(async id=>(await import('/src/config/enterprise-merchant-store.ts')).brandConfigurationVersion(id),fixture.id);
  await p.goto(base+'/'+fixture.url);await p.locator('[data-store-id]').first().waitFor();await p.locator(`[data-ba="store:${fixture.stores[0]}"]`).click();
- const editor=p.locator('dialog:not(.ba-store-menu-preview)'),preview=p.locator('.ba-store-menu-preview');const initial=await snapshot();
+ const editor=p.locator('dialog:not(.ba-store-menu-preview):not(.ba-discard-dialog)'),preview=p.locator('.ba-store-menu-preview');const initial=await snapshot();
  for(const trigger of ['close','cancel','escape']){
    await editor.locator('[name=mode]').selectOption('replace');
    await editor.locator('[data-module=team]').click();await editor.locator('[data-key="team:clock-view-live"]').check();
    await editor.locator('.ba-dialog-body').evaluate(el=>el.scrollTop=0);
    if(trigger==='escape')await p.keyboard.press('Escape');else await editor.locator('[data-close]').nth(trigger==='close'?0:1).click();
-   const prompt=editor.locator('[data-discard]');await prompt.waitFor({state:'visible'});
-   const visible=await prompt.evaluate(el=>{const r=el.getBoundingClientRect(),b=el.closest('.ba-dialog-body').getBoundingClientRect();return r.top>=b.top&&r.bottom<=b.bottom;});
+   const prompt=p.locator('.ba-discard-dialog');await prompt.waitFor({state:'visible'});
+   const visible=await prompt.evaluate(el=>{const r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;});
    if(trigger==='close'&&process.env.CLOSE_TEST_SCREENSHOT)await p.screenshot({path:process.env.CLOSE_TEST_SCREENSHOT});
    assert.ok(visible,`${trigger}: discard confirmation must be visible without scrolling`);
-   assert.ok(await editor.locator('[data-ba=keep]').evaluate(el=>el===document.activeElement),'Continue editing must receive focus');
-   await editor.locator('[data-ba=keep]').click();assert.ok(await editor.locator('[data-key="team:clock-view-live"]').isChecked());
-   await editor.locator('[data-close]').first().click();await editor.locator('[data-ba=discard]').click();await editor.waitFor({state:'detached'});assert.equal(await snapshot(),initial);
+   assert.ok(await prompt.locator('[data-ba=keep]').evaluate(el=>el===document.activeElement),'Continue editing must receive focus');
+   await p.keyboard.press('Escape');await prompt.waitFor({state:'detached'});assert.ok(await editor.isVisible());await editor.locator('[data-close]').first().click();await prompt.locator('[data-discard-close]').click();await prompt.waitFor({state:'detached'});await editor.locator('[data-close]').first().click();await prompt.locator('[data-ba=keep]').click();await prompt.waitFor({state:'detached'});assert.ok(await editor.locator('[data-key="team:clock-view-live"]').isChecked());
+   await editor.locator('[data-close]').first().click();await prompt.locator('[data-ba=discard]').click();await editor.waitFor({state:'detached'});assert.equal(await snapshot(),initial);
    await p.locator(`[data-ba="store:${fixture.stores[0]}"]`).click();
  }
  await editor.locator('[data-close]').last().click();await editor.waitFor({state:'detached'});assert.equal(await snapshot(),initial);

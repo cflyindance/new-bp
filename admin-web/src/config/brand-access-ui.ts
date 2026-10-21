@@ -18,15 +18,26 @@ const date=(value:string)=>new Date(value).toLocaleString('zh-CN');
 /** A native dialog supplies focus containment, Escape handling and focus restoration. */
 function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormElement,review:HTMLElement)=>boolean|void,options:{action?:string;destructive?:boolean;blocked?:boolean;compact?:boolean}={}):HTMLDialogElement {
   const d=document.createElement('dialog');d.className=`ba ba-modal ${options.compact?'ba-admin-dialog':''}`;d.setAttribute('aria-label',title);
-  d.innerHTML=`<form><header class="ba-dialog-header"><div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p><div class="ba-review" data-discard hidden>有未保存的修改，是否放弃？<div class="ba-actions">${button('继续编辑','keep')}${button('放弃修改','discard')}</div></div></section><footer class="ba-footer">${options.action?'':'<span class="ba-muted">保存前可核对变更；取消不会写入</span>'}<div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button><button type="submit" class="ba-btn ${options.destructive?'ba-danger':'ba-primary'}" ${options.blocked?'disabled':''}>${esc(options.action??'预览变更')}</button></div></footer></form>`;
+  d.innerHTML=`<form><header class="ba-dialog-header"><div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p></section><footer class="ba-footer">${options.action?'':'<span class="ba-muted">保存前可核对变更；取消不会写入</span>'}<div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button><button type="submit" class="ba-btn ${options.destructive?'ba-danger':'ba-primary'}" ${options.blocked?'disabled':''}>${esc(options.action??'预览变更')}</button></div></footer></form>`;
   document.body.append(d);d.showModal();
   const form=d.querySelector('form')!,review=d.querySelector<HTMLElement>('[data-review]')!,error=d.querySelector<HTMLElement>('[data-error]')!;
   let dirty=false,busy=false;
-  const close=()=>{if(dirty){const discard=d.querySelector<HTMLElement>('[data-discard]')!;discard.hidden=false;discard.scrollIntoView({block:'nearest'});discard.querySelector<HTMLButtonElement>('[data-ba=keep]')!.focus({preventScroll:true});}else{d.close();d.remove();}};
+  let discardDialog:HTMLDialogElement|null=null;
+  const close=()=>{
+    if(!dirty){d.close();d.remove();return;}
+    if(discardDialog?.open)return;
+    const previous=document.activeElement as HTMLElement|null,confirm=document.createElement('dialog');discardDialog=confirm;
+    confirm.className='ba ba-modal ba-discard-dialog';confirm.setAttribute('aria-labelledby','ba-discard-title');confirm.setAttribute('aria-describedby','ba-discard-description');
+    confirm.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2 id="ba-discard-title">放弃修改？</h2><button type="button" class="ba-btn" data-discard-close aria-label="关闭确认">×</button></header><section class="ba-dialog-body"><p id="ba-discard-description">有未保存的修改，是否放弃？</p></section><footer class="ba-footer"><div class="ba-actions">${button('继续编辑','keep')}${button('放弃修改','discard')}</div></footer></div>`;
+    confirm.querySelector('[data-ba=keep]')!.addEventListener('click',()=>confirm.close());
+    confirm.querySelector('[data-discard-close]')!.addEventListener('click',()=>confirm.close());
+    confirm.querySelector('[data-ba=discard]')!.addEventListener('click',()=>{dirty=false;confirm.close();d.close();d.remove();});
+    confirm.addEventListener('close',()=>{confirm.remove();if(discardDialog===confirm)discardDialog=null;if(d.open&&previous?.isConnected)previous.focus();},{once:true});
+    document.body.append(confirm);confirm.showModal();confirm.querySelector<HTMLButtonElement>('[data-ba=keep]')!.focus();
+  };
+  d.addEventListener('close',()=>discardDialog?.close(),{once:true});
   d.addEventListener('cancel',e=>{e.preventDefault();close();});
   d.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',close));
-  d.querySelector('[data-ba=keep]')?.addEventListener('click',()=>{d.querySelector<HTMLElement>('[data-discard]')!.hidden=true;});
-  d.querySelector('[data-ba=discard]')?.addEventListener('click',()=>{dirty=false;close();});
   form.addEventListener('change',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
   form.addEventListener('input',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
   const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};
