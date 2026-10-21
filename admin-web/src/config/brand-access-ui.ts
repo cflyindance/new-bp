@@ -22,7 +22,7 @@ function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormEl
   document.body.append(d);d.showModal();
   const form=d.querySelector('form')!,review=d.querySelector<HTMLElement>('[data-review]')!,error=d.querySelector<HTMLElement>('[data-error]')!;
   let dirty=false,busy=false;
-  const close=()=>{if(dirty){d.querySelector<HTMLElement>('[data-discard]')!.hidden=false;}else{d.close();d.remove();}};
+  const close=()=>{if(dirty){const discard=d.querySelector<HTMLElement>('[data-discard]')!;discard.hidden=false;discard.scrollIntoView({block:'nearest'});discard.querySelector<HTMLButtonElement>('[data-ba=keep]')!.focus({preventScroll:true});}else{d.close();d.remove();}};
   d.addEventListener('cancel',e=>{e.preventDefault();close();});
   d.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',close));
   d.querySelector('[data-ba=keep]')?.addEventListener('click',()=>{d.querySelector<HTMLElement>('[data-discard]')!.hidden=true;});
