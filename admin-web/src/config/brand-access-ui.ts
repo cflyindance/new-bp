@@ -154,9 +154,8 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
   const account:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
   const nextEnabled=!account.enabled;
   const title=mode==='password'?'重设管理员密码':mode==='status'?(account.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
-  const singleStep=!!existing;
   const blocked=mode==='status'&&account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled);
-  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':'保存修改';
+  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':existing?'保存修改':'开通并启用';
   const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
   const hint=mode==='status'?(account.enabled?'停用后，该账号将无法登录商家后台，已有会话将不再获得品牌权限。账号资料保留，可重新启用。':'启用后，该账号可使用原登录账号和密码登录，恢复品牌 Admin 管理范围。'):mode==='password'?'重设后旧密码立即失效，请使用新密码登录。':'可修改管理员姓名，登录账号与管理员身份保持不变。';
   const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">这是当前最后一名已启用的品牌 Admin，请先开通另一名管理员后再停用。</p>':''}`:mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password" placeholder="请输入至少 6 位的新密码"></label>`:`${existing?`<p class="ba-admin-hint">${hint}</p>`:''}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}" placeholder="请输入管理员姓名"></label><label class="ba-field">登录账号 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>':''}</div>`;
@@ -169,13 +168,12 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     if(!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
     if(!account.name||!account.email.includes('@'))throw Error('请填写姓名与有效登录邮箱。');
     if(account.password.length<6)throw Error('账号密码至少 6 位。');
-    if(!singleStep&&review.hidden){review.textContent=`${title}：${account.name} · ${account.email} · ${account.enabled?'已启用':'已停用'}。`;review.hidden=false;return;}
-    if(!existing)draft.accounts.push(account);
+    if(!draft.accounts.some(a=>a.id===account.id))draft.accounts.push(account);
     const employee=draft.employees.find(e=>e.id===account.id);
     if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
     else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
     saveBrandAccess(draft,state.version,actor,title);showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
-  },{action:singleStep?action:undefined,destructive:mode==='status'&&account.enabled,blocked,compact:true});
+  },{action,destructive:mode==='status'&&account.enabled,blocked,compact:true});
 }
 
 function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:()=>void):void {
