@@ -132,13 +132,15 @@ export interface MerchantCapabilitySnapshot {
 }
 
 /**
- * 门店级能力与服务：仅存本店已开启的服务键。
- * 有效开通 = enabledKeys ∩ 品牌已开通集合；未配置时默认全关。
+ * 门店能力：显式继承模式动态取品牌与门店视角交集；独立模式使用本店键。
+ * 历史缺少 menuMode 时沿用独立配置；缺少配置仍关闭，读取不迁移。
  */
 export interface StoreCapabilitySnapshot {
   storeId: string;
   merchantId: string;
-  /** 本店勾选开启的 nodeKey / serviceId（须落在品牌上限内） */
+  /** Missing on legacy data means independent; only explicit inherit follows the brand. */
+  menuMode?: "inherit" | "independent";
+  /** 本店独立配置键；继承模式下由读取器实时计算有效键。 */
   enabledKeys: string[];
   updatedAt?: string;
   updatedBy?: string;
