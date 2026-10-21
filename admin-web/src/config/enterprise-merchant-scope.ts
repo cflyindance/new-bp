@@ -116,7 +116,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     const name = store?.name ?? storeDetail.storeId;
     const tabTitle =
       storeDetail.tab === "capabilities"
-        ? "菜单配置"
+        ? "门店菜单"
         : storeDetail.tab === "changelog"
           ? "变更记录"
           : "概览";
