@@ -1,3 +1,4 @@
+import { currentBrandPrincipal } from '../auth/brand-access-runtime';
 /**
  * M 平台 → 商家后台 · 连锁品牌组织同步
  */
@@ -323,6 +324,8 @@ export function syncAllActiveMPlatformGroups(): void {
 }
 
 function resolveChainBrandContextFromSession(): ChainBrandContext | null {
+  const principal=currentBrandPrincipal();
+  if(principal){const merchant=getEnterpriseMerchantSnapshot().merchants.find(m=>m.merchantId===principal.merchantId);if(merchant)return resolveGroupBrandContext(merchant.groupId,merchant.merchantId);}
   const email = getAuthenticatedEmail();
   if (email) {
     const account = getStaffLoginAccountByEmail(email);

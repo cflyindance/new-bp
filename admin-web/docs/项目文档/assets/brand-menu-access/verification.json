@@ -1,0 +1,35 @@
+{
+  "base": "http://127.0.0.1:5197",
+  "brandId": "merchant-mvhgodqj-k0jel",
+  "adminCheck": {
+    "filtered": [
+      "brand-mgmt",
+      "brand-store-list",
+      "orders",
+      "reports-finance"
+    ],
+    "orders": "read",
+    "reports": "read",
+    "stores": 3
+  },
+  "roundTrip": "brand.acceptance@menusifu.cn",
+  "staffCheck": {
+    "admin": false,
+    "orders": [
+      "M00000008",
+      "M00000010"
+    ],
+    "reports": [
+      "M00000011"
+    ],
+    "allowed": [
+      "M00000008",
+      "M00000010",
+      "M00000011"
+    ],
+    "canManage": false,
+    "ordersMenu": "read"
+  },
+  "errors": [],
+  "verifiedAt": "2026-10-21T01:56:58.979Z"
+}

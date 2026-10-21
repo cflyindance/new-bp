@@ -2,6 +2,7 @@
  * 登录会话功能权限快照：登录 / 角色变更时固定，切门店不重算。
  */
 import { getAuthenticatedEmail } from "./login";
+import { buildBrandSessionContext } from './brand-access-runtime';
 import type { AccountOrgTier } from "./session-scope";
 import type { PlatformPresetNodeSelection } from "../config/platform-preset-store";
 import {
@@ -39,6 +40,8 @@ function resolveOrgTierForEmployee(employeeId: string): AccountOrgTier {
 }
 
 export function buildUserSessionContext(email: string): UserSessionContext | null {
+  const brand = buildBrandSessionContext();
+  if (brand) return brand;
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
 
@@ -81,6 +84,8 @@ export function buildUserSessionContext(email: string): UserSessionContext | nul
 }
 
 export function getUserSessionContext(): UserSessionContext | null {
+  const brand = buildBrandSessionContext();
+  if (brand) return brand;
   try {
     const raw = sessionStorage.getItem(SESSION_CTX_KEY);
     if (!raw) return null;

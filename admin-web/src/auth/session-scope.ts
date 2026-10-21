@@ -1,3 +1,4 @@
+import { currentBrandPrincipal, brandStoresForPath, brandStores, brandIdentity } from './brand-access-runtime';
 /**
  * 登录会话的数据范围（品牌 / 区域 / 门店）与组织层级（单店 / 连锁）。
  */
@@ -135,7 +136,8 @@ export function readScopeFilters(): ScopeFilterState {
 
 export function writeScopeFilters(state: ScopeFilterState): void {
   const ctx = getUserSessionContext();
-  const next = ctx ? clampScopeToStoreAccess(ctx.storeAccess, state) : state;
+  const principal=currentBrandPrincipal();
+  const next = principal && isChainScopeMode() ? {brand:principal.merchantId,region:state.region,store:ctx?.storeAccess.ids.includes(state.store)?state.store:''} : ctx ? clampScopeToStoreAccess(ctx.storeAccess, state) : state;
   try {
     sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.brand, next.brand);
     sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.region, next.region);
@@ -193,6 +195,7 @@ function scopeOptionLabel(opt: ScopeOption | undefined, locale: "zh" | "en"): st
 }
 
 export function resolveAccountOrgTier(email?: string | null): AccountOrgTier {
+  if (currentBrandPrincipal()) return "chain";
   const normalized = (email ?? getAuthenticatedEmail())?.trim().toLowerCase();
   if (!normalized) return "store";
 
@@ -327,6 +330,7 @@ export function resetScopeFiltersForPerspectiveChange(): void {
   const perspective = resolveChainDataPerspective();
   if (perspective === "brand") {
     const brandId = resolveDefaultAnchorBrandId() ?? "";
+    if(currentBrandPrincipal()){writeScopeFilters({brand:brandId,region:'',store:''});return;}
     // 品牌多门店与其它视角一致：初始化即默认选中一家门店
     writeScopeFilters({ brand: brandId, region: "", store: resolveDefaultSingleStoreId() });
     return;
@@ -350,6 +354,14 @@ export function isStoreLayoutPreset(): boolean {
 
 /** 门店版布局 + 单店账号：锁定为当前门店 */
 export function ensureScopeFiltersForSession(): void {
+  const principal=currentBrandPrincipal();
+  if(principal && isChainScopeMode()){
+    const cur=readScopeFilters();
+    const stores=new Set(getAllowedStoreIds(getUserSessionContext()!.storeAccess));
+    const nextStore=cur.store&&stores.has(cur.store)?cur.store:'';
+    if(cur.brand!==principal.merchantId || cur.store!==nextStore)writeScopeFilters({brand:principal.merchantId,region:cur.region,store:nextStore});
+    return;
+  }
   const ctx = getUserSessionContext();
   if (isChainScopeMode()) {
     if (ctx) {
@@ -403,6 +415,8 @@ export function ensureScopeFiltersForOrgTier(tier: AccountOrgTier = getAccountOr
 export function syncSessionForAuthenticatedUser(): void {
   clearActiveMerchantGroupOverride();
   clearChainDataPerspectiveState();
+  const principal=currentBrandPrincipal();
+  if(principal)writeScopeFilters({brand:principal.merchantId,region:'',store:''});
   refreshUserSessionContext();
   applyDefaultLayoutPresetForOrgTier(getAccountOrgTier());
   ensureChainPerspectiveForCurrentLayout();
@@ -558,6 +572,12 @@ export function getScopedFilterOptions(): {
   regions: ScopeOption[];
   stores: ScopeOption[];
 } {
+  const principal=currentBrandPrincipal();
+  if(principal){
+    const allowed=new Set(getUserSessionContext()?.storeAccess.ids??[]);
+    const stores=brandStores(principal.merchantId).filter(s=>allowed.has(s.id));
+    return {brands:[{value:principal.merchantId,labelZh:brandIdentity(principal.merchantId)?.name??'当前品牌',labelEn:'Current brand'}],regions:[{value:'',labelZh:'全部区域',labelEn:'All regions'},...(brandIdentity(principal.merchantId)?.regions??[]).map(r=>({value:r.regionId,labelZh:r.name,labelEn:r.name}))],stores:stores.map(s=>({value:s.id,labelZh:s.title,labelEn:s.title}))};
+  }
   const withRosterStores = (result: {
     brands: ScopeOption[];
     regions: ScopeOption[];
@@ -651,6 +671,13 @@ function restrictBrandsToStores(
 export function resolveEffectiveScope(): EffectiveScope {
   const perspective = resolveChainDataPerspective();
   const filters = normalizeScopeFilters(readScopeFilters());
+  const principal=currentBrandPrincipal();
+  if(principal){
+    const allowed=new Set(getUserSessionContext()?.storeAccess.ids??[]);
+    const stores=brandStores(principal.merchantId).filter(s=>allowed.has(s.id)&&(!filters.store||s.id===filters.store)&&(!filters.region||s.region===filters.region));
+    const ids=brandStoresForPath(stores.map(s=>s.id),location.hash.replace(/^#/,'').split('?')[0]||'/home');
+    return {groupId:brandIdentity(principal.merchantId)?.groupId??null,perspective,brandIds:[principal.merchantId],storeIds:ids,regionName:filters.region,isAggregated:ids.length>1,filters};
+  }
   const chainCtx = resolveChainBrandContext();
   const groupId = chainCtx?.groupId ?? null;
   const snapshot = loadChainBrandOrgForContext();
@@ -720,6 +747,7 @@ export function resolveEffectiveScope(): EffectiveScope {
     }
   }
 
+  storeIds = brandStoresForPath(storeIds, location.hash.replace(/^#/, '').split('?')[0] || '/nav-home');
   const isAggregated = storeIds.length > 1;
 
   return {

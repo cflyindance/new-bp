@@ -1,3 +1,4 @@
+import { centerKeysForRaw } from './brand-menu-catalog';
 /**
  * M 平台 · 入驻品牌 · 演示数据与查询
  */
@@ -12,6 +13,8 @@ import {
 import { markPlatformPresetOnboardingComplete } from "./platform-preset-onboarding";
 import {
   brandCapabilityCeilingKeys,
+  buildMerchantServiceTreeIndex,
+  isPaidServiceModuleId,
   brandStoreSelectableCeiling,
   migrateLegacyMerchantServices,
   resolveMerchantServiceProductLine,
@@ -2054,7 +2057,11 @@ export function updateMerchantStatus(merchantId: string, status: MerchantStatus,
 }
 
 export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant {
-  const snap = readSnapshot();
+  const snap = input.accountProvisioningRequired ? structuredClone(readSnapshot()) : readSnapshot();
+  const initialIds = [...new Set(input.initialStoreIds ?? [])];
+  const candidates = listBrandAssociationCandidates(input.groupId);
+  if (initialIds.some(id => !candidates.some(s => s.storeId === id))) throw Error('所选门店归属已变化，请重新选择。');
+  const initialKeys = input.initialMenuKeys ? validateExplicitMenuKeys(input.initialMenuKeys, input.productLineIds) : undefined;
   const merchantId = genId("merchant");
   const bid = input.bid ?? generateNextBid(snap);
   const code = input.code.trim() || slugCode(input.name) || merchantId;
@@ -2063,6 +2070,7 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     getGroupById(input.groupId) ??
     ensureDefaultGroupForEnterprise(snap, activeEnterpriseId());
   const merchant: EnterpriseMerchant = {
+    accountProvisioningRequired: input.accountProvisioningRequired,
     merchantId,
     enterpriseId: activeEnterpriseId(),
     groupId: group.groupId,
@@ -2137,13 +2145,27 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
   });
 
   snap.merchants.push(merchant);
+  if (initialKeys) {
+    const cap = snap.capabilities.find(c => c.merchantId === merchantId)!;
+    cap.menuGrantMode = 'explicit';
+    cap.services = explicitServices(initialKeys);
+    cap.menuResourceKeys = [...centerKeysForRaw(new Set(initialKeys))];
+  }
+  for (const id of initialIds) {
+    const store = snap.stores.find(s => s.storeId === id)!;
+    store.merchantId = merchantId;
+    store.brandId = brandId;
+    store.regionId = regionId;
+    store.mountedAt = nowIso();
+    snap.storeCapabilities = (snap.storeCapabilities ?? []).filter(c => c.storeId !== id);
+  }
   appendChangelog(snap, {
     merchantId,
     action: "merchant.create",
     operatorEmail,
     detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid} · 集团 ${group.name}）`,
   });
-  writeSnapshot(snap);
+  if(input.accountProvisioningRequired)persistBrandConfiguration(snap);else writeSnapshot(snap);
   notifyChainBrandOrgSyncForMerchant(merchantId);
   if (status === "active" || input.activateImmediately) {
     syncMerchantCapabilityPresets(merchantId, true);
@@ -2156,6 +2178,86 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     sendOnboardingInvite(merchantId, operatorEmail);
   }
   return merchant;
+}
+
+/** Only independent single-store records in the same group may be associated here. */
+export function listBrandAssociationCandidates(groupId: string): MerchantOrgStore[] {
+  const snap = readSnapshot();
+  return snap.stores.filter(s => {
+    const owner=snap.merchants.find(m=>m.merchantId===s.merchantId);
+    return owner?.groupId===groupId && owner.orgType==='single-store' && s.linkedMerchantId===s.merchantId &&
+      !snap.stores.some(other=>other.merchantId!==s.merchantId && other.linkedMerchantId===s.linkedMerchantId);
+  });
+}
+
+export function brandConfigurationVersion(id:string):string {
+  const snap=readSnapshot();
+  return JSON.stringify({cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
+}
+
+function validateExplicitMenuKeys(keys:string[],productLines:string[]):string[] {
+  const valid=new Set<string>();
+  for(const line of productLines){const index=buildMerchantServiceTreeIndex(resolveMerchantServiceProductLine([line]));for(const g of index.groups){valid.add(g.moduleKey);index.getDescendantKeys(g.moduleKey).forEach(k=>valid.add(k));}}
+  if(keys.some(k=>!valid.has(k)))throw Error('菜单路由已变化，请刷新后重新选择。');
+  return [...new Set(keys)].sort();
+}
+function explicitServices(keys:string[]):MerchantCapabilitySnapshot['services'] {
+  return keys.map(key=>({serviceId:key,nodeKey:key,enabled:true,billingType:isPaidServiceModuleId(key.split(':')[0]!)?'paid' as const:'included' as const,storeScope:'all' as const}));
+}
+function persistBrandConfiguration(snap:EnterpriseMerchantSnapshot):void {
+  // Validate and build on a cloned snapshot; failed storage never publishes a partial draft.
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(snap));
+  cachedSnapshot=snap;
+  window.dispatchEvent(new CustomEvent(SNAPSHOT_CHANGED_EVENT));
+}
+
+export function saveExplicitBrandMenus(id:string,keys:string[],expected:string,actor:string):void {
+  if(brandConfigurationVersion(id)!==expected)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
+  const snap=structuredClone(readSnapshot()),cap=snap.capabilities.find(c=>c.merchantId===id);
+  if(!cap)throw Error('品牌菜单配置不存在。');
+  const validated=validateExplicitMenuKeys(keys,cap.productLineIds);
+  const before=[...cap.services.filter(s=>s.enabled).map(s=>s.nodeKey??s.serviceId)];
+  cap.menuGrantMode='explicit';cap.services=explicitServices(validated);cap.menuResourceKeys=[...centerKeysForRaw(new Set(validated))];
+  const removedStores=pruneStoreCapabilitiesForMerchant(snap,id,new Set(validated));
+  appendChangelog(snap,{merchantId:id,action:'brand.menu.update',operatorEmail:actor,detail:`品牌菜单 ${before.length} → ${validated.length} 项；裁剪 ${removedStores} 家门店；新增路由不自动开通`});
+  persistBrandConfiguration(snap);
+}
+
+export function saveBrandStoreMenus(id:string,storeIds:string[],keys:string[],mode:'add'|'replace',expected:string,actor:string,source:string):void {
+  if(brandConfigurationVersion(id)!==expected)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
+  const snap=structuredClone(readSnapshot()),cap=snap.capabilities.find(c=>c.merchantId===id);
+  if(!cap)throw Error('品牌菜单配置不存在。');
+  const ceiling=new Set(cap.productLineIds.flatMap(pl=>[...brandStoreSelectableCeiling(cap,resolveMerchantServiceProductLine([pl]))]));
+  if(!storeIds.length || storeIds.some(sid=>!snap.stores.some(s=>s.storeId===sid&&s.merchantId===id)))throw Error('请选择当前品牌所属门店。');
+  if(keys.some(k=>!ceiling.has(k)))throw Error('包含品牌未开通的菜单，请刷新后重新选择。');
+  snap.storeCapabilities??=[];
+  for(const sid of [...new Set(storeIds)]){
+    const old=snap.storeCapabilities.find(c=>c.storeId===sid);
+    const prev=old?.enabledKeys??[];
+    const enabledKeys=[...new Set([...(mode==='add'?prev:[]),...keys])].filter(k=>ceiling.has(k)).sort();
+    const next={storeId:sid,merchantId:id,enabledKeys,updatedAt:nowIso(),updatedBy:actor};
+    if(old)Object.assign(old,next);else snap.storeCapabilities.push(next);
+    const added=enabledKeys.filter(k=>!prev.includes(k)),removed=prev.filter(k=>!enabledKeys.includes(k));
+    appendChangelog(snap,{merchantId:id,storeId:sid,action:'store.capability.update',operatorEmail:actor,detail:`${source} · ${mode==='add'?'增量开通':'替换配置'} · 新增 ${added.length} 项 [${added.join(', ')}]；关闭 ${removed.length} 项 [${removed.join(', ')}]`});
+  }
+  persistBrandConfiguration(snap);
+}
+
+export function associateBrandStores(id:string,storeIds:string[],expected:string,actor:string):void {
+  if(brandConfigurationVersion(id)!==expected)throw Error('门店归属已更新，请刷新后重新选择。');
+  const snap=structuredClone(readSnapshot()),merchant=snap.merchants.find(m=>m.merchantId===id);
+  if(!merchant)throw Error('品牌不存在。');
+  const candidates=listBrandAssociationCandidates(merchant.groupId).filter(s=>s.merchantId!==id);
+  if(!storeIds.length || storeIds.some(sid=>!candidates.some(s=>s.storeId===sid)))throw Error('请选择同集团下可关联的独立门店；其他品牌门店不能直接转移。');
+  const brand=snap.brands.find(b=>b.merchantId===id),region=snap.regions.find(r=>r.merchantId===id);
+  if(!brand||!region)throw Error('品牌组织信息缺失。');
+  for(const sid of [...new Set(storeIds)]){
+    const s=snap.stores.find(s=>s.storeId===sid)!;
+    s.merchantId=id;s.brandId=brand.brandId;s.regionId=region.regionId;s.mountedAt=nowIso();
+    snap.storeCapabilities=(snap.storeCapabilities??[]).filter(c=>c.storeId!==sid);
+    appendChangelog(snap,{merchantId:id,storeId:sid,action:'org.store.associate',operatorEmail:actor,detail:`关联已有门店「${s.name}」；保留 MID，新归属下菜单默认关闭`});
+  }
+  persistBrandConfiguration(snap);notifyChainBrandOrgSyncForMerchant(id);
 }
 
 export function getMerchantStoreIdSet(merchantId: string): Set<string> {

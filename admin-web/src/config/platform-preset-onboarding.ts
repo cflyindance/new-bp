@@ -1,3 +1,4 @@
+import { currentBrandPrincipal } from '../auth/brand-access-runtime';
 /**
  * 首次登录 · 业态 / 产线 / 功能确认引导
  */
@@ -145,6 +146,7 @@ export function restartPlatformPresetOnboardingFromStart(): void {
 
 /** MVP：跳过首次登录引导，直接应用默认业态×产线（全功能/不确定 + POS） */
 export function ensureMvpDefaultPlatformPresetOnboardingSkipped(): void {
+  if (currentBrandPrincipal()) return;
   if (!isMvpProductVersion()) return;
   const email = getAuthenticatedEmail();
   if (!email || isPlatformPresetOnboardingComplete(email)) return;
@@ -158,6 +160,7 @@ export function ensureMvpDefaultPlatformPresetOnboardingSkipped(): void {
 }
 
 export function needsPlatformPresetOnboarding(): boolean {
+  if (currentBrandPrincipal()) return false;
   if (isMvpProductVersion()) {
     ensureMvpDefaultPlatformPresetOnboardingSkipped();
     return false;

@@ -1,3 +1,5 @@
+import { currentBrandPrincipal } from './brand-access-store';
+import { renderBrandWorkspace, bindBrandWorkspaces } from './brand-access-ui';
 /**
  * 商家后台 · 品牌多门店视角 · 门店列表（/brand-stores/*）
  * 展示 M 平台同步的当前品牌下全部门店（只读）。
@@ -162,10 +164,15 @@ function renderStoreTable(stores: ChainStoreView[]): string {
 }
 
 export function isBrandStoreListPath(path: string): boolean {
-  return path === "/brand-stores/list" || path === "/brand-stores/overview";
+  return path.startsWith("/brand-stores/");
 }
 
 export function renderBrandStoreListPage(path: string): string {
+  const principal=currentBrandPrincipal();
+  if(principal) {
+    const tab=path.endsWith("/access")?"accounts":path.endsWith("/menus")?"capabilities":path.endsWith("/logs")?"changelog":"org";
+    return `<div class="flex min-h-0 flex-1 flex-col overflow-auto"><nav class="ba ba-tabs"><a class="ba-btn" href="#/brand-stores/list">所属门店</a>${principal.account.admin?'<a class="ba-btn" href="#/brand-stores/menus">品牌菜单</a>':""}${principal.account.admin?'<a class="ba-btn" href="#/brand-stores/access">账号与角色</a>':""}${principal.account.admin?'<a class="ba-btn" href="#/brand-stores/logs">变更记录</a>':""}</nav>${renderBrandWorkspace(principal.merchantId,tab,"merchant")}</div>`;
+  }
   if (!isBrandDataPerspective()) {
     return `<div class="space-y-4" data-brand-store-list-page>${renderEmptyState()}</div>`;
   }
@@ -206,6 +213,7 @@ export function renderBrandStoreListPage(path: string): string {
 }
 
 export function bindBrandStoreListControls(onMount?: () => void): void {
+  bindBrandWorkspaces();
   if (!onMount || typeof window === "undefined") return;
   const win = window as Window & { __menusifuBrandStoreListBound?: boolean };
   if (win.__menusifuBrandStoreListBound) return;

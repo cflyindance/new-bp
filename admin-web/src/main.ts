@@ -1,3 +1,4 @@
+import { applyBrandOperationAccess, bindBrandRuntimeGuards } from './config/brand-access-store';
 import { settingsCategoryItems, settingsCategoryViewGroups } from "./config/settings-category-model";
 import {hasModuleSettingsCategorySidebar} from './config/settings-category-navigation';
 import { renderSettingsCategoryLayout, bindSettingsCategoryLayouts } from "./config/settings-category-layout";
@@ -13129,6 +13130,7 @@ function mountInitializedPage(): void {
   bindImpersonationBanner(mount);
   bindChainBrandMgmtControls(mount);
   bindBrandStoreListControls(mount);
+  applyBrandOperationAccess(location.hash.replace(/^#/, "").split("?")[0] || "/nav-home");
   bindGroupStoreListControls(mount);
   bindStaffAccountsPage();
   bindLoginLogsPage(mount);
@@ -13331,6 +13333,7 @@ function mountInitializedPage(): void {
 }
 
 bindPageSaveGuard();
+bindBrandRuntimeGuards();
 window.addEventListener("hashchange", mount);
 
 if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
