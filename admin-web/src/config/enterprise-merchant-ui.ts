@@ -87,7 +87,7 @@ import {
   updateMerchantStoreStatus,
   updateGroup,
 } from "./enterprise-merchant-store";
-import { canImpersonateMerchant, enterMerchantBackendAsImpersonator } from "./enterprise-merchant-impersonate";
+import { canImpersonateStore, enterStoreBackendAsImpersonator, canImpersonateMerchant, enterMerchantBackendAsImpersonator } from "./enterprise-merchant-impersonate";
 import {
   brandCapabilityCeilingKeys,
   brandStoreSelectableCeiling,
@@ -548,7 +548,7 @@ function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
   return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th>所属集团</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
     const capability=getStoreCapability(row.store.storeId),keys=new Set(capability?.enabledKeys??[]),count=choices.filter(c=>c.level===2&&keys.has(c.key)).length;
-    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td>${escapeHtml(row.groupName)}</td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><button type="button" class="ba-btn" data-brand-single-store="${escapeHtml(row.store.storeId)}">配置菜单</button></td></tr>`;
+    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td>${escapeHtml(row.groupName)}</td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="所属品牌服务未启用或暂无可用管理员"'}>代登录</button></div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -1596,7 +1596,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   bindManagementFilters('brand', filter => {if(tableHost)tableHost.innerHTML=renderMerchantTable(filteredManagementBrands(filter));});
   const storeTableHost=document.querySelector<HTMLElement>('[data-enterprise-store-table]');
   bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
-  if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLElement>('[data-brand-single-store]');if(!button)return;const store=getStoreById(button.dataset.brandSingleStore!);if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],'m-platform',onMount);};
+  if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;if(!enterStoreBackendAsImpersonator(button.dataset.storeImpersonate!,merchantHref('/stores')))window.alert('当前门店暂不支持代登录，请检查所属品牌服务状态和管理员。');};
 
   const groupFilterForm = document.querySelector<HTMLFormElement>("[data-enterprise-group-filter-form]");
   const groupTableHost = document.querySelector<HTMLElement>("[data-enterprise-group-table]");

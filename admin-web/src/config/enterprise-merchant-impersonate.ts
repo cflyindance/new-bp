@@ -8,6 +8,7 @@ import {
   appendImpersonationLogEnd,
   appendImpersonationLogStart,
   getMerchantById,
+  getStoreById,
   syncMerchantCapabilityPresets,
 } from "./enterprise-merchant-store";
 import { syncChainBrandOrgForMerchant, bindChainBrandOrgSyncListener } from "./merchant-chain-brand-sync";
@@ -18,6 +19,7 @@ import { writeChainDataPerspective } from "../auth/merchant-scope-context";
 import {
   ensureScopeFiltersForLayoutPreset,
   resetScopeFiltersForPerspectiveChange,
+  writeScopeFilters,
 } from "../auth/session-scope";
 import { writeSidebarNavLayoutPreset } from "./sidebar-nav-order";
 import { clearActiveMerchantGroupOverride } from "./merchant-chain-brand-sync";
@@ -27,6 +29,8 @@ const APP_NAV_HOME_PATH = "/nav-home";
 
 export interface MerchantImpersonationSession {
   sessionId: string;
+  storeId?:string;
+  storeName?:string;
   merchantId: string;
   merchantName: string;
   operatorEmail: string;
@@ -73,6 +77,11 @@ export function canImpersonateMerchant(merchant: EnterpriseMerchant): boolean {
   return merchant.status === "active";
 }
 
+export function canImpersonateStore(storeId:string):boolean{
+ const store=getStoreById(storeId),merchant=store&&getMerchantById(store.merchantId);
+ return !!(merchant&&canImpersonateMerchant(merchant)&&brandPrimaryAdminEmail(merchant.merchantId).trim());
+}
+
 function resolveEntryPath(merchant: EnterpriseMerchant): string {
   if (merchant.status === "onboarding") return ONBOARDING_PATH;
   return APP_NAV_HOME_PATH;
@@ -102,15 +111,20 @@ export function startMerchantImpersonation(
   merchantId: string,
   operatorEmail: string | null = getAuthenticatedEmail(),
   returnPath?: string,
+  storeId?:string,
 ): MerchantImpersonationSession | null {
+  if(storeId&&(!getAuthenticatedEmail()||!location.hash.startsWith('#/m-platform/')||readActiveImpersonation()))return null;
   const merchant = getMerchantById(merchantId);
   if (!merchant) return null;
+  const store=storeId?getStoreById(storeId):undefined;
+  if(storeId&&(!store||store.merchantId!==merchantId||!canImpersonateStore(storeId)))return null;
   if (!canImpersonateMerchant(merchant)) return null;
 
   const operator = operatorEmail?.trim() || "hq.admin@menusifu.cn";
   const impersonatedAsEmail = brandPrimaryAdminEmail(merchant.merchantId).trim() || operator;
   const session: MerchantImpersonationSession = {
     sessionId: genSessionId(),
+    ...(store?{storeId:store.storeId,storeName:store.name}:{}),
     merchantId: merchant.merchantId,
     merchantName: merchant.name,
     operatorEmail: operator,
@@ -123,6 +137,11 @@ export function startMerchantImpersonation(
   applyImpersonationScopeLock(merchant);
   prepareImpersonatedMerchantContext(merchant);
   writeImpersonationSession(session);
+  if(store){
+    writeSidebarNavLayoutPreset('store');
+    writeChainDataPerspective('store',{brandId:merchantId,storeId:store.storeId});
+    writeScopeFilters({brand:merchantId,region:store.regionId,store:store.storeId});
+  }
   return session;
 }
 
@@ -134,6 +153,13 @@ export function enterMerchantBackendAsImpersonator(merchantId: string, returnPat
   exitMPlatformShell();
   location.hash = `#${resolveEntryPath(merchant)}`;
   return true;
+}
+
+export function enterStoreBackendAsImpersonator(storeId:string,returnPath:string):boolean{
+ if(!getAuthenticatedEmail()||!location.hash.startsWith('#/m-platform/')||readActiveImpersonation())return false;
+ const store=getStoreById(storeId);if(!store||!canImpersonateStore(storeId))return false;
+ const session=startMerchantImpersonation(store.merchantId,getAuthenticatedEmail(),returnPath,storeId);if(!session)return false;
+ exitMPlatformShell();location.hash='#'+APP_NAV_HOME_PATH;return true;
 }
 
 export function endMerchantImpersonation(reason: "manual" = "manual"): void {
@@ -157,13 +183,13 @@ export function renderImpersonationBanner(): string {
       <p class="min-w-0">
         <span class="font-medium">代管模式</span>
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
-        品牌 <strong>${escapeHtml(session.merchantName)}</strong>
+        ${session.storeId?'门店 '+escapeHtml(session.storeName??session.storeId)+' · '+escapeHtml(session.storeId)+' · ':''}品牌 <strong>${escapeHtml(session.merchantName)}</strong>
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
         操作人 ${escapeHtml(session.operatorEmail)}
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
         模拟 ${escapeHtml(session.impersonatedAsEmail)}
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
-        <span class="text-xs">已锁定品牌视角</span>
+        <span class="text-xs">${session.storeId?'已锁定门店视角':'已锁定品牌视角'}</span>
       </p>
       <button
         type="button"

@@ -2917,6 +2917,8 @@ export function appendImpersonationLogStart(session: {
   sessionId: string;
   merchantId: string;
   merchantName: string;
+  storeId?:string;
+  storeName?:string;
   operatorEmail: string;
 }): void {
   const snap = readSnapshot();
@@ -2924,6 +2926,7 @@ export function appendImpersonationLogStart(session: {
     id: session.sessionId,
     merchantId: session.merchantId,
     merchantName: session.merchantName,
+    storeId:session.storeId,storeName:session.storeName,
     operatorEmail: session.operatorEmail,
     startedAt: nowIso(),
   };
@@ -2931,6 +2934,8 @@ export function appendImpersonationLogStart(session: {
   appendChangelog(snap, {
     merchantId: session.merchantId,
     action: "impersonate.start",
+    storeId:session.storeId,
+    ...(session.storeId?{facts:{category:"品牌门店" as const,title:"门店代登录",target:(session.storeName??session.storeId)+" · "+session.storeId,source:"M平台运营",fields:[{name:"代登录范围",before:"M平台",after:"当前门店"}]}}:{}),
     operatorEmail: session.operatorEmail,
     detail: `代登录商家后台（会话 ${session.sessionId}）`,
   });
@@ -2946,6 +2951,8 @@ export function appendImpersonationLogEnd(sessionId: string, reason: "manual" | 
     appendChangelog(snap, {
       merchantId: log.merchantId,
       action: "impersonate.end",
+      storeId:log.storeId,
+      ...(log.storeId?{facts:{category:"品牌门店" as const,title:"退出门店代登录",target:(log.storeName??log.storeId)+" · "+log.storeId,source:"M平台运营",fields:[{name:"代登录范围",before:"当前门店",after:"M平台"}]}}:{}),
       operatorEmail: log.operatorEmail,
       detail: `退出代管（${reason === "manual" ? "手动" : "超时"}）`,
     });
