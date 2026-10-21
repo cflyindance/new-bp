@@ -9,6 +9,9 @@ import {
   MEMBERS_SHEET_SETTINGS_SUBNAV,
   MEMBERS_SHEET_SUBNAV,
   NAV_MODULES,
+  navModuleChildrenAsSheetSubnav,
+  groupNotificationSheetSubnav,
+  groupRuleRestrictionsSubnav,
   PRINT_SHEET_SUBNAV,
   PROMOTIONS_MGMT_SUBNAV,
   REPORTS_SHEET_SUBNAV,
@@ -24,7 +27,7 @@ interface DemoNavItem {
   titleEn?: string;
   path: string;
   children?: DemoNavItem[];
-  sidebarChildren?: Array<{ title: string; titleEn?: string; path: string }>;
+  sidebarChildren?: DemoNavItem[];
 }
 
 const permissionByPath: Record<string, { serviceName: string; permissions: string[] }> = {
@@ -171,6 +174,34 @@ function moduleNode(module: NavModule): MenuNode {
   };
 }
 
-export function buildCurrentMerchantMenuDemoNodes(modules: NavModule[] = NAV_MODULES): MenuNode[] {
+export function buildLegacyMerchantMenuDemoNodes(modules: NavModule[] = NAV_MODULES): MenuNode[] {
   return modules.map(moduleNode);
+}
+
+/** Use the same navigation lists and recursive children as the merchant shell. No synthetic overview pages. */
+export function currentMerchantMenuItemsFor(module:NavModule):DemoNavItem[] {
+  if(module.id==='product-center-main'){
+    const lists=[BRAND_PRODUCTS_SUBNAV,BRAND_MENU_SUBNAV,STORE_MENU_SUBNAV];
+    return module.children.map((item,index)=>({...item,children:undefined,sidebarChildren:lists[index]??item.children??[]}));
+  }
+  const detailed=detailedItemsFor(module);if(detailed)return detailed;
+  const items=navModuleChildrenAsSheetSubnav(module);
+  return module.id==='notifications'?groupNotificationSheetSubnav(items):module.id==='queue-call'?groupRuleRestrictionsSubnav(items):items;
+}
+function currentItemNode(item:DemoNavItem,namespace:string):MenuNode {
+  const children=item.sidebarChildren??item.children??[];
+  if(!children.length)return leafNode(item,namespace);
+  return {...identity(namespace),name:item.titleEn||item.title,i18nInfo:localized(item.title,item.titleEn),children:withOccurrence(children).map(({item:child,segment})=>currentItemNode(child,`${namespace}/${segment}`))};
+}
+export function buildCurrentMerchantMenuDemoNodes(modules:NavModule[]=NAV_MODULES):MenuNode[] {
+  return modules.map(module=>{
+    const namespace=`id:${module.id}`,items=currentMerchantMenuItemsFor(module);
+    if(!items.length)return {...leafNode({title:module.title,titleEn:module.titleEn,path:module.path},namespace),icon:module.icon};
+    return {...identity(namespace),name:module.titleEn||module.title,icon:module.icon,i18nInfo:localized(module.title,module.titleEn),children:withOccurrence(items).map(({item,segment})=>currentItemNode(item,`${namespace}/${segment}`))};
+  });
+}
+/** Recognize only an untouched previously shipped seed; never replace edited documents. */
+export function isLegacyMerchantMenuSeed(menu:MenuNode[]):boolean {
+  const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([key])=>key!=='parentKey').sort(([a],[b])=>a.localeCompare(b)).map(([key,value])=>[key,canonical(value)])):value;
+  return JSON.stringify(canonical(menu))===JSON.stringify(canonical(buildLegacyMerchantMenuDemoNodes()));
 }

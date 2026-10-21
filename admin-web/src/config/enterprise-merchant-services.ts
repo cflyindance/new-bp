@@ -1,3 +1,5 @@
+import { DEFAULT_NAV_BLUEPRINT_ID, getPublishedNavBlueprint } from './nav-blueprint-store';
+import { buildNavBlueprintIndexFromSnapshot } from './nav-blueprint-tree';
 /**
  * M 平台 · 品牌能力与服务 · 源自菜单路由（permission-registry）四级树
  */
@@ -70,11 +72,15 @@ export function resolveMerchantServiceProductLine(productLineIds: string[]): Pro
   return "pos";
 }
 
+export function brandMenuRouteVersion(): number {
+  return getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID)?.version ?? 0;
+}
+
 export function buildMerchantServiceTreeIndex(productLineId: ProductLineId): FourColumnTreeIndex {
-  return indexForTick(`all:${productLineId}`,()=>{
-  const treeOptions = resolvePlatformPresetTreeOptions("enterprise", { blueprintVersion: undefined });
-  const full = buildPlatformPresetIndex(productLineId, treeOptions);
-  return { groups: full.groups, getDescendantKeys: full.getDescendantKeys.bind(full) };
+  const published = getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID);
+  return indexForTick(`all:${productLineId}:${published?.version ?? 0}`,()=>{
+  if (published) return buildNavBlueprintIndexFromSnapshot(published, "active");
+  return buildNavBlueprintIndexFromSnapshot({blueprintId: DEFAULT_NAV_BLUEPRINT_ID,version:0,publishedAt:"",navigationSource:"system",customNodes:[],systemSeqAssignments:{},customSeqAssignments:{},systemStructureSelection:{},customStructureSelection:{}});
   });
 }
 
@@ -82,8 +88,7 @@ function filterIndexByModules(
   productLineId: ProductLineId,
   modulePredicate: (moduleId: string) => boolean,
 ): FourColumnTreeIndex {
-  const treeOptions = resolvePlatformPresetTreeOptions("enterprise", { blueprintVersion: undefined });
-  const full = buildPlatformPresetIndex(productLineId, treeOptions);
+  const full = buildMerchantServiceTreeIndex(productLineId);
   const groups = full.groups.filter((g) => modulePredicate(g.moduleId));
   const allowed = new Set<string>();
   for (const g of groups) {

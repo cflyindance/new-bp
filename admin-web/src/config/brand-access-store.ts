@@ -46,17 +46,17 @@ export function brandCatalog(id: string): {catalog: Catalog; ceiling: Set<string
   return {catalog,ceiling:manifest?new Set([...derived].filter(k=>manifest.includes(k))):derived};
 }
 
-export interface MenuChoice {key:string;title:string;parent?:string;path?:string;level:number;kind:'menu'|'setting'}
+export interface MenuChoice {key:string;title:string;parent?:string;path?:string;level:number;kind:'menu'|'setting';isPage?:boolean}
 export function brandMenuChoices(productLines: string[] = ['pos']): MenuChoice[] {
   const choices = new Map<string,MenuChoice>();
   for (const pl of productLines) {
     const index = buildMerchantServiceTreeIndex(resolveMerchantServiceProductLine([pl]));
-    const visit = (node: typeof index.groups[number]['tree']) => {
+    const visit = (node: typeof index.groups[number]['tree'],depth=1) => {
       const r=node.resource;
       if (r.actionId) return;
-      const title=r.key==='group-store-list'?'门店管理 · 集团视角':r.key==='brand-store-list'?'门店管理 · 品牌视角':r.title;
-      choices.set(r.key,{key:r.key,title,parent:r.parentKey,path:r.path,level:r.level,kind:r.level===4?'setting':'menu'});
-      node.children.forEach(visit);
+      const title=r.title;
+      choices.set(r.key,{key:r.key,title,parent:r.parentKey,path:r.path,level:depth,kind:r.seq!=null?'setting':'menu',isPage:r.seq==null&&!r.groupKey&&(r.customL3MountKind==='page'||r.customL2MountKind==='page'||r.level===2&&r.customL2MountKind!=='features')});
+      node.children.forEach(child=>visit(child,depth+1));
     };
     index.groups.forEach(g=>visit(g.tree));
   }
