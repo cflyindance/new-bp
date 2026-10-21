@@ -1,3 +1,4 @@
+import { withImpersonationContextChange } from "./impersonation-transition";
 /**
  * M 平台 · 代登录商家后台（演示）
  */
@@ -107,7 +108,7 @@ function prepareImpersonatedMerchantContext(merchant: EnterpriseMerchant): void 
   syncChainBrandOrgForMerchant(merchant.merchantId);
 }
 
-export function startMerchantImpersonation(
+function prepareMerchantImpersonation(
   merchantId: string,
   operatorEmail: string | null = getAuthenticatedEmail(),
   returnPath?: string,
@@ -143,6 +144,15 @@ export function startMerchantImpersonation(
     writeScopeFilters({brand:merchantId,region:store.regionId,store:store.storeId});
   }
   return session;
+}
+
+export function startMerchantImpersonation(
+  merchantId: string,
+  operatorEmail: string | null = getAuthenticatedEmail(),
+  returnPath?: string,
+  storeId?: string,
+): MerchantImpersonationSession | null {
+  return withImpersonationContextChange(() => prepareMerchantImpersonation(merchantId, operatorEmail, returnPath, storeId));
 }
 
 export function enterMerchantBackendAsImpersonator(merchantId: string, returnPath?: string): boolean {

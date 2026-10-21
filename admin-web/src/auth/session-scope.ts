@@ -1,3 +1,4 @@
+import { isImpersonationContextChanging } from "../config/impersonation-transition";
 import { STORE_TIER_HIDDEN_NAV_MODULE_IDS, STORE_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS, BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS, BRAND_PERSPECTIVE_ONLY_NAV_MODULE_IDS, GROUP_HQ_PERSPECTIVE_ONLY_NAV_MODULE_IDS } from './menu-perspective-rules';
 import { currentBrandPrincipal, brandStoresForPath, brandStores, brandIdentity } from './brand-access-runtime';
 /**
@@ -780,7 +781,7 @@ export function bindEffectiveScopeChangeListener(onRefresh: () => void): void {
   const win = window as Window & { __menusifuEffectiveScopeBound?: boolean };
   if (win.__menusifuEffectiveScopeBound) return;
   win.__menusifuEffectiveScopeBound = true;
-  const refresh = () => onRefresh();
+  const refresh = () => { if (!isImpersonationContextChanging()) onRefresh(); };
   window.addEventListener("menusifu:scope-filter-change", refresh);
   window.addEventListener("menusifu:scope-perspective-change", refresh);
   window.addEventListener("menusifu:merchant-group-change", refresh);

@@ -1,0 +1,11 @@
+{
+ "baseline": "1685fa22",
+ "branch": "codex/impersonation-loading-20261021",
+ "preview": "http://127.0.0.1:5239",
+ "rootCause": "scope preparation triggered intermediate shell rerenders; duplicate brand row handlers could start twice",
+ "red": "verify-impersonation-loading failed: loading appears immediately",
+ "green": ["immediate loading", "one session after duplicate clicks", "list DOM and scroll preserved", "no intermediate scope rerender", "loading removed after merchant mount", "exit returns to list", "false and exception restore button and overlay"],
+ "regressions": ["verify-store-list-actions", "verify-impersonation-cache-safety", "verify-impersonation-performance", "tsc --noEmit", "git diff --check"],
+ "timingMs": {"brandClickToDisplay":656.8,"storeClickToDisplay":417.4},
+ "limitations": "Local Edge headless prototype validation; production backend not connected; no commit merge or push"
+}
