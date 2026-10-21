@@ -26,12 +26,16 @@ export function renderManagementFilters(kind:Kind){
  const status=field('status',store?'门店状态':'服务状态',store?[['open','营业中'],['preparing','筹备中'],['closed','停业'],['archived','已归档']]:states,f);
  const search=input('query','搜索','search',f,store?'门店 / MID / 地址 / 邮编 / 品牌 / BID / 集团':'品牌名称 / BID / 编码 / 管理员账号');
  const actions='<button type="submit" class="ba-btn ba-primary">查询</button><button type="button" class="ba-btn" data-filter-reset>重置</button>';
- const extras=store
-  ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+field('menu','生效菜单',[['no','无生效菜单'],['yes','有生效菜单']],f)+field('brandStatus','所属品牌服务状态',states,f)
-  :field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+field('menu','品牌菜单',[['no','未配置'],['yes','已配置']],f)+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f)+input('from','创建时间起','date',f)+input('to','创建时间止','date',f);
- return '<form data-management-filters="'+kind+'" class="management-filters"><div class="management-filter-primary">'+group+brand+status+search+
-  (!store?'<a href="#/m-platform/merchants/new" class="ba-btn ba-primary management-filter-create">新建品牌</a>':'')+
-  '</div><div class="management-filter-secondary">'+extras+'<div class="management-filter-actions">'+actions+'</div></div>'+
+ const menu=field('menu',store?'生效菜单':'品牌菜单',store?[['no','无生效菜单'],['yes','有生效菜单']]:[['no','未配置'],['yes','已配置']],f);
+ const primary=store
+  ?group+brand+status+field('brandStatus','所属品牌服务状态',states,f)
+  :group+status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
+ const secondary=store
+  ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+menu
+  :input('from','创建时间起','date',f)+input('to','创建时间止','date',f);
+ return (!store?'<div class="management-page-actions"><a href="#/m-platform/merchants/new" class="ba-btn ba-primary management-filter-create">新建品牌</a></div>':'')+
+  '<form data-management-filters="'+kind+'" class="management-filters"><div class="management-filter-primary">'+primary+
+  '</div><div class="management-filter-secondary">'+secondary+search+'<div class="management-filter-actions">'+actions+'</div></div>'+
   '<p data-filter-error role="alert" class="text-sm text-destructive" hidden></p></form>';
 }
 export function bindManagementFilters(kind:Kind,render:(f:ManagementFilter)=>void){
