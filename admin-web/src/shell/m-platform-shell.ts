@@ -424,6 +424,9 @@ function renderMPlatformMain(path: string): string {
 }
 
 export function mountMPlatformShell(_onMount: () => void, path: string): string {
+  if (parseMerchantDetailPath(path)) {
+    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
+  }
   if (isSubscriptionServiceCreatePath(path)) {
     return `<div class="relative h-dvh min-h-0 w-full overflow-hidden">${renderSubscriptionServicePage(path)}</div>`;
   }
