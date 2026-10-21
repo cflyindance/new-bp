@@ -99,6 +99,8 @@ export interface MerchantOrgStore {
   code: string;
   status: MerchantOrgStoreStatus;
   address?: string;
+  /** 可选邮编；未接入或未填写时展示 — */
+  postalCode?: string;
   openedAt?: string;
   mountedAt?: string;
 }
