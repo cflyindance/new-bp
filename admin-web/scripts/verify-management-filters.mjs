@@ -8,6 +8,7 @@ try{
  const navigate=async path=>{await p.goto(base+'/#/m-platform/merchants'+path);await p.locator('[data-management-filters]').waitFor();};
  const checkLayout=async()=>{for(const width of [1600,1280,1024,768]){await p.setViewportSize({width,height:1000});const layout=await p.locator('[data-management-filters]').evaluate(el=>({fits:el.scrollWidth<=el.clientWidth+1,controls:[...el.querySelectorAll('input,select')].every(c=>c.getBoundingClientRect().height===36&&c.getBoundingClientRect().width>=90)}));assert(layout.fits&&layout.controls,'filter layout fits '+width);}await p.setViewportSize({width:1600,height:1000});};
  await navigate('');let form=p.locator('[data-management-filters="brand"]');
+ const actionLayout=await form.locator('.management-filter-actions').evaluate(el=>{const [query,reset,create]=[...el.children].map(c=>({text:c.textContent?.trim(),rect:c.getBoundingClientRect()}));return {order:[query.text,reset.text,create.text],filterGap:reset.rect.left-query.rect.right,createGap:create.rect.left-reset.rect.right};});assert.deepEqual(actionLayout.order,['查询','重置','新建品牌']);assert.equal(actionLayout.filterGap,8);assert.equal(actionLayout.createGap,24);
  await checkLayout();
  const names=await form.locator('[data-filter-field]').evaluateAll(els=>els.map(e=>e.getAttribute('data-filter-field')));assert.deepEqual(names,['groupId','status','progress','menu','stores','from','to','query']);
  const initial=await p.locator('[data-enterprise-merchant-row]').count();assert(initial>0);
@@ -17,7 +18,7 @@ try{
  assert.equal(await form.locator('summary').count(),0);await form.locator('[name="from"]').fill('2030-01-01');await form.locator('[name="to"]').fill('2020-01-01');await form.getByRole('button',{name:'查询',exact:true}).click();assert.match(await form.locator('[data-filter-error]').innerText(),/不能晚于/);
  await form.getByRole('button',{name:'重置',exact:true}).click();await form.locator('[name="status"]').selectOption('active');const count=await p.locator('[data-enterprise-merchant-row]').count();
  await p.locator('[data-enterprise-merchant-row] a').first().click();await p.locator('[data-brand-detail-full-page]').waitFor();await p.getByRole('link',{name:'← 返回品牌管理',exact:true}).click();await form.waitFor();assert.equal(await form.locator('[name="status"]').inputValue(),'active');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),count);
- if(process.env.FILTER_SCREENSHOTS){await p.waitForTimeout(500);await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/brand-management-filters-order.png'});}
+ if(process.env.FILTER_SCREENSHOTS){await p.waitForTimeout(500);await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/brand-create-after-reset.png'});}
  await navigate('/stores');form=p.locator('[data-management-filters="store"]');
  assert.deepEqual(await form.locator('[data-filter-field]').evaluateAll(els=>els.map(e=>e.getAttribute('data-filter-field'))),['groupId','merchantId','status','brandStatus','mode','menu','query']);
  await checkLayout();

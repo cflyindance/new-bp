@@ -7,7 +7,7 @@
 .management-filters label>span{font-size:12px;line-height:18px}
 .management-filters input,.management-filters select{width:100%;min-width:0;height:36px;box-sizing:border-box;font-size:14px}
 .management-filter-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px}
-.management-page-actions{display:flex;justify-content:flex-end;flex-shrink:0}
-.management-filters .ba-btn,.management-page-actions .ba-btn{height:36px;min-height:36px;padding:0 14px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
+.management-filter-create{margin-left:16px}
+.management-filters .ba-btn{height:36px;min-height:36px;padding:0 14px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:1200px){.management-filter-primary,[data-management-filters="store"] .management-filter-primary{grid-template-columns:repeat(3,minmax(0,1fr))}.management-filter-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.management-filter-primary,[data-management-filters="store"] .management-filter-primary,.management-filter-secondary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.management-filters [data-filter-field="query"],.management-filter-actions{grid-column:1/-1}.management-filters{max-height:55vh}}
