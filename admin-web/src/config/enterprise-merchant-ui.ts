@@ -527,7 +527,7 @@ function bindMerchantBrandStoresDialog(): void {
 function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string {
   if(!merchants.length)return '<p class="ba ba-empty">暂无匹配品牌</p>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>品牌状态</th><th>所属集团</th><th>品牌菜单</th><th>所属门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
+  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>品牌状态</th><th>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.level===2&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
     return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId,'accounts')}">账号与角色</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
@@ -555,15 +555,10 @@ function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
 
 function renderStoreListPage(): string {
   const rows = getEnterpriseStoreList(listEnterpriseStoresFilter());
-  const openCount = rows.filter((r) => r.store.status === "open").length;
-  const groupCount = new Set(rows.map((r) => r.groupId)).size;
-  const merchantCount = new Set(rows.map((r) => r.merchantId)).size;
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="stores">
       <div class="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">
-          汇总全部 Enterprise、全部集团、全部品牌下的门店（共 <strong class="text-foreground">${rows.length}</strong> 家 · ${groupCount} 个集团 · ${merchantCount} 个品牌 · 营业中 ${openCount}）。
-        </p>
+
         <a href="${merchantHref("/org-tree")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">组织树视图</a>
       </div>
       <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-store-filter-form>
@@ -610,7 +605,7 @@ function renderListPage(): string {
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="list">
       <div class="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">检索与管理企业名下所有入驻品牌；列表统一按<strong class="text-foreground">连锁品牌</strong>展示，点击「管理门店」配置所属门店与菜单。</p>
+
         <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
       </div>
       <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-merchant-filter-form>
@@ -1152,7 +1147,7 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
   return `
     <nav class="flex shrink-0 gap-1 border-b border-border" aria-label="品牌详情">
       <a href="${merchantDetailHref(merchantId, "overview")}" class="${tabClass("overview")}">概览</a>
-      <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">所属门店</a>
+      <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">品牌门店</a>
       <a href="${merchantDetailHref(merchantId, "capabilities")}" class="${tabClass("capabilities")}">品牌菜单</a>
       <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">账号与角色</a>
       <a href="${merchantDetailHref(merchantId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
@@ -1662,7 +1657,7 @@ export function renderEnterpriseMerchantPage(path: string): string {
     }
   }
   const hideEnterpriseBar =
-    isGroupMgmtPath(path) || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path));
+    isGroupMgmtPath(path) || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path));
   return wrapMerchantPage(body, { hideEnterpriseBar });
 }
 

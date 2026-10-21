@@ -143,7 +143,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     const name = merchant?.name ?? detail.merchantId;
     const tabTitle =
       detail.tab === "org"
-        ? "所属门店"
+        ? "品牌门店"
         : detail.tab === "capabilities"
           ? "品牌菜单"
           : detail.tab === "accounts"
