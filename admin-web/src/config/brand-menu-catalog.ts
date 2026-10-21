@@ -12,16 +12,22 @@ export function centerKeysForRaw(raw: Set<string>, catalog = buildCenterCatalog(
   const visitCurrent=(tree:ReturnType<typeof buildCurrentSystemMenuGroups>[number]['tree'])=>{resources.set(tree.resource.key,tree.resource);tree.children.forEach(visitCurrent);};buildCurrentSystemMenuGroups().forEach(group=>visitCurrent(group.tree));
   const blueprint=getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID);
   if(blueprint){const index=buildNavBlueprintIndexFromSnapshot(blueprint);const visit=(tree:typeof index.groups[number]['tree'])=>{resources.set(tree.resource.key,tree.resource);tree.children.forEach(visit);};index.groups.forEach(g=>visit(g.tree));}
+  // Former synthesized route keys remain readable; do not migrate or broaden stored grants.
+  for (const view of ['live','records','rules']) {
+    if (raw.has(`team:route:/team/clock-in/${view}`)) allowed.add(`${pageKey('/team/clock-in')}:${view}`);
+  }
   for (const node of resources.values()) {
     if (!raw.has(node.key)) continue;
-    const key = catalog.resources.has(node.key)?node.key:node.level === 1 ? `module:${node.moduleId}` : node.path && node.seq != null ? settingKey(node.path,node.seq) : node.path && !node.groupKey ? pageKey(node.path) : '';
+    const clockView=node.path?.match(/^\/team\/clock-in\/(live|records|rules)$/)?.[1];
+    const key = clockView ? `${pageKey('/team/clock-in')}:${clockView}` : catalog.resources.has(node.key)?node.key:node.level === 1 ? `module:${node.moduleId}` : node.path && node.seq != null ? settingKey(node.path,node.seq) : node.path && !node.groupKey ? pageKey(node.path) : '';
     if (catalog.resources.has(key)) allowed.add(key);
   }
   // Some deep menu routes share an L2 ancestor in the legacy registry.
   for (const resource of catalog.resources.values()) {
     if (allowed.has(resource.key)) continue;
     if (resource.path && resource.type !== 'setting') {
-      const exact=[...resources.values()].filter(n=>n.level>1&&n.seq==null&&!n.groupKey&&n.path===resource.path);
+      const routePath=resource.viewId&&resource.path==='/team/clock-in'?`${resource.path}/${resource.viewId}`:resource.path;
+      const exact=[...resources.values()].filter(n=>n.level>1&&n.seq==null&&!n.groupKey&&n.path===routePath);
       const candidates=exact.length?exact:[...registry.byKey.values()].filter(n=>n.level===2&&n.path&&resource.path!.startsWith(n.path+'/')).sort((a,b)=>b.path!.length-a.path!.length);
       if (candidates[0] && raw.has(candidates[0].key)) allowed.add(resource.key);
     }

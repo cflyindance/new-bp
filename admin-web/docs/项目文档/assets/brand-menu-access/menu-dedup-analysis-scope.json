@@ -1,0 +1,129 @@
+{
+  "status": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": [
+    "/m-platform/merchants/new"
+  ],
+  "references": [
+    {
+      "path": "src/config/brand-access-ui.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/brand-access-store.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/enterprise-merchant-services.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/nav-blueprint-tree.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/nav-blueprint-current-tree.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/brand-menu-catalog.ts",
+      "symbol": "menu tree",
+      "relation": "data_source",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/permissions/center-catalog.ts",
+      "symbol": "menu tree",
+      "relation": "data_source",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/permissions/center-clock-pages.ts",
+      "symbol": "menu tree",
+      "relation": "consumer",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/store-information-navigation.ts",
+      "symbol": "menu tree",
+      "relation": "data_source",
+      "impact": "not_affected",
+      "deepRead": true
+    }
+  ],
+  "deepReadPaths": [
+    "src/config/brand-access-ui.ts",
+    "src/config/brand-access-store.ts",
+    "src/config/enterprise-merchant-services.ts",
+    "src/config/nav-blueprint-tree.ts",
+    "src/config/nav-blueprint-current-tree.ts",
+    "src/config/brand-menu-catalog.ts",
+    "src/permissions/center-catalog.ts",
+    "src/permissions/center-clock-pages.ts",
+    "src/config/store-information-navigation.ts"
+  ],
+  "dataFlow": [
+    {
+      "fromPath": "src/permissions/center-catalog.ts",
+      "toPath": "src/config/nav-blueprint-current-tree.ts",
+      "evidence": "permission views -> system tree"
+    },
+    {
+      "fromPath": "src/config/nav-blueprint-current-tree.ts",
+      "toPath": "src/config/nav-blueprint-tree.ts",
+      "evidence": "system tree -> service index"
+    },
+    {
+      "fromPath": "src/config/brand-access-store.ts",
+      "toPath": "src/config/brand-access-ui.ts",
+      "evidence": "choices -> picker; raw keys retained"
+    }
+  ],
+  "sharedCallers": [
+    "brand/store menu picker",
+    "brand resource ceiling mapping",
+    "system blueprint"
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "clean",
+    "evidence": [
+      "isolated codex/brand-menu-dedup-20261021 from verified main b01df0db"
+    ]
+  },
+  "wikiQueries": [
+    {
+      "mode": "wiki_bypass",
+      "reason": "resolve-query-context script unavailable at skill scripts path; source investigation used"
+    }
+  ],
+  "extensions": [
+    {
+      "question": "Where do duplicate clock views originate?",
+      "trigger": "data_origin_unknown",
+      "addedPaths": [
+        "src/permissions/center-catalog.ts",
+        "src/permissions/center-clock-pages.ts"
+      ],
+      "expectedEvidence": "base view path vs actual route identity"
+    }
+  ]
+}

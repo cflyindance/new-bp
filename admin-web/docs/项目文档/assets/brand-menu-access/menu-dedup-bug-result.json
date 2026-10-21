@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "Clock permission views shared a base path; appending actual routes duplicated all three views. Store pages repeated same-name permission groups/settings in the picker.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "not_required",
+  "changedFiles": [
+    "src/config/nav-blueprint-current-tree.ts",
+    "src/config/brand-menu-catalog.ts",
+    "src/config/brand-menu-presentation.ts",
+    "src/config/brand-access-ui.ts"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "verify-brand-menu-duplicates.ts: expected 3 clock children, actual 6"
+    ],
+    "greenEvidence": [
+      "All tree siblings unique by title/path; store compact rows retain unmodified raw keys"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "Brand creation picker and shared raw permission mapping changed",
+    "evidence": [
+      "verify-brand-menu-duplicates-browser.mjs: actual wizard, collapsed rows, unique store/clock titles, select all/clear, isolated live grant, legacy route alias"
+    ]
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "No build boundary or embedded package changes; CI not verified"
+  },
+  "unverifiedScopes": [
+    "Production backend and CI"
+  ]
+}
