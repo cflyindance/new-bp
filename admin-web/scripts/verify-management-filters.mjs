@@ -9,6 +9,7 @@ try{
  const checkLayout=async()=>{for(const width of [1600,1280,1024,768]){await p.setViewportSize({width,height:1000});const layout=await p.locator('[data-management-filters]').evaluate(el=>({fits:el.scrollWidth<=el.clientWidth+1,controls:[...el.querySelectorAll('input,select')].every(c=>c.getBoundingClientRect().height===36&&c.getBoundingClientRect().width>=90)}));assert(layout.fits&&layout.controls,'filter layout fits '+width);}await p.setViewportSize({width:1600,height:1000});};
  await navigate('');let form=p.locator('[data-management-filters="brand"]');
  await checkLayout();
+ const names=await form.locator('[data-filter-field]').evaluateAll(els=>els.map(e=>e.getAttribute('data-filter-field')));assert.deepEqual(names,['groupId','status','progress','menu','stores','from','to','query']);
  const initial=await p.locator('[data-enterprise-merchant-row]').count();assert(initial>0);
  await form.locator('[name="query"]').fill('不存在的品牌检索');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),initial);
  await form.locator('[name="query"]').press('Enter');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),0);
@@ -16,8 +17,9 @@ try{
  assert.equal(await form.locator('summary').count(),0);await form.locator('[name="from"]').fill('2030-01-01');await form.locator('[name="to"]').fill('2020-01-01');await form.getByRole('button',{name:'查询',exact:true}).click();assert.match(await form.locator('[data-filter-error]').innerText(),/不能晚于/);
  await form.getByRole('button',{name:'重置',exact:true}).click();await form.locator('[name="status"]').selectOption('active');const count=await p.locator('[data-enterprise-merchant-row]').count();
  await p.locator('[data-enterprise-merchant-row] a').first().click();await p.locator('[data-brand-detail-full-page]').waitFor();await p.getByRole('link',{name:'← 返回品牌管理',exact:true}).click();await form.waitFor();assert.equal(await form.locator('[name="status"]').inputValue(),'active');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),count);
- if(process.env.FILTER_SCREENSHOTS){await p.waitForTimeout(500);await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/brand-management-filters-layout.png'});}
+ if(process.env.FILTER_SCREENSHOTS){await p.waitForTimeout(500);await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/brand-management-filters-order.png'});}
  await navigate('/stores');form=p.locator('[data-management-filters="store"]');
+ assert.deepEqual(await form.locator('[data-filter-field]').evaluateAll(els=>els.map(e=>e.getAttribute('data-filter-field'))),['groupId','merchantId','status','brandStatus','mode','menu','query']);
  await checkLayout();
  const fixture=await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts');return s.getEnterpriseStoreList({allEnterprises:true})[0];});
  await form.locator('[name="query"]').fill(fixture.store.storeId);await form.locator('[name="query"]').press('Enter');assert.equal(await p.locator('[data-enterprise-store-table] tbody tr').count(),1);
@@ -30,7 +32,7 @@ try{
  await form.locator('[name="mode"]').selectOption('inherit');await form.locator('[name="menu"]').selectOption('yes');
  assert((await p.locator('[data-enterprise-store-table] tbody tr').count())>0,'inherited fixture has effective pages');
  await p.locator('[data-enterprise-store-table] [data-brand-single-store]').first().click();await p.getByRole('dialog').last().waitFor();await p.getByRole('dialog').last().getByRole('button',{name:'取消',exact:true}).click();
- if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/store-management-filters-layout.png'});
+ if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/store-management-filters-order.png'});
  const checked=await p.evaluate(async()=>{const f=await import('/src/config/management-list-filters.ts'),s=await import('/src/config/enterprise-merchant-store.ts'),b=await import('/src/config/brand-access-store.ts');const rows=f.filteredManagementStores({mode:'inherit',menu:'yes'});return rows.every(r=>s.getStoreCapability(r.store.storeId)?.menuMode==='inherit'&&b.brandMenuChoices().some(c=>c.isPage&&s.getStoreCapability(r.store.storeId)?.enabledKeys.includes(c.key)));});assert(checked);assert.deepEqual(errors,[]);
  console.log('PASS management filters: submit search, reset, invalid dates, brand state, return persistence, MID search, group/brand linkage, single store search, always visible extra filters, inherited effective menus');
 }finally{await browser.close();}

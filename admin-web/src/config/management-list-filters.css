@@ -1,12 +1,13 @@
 .management-filters{flex-shrink:0;display:flex;flex-direction:column;gap:12px;max-height:48vh;overflow:auto;padding-bottom:2px}
-.management-filter-primary,.management-filter-secondary{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:end}
-.management-filters label{grid-column:span 2;min-width:0;gap:4px}
+.management-filter-primary,.management-filter-secondary{display:grid;gap:12px;align-items:end}
+.management-filter-primary{grid-template-columns:repeat(5,minmax(0,1fr))}
+[data-management-filters="store"] .management-filter-primary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.management-filter-secondary{grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) minmax(240px,3fr) auto}
+.management-filters label{min-width:0;gap:4px}
 .management-filters label>span{font-size:12px;line-height:18px}
 .management-filters input,.management-filters select{width:100%;min-width:0;height:36px;box-sizing:border-box;font-size:14px}
-.management-filters [data-filter-field="query"]{grid-column:span 6}
-.management-filter-create{grid-column:span 2;justify-self:end}
-.management-filter-actions{grid-column:span 2;display:flex;justify-content:flex-end;align-items:center;gap:8px}
-[data-management-filters="store"] .management-filter-actions{grid-column:span 6}
-.management-filters .ba-btn{height:36px;min-height:36px;padding:0 14px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
-@media(max-width:1200px){.management-filter-primary,.management-filter-secondary{grid-template-columns:repeat(6,minmax(0,1fr))}.management-filters [data-filter-field="query"]{grid-column:span 4}.management-filter-actions,[data-management-filters="store"] .management-filter-actions{grid-column:1/-1}.management-filter-create{grid-column:span 2}}
-@media(max-width:640px){.management-filter-primary,.management-filter-secondary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.management-filters label{grid-column:span 1}.management-filters [data-filter-field="query"]{grid-column:1/-1}.management-filter-create{grid-column:1/-1}.management-filters{max-height:55vh}}
+.management-filter-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.management-page-actions{display:flex;justify-content:flex-end;flex-shrink:0}
+.management-filters .ba-btn,.management-page-actions .ba-btn{height:36px;min-height:36px;padding:0 14px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:1200px){.management-filter-primary,[data-management-filters="store"] .management-filter-primary{grid-template-columns:repeat(3,minmax(0,1fr))}.management-filter-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.management-filter-primary,[data-management-filters="store"] .management-filter-primary,.management-filter-secondary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.management-filters [data-filter-field="query"],.management-filter-actions{grid-column:1/-1}.management-filters{max-height:55vh}}
