@@ -1,3 +1,4 @@
+import './management-list-filters.css';
 import {getMerchants,getEnterpriseStoreList,getGroupsForSelect,getMerchantStores,getStoreCapability,getMerchantById} from './enterprise-merchant-store';
 import {brandRawMenuKeys,brandMenuChoices,readBrandAccess} from './brand-access-store';
 import {brandOnboardingProgress} from './brand-service-lifecycle';
@@ -16,8 +17,8 @@ export function filteredManagementBrands(f:ManagementFilter){
 }
 export function filteredManagementStores(f:ManagementFilter){return getEnterpriseStoreList({allEnterprises:true,groupId:f.groupId,merchantId:f.merchantId,status:f.status as never,query:f.query}).filter(r=>(!f.mode||(getStoreCapability(r.store.storeId)?.menuMode==='inherit'?'inherit':'independent')===f.mode)&&(!f.menu||(hasStorePages(r.store.storeId)?'yes':'no')===f.menu)&&(!f.brandStatus||serviceStatus(getMerchantById(r.merchantId)!.status)===f.brandStatus));}
 const states:[string,string][]=[['onboarding','待启用'],['active','已启用'],['suspended','已暂停'],['closed','已关闭']];
-function field(name:string,title:string,options:[string,string][],f:ManagementFilter){return `<label class="flex min-w-[8rem] flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><select name="${name}" class="h-9 rounded-md border border-input bg-background px-2 text-sm"><option value="">全部</option>${options.map(([v,t])=>`<option value="${esc(v)}" ${f[name]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;}
-const input=(name:string,title:string,type:string,f:ManagementFilter,placeholder='')=>`<label class="flex ${type==='search'?'min-w-[14rem] flex-1':''} flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><input name="${name}" type="${type}" value="${esc(f[name]??'')}" placeholder="${placeholder}" class="h-9 rounded-md border border-input bg-background px-3 text-sm"></label>`;
+function field(name:string,title:string,options:[string,string][],f:ManagementFilter){return `<label data-filter-field="${name}" class="flex flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><select name="${name}" class="h-9 rounded-md border border-input bg-background px-2 text-sm"><option value="">全部</option>${options.map(([v,t])=>`<option value="${esc(v)}" ${f[name]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;}
+const input=(name:string,title:string,type:string,f:ManagementFilter,placeholder='')=>`<label data-filter-field="${name}" class="flex flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><input name="${name}" type="${type}" value="${esc(f[name]??'')}" placeholder="${placeholder}" class="h-9 rounded-md border border-input bg-background px-3 text-sm"></label>`;
 export function renderManagementFilters(kind:Kind){
  const f=savedManagementFilter(kind),store=kind==='store';
  const group=field('groupId','所属集团',getGroupsForSelect({allEnterprises:true}).map(g=>[g.groupId,g.name]),f);
@@ -28,20 +29,20 @@ export function renderManagementFilters(kind:Kind){
  const extras=store
   ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+field('menu','生效菜单',[['no','无生效菜单'],['yes','有生效菜单']],f)+field('brandStatus','所属品牌服务状态',states,f)
   :field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+field('menu','品牌菜单',[['no','未配置'],['yes','已配置']],f)+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f)+input('from','创建时间起','date',f)+input('to','创建时间止','date',f);
- return '<form data-management-filters="'+kind+'" class="flex shrink-0 flex-wrap items-end gap-3" style="max-height:45vh;overflow:auto">'+group+brand+status+search+
-  (store?'<div class="flex w-full flex-wrap items-end gap-3">'+extras+actions+'</div>':actions+'<a href="#/m-platform/merchants/new" class="ba-btn ba-primary">新建品牌</a><details class="w-full" '+(f.more==='true'?'open':'')+'><summary class="cursor-pointer text-sm text-primary">更多筛选</summary><div class="flex flex-wrap items-end gap-3 py-3">'+extras+'</div></details>')+
+ return '<form data-management-filters="'+kind+'" class="management-filters"><div class="management-filter-primary">'+group+brand+status+search+
+  (!store?'<a href="#/m-platform/merchants/new" class="ba-btn ba-primary management-filter-create">新建品牌</a>':'')+
+  '</div><div class="management-filter-secondary">'+extras+'<div class="management-filter-actions">'+actions+'</div></div>'+
   '<p data-filter-error role="alert" class="text-sm text-destructive" hidden></p></form>';
 }
 export function bindManagementFilters(kind:Kind,render:(f:ManagementFilter)=>void){
  const form=document.querySelector<HTMLFormElement>(`[data-management-filters="${kind}"]`);if(!form)return;
  const value=(name:string)=>(form.elements.namedItem(name) as HTMLInputElement|HTMLSelectElement)?.value??'';
  const collect=()=>Object.fromEntries([...new FormData(form)].map(([k,v])=>[k,String(v)]));
- const save=(f:ManagementFilter)=>{try{sessionStorage.setItem(key(kind),JSON.stringify({...f,more:String(form.querySelector('details')?.open??false)}))}catch{}};
+ const save=(f:ManagementFilter)=>{try{sessionStorage.setItem(key(kind),JSON.stringify(f))}catch{}};
  const apply=()=>{const f=collect(),error=form.querySelector<HTMLElement>('[data-filter-error]')!;error.hidden=true;if(f.from&&f.to&&f.from>f.to){error.textContent='创建时间起不能晚于结束时间';error.hidden=false;return;}save(f);render(f);};
  const updateBrands=()=>{const select=form.elements.namedItem('merchantId') as HTMLSelectElement;if(!select)return;const old=select.value;select.innerHTML='<option value="">全部</option>'+brands().filter(m=>(!value('groupId')||m.groupId===value('groupId'))).map(m=>`<option value="${esc(m.merchantId)}">${esc(m.name)}</option>`).join('');select.value=[...select.options].some(o=>o.value===old)?old:'';};
  form.onsubmit=e=>{e.preventDefault();apply();};
- form.querySelector('[data-filter-reset]')!.addEventListener('click',()=>{form.querySelectorAll<HTMLInputElement|HTMLSelectElement>('input,select').forEach(el=>el.value='');const details=form.querySelector('details');if(details)details.open=false;updateBrands();apply();});
+ form.querySelector('[data-filter-reset]')!.addEventListener('click',()=>{form.querySelectorAll<HTMLInputElement|HTMLSelectElement>('input,select').forEach(el=>el.value='');updateBrands();apply();});
  form.querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{if(el.name==='groupId')updateBrands();apply();}));
- form.querySelector('details')?.addEventListener('toggle',()=>{const f=savedManagementFilter(kind);save(f);});
  updateBrands();render(collect());
 }
