@@ -2190,6 +2190,26 @@ export function listBrandAssociationCandidates(groupId: string): MerchantOrgStor
   });
 }
 
+/** Local prototype fixtures only: replenish unassociated demo stores for the creation wizard. */
+export function ensureBrandCreationDemoStores(groupId: string): void {
+  const group = getGroupById(groupId);
+  if (!group || group.enterpriseId !== activeEnterpriseId()) return;
+  const prefix = `brand-create-demo-${groupId}-`;
+  const available = listBrandAssociationCandidates(groupId).filter(store =>
+    getMerchantById(store.merchantId)?.code.startsWith(prefix),
+  );
+  for (let index = available.length; index < 3; index++) {
+    const code = `${prefix}${genId('fixture')}`;
+    createMerchant({
+      name: `${group.name} · 演示门店 ${code.slice(-6)}`, code, groupId, orgType: 'single-store',
+      timezone: 'Asia/Shanghai', contactName: '演示数据', primaryAdminEmail: '',
+      businessTypeIds: ['full-service'], productLineIds: ['pos'],
+      firstStoreName: `${group.name} · 演示门店 ${code.slice(-6)}`, initialMenuKeys: [],
+      accountProvisioningRequired: true, activateImmediately: true,
+    }, '原型演示门店预置');
+  }
+}
+
 export function brandConfigurationVersion(id:string):string {
   const snap=readSnapshot();
   return JSON.stringify({cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
