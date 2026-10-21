@@ -1,5 +1,7 @@
 import {demoBrandAccess} from './brand-store-demo-presets';
 import {DEMO_LOGIN_PASSWORD} from '../auth/login';
+import {getUiLocale} from '../i18n';
+import {brandMenuRouteVersion} from './enterprise-merchant-services';
 import type {AdminAuditContext,BrandChangeFacts} from './brand-audit-types';
 import { installBrandAccessRuntime } from '../auth/brand-access-runtime';
 import { centerKeysForRaw } from './brand-menu-catalog';
@@ -42,9 +44,8 @@ export function brandRawMenuKeys(id: string): Set<string> {
 }
 
 
-export function brandCatalog(id: string): {catalog: Catalog; ceiling: Set<string>} {
-  const catalog = buildCenterCatalog();
-  const derived=centerKeysForRaw(brandRawMenuKeys(id),catalog);
+export function brandCatalog(id: string,catalog:Catalog=buildCenterCatalog()): {catalog: Catalog; ceiling: Set<string>} {
+  const derived=mappedRuntimeKeys(brandRawMenuKeys(id),catalog);
   const manifest=getMerchantCapability(id)?.menuResourceKeys;
   return {catalog,ceiling:manifest?new Set([...derived].filter(k=>manifest.includes(k))):derived};
 }
@@ -159,18 +160,30 @@ export function validateBrandLogin(email:string,password:string):string|null|und
 }
 
 interface Runtime {p:Principal;catalog:Catalog;ceiling:Set<string>;all:Store[];storeIds:string[];caps:Map<string,Set<string>>;brandPerspective:boolean;values:Map<string,Access>;session?:UserSessionContext;paths:Map<string,boolean>}
+// Cache directory construction only. Account/grant/state evaluation remains per turn.
+let runtimeDirectory:{locale:string;catalog:Catalog}|undefined;
+const runtimeKeyMaps=new WeakMap<Catalog,Map<string,Set<string>>>();
+function runtimeCatalog():Catalog{
+ const locale=getUiLocale();if(runtimeDirectory?.locale===locale)return runtimeDirectory.catalog;
+ return (runtimeDirectory={locale,catalog:buildCenterCatalog()}).catalog;
+}
+function mappedRuntimeKeys(raw:Set<string>,catalog:Catalog):Set<string>{
+ let cache=runtimeKeyMaps.get(catalog);if(!cache){cache=new Map();runtimeKeyMaps.set(catalog,cache);}
+ const key=brandMenuRouteVersion()+':'+JSON.stringify([...raw].sort());const found=cache.get(key);if(found)return found;
+ const result=centerKeysForRaw(raw,catalog);if(cache.size>=128)cache.clear();cache.set(key,result);return result;
+}
 let runtimeTick:Runtime|undefined;
 function brandRuntime():Runtime|undefined {
   const p=currentBrandPrincipal();
   if (!p) return undefined;
   if(runtimeTick)return runtimeTick;
-  const {catalog,ceiling}=brandCatalog(p.merchantId);
+  const {catalog,ceiling}=brandCatalog(p.merchantId,runtimeCatalog());
   const all=brandStores(p.merchantId);
   const perspective=localStorage.getItem('sidebar-nav-layout-preset-v1')==='store' ? 'store' : sessionStorage.getItem('menusifu:chain-data-perspective-v1')??'brand';
   const lockedStore=readActiveImpersonation()?.storeId;
   const store=lockedStore||sessionStorage.getItem('header-scope-filter-store') || sessionStorage.getItem('menusifu:chain-anchor-store-v1');
   const storeIds=store ? [store] : brandAccountStores(p.state,p.account,all);
-  const caps=new Map(all.map(s=>[s.id,centerKeysForRaw(new Set(getStoreCapability(s.id)?.enabledKeys??[]),catalog)]));
+  const caps=new Map(all.map(s=>[s.id,mappedRuntimeKeys(new Set(getStoreCapability(s.id)?.enabledKeys??[]),catalog)]));
   return runtimeTick={p,catalog,ceiling,all,storeIds,caps,brandPerspective:!lockedStore&&perspective!=='store',values:new Map(),paths:new Map()};
 }
 export function currentBrandAccess(key:string):Access|undefined {

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "Repeated immutable catalog and current-system route-tree construction during impersonation entry/render. CDP samples identify buildCenterCatalog/pagePolicy/registerPageModes and nav-blueprint-current-tree.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": [
+    "src/config/brand-access-store.ts",
+    "src/config/nav-blueprint-current-tree.ts",
+    "scripts/verify-impersonation-performance.mjs",
+    "scripts/verify-impersonation-cache-safety.mjs"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "baseline brand click-to-render 1262.4ms failed 650ms budget; unoptimized store entry 367.4ms"
+    ],
+    "greenEvidence": [
+      "optimized brand click-to-render 674ms; store 372.4ms, final regression budget 800ms; entry under 300ms",
+      "cache safety: cloned tree isolation, locale, grant withdrawal/restoration and service pause passed"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "Shared merchant navigation and authorization runtime affected",
+    "evidence": [
+      "verify-impersonation-performance.mjs",
+      "verify-impersonation-cache-safety.mjs",
+      "verify-store-list-actions.mjs",
+      "verify-brand-service-lifecycle.mjs",
+      "verify-current-route-structure-browser.mjs",
+      "tsc --noEmit",
+      "git diff --check"
+    ]
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "No vendor/emenu or embedded build/runtime boundary changed."
+  },
+  "unverifiedScopes": [
+    "User's exact existing browser dataset and hardware timing",
+    "Production server latency, CI and deployment"
+  ]
+}

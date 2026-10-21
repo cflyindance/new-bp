@@ -1,0 +1,140 @@
+{
+  "entryPoints": [
+    "品牌管理 /m-platform/merchants → 代登录",
+    "门店管理 /m-platform/merchants/stores → 代登录"
+  ],
+  "workspace": {
+    "status": "clean",
+    "evidence": [
+      "isolated codex/impersonation-performance-20261021 from main f39b220b; original checkout untouched"
+    ]
+  },
+  "analysisScopeStatus": "bounded",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "Repeated immutable catalog and current-system route-tree construction during impersonation entry/render. CDP samples identify buildCenterCatalog/pagePolicy/registerPageModes and nav-blueprint-current-tree.",
+  "references": [
+    {
+      "path": "src/config/enterprise-merchant-ui.ts",
+      "relation": "entry_point",
+      "status": "not_affected"
+    },
+    {
+      "path": "src/config/enterprise-merchant-impersonate.ts",
+      "relation": "definition",
+      "status": "not_affected"
+    },
+    {
+      "path": "src/config/brand-access-store.ts",
+      "relation": "consumer",
+      "status": "affected"
+    },
+    {
+      "path": "src/permissions/center-catalog.ts",
+      "relation": "producer",
+      "status": "not_affected"
+    },
+    {
+      "path": "src/config/nav-blueprint-current-tree.ts",
+      "relation": "producer",
+      "status": "affected"
+    },
+    {
+      "path": "src/config/brand-menu-catalog.ts",
+      "relation": "direct_caller",
+      "status": "not_affected"
+    },
+    {
+      "path": "src/config/nav-blueprint-tree.ts",
+      "relation": "direct_caller",
+      "status": "not_affected"
+    },
+    {
+      "path": "src/config/brand-access-ui.ts",
+      "relation": "shared_caller",
+      "status": "not_affected"
+    }
+  ],
+  "deepReadPaths": [
+    "src/config/enterprise-merchant-impersonate.ts",
+    "src/config/enterprise-merchant-store.ts",
+    "src/config/brand-access-store.ts",
+    "src/permissions/center-catalog.ts",
+    "src/config/nav-blueprint-current-tree.ts",
+    "src/config/brand-menu-catalog.ts",
+    "src/config/nav-blueprint-tree.ts"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/config/enterprise-merchant-ui.ts",
+      "to": "src/config/enterprise-merchant-impersonate.ts",
+      "evidence": "brand/store handlers invoke existing impersonation entry"
+    },
+    {
+      "from": "src/config/brand-access-store.ts",
+      "to": "src/permissions/center-catalog.ts",
+      "evidence": "brandRuntime builds directory and grants"
+    },
+    {
+      "from": "src/config/brand-menu-catalog.ts",
+      "to": "src/config/nav-blueprint-current-tree.ts",
+      "evidence": "raw grant mapping reconstructs current system tree"
+    },
+    {
+      "from": "src/config/nav-blueprint-tree.ts",
+      "to": "src/config/nav-blueprint-current-tree.ts",
+      "evidence": "blueprint consumer mutates working copy; returned cached source is cloned"
+    }
+  ],
+  "sharedCallers": [
+    "brand-access-ui.ts uses default fresh brandCatalog",
+    "brand-menu-catalog.ts reads current system groups",
+    "nav-blueprint-tree.ts clones and mutates system groups"
+  ],
+  "sharedCallersComplete": true,
+  "expansions": [
+    {
+      "question": "Why catalog construction remains hot after brand runtime cache?",
+      "trigger": "CDP CPU samples still point at center-catalog",
+      "addedPaths": [
+        "src/config/nav-blueprint-current-tree.ts",
+        "src/config/nav-blueprint-tree.ts"
+      ],
+      "expectedEvidence": "identify duplicate builder and whether consumers mutate cached trees"
+    }
+  ],
+  "wikiQueries": [
+    {
+      "question": "Where does impersonation rebuild permission/navigation catalogs?",
+      "mode": "wiki_bypass",
+      "reason": "No wiki provider exposed in ALL_TOOLS and no project wiki entry discovered; source and CDP profiling used."
+    }
+  ],
+  "plan": {
+    "status": "approved",
+    "authorization": "User requested performance fix; bounded implementation proceeds without extra approval.",
+    "steps": [
+      "Capture failing click-to-render budget on baseline",
+      "Cache locale-specific immutable runtime directory and raw-key mapping keyed by published route version + raw key set",
+      "Cache immutable current-system tree by locale; clone for mutable consumers",
+      "Keep account/grant/service snapshot evaluation live; avoid merchant data caching",
+      "Validate performance, clone isolation, locale, grant withdrawal/restoration and service pause",
+      "Run store impersonation, lifecycle, current-route regression and typecheck"
+    ],
+    "build": "skipped: frontend TypeScript-only fix, no vendor/embed/build boundary touched"
+  },
+  "measurements": {
+    "baseline": {
+      "brandClickRenderMs": 1262.4,
+      "storeClickRenderMs": 826.5,
+      "brandEntryMs": 76.8,
+      "storeEntryMs": 367.4
+    },
+    "optimized": {
+      "brandClickRenderMs": 674,
+      "storeClickRenderMs": 372.4,
+      "brandEntryMs": 73,
+      "storeEntryMs": 187.1
+    },
+    "environment": "Windows Edge headless, localhost Vite, fresh isolated browser context per kind, same test sequence; indicative not production SLA"
+  }
+}

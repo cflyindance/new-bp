@@ -1,9 +1,18 @@
 import { NAV_MODULES, navModuleChildrenAsSheetSubnav } from './navigation';
 import { buildCenterCatalog, type MenuNode } from '../permissions/center-catalog';
 import { buildPermissionModuleGroups, type PermissionModuleGroup, type PermissionTreeNode, type PermissionResource } from './permission-registry';
+import {getUiLocale} from '../i18n';
+
+let cachedSystemMenu:{locale:string;groups:PermissionModuleGroup[]}|undefined;
 
 /** Current business navigation, with stable legacy setting identities retained. */
 export function buildCurrentSystemMenuGroups(): PermissionModuleGroup[] {
+  const locale=getUiLocale();
+  if(cachedSystemMenu?.locale!==locale)cachedSystemMenu={locale,groups:buildSystemMenuGroups()};
+  // Blueprint builders modify their working tree. Never expose the cached source.
+  return structuredClone(cachedSystemMenu.groups);
+}
+function buildSystemMenuGroups(): PermissionModuleGroup[] {
   const catalog=buildCenterCatalog(),legacy=buildPermissionModuleGroups();
   const pool:PermissionResource[]=[];
   const collect=(node:PermissionTreeNode)=>{pool.push(node.resource);node.children.forEach(collect);};
