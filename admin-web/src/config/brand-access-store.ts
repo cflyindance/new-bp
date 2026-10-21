@@ -1,3 +1,4 @@
+import type {AdminAuditContext,BrandChangeFacts} from './brand-audit-types';
 import { installBrandAccessRuntime } from '../auth/brand-access-runtime';
 import { centerKeysForRaw } from './brand-menu-catalog';
 export { centerKeysForRaw } from './brand-menu-catalog';
@@ -87,7 +88,7 @@ export function authorizeBrandManagement(id:string,source:'m-platform'|'merchant
   return source==='merchant' ? principal!.account.email : getAuthenticatedEmail()??'M 平台运营';
 }
 
-export function saveBrandAccess(next:BrandAccessState,expected:number,actor:string,action:string):BrandAccessState {
+export function saveBrandAccess(next:BrandAccessState,expected:number,actor:string,action:string,context?:AdminAuditContext):BrandAccessState {
   const current=readBrandAccess(next.merchantId);
   assertBrandVersion(current.version,expected);
   const {catalog,ceiling}=brandCatalog(next.merchantId);
@@ -113,9 +114,21 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
   }
   for (const employee of next.employees) for (const b of employee.bindings) if (b.scope.mode!=='stores' || b.scope.ids.some(id=>!stores.has(id))) throw Error('角色生效范围必须为当前品牌所属门店。');
   for (const role of current.roles) if (!next.roles.some(r=>r.id===role.id) && next.employees.some(e=>e.bindings.some(b=>b.roleId===role.id))) throw Error('角色仍被账号使用，不能删除。');
+  let facts:BrandChangeFacts|undefined;
+  if(context){
+    const before=current.accounts.find(a=>a.id===context.accountId),after=next.accounts.find(a=>a.id===context.accountId);
+    if(!after)throw Error('管理员不存在。');
+    const fields:BrandChangeFacts['fields']=[];
+    if(!before||before.name!==after.name)fields.push({name:'姓名',before:before?.name??'未开通',after:after.name});
+    if(!before||before.email!==after.email)fields.push({name:'登录账号',before:before?.email??'未开通',after:after.email});
+    if(!before||before.enabled!==after.enabled)fields.push({name:'账号状态',before:before?(before.enabled?'已启用':'已停用'):'未开通',after:after.enabled?'已启用':'已停用'});
+    if(context.operation==='password')fields.push({name:'登录密码',before:'不展示密码',after:'已重设（旧密码失效，不记录密码内容）'});
+    if(!fields.length)return current;
+    facts={category:'品牌管理员',title:context.operation==='create'?'开通管理员':context.operation==='password'?'重设管理员密码':context.operation==='enable'?'启用管理员':context.operation==='disable'?'停用管理员':'修改管理员资料',source:context.source,target:`${after.name} · ${after.email}`,fields};
+  }
   const saved=structuredClone(next);
   saved.version=expected+1;
-  saved.logs=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor,objectId:next.merchantId,action,before:JSON.stringify({roles:current.roles.map(r=>({id:r.id,name:r.name,grants:r.grants})),accounts:current.accounts.map(({password,...a})=>a),employees:current.employees}),after:JSON.stringify({roles:next.roles.map(r=>({id:r.id,name:r.name,grants:r.grants})),accounts:next.accounts.map(({password,...a})=>a),employees:next.employees})},...current.logs];
+  saved.logs=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor,objectId:next.merchantId,action,facts,before:JSON.stringify({roles:current.roles.map(r=>({id:r.id,name:r.name,grants:r.grants})),accounts:current.accounts.map(({password,...a})=>a),employees:current.employees}),after:JSON.stringify({roles:next.roles.map(r=>({id:r.id,name:r.name,grants:r.grants})),accounts:next.accounts.map(({password,...a})=>a),employees:next.employees})},...current.logs];
   localStorage.setItem(brandAccessKey(saved.merchantId),JSON.stringify(saved));
   window.dispatchEvent(new CustomEvent('menusifu:brand-access-changed'));
   return saved;

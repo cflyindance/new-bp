@@ -11,7 +11,7 @@ export interface BrandAccount {
   /** Local prototype credentials; use the existing authentication service in production. */
   password: string;
 }
-export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[] }
+export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[]; logs:(CenterState['logs'][number]&{facts?:import('./brand-audit-types').BrandChangeFacts})[] }
 
 /** Never combine one binding's role with another binding's store range. */
 export function brandAccountStores(state: BrandAccessState, account: BrandAccount, stores: Store[]): string[] {

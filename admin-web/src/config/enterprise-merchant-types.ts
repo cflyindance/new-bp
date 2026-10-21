@@ -158,6 +158,7 @@ export interface MerchantMenuChange {
   choices:import('./brand-menu-choices').MenuChoice[];
 }
 export interface MerchantChangeLogEntry {
+  facts?:import('./brand-audit-types').BrandChangeFacts;
   menuChange?:MerchantMenuChange;
   id: string;
   enterpriseId?: string;
