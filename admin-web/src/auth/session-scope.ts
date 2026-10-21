@@ -341,6 +341,7 @@ export function isStoreLayoutPreset(): boolean {
 
 /** 门店版布局 + 单店账号：锁定为当前门店 */
 export function ensureScopeFiltersForSession(): void {
+  const impersonation=readActiveImpersonation();if(impersonation?.storeId){writeScopeFilters({brand:impersonation.merchantId,region:"",store:impersonation.storeId});return;}
   const principal=currentBrandPrincipal();
   if(principal && isChainScopeMode()){
     const cur=readScopeFilters();

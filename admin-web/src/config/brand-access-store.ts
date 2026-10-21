@@ -165,10 +165,11 @@ function brandRuntime():Runtime|undefined {
   const {catalog,ceiling}=brandCatalog(p.merchantId);
   const all=brandStores(p.merchantId);
   const perspective=localStorage.getItem('sidebar-nav-layout-preset-v1')==='store' ? 'store' : sessionStorage.getItem('menusifu:chain-data-perspective-v1')??'brand';
-  const store=sessionStorage.getItem('header-scope-filter-store') || sessionStorage.getItem('menusifu:chain-anchor-store-v1');
+  const lockedStore=readActiveImpersonation()?.storeId;
+  const store=lockedStore||sessionStorage.getItem('header-scope-filter-store') || sessionStorage.getItem('menusifu:chain-anchor-store-v1');
   const storeIds=store ? [store] : brandAccountStores(p.state,p.account,all);
   const caps=new Map(all.map(s=>[s.id,centerKeysForRaw(new Set(getStoreCapability(s.id)?.enabledKeys??[]),catalog)]));
-  return runtimeTick={p,catalog,ceiling,all,storeIds,caps,brandPerspective:perspective!=='store',values:new Map(),paths:new Map()};
+  return runtimeTick={p,catalog,ceiling,all,storeIds,caps,brandPerspective:!lockedStore&&perspective!=='store',values:new Map(),paths:new Map()};
 }
 export function currentBrandAccess(key:string):Access|undefined {
   const ctx=brandRuntime();if(!ctx)return undefined;
@@ -188,8 +189,8 @@ export function buildBrandSessionContext():UserSessionContext|null {
     selection[node.key]={enabled:value!=='hidden',display:value!=='hidden',l4EditMode:value==='edit'?'editable':'display-only'};
   }
   // The brand's store management is an administrative entry, not a business-menu grant.
-  selection['brand-store-list']={enabled:p.account.enabled,display:p.account.enabled};
-  return runtime.session={employeeId:p.account.id,employeeName:p.account.name,email:p.account.email,orgTier:'chain',roleIds:p.account.admin?['brand-admin']:p.state.employees.find(e=>e.id===p.account.id)?.bindings.map(b=>b.roleId)??['brand-unassigned'],storeAccess:{mode:'stores',ids:brandAccountStores(p.state,p.account,runtime.all)},permissionSnapshot:selection,builtAt:new Date().toISOString()};
+  selection['brand-store-list']={enabled:p.account.enabled&&!readActiveImpersonation()?.storeId,display:p.account.enabled&&!readActiveImpersonation()?.storeId};
+  return runtime.session={employeeId:p.account.id,employeeName:p.account.name,email:p.account.email,orgTier:'chain',roleIds:p.account.admin?['brand-admin']:p.state.employees.find(e=>e.id===p.account.id)?.bindings.map(b=>b.roleId)??['brand-unassigned'],storeAccess:{mode:'stores',ids:readActiveImpersonation()?.storeId?[readActiveImpersonation()!.storeId!]:brandAccountStores(p.state,p.account,runtime.all)},permissionSnapshot:selection,builtAt:new Date().toISOString()};
 }
 
 export function isBrandPathAllowed(path:string):boolean {
@@ -199,7 +200,7 @@ export function isBrandPathAllowed(path:string):boolean {
   path=path.split('?')[0]!;
   if(!p.account.enabled)return path==='/login';
   if (isNavHomePath(path) || path==='/login' || path==='/onboarding') return true;
-  if (path.startsWith('/brand-stores/')) return p.account.enabled && (p.account.admin || path==='/brand-stores/list' || path==='/brand-stores/overview');
+  if (path.startsWith('/brand-stores/')) return !readActiveImpersonation()?.storeId && p.account.enabled && (p.account.admin || path==='/brand-stores/list' || path==='/brand-stores/overview');
   if(runtime.paths.has(path))return runtime.paths.get(path)!;
   const pages=[...catalog.resources.values()].filter(r=>r.type==='page' && r.path && (path===r.path || path.startsWith(r.path+'/'))).sort((a,b)=>b.path!.length-a.path!.length);
   const allowed=!!pages[0] && currentBrandAccess(pages[0].key)!=='hidden';
@@ -209,6 +210,7 @@ export function isBrandPathAllowed(path:string):boolean {
 export function brandStoresForPath(ids:string[],path:string):string[] {
   const ctx=brandRuntime();if(!ctx)return ids;
   const {p,catalog,all,ceiling,caps}=ctx;
+  if(readActiveImpersonation()?.storeId)ids=ids.filter(id=>id===readActiveImpersonation()!.storeId);
   if(p.account.admin)return ids;
   const pages=[...catalog.resources.values()].filter(r=>r.type==='page'&&r.path&&(path===r.path||path.startsWith(r.path+'/'))).sort((a,b)=>b.path!.length-a.path!.length);
   if(path.startsWith('/brand-stores/'))return ids;

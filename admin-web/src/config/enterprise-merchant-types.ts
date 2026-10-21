@@ -222,6 +222,8 @@ export interface MerchantImpersonationLog {
   id: string;
   merchantId: string;
   merchantName: string;
+  storeId?:string;
+  storeName?:string;
   operatorEmail: string;
   startedAt: string;
   endedAt?: string;
