@@ -148,6 +148,31 @@ function openRole(id:string,roleId:string|undefined,source:Source,onSaved:()=>vo
   });read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,resourceChoices(catalog,ceiling),Object.keys(role.grants).filter(k=>role.grants[k]!=='hidden'),{roles:true,grants:role.grants});
 }
 
+function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mode:'profile'|'password'|'status'='profile'):void {
+  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),draft=structuredClone(state),existing=draft.accounts.find(a=>a.id===accountId);
+  if(accountId&&!existing?.admin)throw Error('只能管理品牌 Admin。');
+  const account:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
+  const nextEnabled=!account.enabled;
+  const title=mode==='password'?'重设管理员密码':mode==='status'?(account.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
+  const body=mode==='status'?`<p>确认${account.enabled?'停用':'启用'} ${esc(account.name)}（${esc(account.email)}）？</p>`:mode==='password'?`<p>${esc(account.name)} · ${esc(account.email)}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>`:`<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}"></label><label class="ba-field">登录邮箱 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>':''}</div>`;
+  dialog(title,'',body,(form,review)=>{
+    const fd=new FormData(form);
+    if(mode==='status')account.enabled=nextEnabled;
+    else if(mode==='password')account.password=String(fd.get('password')??'');
+    else{account.name=String(fd.get('name')??'').trim();account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
+    account.admin=true;
+    if(!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
+    if(!account.name||!account.email.includes('@'))throw Error('请填写姓名与有效登录邮箱。');
+    if(account.password.length<6)throw Error('账号密码至少 6 位。');
+    if(review.hidden){review.textContent=`${title}：${account.name} · ${account.email} · ${account.enabled?'已启用':'已停用'}。`;review.hidden=false;return;}
+    if(!existing)draft.accounts.push(account);
+    const employee=draft.employees.find(e=>e.id===account.id);
+    if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
+    else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
+    saveBrandAccess(draft,state.version,actor,title);showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
+  });
+}
+
 function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:()=>void):void {
   const state=readBrandAccess(id),draft=structuredClone(state),existing=draft.accounts.find(a=>a.id===accountId),merchant=getMerchantById(id)!;
   const account:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:state.accounts.length?'':merchant.primaryAdminEmail??'',password:'',enabled:true,admin:!state.accounts.length};
@@ -192,7 +217,13 @@ export function bindBrandWorkspaces():void {
         root.innerHTML=`<header class="ba-head"><div><h2>品牌菜单</h2></div>${source==='m-platform'?button('编辑品牌菜单','edit-menu',true):'<span class="ba-tag">品牌菜单由 M 平台开通</span>'}</header>${stats}<div data-menu-read></div>`;
         bindOpenedBrandMenuTree(root.querySelector<HTMLElement>('[data-menu-read]')!,choices,keys);
       }else if(tab==='accounts'){
+        if(source==='m-platform'){
+          const administrators=state.accounts.filter(a=>a.admin),legacy=!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail&&!state.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail?.toLowerCase());
+          root.innerHTML=`<header class="ba-head"><h2>品牌管理员</h2>${button('开通品牌 Admin','new-admin',true)}</header><section class="ba-card"><h3 style="margin-bottom:16px">品牌 Admin <span class="ba-tag">${administrators.length+(legacy?1:0)}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>姓名</th><th>登录账号</th><th>状态</th><th>开通时间</th><th>最近登录时间</th><th>操作</th></tr></thead><tbody>${administrators.map(a=>`<tr data-brand-admin="${esc(a.id)}"><td>${esc(a.name)}</td><td>${esc(a.email)}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${a.createdAt?esc(date(a.createdAt)):'—'}</td><td>${a.lastLoginAt?esc(date(a.lastLoginAt)):'—'}</td><td><div class="ba-actions">${button('管理',`admin:${a.id}`)}${button('重设密码',`admin-password:${a.id}`)}${button(a.enabled?'停用':'启用',`admin-status:${a.id}`)}</div></td></tr>`).join('')}${legacy?`<tr data-legacy-admin><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>${['active','onboarding'].includes(merchant.status)?'已启用':'品牌暂停'}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>`:''}${!administrators.length&&!legacy?'<tr><td colspan="6" class="ba-empty">尚未开通品牌 Admin</td></tr>':''}</tbody></table></div></section>`;
+        }else{
+
         root.innerHTML=`<header class="ba-head"><div><h2>账号与角色</h2></div>${admin?`<div class="ba-actions">${button('新建角色','new-role')}${button('开通账号','new-account',true)}</div>`:''}</header><section class="ba-card"><h3 style="margin-bottom:16px">登录账号 <span class="ba-tag">${state.accounts.length}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>账号</th><th>身份</th><th>角色与生效门店</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.accounts.map(a=>{const e=state.employees.find(e=>e.id===a.id);return `<tr><td>${esc(a.name)}<br><small>${esc(a.email)}</small></td><td><span class="ba-tag ${a.admin?'active':''}">${a.admin?'品牌 Admin':'普通账号'}</span></td><td>${a.admin?'全部品牌门店（含新增门店）':e?.bindings.map(b=>`${esc(state.roles.find(r=>r.id===b.roleId)?.name??'角色缺失')} · ${b.scope.ids.length} 家门店`).join('<br>')||'未分配'}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${admin?button('管理账号',`account:${a.id}`):'—'}</td></tr>`;}).join('')||`<tr><td colspan="5" class="ba-empty">尚未单独开通账号${merchant.accountProvisioningRequired?'，请先开通品牌 Admin':'；已有品牌管理员继续使用原登录方式'}</td></tr>`}</tbody></table></div></section><section class="ba-card"><h3>品牌角色 <span class="ba-tag">${state.roles.length}</span></h3>${state.roles.map(r=>`<div class="ba-role-line"><div><strong>${esc(r.name)}</strong><p class="ba-muted">${esc(r.description)||'未填写描述'} · ${state.employees.filter(e=>e.bindings.some(b=>b.roleId===r.id)).length} 个账号使用</p></div>${admin?button('编辑权限',`role:${r.id}`):''}</div>`).join('')||'<p class="ba-empty">尚未创建角色。建议按店长、财务等岗位建立，再分配给账号。</p>'}</section>`;
+        }
       }else if(tab==='changelog'){
         const rows=[...state.logs.map(l=>({at:l.at,actor:l.actor,detail:l.action})),...getMerchantChangelog(id).map(l=>({at:l.at,actor:l.operatorEmail,detail:l.detail}))].sort((a,b)=>b.at.localeCompare(a.at));
         root.innerHTML=`<header class="ba-head"><div><h2>变更记录</h2></div></header><div class="ba-table-wrap"><table><thead><tr><th>时间</th><th>操作人</th><th>变更内容</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(date(l.at))}</td><td>${esc(l.actor)}</td><td>${esc(l.detail)}</td></tr>`).join('')||'<tr><td colspan="3" class="ba-empty">暂无变更记录</td></tr>'}</tbody></table></div>`;
@@ -203,6 +234,11 @@ export function bindBrandWorkspaces():void {
       }
       root.querySelectorAll<HTMLButtonElement>('[data-ba]').forEach(b=>b.onclick=()=>{try{
         const action=b.dataset.ba!;
+        if(source==='m-platform'&&(action==='new-role'||action==='new-account'||action.startsWith('role:')||action.startsWith('account:')))throw Error('员工账号与角色请在商家后台管理。');
+        if(source==='m-platform'&&action==='new-admin')openBrandAdmin(id,undefined,render);
+        if(source==='m-platform'&&action.startsWith('admin:'))openBrandAdmin(id,action.slice(6),render);
+        if(source==='m-platform'&&action.startsWith('admin-password:'))openBrandAdmin(id,action.slice(15),render,'password');
+        if(source==='m-platform'&&action.startsWith('admin-status:'))openBrandAdmin(id,action.slice(13),render,'status');
         if(action==='edit-menu')openBrandMenus(id,render);
         if(action==='associate')openAssociation(id,render);
         if(action==='new-account')openAccount(id,undefined,source,render);

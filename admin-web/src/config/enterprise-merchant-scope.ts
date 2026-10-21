@@ -147,7 +147,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
         : detail.tab === "capabilities"
           ? "品牌菜单"
           : detail.tab === "accounts"
-            ? "账号与角色"
+            ? "品牌管理员"
             : detail.tab === "changelog"
             ? "变更记录"
             : "概览";
