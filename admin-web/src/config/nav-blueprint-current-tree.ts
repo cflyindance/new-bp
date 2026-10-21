@@ -15,7 +15,7 @@ export function buildCurrentSystemMenuGroups(): PermissionModuleGroup[] {
     const moduleTitle=catalog.resources.get(root.key!)?.title??root.title;
     const make=(node:MenuNode,parent:string|undefined,depth:number):PermissionTreeNode=>{
       const resource=node.key?catalog.resources.get(node.key):undefined;
-      const path=resource?.path;
+      const path=resource?.viewId&&resource.path==='/team/clock-in'?`${resource.path}/${resource.viewId}`:resource?.path;
       const prior=depth===1?old?.tree.resource:pool.find(item=>item.moduleId===moduleId&&item.path===path&&!item.seq&&!item.actionId&&!item.groupKey&&!used.has(item.key));
       const key=prior?.key??(depth===1?moduleId:`${moduleId}:${node.id}`);
       used.add(key);
