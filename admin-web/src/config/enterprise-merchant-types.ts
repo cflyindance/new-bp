@@ -253,6 +253,8 @@ export interface MerchantReportSummary {
 }
 
 export interface EnterpriseMerchantSnapshot {
+  brandStoreDemoVersion?:number;
+  brandStoreDemoFresh?:boolean;
   enterprises: EnterpriseTenant[];
   groups: EnterpriseGroup[];
   merchants: EnterpriseMerchant[];
