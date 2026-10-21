@@ -1655,7 +1655,7 @@ export function renderEnterpriseMerchantPage(path: string): string {
     }
   }
   const hideEnterpriseBar =
-    isGroupMgmtPath(path) || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path));
+    isGroupMgmtPath(path) || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path)) || path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`;
   return wrapMerchantPage(body, { hideEnterpriseBar });
 }
 
