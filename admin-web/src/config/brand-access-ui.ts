@@ -16,9 +16,9 @@ const button=(text:string,action:string,primary=false)=>`<button type="button" c
 const date=(value:string)=>new Date(value).toLocaleString('zh-CN');
 
 /** A native dialog supplies focus containment, Escape handling and focus restoration. */
-function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormElement,review:HTMLElement)=>boolean|void):HTMLDialogElement {
-  const d=document.createElement('dialog');d.className='ba ba-modal';
-  d.innerHTML=`<form><header class="ba-dialog-header"><div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p><div class="ba-review" data-discard hidden>有未保存的修改，是否放弃？<div class="ba-actions">${button('继续编辑','keep')}${button('放弃修改','discard')}</div></div></section><footer class="ba-footer"><span class="ba-muted">保存前可核对变更；取消不会写入</span><div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button><button type="submit" class="ba-btn ba-primary">预览变更</button></div></footer></form>`;
+function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormElement,review:HTMLElement)=>boolean|void,options:{action?:string;destructive?:boolean;blocked?:boolean;compact?:boolean}={}):HTMLDialogElement {
+  const d=document.createElement('dialog');d.className=`ba ba-modal ${options.compact?'ba-admin-dialog':''}`;d.setAttribute('aria-label',title);
+  d.innerHTML=`<form><header class="ba-dialog-header"><div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p><div class="ba-review" data-discard hidden>有未保存的修改，是否放弃？<div class="ba-actions">${button('继续编辑','keep')}${button('放弃修改','discard')}</div></div></section><footer class="ba-footer">${options.action?'':'<span class="ba-muted">保存前可核对变更；取消不会写入</span>'}<div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button><button type="submit" class="ba-btn ${options.destructive?'ba-danger':'ba-primary'}" ${options.blocked?'disabled':''}>${esc(options.action??'预览变更')}</button></div></footer></form>`;
   document.body.append(d);d.showModal();
   const form=d.querySelector('form')!,review=d.querySelector<HTMLElement>('[data-review]')!,error=d.querySelector<HTMLElement>('[data-error]')!;
   let dirty=false,busy=false;
@@ -27,14 +27,14 @@ function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormEl
   d.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',close));
   d.querySelector('[data-ba=keep]')?.addEventListener('click',()=>{d.querySelector<HTMLElement>('[data-discard]')!.hidden=true;});
   d.querySelector('[data-ba=discard]')?.addEventListener('click',()=>{dirty=false;close();});
-  form.addEventListener('change',()=>{dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent='预览变更';});
-  form.addEventListener('input',e=>{if((e.target as HTMLElement).matches('[data-menu-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent='预览变更';});
+  form.addEventListener('change',()=>{dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
+  form.addEventListener('input',e=>{if((e.target as HTMLElement).matches('[data-menu-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
   const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};
   const originalHash=location.hash;
   const hashGuard=(e:HashChangeEvent)=>{if(location.hash===originalHash)return;if(dirty){e.stopImmediatePropagation();history.replaceState(null,'',originalHash);error.hidden=false;error.textContent='请先保存或关闭当前弹框，修改内容已保留。';}else{d.close();d.remove();}};
   window.addEventListener('hashchange',hashGuard,true);
   window.addEventListener('beforeunload',unload);d.addEventListener('close',()=>{window.removeEventListener('beforeunload',unload);window.removeEventListener('hashchange',hashGuard,true);});
-  form.addEventListener('submit',e=>{e.preventDefault();if(busy)return;error.hidden=true;try{busy=true;if(onSave(form,review)===true){dirty=false;d.close();d.remove();}else form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent='确认保存';}catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{busy=false;}});
+  form.addEventListener('submit',e=>{e.preventDefault();if(busy||options.blocked)return;error.hidden=true;try{busy=true;if(onSave(form,review)===true){dirty=false;d.close();d.remove();}else form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'确认保存';}catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{busy=false;}});
   return d;
 }
 
@@ -154,7 +154,12 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
   const account:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
   const nextEnabled=!account.enabled;
   const title=mode==='password'?'重设管理员密码':mode==='status'?(account.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
-  const body=mode==='status'?`<p>确认${account.enabled?'停用':'启用'} ${esc(account.name)}（${esc(account.email)}）？</p>`:mode==='password'?`<p>${esc(account.name)} · ${esc(account.email)}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>`:`<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}"></label><label class="ba-field">登录邮箱 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>':''}</div>`;
+  const singleStep=!!existing;
+  const blocked=mode==='status'&&account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled);
+  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':'保存修改';
+  const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
+  const hint=mode==='status'?(account.enabled?'停用后，该账号将无法登录商家后台，已有会话将不再获得品牌权限。账号资料保留，可重新启用。':'启用后，该账号可使用原登录账号和密码登录，恢复品牌 Admin 管理范围。'):mode==='password'?'重设后旧密码立即失效，请使用新密码登录。':'可修改管理员姓名，登录账号与管理员身份保持不变。';
+  const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">这是当前最后一名已启用的品牌 Admin，请先开通另一名管理员后再停用。</p>':''}`:mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password" placeholder="请输入至少 6 位的新密码"></label>`:`${existing?`<p class="ba-admin-hint">${hint}</p>`:''}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}" placeholder="请输入管理员姓名"></label><label class="ba-field">登录账号 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>':''}</div>`;
   dialog(title,'',body,(form,review)=>{
     const fd=new FormData(form);
     if(mode==='status')account.enabled=nextEnabled;
@@ -164,13 +169,13 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     if(!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
     if(!account.name||!account.email.includes('@'))throw Error('请填写姓名与有效登录邮箱。');
     if(account.password.length<6)throw Error('账号密码至少 6 位。');
-    if(review.hidden){review.textContent=`${title}：${account.name} · ${account.email} · ${account.enabled?'已启用':'已停用'}。`;review.hidden=false;return;}
+    if(!singleStep&&review.hidden){review.textContent=`${title}：${account.name} · ${account.email} · ${account.enabled?'已启用':'已停用'}。`;review.hidden=false;return;}
     if(!existing)draft.accounts.push(account);
     const employee=draft.employees.find(e=>e.id===account.id);
     if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
     else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
     saveBrandAccess(draft,state.version,actor,title);showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
-  });
+  },{action:singleStep?action:undefined,destructive:mode==='status'&&account.enabled,blocked,compact:true});
 }
 
 function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:()=>void):void {
