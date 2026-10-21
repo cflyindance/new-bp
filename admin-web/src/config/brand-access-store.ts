@@ -1,3 +1,5 @@
+import {demoBrandAccess} from './brand-store-demo-presets';
+import {DEMO_LOGIN_PASSWORD} from '../auth/login';
 import type {AdminAuditContext,BrandChangeFacts} from './brand-audit-types';
 import { installBrandAccessRuntime } from '../auth/brand-access-runtime';
 import { centerKeysForRaw } from './brand-menu-catalog';
@@ -26,7 +28,7 @@ export const brandStores = (id: string): Store[] => getMerchantStores(id).map(s 
 
 export function readBrandAccess(id: string): BrandAccessState {
   const raw = localStorage.getItem(brandAccessKey(id));
-  if (!raw) return {schema:1,employeeAuthorization:'roles-only',merchantId:id,version:0,accounts:[],roles:[],employees:[],logs:[]};
+  if (!raw) {const merchant=getMerchantById(id),demo=merchant&&demoBrandAccess(merchant,DEMO_LOGIN_PASSWORD);return demo??{schema:1,employeeAuthorization:'roles-only',merchantId:id,version:0,accounts:[],roles:[],employees:[],logs:[]};}
   const state = JSON.parse(raw) as BrandAccessState;
   if (state.schema !== 1 || state.merchantId !== id || !Array.isArray(state.accounts) || !Array.isArray(state.roles) || !Array.isArray(state.employees)) throw Error('品牌账号数据无法读取，原数据已保留。');
   return state;

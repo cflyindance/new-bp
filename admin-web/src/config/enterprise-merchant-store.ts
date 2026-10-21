@@ -1,3 +1,4 @@
+import {fillBrandStoreDemoPresets} from './brand-store-demo-presets';
 import { serviceStatus,serviceLabel } from './brand-service-policy';
 import { brandMenuChoices } from './brand-menu-choices';
 import { brandMenuRouteVersion } from './enterprise-merchant-services';
@@ -467,10 +468,10 @@ function buildCuratedSeedMerchants(): EnterpriseMerchant[] {
       locale: "zh-CN",
       contactName: "李店长",
       contactPhone: "13900002222",
-      contractExpiresAt: "2026-06-30",
+      contractExpiresAt: "2028-12-31",
       crmContractId: "CRM-MJ-2026-014",
       crmAccountId: "ACC-TEA-ONE",
-      contractStatus: "renewal",
+      contractStatus: "active",
       crmLastSyncedAt: "2026-06-15T00:00:00.000Z",
       licenseAutoSuspend: true,
       primaryAdminEmail: "tea.one@menusifu.cn",
@@ -996,11 +997,14 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
   const slaMetrics = merchants.map((m) => buildDefaultSlaMetrics(m.merchantId));
   enrichLicenseFields({ enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics });
 
-  return { enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics };
+  const seed:EnterpriseMerchantSnapshot={ enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics };
+  seed.brandStoreDemoFresh=true;return seed;
 }
 
 function normalizeSnapshot(raw: EnterpriseMerchantSnapshot): EnterpriseMerchantSnapshot {
   return {
+    brandStoreDemoVersion:raw.brandStoreDemoVersion,
+    brandStoreDemoFresh:raw.brandStoreDemoFresh,
     enterprises: raw.enterprises ?? [],
     groups: raw.groups ?? [],
     merchants: raw.merchants ?? [],
@@ -1582,6 +1586,10 @@ function appendChangelog(
 
 export function recordMerchantFirstLogin(id:string):void {
  const snap=readSnapshot(),m=snap.merchants.find(m=>m.merchantId===id);if(!m||m.status!=='active'||m.firstLoginAt)return;m.firstLoginAt=nowIso();localStorage.setItem(STORAGE_KEY,JSON.stringify(snap));cachedSnapshot=snap;
+}
+
+export function ensureBrandStoreDemoPresets():void {
+ const snap=readSnapshot();if(fillBrandStoreDemoPresets(snap,snap.brandStoreDemoFresh===true)){delete snap.brandStoreDemoFresh;enrichLicenseFields(snap);writeSnapshot(snap);}
 }
 
 export function getEnterpriseMerchantSnapshot(): EnterpriseMerchantSnapshot {
