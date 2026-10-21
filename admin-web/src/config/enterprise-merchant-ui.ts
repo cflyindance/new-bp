@@ -1,3 +1,4 @@
+import { runImpersonationWithLoading } from "./impersonation-loading";
 import {ensureBrandStoreDemoPresets} from './enterprise-merchant-store';
 import {bindBrandChangeLog} from './brand-change-log';
 import {bindOpenedBrandMenuTree} from './brand-menu-read-tree';
@@ -1590,15 +1591,13 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       if (!btn) return;
       const merchantId = btn.dataset.merchantImpersonate;
       if (!merchantId) return;
-      if (!enterMerchantBackendAsImpersonator(merchantId, merchantHref(""))) {
-        window.alert("当前品牌状态不支持代登录。");
-      }
+      void runImpersonationWithLoading(btn, () => enterMerchantBackendAsImpersonator(merchantId, merchantHref("")), "当前品牌状态不支持代登录。");
     });
   }
   bindManagementFilters('brand', filter => {if(tableHost)tableHost.innerHTML=renderMerchantTable(filteredManagementBrands(filter));});
   const storeTableHost=document.querySelector<HTMLElement>('[data-enterprise-store-table]');
   bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
-  if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;if(!enterStoreBackendAsImpersonator(button.dataset.storeImpersonate!,merchantHref('/stores')))window.alert('当前门店暂不支持代登录，请检查所属品牌服务状态和管理员。');};
+  if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;void runImpersonationWithLoading(button,()=>enterStoreBackendAsImpersonator(button.dataset.storeImpersonate!,merchantHref('/stores')),'当前门店暂不支持代登录，请检查所属品牌服务状态和管理员。');};
 
   const groupFilterForm = document.querySelector<HTMLFormElement>("[data-enterprise-group-filter-form]");
   const groupTableHost = document.querySelector<HTMLElement>("[data-enterprise-group-table]");
@@ -1715,17 +1714,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   });
 
   document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
-  document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;if(!enterMerchantBackendAsImpersonator(id,merchantDetailHref(id)))window.alert('当前品牌服务状态不支持代登录。');});
-
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-impersonate]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const merchantId = btn.dataset.merchantImpersonate;
-      if (!merchantId) return;
-      if (!enterMerchantBackendAsImpersonator(merchantId, merchantHref(""))) {
-        window.alert("当前品牌状态不支持代登录。");
-      }
-    });
-  });
+  document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;void runImpersonationWithLoading(button,()=>enterMerchantBackendAsImpersonator(id,merchantDetailHref(id)),'当前品牌服务状态不支持代登录。');});
 
   document.querySelector<HTMLFormElement>("[data-merchant-request-form]")?.addEventListener("submit", (e) => {
     e.preventDefault();
