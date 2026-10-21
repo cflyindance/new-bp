@@ -604,11 +604,8 @@ function renderStoreListPage(): string {
 function renderListPage(): string {
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="list">
-      <div class="flex shrink-0 flex-wrap items-center justify-between gap-3">
 
-        <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
-      </div>
-      <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-merchant-filter-form>
+      <form class="flex shrink-0 flex-wrap items-end gap-3" data-enterprise-merchant-filter-form>
         <label class="flex min-w-[8rem] flex-col gap-1">
           <span class="text-xs text-muted-foreground">状态</span>
           <select name="status" data-merchant-filter="status" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
@@ -634,6 +631,7 @@ function renderListPage(): string {
           <span class="text-xs text-muted-foreground">搜索</span>
           <input type="search" name="query" data-merchant-filter="query" placeholder="品牌名称 / BID / 编码 / 邮箱" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
         </label>
+        <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
       </form>
       <div class="min-h-0 flex-1 overflow-y-auto" data-enterprise-merchant-table>
         ${renderMerchantTable(getMerchants(listMerchantsFilter()))}
