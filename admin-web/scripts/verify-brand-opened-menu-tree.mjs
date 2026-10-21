@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({channel:'msedge',headless:true}),base=process.env.BRAND_PREVIEW_URL??'http://127.0.0.1:5212';
+try{
+ const p=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(base);
+ await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('hq.admin@menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('hq.admin@menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+ const fixture=await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts'),c=await import('/src/config/brand-access-store.ts'),scope=await import('/src/config/enterprise-merchant-scope.ts');const all=c.brandMenuChoices(['pos']);const make=(name,keys)=>s.createMerchant({name,code:'',groupId:s.getGroupsForSelect({allEnterprises:false})[0].groupId,orgType:'chain',timezone:'Asia/Shanghai',contactName:'只读验收',contactPhone:'',primaryAdminEmail:'',businessTypeIds:[s.getBusinessTypeOptions()[0].id],productLineIds:['pos'],initialMenuKeys:keys,initialStoreIds:[],accountProvisioningRequired:true,activateImmediately:true});const full=make('菜单树完整验收',all.map(c=>c.key)),empty=make('菜单树空状态验收',[]),sparse=make('菜单树单页验收',['team:clock-view-live']);return{full:scope.merchantDetailHref(full.merchantId,'capabilities'),empty:scope.merchantDetailHref(empty.merchantId,'capabilities'),sparse:scope.merchantDetailHref(sparse.merchantId,'capabilities'),id:full.merchantId,keys:all.map(c=>c.key)};});
+ await p.goto(base+'/'+fixture.full);await p.locator('[data-opened-search]').waitFor();
+ const snapshot=()=>p.evaluate(async(id)=>JSON.stringify((await import('/src/config/enterprise-merchant-store.ts')).getMerchantCapability(id)),fixture.id);const before=await snapshot();
+ assert.equal(await p.locator('[data-menu-read] input[type=checkbox]').count(),0);await p.locator('[data-opened-category=team]').click();
+ assert.equal(await p.locator('[data-opened-node="team:clock-view-live"]').count(),1);assert.equal(await p.locator('[data-opened-node="team:route:/team/clock-in/live"]').count(),0);
+ await p.locator('[data-opened-collapse]').click();assert.equal(await p.locator('[data-opened-node="team:clock-view-live"]').isVisible(),false);
+ await p.locator('[data-opened-expand]').click();assert.ok(await p.locator('[data-opened-node="team:clock-view-live"]').isVisible());
+ await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/opened-menu-team-tree.png'});
+ await p.locator('[data-opened-search]').fill('/team/clock-in/records');assert.ok(await p.locator('[data-opened-node="team:clock-view-records"]').isVisible());assert.ok((await p.locator('[data-opened-list]').innerText()).includes('团队管理 / 员工打卡'));assert.equal(await p.locator('[data-opened-node="team:clock-view-live"]').count(),0);
+ await p.locator('[data-opened-search]').fill('不存在的菜单xyz');assert.ok((await p.locator('[data-opened-list]').innerText()).includes('没有匹配菜单'));
+ await p.locator('[data-opened-category="store-mgmt"]').click();assert.equal(await p.locator('[data-opened-search]').inputValue(),'');assert.equal(await p.locator('[data-opened-list] .ba-tree-title').filter({hasText:/^门店档案$/}).count(),1);assert.equal(await p.locator('[data-opened-list] .ba-tree-title').filter({hasText:/^营业时间$/}).count(),1);
+ assert.equal(await snapshot(),before);await p.locator('[data-ba="edit-menu"]').click();await p.locator('dialog').waitFor({state:'visible'});await p.locator('dialog [data-close]').first().click();assert.equal(await snapshot(),before);
+ await p.goto(base+'/'+fixture.sparse);await p.locator('[data-opened-search]').waitFor();assert.equal(await p.locator('[data-opened-node="team:clock-view-live"]').count(),1);assert.equal(await p.locator('[data-opened-node="team:clock-view-records"]').count(),0);
+ await p.goto(base+'/'+fixture.empty);await p.locator('[data-menu-read]').waitFor();assert.ok((await p.locator('[data-menu-read]').innerText()).includes('尚未开通菜单'));assert.equal(await p.locator('[data-opened-category]').count(),0);assert.equal(errors.length,0,errors.join('\n'));
+ console.log('PASS opened menu tree: deep clock rows, collapse/expand, global route search and ancestors, no match, compact stores, read-only data, edit entry, sparse and empty grants');
+}finally{await browser.close();}
