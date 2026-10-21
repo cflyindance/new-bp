@@ -58,12 +58,14 @@ export interface EnterpriseMerchant {
   licenseAutoSuspend?: boolean;
   licenseStatus?: MerchantLicenseStatus;
   suspendedReason?: string;
+  serviceReason?:string;
   primaryAdminEmail?: string;
   createdAt: string;
   updatedAt: string;
   activatedAt?: string;
   onboardingInviteSentAt?: string;
   onboardingCompletedAt?: string;
+  firstLoginAt?:string;
   closingStartedAt?: string;
   closingEndsAt?: string;
   closedAt?: string;

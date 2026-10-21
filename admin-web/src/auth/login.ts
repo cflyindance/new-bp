@@ -1,4 +1,4 @@
-import { validateBrandLogin } from './brand-access-runtime';
+import { validateBrandLogin,recordBrandSuccessfulLogin } from './brand-access-runtime';
 /** 演示登录：员工维护账号优先，兼容 Menusifu 企业邮箱 + 演示密码 */
 
 import { recordSystemLoginLog } from "./login-log-store";
@@ -168,6 +168,7 @@ export function bindLoginPage(onSuccess: () => void): void {
     showError("");
     const account = email.trim();
     setAuthenticated(account);
+    recordBrandSuccessfulLogin(account);
     recordSystemLoginLog(account);
     onSuccess();
   });

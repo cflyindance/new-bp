@@ -7,7 +7,7 @@ import { additionalPageActions } from '../permissions/center-actions';
 import { type Resource, type Access, type Store } from '../permissions/center-domain';
 import { buildPermissionResourceIndex } from './permission-registry';
 import { buildMerchantServiceTreeIndex, brandStoreSelectableCeiling, resolveMerchantServiceProductLine } from './enterprise-merchant-services';
-import { getEnterpriseMerchantSnapshot, getMerchantById, getMerchantCapability, getMerchantStores, getMerchantRegions, getStoreCapability } from './enterprise-merchant-store';
+import { getEnterpriseMerchantSnapshot, recordMerchantFirstLogin, getMerchantById, getMerchantCapability, getMerchantStores, getMerchantRegions, getStoreCapability } from './enterprise-merchant-store';
 import { getAuthenticatedEmail } from '../auth/login';
 import { readActiveImpersonation } from './enterprise-merchant-impersonate';
 import { assertBrandVersion, brandAccountStores, resolveBrandAccess, type BrandAccessState, type BrandAccount } from './brand-access-domain';
@@ -20,7 +20,7 @@ export const BRAND_ACCESS_KEY = 'menusifu:brand-access:v1:';
 export const brandAccessKey = (id: string) => BRAND_ACCESS_KEY + id;
 export const brandIdentity=(id:string)=>{const merchant=getMerchantById(id);return merchant?{name:merchant.name,groupId:merchant.groupId,regions:getMerchantRegions(id)}:null;};
 export function brandPrimaryAdminEmail(id:string):string {
-  return readBrandAccess(id).accounts.find(a=>a.admin&&a.enabled)?.email??getMerchantById(id)?.primaryAdminEmail??'';
+  const state=readBrandAccess(id),m=getMerchantById(id),explicit=state.accounts.find(a=>a.admin&&a.enabled);if(explicit)return explicit.email;return !m?.accountProvisioningRequired&&m?.primaryAdminEmail&&!state.accounts.some(a=>a.email.toLowerCase()===m.primaryAdminEmail!.toLowerCase())?m.primaryAdminEmail:'';
 }
 export const brandStores = (id: string): Store[] => getMerchantStores(id).map(s => ({id:s.storeId,title:s.name,brand:id,region:s.regionId}));
 
@@ -73,7 +73,7 @@ function resolveBrandPrincipal(): Principal | null {
     if (impersonation && merchant.merchantId!==impersonation.merchantId) continue;
     const state=readBrandAccess(merchant.merchantId);
     const explicit=state.accounts.find(a=>a.email.toLowerCase()===email);
-    const active=merchant.status==='active'||merchant.status==='onboarding';
+    const active=merchant.status==='active';
     if (explicit) return {merchantId:merchant.merchantId,account:active?explicit:{...explicit,enabled:false},state};
     // Preserve existing primary Admins. New brands require explicit account provisioning.
     if (!merchant.accountProvisioningRequired && merchant.primaryAdminEmail?.toLowerCase()===email) return {merchantId:merchant.merchantId,state,account:{id:`admin:${merchant.merchantId}`,name:'品牌 Admin',email,enabled:active,admin:true,password:''}};
@@ -134,13 +134,21 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
   return saved;
 }
 
+export function recordBrandSuccessfulLogin(email:string):void {
+ for(const m of getEnterpriseMerchantSnapshot().merchants){
+  if(m.status!=='active')continue;const state=readBrandAccess(m.merchantId),a=state.accounts.find(a=>a.email.toLowerCase()===email.trim().toLowerCase());
+  if(a?.enabled){a.lastLoginAt=new Date().toISOString();localStorage.setItem(brandAccessKey(m.merchantId),JSON.stringify(state));recordMerchantFirstLogin(m.merchantId);break;}
+  if(!a&&!m.accountProvisioningRequired&&m.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase()){recordMerchantFirstLogin(m.merchantId);break;}
+ }
+}
 export function validateBrandLogin(email:string,password:string):string|null|undefined {
   for (const merchant of getEnterpriseMerchantSnapshot().merchants) {
     const state=readBrandAccess(merchant.merchantId);
     const account=state.accounts.find(a=>a.email.toLowerCase()===email.trim().toLowerCase());
+    if ((account||merchant.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase())&&merchant.status!=='active')return merchant.status==='onboarding'||merchant.status==='draft'?'该品牌待启用，请联系平台运营。':merchant.status==='closed'?'该品牌已关闭，无法登录。':'该品牌服务已暂停，请联系平台运营。';
     if (account) {
       if (!account.enabled) return '该账号已停用，请联系品牌 Admin。';
-      if (merchant.status!=='active' && merchant.status!=='onboarding') return '该品牌当前状态不允许登录。';
+      if (merchant.status!=='active') return '该品牌当前状态不允许登录。';
       return account.password===password ? null : '密码不正确';
     }
     if (merchant.accountProvisioningRequired && merchant.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase()) return '请先在品牌详情开通登录账号。';
@@ -189,6 +197,7 @@ export function isBrandPathAllowed(path:string):boolean {
   if (!runtime) return true;
   const {p,catalog}=runtime;
   path=path.split('?')[0]!;
+  if(!p.account.enabled)return path==='/login';
   if (isNavHomePath(path) || path==='/login' || path==='/onboarding') return true;
   if (path.startsWith('/brand-stores/')) return p.account.enabled && (p.account.admin || path==='/brand-stores/list' || path==='/brand-stores/overview');
   if(runtime.paths.has(path))return runtime.paths.get(path)!;
@@ -248,4 +257,4 @@ export function bindBrandRuntimeGuards():void {
   document.addEventListener('beforeinput',guard,true);
 }
 
-installBrandAccessRuntime({currentBrandPrincipal,buildBrandSessionContext,validateBrandLogin,isBrandPathAllowed,brandStoresForPath,brandStores,brandIdentity,brandPrimaryAdminEmail});
+installBrandAccessRuntime({recordBrandSuccessfulLogin,currentBrandPrincipal,buildBrandSessionContext,validateBrandLogin,isBrandPathAllowed,brandStoresForPath,brandStores,brandIdentity,brandPrimaryAdminEmail});

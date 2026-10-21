@@ -1,5 +1,7 @@
+import {serviceStatus} from './brand-service-policy';
+import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
 import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail } from './brand-access-store';
-import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor } from './brand-access-ui';
+import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
  */
@@ -30,16 +32,12 @@ import {
   businessTypeLabel,
   approvePosStoreRequest,
   approveProvisioningRequest,
-  cancelMerchantClosing,
-  completeMerchantOnboarding,
   countStoresForMerchant,
   createGroup,
   createMerchant,
   countMerchantsForGroup,
   deleteGroup,
-  finalizeMerchantClosing,
   getBusinessTypeOptions,
-  getClosingDaysRemaining,
   getMerchantBrands,
   getMerchantById,
   getMerchantCapability,
@@ -68,7 +66,6 @@ import {
   getContractStatusLabel,
   getLicenseStatusLabel,
   getStoreStatusLabel,
-  initiateMerchantClosing,
   licenseStatusBadgeClass,
   listMountableMerchantsForOrg,
   mountMerchantToOrg,
@@ -78,13 +75,11 @@ import {
   rejectProvisioningRequest,
   renewMerchantContract,
   saveMerchantCapability,
-  sendOnboardingInvite,
   statusBadgeClass,
   submitPosStoreRequest,
   submitProvisioningRequest,
   syncMerchantFromCrm,
   syncMerchantCapabilityPresets,
-  updateMerchantStatus,
   updateMerchantStoreStatus,
   updateGroup,
 } from "./enterprise-merchant-store";
@@ -527,9 +522,9 @@ function bindMerchantBrandStoresDialog(): void {
 function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string {
   if(!merchants.length)return '<p class="ba ba-empty">暂无匹配品牌</p>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>品牌状态</th><th>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
+  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.level===2&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
-    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
+    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -610,11 +605,9 @@ function renderListPage(): string {
           <span class="text-xs text-muted-foreground">状态</span>
           <select name="status" data-merchant-filter="status" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
             <option value="">全部</option>
-            <option value="active">在营</option>
-            <option value="onboarding">待引导</option>
-            <option value="draft">草稿</option>
+            <option value="active">已启用</option>
+            <option value="onboarding">待启用</option>
             <option value="suspended">已暂停</option>
-            <option value="closing">关闭中</option>
             <option value="closed">已关闭</option>
           </select>
         </label>
@@ -733,10 +726,6 @@ function renderNewMerchantPage(): string {
               <input name="firstStoreAddress" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
             </label>
           </div>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" name="activateImmediately" class="accent-primary" />
-            立即激活（跳过 onboarding，状态设为在营）
-          </label>
           <label class="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" name="sendInviteEmail" class="accent-primary" checked />
             创建后发送 onboarding 邀请邮件（演示）
@@ -1071,7 +1060,7 @@ function renderReportsPage(): string {
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-enterprise-merchant-page="reports">
       <p class="text-sm text-muted-foreground">品牌级 SLA 看板 · REST API 演示（路径前缀 <code class="text-xs">${escapeHtml(merchantApiPath(eid))}</code>）</p>
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        ${kpi("在营品牌", summary.activeCount, `共 ${summary.merchantCount} 家`)}
+        ${kpi("已启用品牌", summary.activeCount, `共 ${summary.merchantCount} 家`)}
         ${kpi("平均可用性", `${summary.avgUptimePct.toFixed(2)}%`)}
         ${kpi("未结工单", summary.openTickets, `P1 ${summary.p1Tickets}`)}
         ${kpi("License 告警", summary.licenseExpiredCount + summary.licenseExpiringCount, `到期 ${summary.licenseExpiredCount} · 即将 ${summary.licenseExpiringCount}`)}
@@ -1152,42 +1141,13 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
     </nav>`;
 }
 
-function renderLifecycleActions(merchant: EnterpriseMerchant): string {
-  const id = merchant.merchantId;
-  const btn = (label: string, action: string, variant: "primary" | "outline" | "destructive" = "outline") => {
-    const cls =
-      variant === "primary"
-        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-        : variant === "destructive"
-          ? "border-destructive/50 text-destructive hover:bg-destructive/10"
-          : "border-border hover:bg-muted";
-    return `<button type="button" data-merchant-lifecycle="${action}" data-merchant-id="${escapeHtml(id)}" class="inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium ${cls}">${escapeHtml(label)}</button>`;
-  };
-  const parts: string[] = [];
-  if (canImpersonateMerchant(merchant)) {
-    parts.push(btn("进入商家后台", "impersonate", "primary"));
-  }
-  if (merchant.status === "draft" || merchant.status === "onboarding") {
-    parts.push(btn("发送邀请邮件", "send-invite"));
-    if (merchant.status === "onboarding") {
-      parts.push(btn("代完成 onboarding", "complete-onboarding"));
-    }
-  }
-  if (merchant.status === "active" || merchant.status === "suspended") {
-    if (merchant.status === "suspended") parts.push(btn("恢复在营", "restore-active", "primary"));
-    else parts.push(btn("暂停", "suspend", "destructive"));
-    parts.push(btn("发起关闭", "initiate-closing", "destructive"));
-  }
-  if (merchant.status === "closing") {
-    const days = getClosingDaysRemaining(merchant);
-    if (days !== null) parts.push(`<span class="inline-flex h-8 items-center px-1 text-xs text-muted-foreground">冷静期剩余约 ${days} 天</span>`);
-    parts.push(btn("取消关闭", "cancel-closing"));
-    parts.push(btn("立即归档（演示）", "finalize-closing", "destructive"));
-  }
-  if (merchant.status === "suspended") {
-    parts.push(btn("强制关闭", "force-close", "destructive"));
-  }
-  return `<div class="flex flex-wrap items-center gap-2">${parts.join("")}</div>`;
+function renderLifecycleActions(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
+ return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn ba-primary">进入商家后台</button>`:'';
+}
+function renderServicePanel(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
+ const status=serviceStatus(merchant.status),id=merchant.merchantId,issues=brandServiceReadiness(id);
+ const action=(key:BrandServiceAction,text:string)=>`<button type="button" class="ba-btn ${key==='close'||key==='suspend'?'ba-danger':'ba-primary'}" data-brand-service="${key}" data-merchant-id="${escapeHtml(id)}">${text}</button>`;
+ return `<section class="ba ba-card" style="margin-bottom:16px" data-brand-service-panel><div class="ba-head"><h2>服务状态 · ${escapeHtml(getMerchantStatusLabel(merchant.status))}</h2><div class="ba-actions">${status==='onboarding'?action('activate','启用品牌'):status==='active'?action('suspend','暂停服务')+action('close','关闭品牌'):status==='suspended'?action('resume','恢复服务')+action('close','关闭品牌'):''}</div></div><p>开通进度：${escapeHtml(brandOnboardingProgress(id))}</p><p class="ba-muted" style="margin-top:10px">${status==='active'?'品牌正常使用服务；门店营业状态由各门店单独管理。':status==='closed'?'品牌已关闭，当前不提供恢复入口。数据、账号、门店和菜单配置保留。':status==='suspended'?'当前品牌及全部门店停止商家后台访问；恢复服务后沿用原配置。':'待启用品牌可由M平台配置资料、菜单和管理员，商家账号暂不能登录。门店可在启用后继续关联。'}</p>${merchant.status==='closing'?'<p class="ba-admin-warning">历史关闭申请已停止自动倒计时，当前按暂停服务处理；请明确选择恢复服务或关闭品牌。</p>':''}${merchant.serviceReason||merchant.suspendedReason?`<p class="ba-muted" style="margin-top:10px">最近原因：${escapeHtml(merchant.serviceReason??merchant.suspendedReason??'')}</p>`:''}${status==='onboarding'&&issues.length?`<p class="ba-muted" style="margin-top:10px">启用前待完善：${issues.map(escapeHtml).join('；')}</p>`:''}</section>`;
 }
 
 function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
@@ -1197,6 +1157,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
     `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
   return `
+    ${renderServicePanel(merchant)}
     <div class="grid gap-4 lg:grid-cols-2">
       ${card(`
         <h2 class="text-sm font-semibold">基本信息</h2>
@@ -1214,7 +1175,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           ${row("License", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${licenseStatusBadgeClass(merchant.licenseStatus)}">${escapeHtml(getLicenseStatusLabel(merchant.licenseStatus))}</span>`)}
           ${merchant.suspendedReason ? row("暂停原因", escapeHtml(merchant.suspendedReason)) : ""}
           ${row("邀请邮件", formatDate(merchant.onboardingInviteSentAt))}
-          ${row("onboarding 完成", formatDate(merchant.onboardingCompletedAt))}
+          ${row("初始化完成时间", formatDate(merchant.onboardingCompletedAt))}
           ${
             merchant.status === "closing"
               ? row("冷静期至", formatDate(merchant.closingEndsAt))
@@ -1846,7 +1807,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       productLineIds,
       firstStoreName: String(fd.get("firstStoreName") ?? "") || undefined,
       firstStoreAddress: String(fd.get("firstStoreAddress") ?? "") || undefined,
-      activateImmediately: fd.get("activateImmediately") === "on",
+      activateImmediately: false,
       sendInviteEmail: fd.get("sendInviteEmail") === "on",
     };
     const merchant = createMerchant(input);
@@ -1854,62 +1815,8 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     onMount();
   });
 
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-status]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const merchantId = btn.dataset.merchantId;
-      const status = btn.dataset.merchantStatus as MerchantStatus | undefined;
-      if (!merchantId || !status) return;
-      updateMerchantStatus(merchantId, status);
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-lifecycle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const merchantId = btn.dataset.merchantId;
-      const action = btn.dataset.merchantLifecycle;
-      if (!merchantId || !action) return;
-      if (action === "impersonate") {
-        if (!enterMerchantBackendAsImpersonator(merchantId, merchantDetailHref(merchantId))) {
-          window.alert("当前品牌状态不支持代登录。");
-        }
-        return;
-      }
-      if (action === "send-invite") {
-        const preview = sendOnboardingInvite(merchantId);
-        if (preview) window.alert(`邀请邮件已发送（演示预览）：\n\n${preview}`);
-        else window.alert("无法发送邀请：品牌状态不符或不存在。");
-        onMount();
-        return;
-      }
-      if (action === "complete-onboarding") {
-        completeMerchantOnboarding(merchantId);
-        onMount();
-        return;
-      }
-      if (action === "restore-active" || action === "suspend") {
-        updateMerchantStatus(merchantId, action === "restore-active" ? "active" : "suspended");
-        onMount();
-        return;
-      }
-      if (action === "initiate-closing") {
-        if (!window.confirm("确认发起关闭流程？将进入 30 天冷静期（只读）。")) return;
-        initiateMerchantClosing(merchantId);
-        onMount();
-        return;
-      }
-      if (action === "cancel-closing") {
-        cancelMerchantClosing(merchantId);
-        onMount();
-        return;
-      }
-      if (action === "finalize-closing" || action === "force-close") {
-        if (!window.confirm("确认立即关闭并归档该品牌？")) return;
-        finalizeMerchantClosing(merchantId);
-        onMount();
-      }
-    });
-  });
+  document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
+  document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;if(!enterMerchantBackendAsImpersonator(id,merchantDetailHref(id)))window.alert('当前品牌服务状态不支持代登录。');});
 
   document.querySelectorAll<HTMLButtonElement>("[data-merchant-impersonate]").forEach((btn) => {
     btn.addEventListener("click", () => {

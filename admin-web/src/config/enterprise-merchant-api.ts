@@ -1,3 +1,5 @@
+import {transitionBrandService} from './brand-service-lifecycle';
+import {serviceStatus} from './brand-service-policy';
 /**
  * M 平台 · 品牌 REST API 演示层
  * 路径约定：/api/enterprises/{enterpriseId}/merchants[...]
@@ -130,17 +132,9 @@ export async function apiGetMerchant(
   return runApi("GET", path, () => merchant);
 }
 
-export async function apiPatchMerchantStatus(
-  merchantId: string,
-  status: Parameters<typeof updateMerchantStatus>[1],
-  enterpriseId: string = readActiveEnterpriseId(),
-) {
-  const path = merchantApiPath(enterpriseId, `/${encodeURIComponent(merchantId)}/status`);
-  return runApi("PATCH", path, () => {
-    const updated = updateMerchantStatus(merchantId, status);
-    if (!updated) throw new Error("Merchant not found");
-    return updated;
-  }, `status → ${status}`);
+export async function apiPatchMerchantStatus(merchantId:string,status:Parameters<typeof updateMerchantStatus>[1],enterpriseId:string=readActiveEnterpriseId(),options?:{reason:string;expected:string}) {
+ const path=merchantApiPath(enterpriseId,`/${encodeURIComponent(merchantId)}/status`);
+ return runApi('PATCH',path,()=>{if(!options)throw Error('服务状态修改需要版本和操作原因。');const merchant=getMerchantById(merchantId);if(!merchant)throw Error('品牌不存在。');if(!['active','suspended','closed'].includes(status))throw Error('不支持该服务状态。');transitionBrandService(merchantId,status==='active'?(serviceStatus(merchant.status)==='onboarding'?'activate':'resume'):status==='suspended'?'suspend':'close',options.reason,options.expected);return getMerchantById(merchantId);},`status → ${status}`);
 }
 
 export async function apiPostCrmSync(

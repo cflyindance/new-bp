@@ -1,3 +1,4 @@
+import { serviceStatus,serviceLabel } from './brand-service-policy';
 import { brandMenuChoices } from './brand-menu-choices';
 import { brandMenuRouteVersion } from './enterprise-merchant-services';
 import { centerKeysForRaw } from './brand-menu-catalog';
@@ -396,12 +397,14 @@ function processLicenseExpiry(snapshot: EnterpriseMerchantSnapshot): boolean {
     if (exp >= now) continue;
     merchant.status = "suspended";
     merchant.suspendedReason = "License / 合同到期自动暂停";
+    merchant.serviceReason = merchant.suspendedReason;
     merchant.licenseStatus = "suspended";
     merchant.updatedAt = nowIso();
     appendChangelog(snapshot, {
       enterpriseId: merchant.enterpriseId,
       merchantId: merchant.merchantId,
       action: "license.expired",
+      facts:{category:"品牌服务",title:"自动暂停服务",target:merchant.name,source:"系统",fields:[{name:"服务状态",before:"已启用",after:"已暂停"},{name:"暂停原因",before:"—",after:"License / 合同到期自动暂停"}]},
       operatorEmail: "system@menusifu.cn",
       detail: `合同已于 ${new Date(merchant.contractExpiresAt).toLocaleDateString("zh-CN")} 到期，系统自动暂停`,
     });
@@ -1495,27 +1498,6 @@ function addDaysIso(from: Date, days: number): string {
   return d.toISOString();
 }
 
-function processClosingCooldowns(snapshot: EnterpriseMerchantSnapshot): boolean {
-  let changed = false;
-  const now = Date.now();
-  for (const merchant of snapshot.merchants) {
-    if (merchant.status !== "closing" || !merchant.closingEndsAt) continue;
-    if (new Date(merchant.closingEndsAt).getTime() > now) continue;
-    merchant.status = "closed";
-    merchant.closedAt = nowIso();
-    merchant.closingStartedAt = undefined;
-    merchant.closingEndsAt = undefined;
-    merchant.updatedAt = nowIso();
-    appendChangelog(snapshot, {
-      merchantId: merchant.merchantId,
-      action: "status.closed",
-      operatorEmail: "system@menusifu.cn",
-      detail: `冷静期结束，品牌已自动归档关闭`,
-    });
-    changed = true;
-  }
-  return changed;
-}
 
 function readSnapshot(): EnterpriseMerchantSnapshot {
   if (snapshotReadDepth > 0 && cachedSnapshot) {
@@ -1537,7 +1519,7 @@ function readSnapshot(): EnterpriseMerchantSnapshot {
             parsed.requests = buildSeedSnapshot().requests;
             changed = true;
           }
-          if (processClosingCooldowns(parsed)) changed = true;
+          // Legacy closing requests remain paused until explicitly handled; no automatic close.
           if (processLicenseExpiry(parsed)) changed = true;
           if (dedupeMerchantOrgStores(parsed)) changed = true;
           if (needsOrgMidMigration(parsed)) {
@@ -1598,6 +1580,10 @@ function appendChangelog(
   });
 }
 
+export function recordMerchantFirstLogin(id:string):void {
+ const snap=readSnapshot(),m=snap.merchants.find(m=>m.merchantId===id);if(!m||m.status!=='active'||m.firstLoginAt)return;m.firstLoginAt=nowIso();localStorage.setItem(STORAGE_KEY,JSON.stringify(snap));cachedSnapshot=snap;
+}
+
 export function getEnterpriseMerchantSnapshot(): EnterpriseMerchantSnapshot {
   return readSnapshot();
 }
@@ -1610,7 +1596,7 @@ export function getMerchants(filter: MerchantFilter = {}): EnterpriseMerchant[] 
   return snap.merchants.filter((m) => {
     if (linkedTenants?.has(m.merchantId)) return false;
     if (!all && m.enterpriseId !== eid) return false;
-    if (filter.status && m.status !== filter.status) return false;
+    if (filter.status && serviceStatus(m.status) !== serviceStatus(filter.status)) return false;
     if (filter.orgType && m.orgType !== filter.orgType) return false;
     if (filter.groupId && m.groupId !== filter.groupId) return false;
     if (filter.query) {
@@ -1986,9 +1972,9 @@ export function getMerchantOverviewStats(): {
     total: merchants.length,
     active: merchants.filter((m) => m.status === "active").length,
     onboarding: merchants.filter((m) => m.status === "onboarding" || m.status === "draft").length,
-    suspended: merchants.filter((m) => m.status === "suspended").length,
+    suspended: merchants.filter((m) => serviceStatus(m.status) === "suspended").length,
     draft: merchants.filter((m) => m.status === "draft").length,
-    closed: merchants.filter((m) => m.status === "closed" || m.status === "closing").length,
+    closed: merchants.filter((m) => m.status === "closed").length,
     storeCount: snap.stores.filter((s) => ids.has(s.merchantId)).length,
     expiringSoon: merchants.filter((m) => {
       if (!m.contractExpiresAt) return false;
@@ -2000,11 +1986,11 @@ export function getMerchantOverviewStats(): {
 
 export function getMerchantStatusLabel(status: MerchantStatus): string {
   const map: Record<MerchantStatus, string> = {
-    draft: "草稿",
-    onboarding: "待引导",
-    active: "在营",
+    draft: "待启用",
+    onboarding: "待启用",
+    active: "已启用",
     suspended: "已暂停",
-    closing: "关闭中",
+    closing: "已暂停（历史关闭待处理）",
     closed: "已关闭",
   };
   return map[status] ?? status;
@@ -2047,22 +2033,21 @@ export function getProductLineOptions(): { id: string; label: string }[] {
   return FOH_LINE_NAV_ORDER.map((pl) => ({ id: pl.id, label: pl.label }));
 }
 
-export function updateMerchantStatus(merchantId: string, status: MerchantStatus, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
-  if (!merchant) return null;
-  const prev = merchant.status;
-  merchant.status = status;
-  merchant.updatedAt = nowIso();
-  if (status === "active" && !merchant.activatedAt) merchant.activatedAt = nowIso();
-  appendChangelog(snap, {
-    merchantId,
-    action: `status.${status}`,
-    operatorEmail,
-    detail: `状态由「${getMerchantStatusLabel(prev)}」变更为「${getMerchantStatusLabel(status)}」`,
-  });
-  writeSnapshot(snap);
-  return merchant;
+export function updateMerchantStatus(merchantId:string,status:MerchantStatus,operatorEmail=DEMO_OPERATOR,options?:{expected:string;reason:string}):EnterpriseMerchant|null {
+  if(!options)throw Error('请通过品牌服务状态操作，并填写原因。');
+  if(brandConfigurationVersion(merchantId)!==options.expected)throw Error('品牌配置已更新，请刷新后重试。');
+  const snap=structuredClone(readSnapshot()),merchant=snap.merchants.find(m=>m.merchantId===merchantId);if(!merchant)return null;
+  const previous=serviceStatus(merchant.status),reason=options.reason.trim();
+  if(reason.length<2||reason.length>200)throw Error('请填写2至200字的操作原因。');
+  if(!['active','suspended','closed'].includes(status)||previous==='closed'||previous===status||!(previous==='onboarding'&&status==='active'||previous==='active'&&['suspended','closed'].includes(status)||previous==='suspended'&&['active','closed'].includes(status)))throw Error('当前品牌状态不支持此操作。');
+  const title=status==='closed'?'关闭品牌':status==='suspended'?'暂停服务':previous==='onboarding'?'启用品牌':'恢复服务';
+  merchant.status=status;merchant.updatedAt=nowIso();merchant.serviceReason=reason;
+  if(status==='active'){merchant.activatedAt??=nowIso();merchant.suspendedReason=undefined;}
+  if(status==='suspended')merchant.suspendedReason=reason;
+  if(status==='closed')merchant.closedAt=nowIso();
+  merchant.closingStartedAt=undefined;merchant.closingEndsAt=undefined;merchant.licenseStatus=computeLicenseStatus(merchant);
+  appendChangelog(snap,{merchantId,action:'service.'+status,operatorEmail,detail:`${title}：${serviceLabel(previous)} → ${serviceLabel(status)}；原因：${reason}`,facts:{category:'品牌服务',title,target:merchant.name,source:'M 平台运营',fields:[{name:'服务状态',before:serviceLabel(previous),after:serviceLabel(status)},{name:'操作原因',before:'—',after:reason},{name:'影响范围',before:'当前品牌及其全部门店',after:status==='active'?'按原菜单及账号权限提供服务':'停止商家后台访问，保留数据和配置'}]}});
+  persistBrandConfiguration(snap);return merchant;
 }
 
 export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant {
@@ -2225,7 +2210,8 @@ export function ensureBrandCreationDemoStores(groupId: string): void {
 
 export function brandConfigurationVersion(id:string):string {
   const snap=readSnapshot();
-  return JSON.stringify({routeVersion:brandMenuRouteVersion(),cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
+  const merchant=snap.merchants.find(m=>m.merchantId===id);const {firstLoginAt:_,...serviceMerchant}=merchant??{};
+  return JSON.stringify({merchant:serviceMerchant,routeVersion:brandMenuRouteVersion(),cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
 }
 
 function validateExplicitMenuKeys(keys:string[],productLines:string[]):string[] {
@@ -2566,8 +2552,7 @@ export function sendOnboardingInvite(merchantId: string, operatorEmail = DEMO_OP
 export function completeMerchantOnboarding(merchantId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
   const snap = readSnapshot();
   const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
-  if (!merchant || merchant.status !== "onboarding") return null;
-  merchant.status = "active";
+  if (!merchant || merchant.status !== "active") return null;
   merchant.onboardingCompletedAt = nowIso();
   merchant.updatedAt = nowIso();
   if (!merchant.activatedAt) merchant.activatedAt = nowIso();
@@ -2579,7 +2564,7 @@ export function completeMerchantOnboarding(merchantId: string, operatorEmail = D
     merchantId,
     action: "onboarding.complete",
     operatorEmail,
-    detail: "M 平台代完成 onboarding，品牌变更为在营",
+    detail: "初始化完成，品牌服务状态保持不变",
   });
   writeSnapshot(snap);
   return merchant;
@@ -2591,30 +2576,16 @@ export function getClosingDaysRemaining(merchant: EnterpriseMerchant): number | 
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
 }
 
-export function initiateMerchantClosing(merchantId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
-  if (!merchant || (merchant.status !== "active" && merchant.status !== "suspended")) return null;
-  const started = nowIso();
-  merchant.status = "closing";
-  merchant.closingStartedAt = started;
-  merchant.closingEndsAt = addDaysIso(new Date(), CLOSING_COOLDOWN_DAYS);
-  merchant.updatedAt = nowIso();
-  appendChangelog(snap, {
-    merchantId,
-    action: "status.closing",
-    operatorEmail,
-    detail: `发起关闭流程，${CLOSING_COOLDOWN_DAYS} 天冷静期至 ${new Date(merchant.closingEndsAt).toLocaleDateString("zh-CN")}`,
-  });
-  writeSnapshot(snap);
-  return merchant;
+/** @deprecated Use the reasoned, version-checked service close action. */
+export function initiateMerchantClosing(_merchantId:string,_operatorEmail=DEMO_OPERATOR):never {
+  throw Error('已取消关闭冷静期，请通过品牌服务状态关闭品牌并填写原因。');
 }
 
 export function cancelMerchantClosing(merchantId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
   const snap = readSnapshot();
   const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
   if (!merchant || merchant.status !== "closing") return null;
-  merchant.status = "active";
+  merchant.status = "suspended";
   merchant.closingStartedAt = undefined;
   merchant.closingEndsAt = undefined;
   merchant.updatedAt = nowIso();
@@ -2622,29 +2593,15 @@ export function cancelMerchantClosing(merchantId: string, operatorEmail = DEMO_O
     merchantId,
     action: "status.closing.cancel",
     operatorEmail,
-    detail: "取消关闭流程，恢复在营",
+    detail: "取消历史关闭申请，保留暂停状态，恢复服务需另行校验",
   });
   writeSnapshot(snap);
   return merchant;
 }
 
-export function finalizeMerchantClosing(merchantId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
-  if (!merchant || (merchant.status !== "closing" && merchant.status !== "suspended")) return null;
-  merchant.status = "closed";
-  merchant.closedAt = nowIso();
-  merchant.closingStartedAt = undefined;
-  merchant.closingEndsAt = undefined;
-  merchant.updatedAt = nowIso();
-  appendChangelog(snap, {
-    merchantId,
-    action: "status.closed",
-    operatorEmail,
-    detail: operatorEmail === "system@menusifu.cn" ? "冷静期结束，品牌已归档关闭" : "品牌已关闭并归档",
-  });
-  writeSnapshot(snap);
-  return merchant;
+/** @deprecated Legacy force-close must not bypass service checks and audit. */
+export function finalizeMerchantClosing(_merchantId:string,_operatorEmail=DEMO_OPERATOR):never {
+  throw Error('请通过品牌服务状态关闭品牌并填写原因。');
 }
 
 export function getProvisioningRequests(status?: MerchantProvisioningRequest["status"]): MerchantProvisioningRequest[] {
@@ -2892,10 +2849,10 @@ export function getMerchantTodos(): MerchantTodoItem[] {
       todos.push({
         id: `todo-ob-${merchant.merchantId}`,
         kind: "onboarding",
-        title: `onboarding 未完成：${merchant.name}`,
+        title: `品牌待启用：${merchant.name}`,
         detail: merchant.onboardingInviteSentAt
           ? `已发邀请 · ${merchant.primaryAdminEmail ?? "—"}`
-          : `待发送邀请 · ${merchant.primaryAdminEmail ?? "—"}`,
+          : `请完善管理员和菜单后启用 · ${merchant.primaryAdminEmail ?? "—"}`,
         href: `/m-platform/merchants/${encodeURIComponent(merchant.merchantId)}`,
         merchantId: merchant.merchantId,
         priority: "normal",
@@ -2923,12 +2880,12 @@ export function getMerchantTodos(): MerchantTodoItem[] {
       todos.push({
         id: `todo-closing-${merchant.merchantId}`,
         kind: "closing",
-        title: `关闭冷静期中：${merchant.name}`,
-        detail: days !== null ? `剩余约 ${days} 天` : "等待归档",
+        title: `历史关闭申请待处理：${merchant.name}`,
+        detail: "当前按暂停服务处理，不再自动关闭；请运营明确选择恢复服务或关闭品牌",
         href: `/m-platform/merchants/${encodeURIComponent(merchant.merchantId)}`,
         merchantId: merchant.merchantId,
         priority: "high",
-        at: merchant.closingEndsAt,
+        at: merchant.updatedAt,
       });
     }
     if (
@@ -3093,10 +3050,7 @@ export function renewMerchantContract(
   else merchant.contractStatus = "active";
   merchant.crmLastSyncedAt = nowIso();
   merchant.licenseStatus = computeLicenseStatus(merchant);
-  if (input.restoreActive !== false && merchant.status === "suspended" && merchant.suspendedReason?.includes("License")) {
-    merchant.status = "active";
-    merchant.suspendedReason = undefined;
-  }
+  // Renewal clears the expiry condition; restoring service is a separate audited action.
   merchant.updatedAt = nowIso();
   appendChangelog(snap, {
     merchantId,
