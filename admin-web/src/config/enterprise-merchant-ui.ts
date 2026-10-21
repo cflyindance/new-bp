@@ -552,10 +552,6 @@ function renderStoreListPage(): string {
   const rows = getEnterpriseStoreList(listEnterpriseStoresFilter());
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="stores">
-      <div class="flex shrink-0 flex-wrap items-center justify-between gap-3">
-
-        <a href="${merchantHref("/org-tree")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">组织树视图</a>
-      </div>
       <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-store-filter-form>
         <label class="flex min-w-[10rem] flex-col gap-1">
           <span class="text-xs text-muted-foreground">所属集团</span>
