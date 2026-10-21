@@ -70,7 +70,7 @@ function writeImpersonationSession(session: MerchantImpersonationSession | null)
 
 export function canImpersonateMerchant(merchant: EnterpriseMerchant): boolean {
   if(merchant.accountProvisioningRequired && !brandPrimaryAdminEmail(merchant.merchantId))return false;
-  return merchant.status !== "closed" && merchant.status !== "draft";
+  return merchant.status === "active";
 }
 
 function resolveEntryPath(merchant: EnterpriseMerchant): string {
