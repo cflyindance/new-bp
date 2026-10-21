@@ -1,3 +1,6 @@
+import {bindBrandChangeLog} from './brand-change-log';
+import {bindOpenedBrandMenuTree} from './brand-menu-read-tree';
+import {brandStorePerspectiveCeiling} from './enterprise-merchant-services';
 import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,filteredManagementStores,savedManagementFilter} from './management-list-filters';
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
@@ -1416,7 +1419,7 @@ function renderStoreDetailTabs(storeId: string, tab: StoreDetailTab): string {
   return `
     <nav class="flex flex-wrap gap-1 border-b border-border">
       <a href="${storeDetailHref(storeId)}" class="${tabClass("overview")}">概览</a>
-      <a href="${storeDetailHref(storeId, "capabilities")}" class="${tabClass("capabilities")}">能力与服务</a>
+      <a href="${storeDetailHref(storeId, "capabilities")}" class="${tabClass("capabilities")}">门店菜单</a>
       <a href="${storeDetailHref(storeId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
     </nav>`;
 }
@@ -1447,17 +1450,18 @@ function renderStoreDetailOverview(storeId: string): string {
         </dl>
       `)}
       ${card(`
-        <h2 class="text-sm font-semibold">能力摘要</h2>
+        <h2 class="text-sm font-semibold">菜单摘要</h2>
         <dl class="mt-2">
-          ${row("品牌已开通项", String(brandCap ? brandCapabilityCeilingKeys(brandCap, resolveMerchantServiceProductLine(brandCap.productLineIds)).size : 0))}
-          ${row("本店可选范围", String(brandCap ? brandStoreSelectableCeiling(brandCap, resolveMerchantServiceProductLine(brandCap.productLineIds)).size : 0))}
-          ${row("本店已开通项", String(storeCap?.enabledKeys.length ?? 0))}
+          ${row("品牌开通页面", String(brandMenuChoices(brandCap?.productLineIds).filter(c=>c.isPage&&brandRawMenuKeys(store.merchantId).has(c.key)).length))}
+          ${row("门店可选页面", String(brandMenuChoices(brandCap?.productLineIds).filter(c=>c.isPage&&brandCap&&brandStorePerspectiveCeiling(brandCap).has(c.key)).length))}
+          ${row("门店生效页面", String(brandMenuChoices(brandCap?.productLineIds).filter(c=>c.isPage&&storeCap?.enabledKeys.includes(c.key)).length))}
+          ${row("菜单配置方式", storeCap?.menuMode==="inherit"?"继承品牌菜单":"独立配置")}
           ${row("上次更新", formatDate(storeCap?.updatedAt))}
           ${row("操作人", escapeHtml(storeCap?.updatedBy ?? "—"))}
         </dl>
-        <p class="mt-3 text-xs text-muted-foreground">本店仅可在品牌已开通范围内勾选；未单独配置时默认全部关闭。</p>
+        <p class="mt-3 text-xs text-muted-foreground">继承模式随品牌菜单同步，独立配置按本店设置生效。</p>
         <div class="mt-4 flex flex-wrap gap-2">
-          <a href="${storeDetailHref(storeId, "capabilities")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">配置能力与服务</a>
+          <a href="${storeDetailHref(storeId, "capabilities")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">编辑门店菜单</a>
           <a href="${storeDetailHref(storeId, "changelog")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">变更记录</a>
         </div>
       `)}
@@ -1465,42 +1469,11 @@ function renderStoreDetailOverview(storeId: string): string {
 }
 
 function renderStoreDetailCapabilities(storeId: string): string {
-  return `<section class="ba ba-card"><h2>门店菜单开通</h2><p class="ba-muted">在品牌已开通范围内配置本店菜单，与品牌 Admin 的配置结果保持一致。</p><button class="ba-btn ba-primary" data-brand-single-store="${escapeHtml(storeId)}">配置本店菜单</button></section>`;
+  const cap=getStoreCapability(storeId);
+  return '<section class="ba"><header class="ba-head"><h2>门店菜单</h2><button class="ba-btn ba-primary" data-brand-single-store="'+escapeHtml(storeId)+'">编辑门店菜单</button></header><p class="ba-muted" style="margin-bottom:16px">菜单配置方式：'+(cap?.menuMode==='inherit'?'继承品牌菜单':'独立配置')+'</p><div data-store-menu-read="'+escapeHtml(storeId)+'"></div></section>';
 }
-
-function storeCapabilityActionLabel(action: string): string {
-  if (action === "store.capability.update") return "更新能力与服务";
-  if (action.startsWith("store.capability")) return "门店能力变更";
-  return action;
-}
-
 function renderStoreDetailChangelog(storeId: string): string {
-  const logs = getStoreChangelog(storeId);
-  if (logs.length === 0) {
-    return card(`
-      <p class="text-sm text-muted-foreground">暂无本店能力变更记录</p>
-      <p class="mt-2 text-xs text-muted-foreground">在「能力与服务」中保存后，将在此展示开通项增减与操作人。</p>
-      <a href="${storeDetailHref(storeId, "capabilities")}" class="mt-4 inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">去配置能力与服务</a>
-    `);
-  }
-  return `
-    <div class="space-y-2">
-      <p class="text-xs text-muted-foreground">共 ${logs.length} 条本店能力相关变更</p>
-      ${logs
-        .map(
-          (l) => `
-        <div class="rounded-xl border border-border bg-card p-4">
-          <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="font-medium">${escapeHtml(storeCapabilityActionLabel(l.action))}</span>
-            <span class="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">${escapeHtml(l.action)}</span>
-            <span class="text-xs text-muted-foreground">${formatDate(l.at)}</span>
-          </div>
-          <p class="mt-1 text-sm text-muted-foreground">${escapeHtml(l.detail)}</p>
-          <p class="mt-2 text-xs text-muted-foreground">${escapeHtml(l.operatorEmail)}</p>
-        </div>`,
-        )
-        .join("")}
-    </div>`;
+  return '<section class="ba" data-store-change-log="'+escapeHtml(storeId)+'"></section>';
 }
 
 function renderStoreDetailPage(storeId: string, tab: StoreDetailTab): string {
@@ -1587,6 +1560,8 @@ function readStoreFilter(form: HTMLFormElement): Parameters<typeof getEnterprise
 }
 
 export function bindEnterpriseMerchant(onMount: () => void): void {
+  document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
+  document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces();
   bindBrandCreateWizard();
   document.querySelectorAll<HTMLButtonElement>("[data-brand-single-store]").forEach(button => button.onclick = () => { const store=getStoreById(button.dataset.brandSingleStore!); if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],"m-platform",onMount); });
