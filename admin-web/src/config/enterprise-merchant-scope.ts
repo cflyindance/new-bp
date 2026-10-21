@@ -105,10 +105,10 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     return { title: group ? `编辑集团 · ${group.name}` : "编辑集团", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (isMerchantListPath(path)) {
-    return { title: "品牌列表", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+    return { title: "品牌管理", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (isStoreListPath(path)) {
-    return { title: "门店列表", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+    return { title: "门店管理", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   const storeDetail = parseStoreDetailPath(path);
   if (storeDetail) {

@@ -53,6 +53,7 @@ import {
   isMPlatformMerchantPath,
   merchantHref,
   parseMerchantDetailPath,
+  parseStoreDetailPath,
 } from "../config/enterprise-merchant-scope";
 import { bindEnterpriseMerchant, renderEnterpriseMerchantPage } from "../config/enterprise-merchant-ui";
 import { exitMPlatformShell } from "./app-shell-mode";
@@ -424,6 +425,9 @@ function renderMPlatformMain(path: string): string {
 }
 
 export function mountMPlatformShell(_onMount: () => void, path: string): string {
+  if (parseStoreDetailPath(path)) {
+    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
+  }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
     return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
   }

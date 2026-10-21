@@ -212,8 +212,8 @@ function renderOverviewPage(): string {
         <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
         <a href="${merchantHref("/requests")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">开通申请 / 待办</a>
         <a href="${merchantHref("/reports")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">报表 / SLA</a>
-        <a href="${merchantHref("")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">品牌列表</a>
-        <a href="${merchantHref("/stores")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">门店列表</a>
+        <a href="${merchantHref("")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">品牌管理</a>
+        <a href="${merchantHref("/stores")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">门店管理</a>
       </div>
       ${
         todos.length
@@ -650,7 +650,7 @@ function renderNewMerchantPage(): string {
           </div>`;
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-enterprise-merchant-page="new">
-      <a href="${merchantHref("")}" class="text-sm text-primary hover:underline">← 返回品牌列表</a>
+      <a href="${merchantHref("")}" class="text-sm text-primary hover:underline">← 返回品牌管理</a>
       ${card(`
         <h2 class="text-sm font-semibold text-card-foreground">M 平台代开通品牌</h2>
         <p class="mt-1 text-sm text-muted-foreground">填写基本信息、能力与首店信息；保存后写入本地演示数据。</p>
@@ -1459,7 +1459,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="detail">
-      <a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌列表</a>
+      <a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>
       <div class="shrink-0">
         <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(merchant.name)}</h2>
         <p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>
@@ -1577,7 +1577,7 @@ function renderStoreDetailPage(storeId: string, tab: StoreDetailTab): string {
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="store-detail">
-      <a href="${merchantHref("/stores")}" class="shrink-0 text-sm text-primary hover:underline">← 返回门店列表</a>
+      <a href="${merchantHref("/stores")}" class="shrink-0 text-sm text-primary hover:underline">← 返回门店管理</a>
       <div class="shrink-0">
         <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(store.name)}</h2>
         <p class="text-xs text-muted-foreground">
