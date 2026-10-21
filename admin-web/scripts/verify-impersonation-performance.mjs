@@ -1,0 +1,19 @@
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({channel:'msedge',headless:true}),base=process.env.BRAND_PREVIEW_URL??'http://127.0.0.1:5238';
+try{
+ for(const kind of ['brand','store']){
+  const context=await browser.newContext(),p=await context.newPage();await p.goto(base);await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('hq.admin@menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('hq.admin@menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});await p.goto(base+'/#/m-platform/merchants'+(kind==='store'?'/stores':''));await p.locator('[data-management-filters]').waitFor();
+  const cdp=await context.newCDPSession(p);await cdp.send('Profiler.enable');await cdp.send('Profiler.start');
+  const result=await p.evaluate(async kind=>{const i=await import('/src/config/enterprise-merchant-impersonate.ts'),s=await import('/src/config/enterprise-merchant-store.ts');const row=s.getEnterpriseStoreList({allEnterprises:true}).find(r=>i.canImpersonateStore(r.store.storeId));let reads=0;const original=Storage.prototype.getItem;Storage.prototype.getItem=function(key){if(key==='menusifu:enterprise-merchants-v1')reads++;return original.call(this,key);};const start=performance.now();try{const session=i.startMerchantImpersonation(row.merchantId,undefined,'#/m-platform/merchants',kind==='store'?row.store.storeId:undefined);return {ms:performance.now()-start,reads,ok:!!session};}finally{Storage.prototype.getItem=original;}},kind);
+  const {profile}=await cdp.send('Profiler.stop');const nodes=new Map(profile.nodes.map(n=>[n.id,n])),counts=new Map();for(const id of profile.samples??[]){const n=nodes.get(id),name=n.callFrame.functionName+' '+n.callFrame.url.split('/').slice(-1)[0];counts.set(name,(counts.get(name)??0)+1);}console.log(JSON.stringify({kind,...result,top:[...counts].sort((a,b)=>b[1]-a[1]).slice(0,10)}));assert(result.ok);
+  if(!process.env.PROFILE_ONLY)assert(result.ms<300,kind+' entry should finish within 300ms, actual '+result.ms);
+  await p.evaluate(async()=>(await import('/src/config/enterprise-merchant-impersonate.ts')).endMerchantImpersonation());await p.goto(base+'/#/m-platform/merchants'+(kind==='store'?'/stores':''));await p.locator('[data-management-filters]').waitFor();
+  await cdp.send('Profiler.start');await p.evaluate(()=>{window.__entryReads=0;window.__getItem=Storage.prototype.getItem;Storage.prototype.getItem=function(key){if(key==='menusifu:enterprise-merchants-v1')window.__entryReads++;return window.__getItem.call(this,key);};});
+  const button=p.locator(kind==='store'?'[data-store-impersonate]:not([disabled])':'[data-merchant-impersonate]').first();await button.evaluate(el=>{window.__entryStart=performance.now();el.click();});await p.locator('[data-merchant-impersonation-banner]').waitFor();const full=await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{Storage.prototype.getItem=window.__getItem;resolve({ms:performance.now()-window.__entryStart,reads:window.__entryReads});}))));
+  const {profile:fullProfile}=await cdp.send('Profiler.stop'),fullNodes=new Map(fullProfile.nodes.map(n=>[n.id,n])),fullCounts=new Map();for(const id of fullProfile.samples??[]){const n=fullNodes.get(id),name=n.callFrame.functionName+' '+n.callFrame.url.split('/').slice(-1)[0];fullCounts.set(name,(fullCounts.get(name)??0)+1);}console.log(JSON.stringify({kind,full,top:[...fullCounts].sort((a,b)=>b[1]-a[1]).slice(0,10)}));
+  if(!process.env.PROFILE_ONLY)assert(full.ms<800,kind+' click-to-render should finish within 800ms, actual '+full.ms);
+  await context.close();
+ }
+}finally{await browser.close();}

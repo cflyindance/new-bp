@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({channel:'msedge',headless:true}),base=process.env.BRAND_PREVIEW_URL??'http://127.0.0.1:5238';
+try{
+ const p=await browser.newPage();await p.goto(base);await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('hq.admin@menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('hq.admin@menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});await p.goto(base+'/#/m-platform/merchants');await p.locator('[data-management-filters]').waitFor();
+ const clone=await p.evaluate(async()=>{const n=await import('/src/config/nav-blueprint-current-tree.ts'),lang=await import('/src/i18n.ts');const original=JSON.stringify(n.buildCurrentSystemMenuGroups()),changed=n.buildCurrentSystemMenuGroups();changed[0].tree.children=[];changed[0].tree.resource.title='MUTATED';const isolated=JSON.stringify(n.buildCurrentSystemMenuGroups())===original;lang.setUiLocale('en');const en=n.buildCurrentSystemMenuGroups();lang.setUiLocale('zh-CN');return {isolated,localized:en.length>0,restored:JSON.stringify(n.buildCurrentSystemMenuGroups())===original};});assert(clone.isolated&&clone.localized&&clone.restored);
+ await p.evaluate(async()=>{const i=await import('/src/config/enterprise-merchant-impersonate.ts');if(!i.enterStoreBackendAsImpersonator('M00000001','#/m-platform/merchants'))throw Error('entry failed');});await p.locator('[data-merchant-impersonation-banner]').waitFor();
+ const allowed=()=>p.evaluate(async()=>(await import('/src/config/brand-access-store.ts')).isBrandPathAllowed('/team/clock-in'));assert(await allowed());
+ const update=mode=>p.evaluate(async mode=>{const s=await import('/src/config/enterprise-merchant-store.ts');s.saveBrandStoreMenus('merchant-zhangji',['M00000001'],[],mode,s.brandConfigurationVersion('merchant-zhangji'),'hq.admin@menusifu.cn','M平台运营');},mode);
+ await update('replace');assert.equal(await allowed(),false,'menu removal invalidates cached raw mapping');await update('inherit');assert.equal(await allowed(),true,'restoring inherited menu recomputes grants');
+ await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts');const raw=s.getEnterpriseMerchantSnapshot();raw.merchants.find(m=>m.merchantId==='merchant-zhangji').status='suspended';localStorage.setItem('menusifu:enterprise-merchants-v1',JSON.stringify(raw));});assert.equal(await allowed(),false,'service state is never cached with directory');
+ console.log('PASS readonly tree clone isolation, locale rebuild, grant removal/restoration and service pause take effect with cached directory');
+}finally{await browser.close();}
