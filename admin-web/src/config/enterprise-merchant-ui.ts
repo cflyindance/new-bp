@@ -529,7 +529,7 @@ function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
   return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>品牌状态</th><th>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.level===2&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
-    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId,'accounts')}">账号与角色</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
+    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId,'accounts')}">品牌管理员</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -1147,7 +1147,7 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
       <a href="${merchantDetailHref(merchantId, "overview")}" class="${tabClass("overview")}">概览</a>
       <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">品牌门店</a>
       <a href="${merchantDetailHref(merchantId, "capabilities")}" class="${tabClass("capabilities")}">品牌菜单</a>
-      <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">账号与角色</a>
+      <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">品牌管理员</a>
       <a href="${merchantDetailHref(merchantId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
     </nav>`;
 }

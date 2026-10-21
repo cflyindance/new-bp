@@ -6,6 +6,8 @@ export interface BrandAccount {
   email: string;
   enabled: boolean;
   admin: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
   /** Local prototype credentials; use the existing authentication service in production. */
   password: string;
 }
