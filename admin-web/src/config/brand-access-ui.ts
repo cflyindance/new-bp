@@ -105,13 +105,34 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   const ceiling=brandRawMenuKeys(id),choices=brandMenuChoices(cap.productLineIds),inherited=brandStorePerspectiveCeiling(cap);
   const initial=stores.length===1?getStoreCapability(stores[0].storeId)?.enabledKeys??[]:[];
   const defaultMode=stores.length===1?(getStoreCapability(stores[0].storeId)?.menuMode==='inherit'?'inherit':'replace'):'add';
-  let read=()=>initial;
-  const d=dialog(stores.length===1?`${stores[0].name} · 菜单配置`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form,review)=>{
-    const mode=new FormData(form).get('mode') as 'inherit'|'add'|'replace',selected=mode==='inherit'?[]:read();
-    if(review.hidden){review.innerHTML=`<h3>${mode==='inherit'?'继承品牌菜单，后续自动同步':'独立配置门店菜单'}</h3>`;for(const store of stores){const before=getStoreCapability(store.storeId)?.enabledKeys??[],after=mode==='inherit'?[...inherited]:updateMenuKeys(before,selected,mode,ceiling);menuDiff(review,before,after,choices,store.name);}review.hidden=false;return;}
-    saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),source==='merchant'?'品牌 Admin':'M 平台运营');
-    showAppToast('门店菜单已保存',{variant:'success'});onSaved();return true;
-  });
+  let read=()=>initial,preview:HTMLDialogElement|null=null;
+  const d=dialog(stores.length===1?`${stores[0].name} · 菜单配置`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
+    if(preview?.open)return;
+    if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
+    const mode=new FormData(form).get('mode') as 'inherit'|'add'|'replace',selected=mode==='inherit'?[]:[...read()];
+    const plans=stores.map(store=>{const before=getStoreCapability(store.storeId)?.enabledKeys??[],after=mode==='inherit'?[...inherited]:updateMenuKeys(before,selected,mode,ceiling);return{store,before,after,added:after.filter(k=>!before.includes(k)),removed:before.filter(k=>!after.includes(k))};});
+    const current=document.createElement('dialog');preview=current;current.className='ba ba-modal ba-store-menu-preview';current.setAttribute('aria-label','门店菜单配置预览');
+    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>门店菜单配置预览</h2><button type="button" class="ba-btn" data-store-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><div class="ba-section-title"><strong>${mode==='inherit'?'继承品牌菜单':mode==='add'?'独立配置 · 增量开通':'独立配置 · 替换菜单'}</strong><span class="ba-muted">${stores.length} 家门店</span></div>${stores.length>1?`<label class="ba-field">预览门店<select data-preview-store>${stores.map(store=>`<option value="${esc(store.storeId)}">${esc(store.name)} · ${esc(store.storeId)}</option>`).join('')}</select></label>`:`<p class="ba-muted">${esc(stores[0].name)} · ${esc(stores[0].storeId)}</p>`}<div class="ba-preview-metrics" data-preview-metrics></div><div class="ba-actions ba-preview-filters" aria-label="预览菜单范围"><button type="button" class="ba-btn" data-preview-filter="all">生效菜单</button><button type="button" class="ba-btn" data-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-preview-filter="removed">本次关闭</button></div><div data-store-preview-tree></div><p class="ba-error" data-store-preview-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">${mode==='inherit'?'保存后随品牌菜单自动同步':'保存后按门店独立配置生效'}</span><div class="ba-actions"><button type="button" class="ba-btn" data-store-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-store-preview-save>确认保存</button></div></footer></div>`;
+    let activeStore=stores[0].storeId,filter:'all'|'added'|'removed'='all',saving=false;
+    const renderTree=()=>{
+      const plan=plans.find(p=>p.store.storeId===activeStore)!;
+      current.querySelector('[data-preview-metrics]')!.innerHTML=`<span>生效页面 <strong>${choices.filter(c=>c.isPage&&plan.after.includes(c.key)).length}</strong> 个</span><span>新增 <strong>${plan.added.length}</strong> 项</span><span>关闭 <strong>${plan.removed.length}</strong> 项</span>`;
+      current.querySelectorAll<HTMLButtonElement>('[data-preview-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.previewFilter===filter)));
+      const keys=filter==='all'?plan.after:filter==='added'?plan.added:plan.removed;
+      bindOpenedBrandMenuTree(current.querySelector<HTMLElement>('[data-store-preview-tree]')!,choices,new Set(keys),{emptyText:filter==='all'?'本次配置未开通任何菜单。':filter==='added'?'本次没有新增菜单。':'本次没有关闭菜单。'});
+    };
+    current.querySelector<HTMLSelectElement>('[data-preview-store]')?.addEventListener('change',event=>{activeStore=(event.target as HTMLSelectElement).value;renderTree();});
+    current.querySelectorAll<HTMLButtonElement>('[data-preview-filter]').forEach(button=>button.onclick=()=>{filter=button.dataset.previewFilter as typeof filter;renderTree();});
+    current.querySelectorAll('[data-store-preview-close]').forEach(button=>button.addEventListener('click',()=>current.close()));
+    current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
+    current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!.onclick=()=>{
+      if(saving||!current.open)return;const error=current.querySelector<HTMLElement>('[data-store-preview-error]')!,save=current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!;error.hidden=true;
+      try{saving=true;save.disabled=true;saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),source==='merchant'?'品牌 Admin':'M 平台运营');current.close();d.close();d.remove();showAppToast('门店菜单已保存',{variant:'success'});onSaved();}
+      catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;save.disabled=false;}
+    };
+    document.body.append(current);renderTree();current.showModal();
+  },{action:'预览配置'});
+  d.addEventListener('close',()=>{preview?.close();},{once:true});
   read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
   const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};

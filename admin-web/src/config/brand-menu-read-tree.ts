@@ -3,13 +3,13 @@ import { compactBrandMenuRows } from './brand-menu-presentation';
 import type { MenuChoice } from './brand-access-store';
 
 /** Read-only projection: path ancestors do not become grants or persisted choices. */
-export function bindOpenedBrandMenuTree(host:HTMLElement,choices:MenuChoice[],opened:Set<string>):void {
+export function bindOpenedBrandMenuTree(host:HTMLElement,choices:MenuChoice[],opened:Set<string>,options:{emptyText?:string}={}):void {
   const all=new Map(choices.map(c=>[c.key,c])),included=new Set(opened);
   for(const key of opened){let parent=all.get(key)?.parent;const seen=new Set<string>();while(parent&&!seen.has(parent)){seen.add(parent);included.add(parent);parent=all.get(parent)?.parent;}}
   const rows=compactBrandMenuRows(choices).filter(c=>included.has(c.key)),byKey=new Map(rows.map(c=>[c.key,c])),children=new Map<string,MenuChoice[]>(),parents=new Map<string,string>();
   for(const row of rows){let parent=row.parent;const seen=new Set<string>();while(parent&&!byKey.has(parent)&&!seen.has(parent)){seen.add(parent);parent=all.get(parent)?.parent;}parents.set(row.key,parent??'');const list=children.get(parent??'')??[];list.push(row);children.set(parent??'',list);}
   const roots=children.get('')??[];
-  if(!roots.length){host.innerHTML='<div class="ba-card ba-empty">尚未开通菜单。由 M 平台选择品牌可用范围。</div>';return;}
+  if(!roots.length){host.innerHTML=`<div class="ba-card ba-empty">${esc(options.emptyText??'尚未开通菜单。由 M 平台选择品牌可用范围。')}</div>`;return;}
   let active=roots[0].key,query='';
   const collapsed=new Set(rows.filter(c=>c.isPage).map(c=>c.key));
   const rootOf=(key:string):string=>{let parent=parents.get(key);const seen=new Set<string>();while(parent&&!seen.has(parent)){seen.add(parent);key=parent;parent=parents.get(key);}return key;};
