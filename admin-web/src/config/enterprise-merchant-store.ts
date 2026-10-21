@@ -1,3 +1,4 @@
+import { brandMenuRouteVersion } from './enterprise-merchant-services';
 import { centerKeysForRaw } from './brand-menu-catalog';
 /**
  * M 平台 · 入驻品牌 · 演示数据与查询
@@ -2212,7 +2213,7 @@ export function ensureBrandCreationDemoStores(groupId: string): void {
 
 export function brandConfigurationVersion(id:string):string {
   const snap=readSnapshot();
-  return JSON.stringify({cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
+  return JSON.stringify({routeVersion:brandMenuRouteVersion(),cap:snap.capabilities.find(c=>c.merchantId===id),stores:snap.stores.filter(s=>s.merchantId===id),storeCaps:(snap.storeCapabilities??[]).filter(c=>c.merchantId===id)});
 }
 
 function validateExplicitMenuKeys(keys:string[],productLines:string[]):string[] {

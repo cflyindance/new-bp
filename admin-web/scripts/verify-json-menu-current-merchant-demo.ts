@@ -10,6 +10,9 @@ import {
   MEMBERS_SHEET_SETTINGS_SUBNAV,
   MEMBERS_SHEET_SUBNAV,
   NAV_MODULES,
+  navModuleChildrenAsSheetSubnav,
+  groupNotificationSheetSubnav,
+  groupRuleRestrictionsSubnav,
   PRINT_SHEET_SUBNAV,
   PROMOTIONS_MGMT_SUBNAV,
   REPORTS_SHEET_SUBNAV,
@@ -30,9 +33,9 @@ interface SourceItem {
 function sourcePaths(items: SourceItem[]): Set<string> {
   const result = new Set<string>();
   const visit = (item: SourceItem): void => {
-    result.add(item.path);
-    item.children?.forEach(visit);
-    item.sidebarChildren?.forEach(visit);
+    const children=item.sidebarChildren??item.children??[];
+    if(!children.length)result.add(item.path);
+    children.forEach(visit);
   };
   items.forEach(visit);
   return result;
@@ -76,13 +79,13 @@ NAV_MODULES.forEach((module, index) => {
   if (module.id === "product-center-main") {
     expected = sourcePaths([...BRAND_PRODUCTS_SUBNAV, ...BRAND_MENU_SUBNAV, ...STORE_MENU_SUBNAV]);
   } else {
-    expected = sourcePaths(detailedSource(module) ?? module.children);
+    expected = sourcePaths(detailedSource(module) ?? (module.id==='notifications'?groupNotificationSheetSubnav(navModuleChildrenAsSheetSubnav(module)):module.id==='queue-call'?groupRuleRestrictionsSubnav(navModuleChildrenAsSheetSubnav(module)):navModuleChildrenAsSheetSubnav(module)));
   }
   assert.deepEqual([...generatedPaths(generated)].sort(), [...expected].sort(), `${module.id} 路由覆盖不完整`);
 });
 
 const visits = walkMenuNodes(nodes);
-assert(visits.every((visit) => visit.path.length <= 3), "默认示例不得超过三级");
+assert(visits.some((visit) => visit.path.length > 3), "真实递归菜单不得拍平成三级");
 const ids = visits.map((visit) => visit.node.id).filter((id): id is string => Boolean(id));
 const keys = visits.map((visit) => visit.node.key).filter((key): key is string => Boolean(key));
 assert.equal(new Set(ids).size, visits.length, "节点 ID 必须存在且唯一");

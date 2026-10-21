@@ -1,3 +1,4 @@
+import { buildCurrentSystemMenuGroups } from './nav-blueprint-current-tree';
 /**
  * 导航蓝图 · 四级树索引（系统默认 + 自定义节点 + seq 重归属）
  */
@@ -364,7 +365,9 @@ function applyCatalogNavOrderToSystemGroups(groups: PermissionModuleGroup[]): vo
 /** 系统预设导航树（不含自定义节点、不含页面操作按钮 L3） */
 export function buildSystemNavBlueprintGroups(snapshot: NavBlueprintSnapshot): PermissionModuleGroup[] {
   const normalized = normalizeBlueprintSnapshot(snapshot);
-  const groups = cloneGroups(buildPermissionModuleGroups());
+  const groups = cloneGroups(buildCurrentSystemMenuGroups());
+  const validTargets=new Set<string>();const collectKeys=(node:PermissionTreeNode)=>{validTargets.add(node.resource.key);node.children.forEach(collectKeys);};groups.forEach(group=>collectKeys(group.tree));
+  normalized.systemSeqAssignments=Object.fromEntries(Object.entries(normalized.systemSeqAssignments).filter(([,key])=>validTargets.has(key)));
   stripPermissionActionL3Nodes(groups);
   applySeqAssignments(groups, normalized.systemSeqAssignments, undefined, normalized.systemSeqOrder);
   applyCatalogNavOrderToSystemGroups(groups);

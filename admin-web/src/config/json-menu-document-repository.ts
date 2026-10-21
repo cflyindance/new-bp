@@ -1,7 +1,7 @@
 import { serializeMenuDocument } from "./json-menu-document-serializer";
 import type { MenuDocument } from "./json-menu-document-domain";
 import { resolveMenuDocumentRepositoryMode } from "./json-menu-document-repository-mode";
-import { buildCurrentMerchantMenuDemoNodes } from "./json-menu-demo-data";
+import { buildCurrentMerchantMenuDemoNodes, isLegacyMerchantMenuSeed } from "./json-menu-demo-data";
 
 export interface MenuDocumentRepository {
   readPublished(): Promise<MenuDocument>;
@@ -86,10 +86,12 @@ function writeStored(key: string, document: MenuDocument): MenuDocument {
 
 export class DemoMenuDocumentRepository implements MenuDocumentRepository {
   async readPublished(): Promise<MenuDocument> {
-    return structuredClone(readStored(DEMO_PUBLISHED_KEY) ?? defaultDemoDocument());
+    const stored=readStored(DEMO_PUBLISHED_KEY);
+    return structuredClone(stored&&isLegacyMerchantMenuSeed(stored.menu)?{...stored,menu:buildCurrentMerchantMenuDemoNodes()}:stored??defaultDemoDocument());
   }
   async readDraft(): Promise<MenuDocument | null> {
-    return structuredClone(readStored(DEMO_DRAFT_KEY));
+    const draft=readStored(DEMO_DRAFT_KEY);
+    return structuredClone(draft&&isLegacyMerchantMenuSeed(draft.menu)?{...draft,menu:buildCurrentMerchantMenuDemoNodes()}:draft);
   }
   async saveDraft(document: MenuDocument): Promise<MenuDocument> {
     return writeStored(DEMO_DRAFT_KEY, document);

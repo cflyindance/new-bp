@@ -1,0 +1,84 @@
+{
+  "nodes": 840,
+  "expected": 214,
+  "missing": [],
+  "parents": [],
+  "orderErrors": [],
+  "store": [
+    {
+      "title": "门店信息",
+      "mod": "store-mgmt"
+    },
+    {
+      "title": "门店档案",
+      "path": "/stores/profile",
+      "mod": "store-mgmt",
+      "parent": "门店信息"
+    },
+    {
+      "title": "门店档案",
+      "mod": "store-mgmt",
+      "parent": "门店档案"
+    },
+    {
+      "title": "门店档案",
+      "path": "/stores/settings",
+      "mod": "store-mgmt",
+      "parent": "门店档案"
+    },
+    {
+      "title": "营业时间",
+      "path": "/stores/hours",
+      "mod": "store-mgmt",
+      "parent": "门店信息"
+    },
+    {
+      "title": "营业时间",
+      "mod": "store-mgmt",
+      "parent": "营业时间"
+    },
+    {
+      "title": "营业时段",
+      "path": "/stores/settings",
+      "mod": "store-mgmt",
+      "parent": "营业时间"
+    },
+    {
+      "title": "设置",
+      "path": "/stores/settings",
+      "mod": "store-mgmt",
+      "parent": "门店信息"
+    },
+    {
+      "title": "营业提醒",
+      "mod": "store-mgmt",
+      "parent": "设置"
+    },
+    {
+      "title": "营业时间即将结束提示",
+      "path": "/stores/settings",
+      "mod": "store-mgmt",
+      "parent": "营业提醒"
+    }
+  ],
+  "tips": [
+    {
+      "title": "小费管理",
+      "path": "/team/tips",
+      "mod": "team",
+      "parent": "团队管理"
+    },
+    {
+      "title": "小费分配",
+      "path": "/team/tips/distribution",
+      "mod": "team",
+      "parent": "小费管理"
+    },
+    {
+      "title": "分配规则",
+      "path": "/team/tips/rules",
+      "mod": "team",
+      "parent": "小费管理"
+    }
+  ]
+}
