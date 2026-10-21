@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({channel:'msedge',headless:true}),base=process.env.BRAND_PREVIEW_URL??'http://127.0.0.1:5229';
+try{
+ const p=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(base);
+ await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('hq.admin@menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('hq.admin@menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+ const navigate=async path=>{await p.goto(base+'/#/m-platform/merchants'+path);await p.locator('[data-management-filters]').waitFor();};
+ await navigate('');let form=p.locator('[data-management-filters="brand"]');
+ const initial=await p.locator('[data-enterprise-merchant-row]').count();assert(initial>0);
+ await form.locator('[name="query"]').fill('不存在的品牌检索');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),initial);
+ await form.locator('[name="query"]').press('Enter');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),0);
+ await form.getByRole('button',{name:'重置',exact:true}).click();assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),initial);
+ await form.locator('summary').click();await form.locator('[name="from"]').fill('2030-01-01');await form.locator('[name="to"]').fill('2020-01-01');await form.getByRole('button',{name:'查询',exact:true}).click();assert.match(await form.locator('[data-filter-error]').innerText(),/不能晚于/);
+ await form.getByRole('button',{name:'重置',exact:true}).click();await form.locator('[name="status"]').selectOption('active');const count=await p.locator('[data-enterprise-merchant-row]').count();
+ await p.locator('[data-enterprise-merchant-row] a').first().click();await p.locator('[data-brand-detail-full-page]').waitFor();await p.getByRole('link',{name:'← 返回品牌管理',exact:true}).click();await form.waitFor();assert.equal(await form.locator('[name="status"]').inputValue(),'active');assert.equal(await p.locator('[data-enterprise-merchant-row]').count(),count);
+ if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/brand-management-filters.png'});
+ await navigate('/stores');form=p.locator('[data-management-filters="store"]');
+ const fixture=await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts');return s.getEnterpriseStoreList({allEnterprises:true})[0];});
+ await form.locator('[name="query"]').fill(fixture.store.storeId);await form.locator('[name="query"]').press('Enter');assert.equal(await p.locator('[data-enterprise-store-table] tbody tr').count(),1);
+ await p.locator('[data-enterprise-store-table] a').first().click();await p.getByRole('link',{name:'← 返回门店管理',exact:true}).click();await form.waitFor();assert.equal(await form.locator('[name="query"]').inputValue(),fixture.store.storeId);
+ await form.getByRole('button',{name:'重置',exact:true}).click();await form.locator('[name="groupId"]').selectOption(fixture.groupId);await form.locator('[name="merchantId"]').selectOption(fixture.merchantId);
+ const other=await form.locator('[name="groupId"] option').evaluateAll((els,id)=>els.map(e=>e.value).find(v=>v&&v!==id),fixture.groupId);assert(other);await form.locator('[name="groupId"]').selectOption(other);assert.equal(await form.locator('[name="merchantId"]').inputValue(),'');
+ await form.locator('[name="brandQuery"]').fill('不存在品牌');assert.equal(await form.locator('[name="merchantId"] option').count(),1);
+ await form.getByRole('button',{name:'重置',exact:true}).click();
+ await p.evaluate(async row=>{const s=await import('/src/config/enterprise-merchant-store.ts');s.saveBrandStoreMenus(row.merchantId,[row.store.storeId],[],'inherit',s.brandConfigurationVersion(row.merchantId),'hq.admin@menusifu.cn','M平台运营');},fixture);
+ await form.locator('summary').click();await form.locator('[name="mode"]').selectOption('inherit');await form.locator('[name="menu"]').selectOption('yes');
+ assert((await p.locator('[data-enterprise-store-table] tbody tr').count())>0,'inherited fixture has effective pages');
+ await p.locator('[data-enterprise-store-table] [data-brand-single-store]').first().click();await p.getByRole('dialog').last().waitFor();await p.getByRole('dialog').last().getByRole('button',{name:'取消',exact:true}).click();
+ if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/store-management-filters.png'});
+ const checked=await p.evaluate(async()=>{const f=await import('/src/config/management-list-filters.ts'),s=await import('/src/config/enterprise-merchant-store.ts'),b=await import('/src/config/brand-access-store.ts');const rows=f.filteredManagementStores({mode:'inherit',menu:'yes'});return rows.every(r=>s.getStoreCapability(r.store.storeId)?.menuMode==='inherit'&&b.brandMenuChoices().some(c=>c.isPage&&s.getStoreCapability(r.store.storeId)?.enabledKeys.includes(c.key)));});assert(checked);assert.deepEqual(errors,[]);
+ console.log('PASS management filters: submit search, reset, invalid dates, brand state, return persistence, MID search, group/brand linkage, brand search, inherited effective menus');
+}finally{await browser.close();}

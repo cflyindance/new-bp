@@ -1,3 +1,4 @@
+import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,filteredManagementStores,savedManagementFilter} from './management-list-filters';
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
 import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail } from './brand-access-store';
@@ -549,43 +550,10 @@ function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
 }
 
 function renderStoreListPage(): string {
-  const rows = getEnterpriseStoreList(listEnterpriseStoresFilter());
+  const rows = filteredManagementStores(savedManagementFilter("store"));
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="stores">
-      <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-store-filter-form>
-        <label class="flex min-w-[10rem] flex-col gap-1">
-          <span class="text-xs text-muted-foreground">所属集团</span>
-          <select name="groupId" data-store-filter="groupId" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="">全部集团</option>
-            ${getGroupsForSelect({ allEnterprises: true })
-              .map((g) => `<option value="${escapeHtml(g.groupId)}">${escapeHtml(g.name)}</option>`)
-              .join("")}
-          </select>
-        </label>
-        <label class="flex min-w-[10rem] flex-col gap-1">
-          <span class="text-xs text-muted-foreground">所属品牌</span>
-          <select name="merchantId" data-store-filter="merchantId" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="">全部品牌</option>
-            ${getMerchants(listMerchantsFilter())
-              .map((m) => `<option value="${escapeHtml(m.merchantId)}">${escapeHtml(m.name)}</option>`)
-              .join("")}
-          </select>
-        </label>
-        <label class="flex min-w-[8rem] flex-col gap-1">
-          <span class="text-xs text-muted-foreground">门店状态</span>
-          <select name="status" data-store-filter="status" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="">全部</option>
-            <option value="open">营业中</option>
-            <option value="preparing">筹备中</option>
-            <option value="closed">停业</option>
-            <option value="archived">已归档</option>
-          </select>
-        </label>
-        <label class="flex min-w-[12rem] flex-1 flex-col gap-1">
-          <span class="text-xs text-muted-foreground">搜索</span>
-          <input type="search" name="query" data-store-filter="query" placeholder="门店 / 品牌 / 集团 / BID / MID / 地址" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-        </label>
-      </form>
+      ${renderManagementFilters("store")}
       <div class="min-h-0 flex-1 overflow-y-auto" data-enterprise-store-table>
         ${renderEnterpriseStoreTable(rows)}
       </div>
@@ -596,34 +564,9 @@ function renderListPage(): string {
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="list">
 
-      <form class="flex shrink-0 flex-wrap items-end gap-3" data-enterprise-merchant-filter-form>
-        <label class="flex min-w-[8rem] flex-col gap-1">
-          <span class="text-xs text-muted-foreground">状态</span>
-          <select name="status" data-merchant-filter="status" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="">全部</option>
-            <option value="active">已启用</option>
-            <option value="onboarding">待启用</option>
-            <option value="suspended">已暂停</option>
-            <option value="closed">已关闭</option>
-          </select>
-        </label>
-        <label class="flex min-w-[10rem] flex-col gap-1">
-          <span class="text-xs text-muted-foreground">所属集团</span>
-          <select name="groupId" data-merchant-filter="groupId" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="">全部集团</option>
-            ${getGroupsForSelect({ allEnterprises: true })
-              .map((g) => `<option value="${escapeHtml(g.groupId)}">${escapeHtml(g.name)}</option>`)
-              .join("")}
-          </select>
-        </label>
-        <label class="flex min-w-[12rem] flex-1 flex-col gap-1">
-          <span class="text-xs text-muted-foreground">搜索</span>
-          <input type="search" name="query" data-merchant-filter="query" placeholder="品牌名称 / BID / 编码 / 邮箱" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-        </label>
-        <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
-      </form>
+      ${renderManagementFilters("brand")}
       <div class="min-h-0 flex-1 overflow-y-auto" data-enterprise-merchant-table>
-        ${renderMerchantTable(getMerchants(listMerchantsFilter()))}
+        ${renderMerchantTable(filteredManagementBrands(savedManagementFilter("brand")))}
       </div>
     </div>`;
 }
@@ -1675,27 +1618,10 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       }
     });
   }
-  const applyFilter = () => {
-    if (!filterForm || !tableHost) return;
-    tableHost.innerHTML = renderMerchantTable(getMerchants(listMerchantsFilter(readMerchantFilter(filterForm))));
-  };
-  filterForm?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-merchant-filter]").forEach((el) => {
-    el.addEventListener("change", applyFilter);
-    if (el instanceof HTMLInputElement && el.type === "search") el.addEventListener("input", applyFilter);
-  });
-
-  const storeFilterForm = document.querySelector<HTMLFormElement>("[data-enterprise-store-filter-form]");
-  const storeTableHost = document.querySelector<HTMLElement>("[data-enterprise-store-table]");
-  const applyStoreFilter = () => {
-    if (!storeFilterForm || !storeTableHost) return;
-    storeTableHost.innerHTML = renderEnterpriseStoreTable(
-      getEnterpriseStoreList(listEnterpriseStoresFilter(readStoreFilter(storeFilterForm))),
-    );
-  };
-  storeFilterForm?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-store-filter]").forEach((el) => {
-    el.addEventListener("change", applyStoreFilter);
-    if (el instanceof HTMLInputElement && el.type === "search") el.addEventListener("input", applyStoreFilter);
-  });
+  bindManagementFilters('brand', filter => {if(tableHost)tableHost.innerHTML=renderMerchantTable(filteredManagementBrands(filter));});
+  const storeTableHost=document.querySelector<HTMLElement>('[data-enterprise-store-table]');
+  bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
+  if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLElement>('[data-brand-single-store]');if(!button)return;const store=getStoreById(button.dataset.brandSingleStore!);if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],'m-platform',onMount);};
 
   const groupFilterForm = document.querySelector<HTMLFormElement>("[data-enterprise-group-filter-form]");
   const groupTableHost = document.querySelector<HTMLElement>("[data-enterprise-group-table]");

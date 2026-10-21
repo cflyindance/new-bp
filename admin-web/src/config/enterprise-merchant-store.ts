@@ -1916,6 +1916,7 @@ export function getEnterpriseStoreList(filter: EnterpriseStoreListFilter = {}): 
           store.code,
           store.storeId,
           store.address,
+          store.postalCode,
           merchant.name,
           merchant.bid,
           groupNameById.get(merchant.groupId),
