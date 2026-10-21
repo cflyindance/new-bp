@@ -48,3 +48,4 @@
 .ba-change-detail{width:min(1080px,94vw)}.ba-log-info{display:grid;grid-template-columns:90px 1fr;gap:10px;margin:0 0 20px}.ba-log-info dd{margin:0;overflow-wrap:anywhere}.ba-log-info dt{color:var(--color-muted-foreground)}.ba-change-detail [data-log-summary]{margin:16px 0}.ba-change-detail [data-log-unknown]{overflow-wrap:anywhere}
 
 .ba-brand-menu-preview .ba-preview-filters{margin-top:16px}
+.ba-change-list table{min-width:1200px}.ba-change-list th:nth-child(3),.ba-change-list td:nth-child(3),.ba-change-list th:nth-child(4),.ba-change-list td:nth-child(4){white-space:nowrap}.ba-change-list td:nth-child(5){min-width:210px}.ba-change-detail [data-log-fields] h3{margin:18px 0 10px}
