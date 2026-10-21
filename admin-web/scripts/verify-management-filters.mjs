@@ -21,13 +21,13 @@ try{
  await p.locator('[data-enterprise-store-table] a').first().click();await p.getByRole('link',{name:'← 返回门店管理',exact:true}).click();await form.waitFor();assert.equal(await form.locator('[name="query"]').inputValue(),fixture.store.storeId);
  await form.getByRole('button',{name:'重置',exact:true}).click();await form.locator('[name="groupId"]').selectOption(fixture.groupId);await form.locator('[name="merchantId"]').selectOption(fixture.merchantId);
  const other=await form.locator('[name="groupId"] option').evaluateAll((els,id)=>els.map(e=>e.value).find(v=>v&&v!==id),fixture.groupId);assert(other);await form.locator('[name="groupId"]').selectOption(other);assert.equal(await form.locator('[name="merchantId"]').inputValue(),'');
- await form.locator('[name="brandQuery"]').fill('不存在品牌');assert.equal(await form.locator('[name="merchantId"] option').count(),1);
+ assert.equal(await form.locator('[name="brandQuery"]').count(),0);assert.equal(await form.locator('summary').count(),0);
  await form.getByRole('button',{name:'重置',exact:true}).click();
  await p.evaluate(async row=>{const s=await import('/src/config/enterprise-merchant-store.ts');s.saveBrandStoreMenus(row.merchantId,[row.store.storeId],[],'inherit',s.brandConfigurationVersion(row.merchantId),'hq.admin@menusifu.cn','M平台运营');},fixture);
- await form.locator('summary').click();await form.locator('[name="mode"]').selectOption('inherit');await form.locator('[name="menu"]').selectOption('yes');
+ await form.locator('[name="mode"]').selectOption('inherit');await form.locator('[name="menu"]').selectOption('yes');
  assert((await p.locator('[data-enterprise-store-table] tbody tr').count())>0,'inherited fixture has effective pages');
  await p.locator('[data-enterprise-store-table] [data-brand-single-store]').first().click();await p.getByRole('dialog').last().waitFor();await p.getByRole('dialog').last().getByRole('button',{name:'取消',exact:true}).click();
- if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/store-management-filters.png'});
+ if(process.env.FILTER_SCREENSHOTS)await p.screenshot({path:'docs/项目文档/assets/brand-menu-access/store-management-filters-flat.png'});
  const checked=await p.evaluate(async()=>{const f=await import('/src/config/management-list-filters.ts'),s=await import('/src/config/enterprise-merchant-store.ts'),b=await import('/src/config/brand-access-store.ts');const rows=f.filteredManagementStores({mode:'inherit',menu:'yes'});return rows.every(r=>s.getStoreCapability(r.store.storeId)?.menuMode==='inherit'&&b.brandMenuChoices().some(c=>c.isPage&&s.getStoreCapability(r.store.storeId)?.enabledKeys.includes(c.key)));});assert(checked);assert.deepEqual(errors,[]);
- console.log('PASS management filters: submit search, reset, invalid dates, brand state, return persistence, MID search, group/brand linkage, brand search, inherited effective menus');
+ console.log('PASS management filters: submit search, reset, invalid dates, brand state, return persistence, MID search, group/brand linkage, single store search, always visible extra filters, inherited effective menus');
 }finally{await browser.close();}
