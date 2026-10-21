@@ -1,3 +1,4 @@
+import { historicalAdminFacts } from './brand-audit-history';
 import { bindBrandChangeLog } from './brand-change-log';
 import { bindOpenedBrandMenuTree } from './brand-menu-read-tree';
 import { compactBrandMenuRows } from './brand-menu-presentation';
@@ -104,12 +105,6 @@ function brandMenuSelectionSummary(keys:string[],choices:MenuChoice[]):string {
   return `<section class="ba-selection-summary"><h3>已选菜单</h3>${visible.length?`<ul class="ba-review-tree" aria-label="已选菜单结构">${(children.get('')??[]).map(render).join('')}</ul>`:'<p class="ba-muted">未选择功能菜单</p>'}</section>`;
 }
 
-function menuDiff(review:HTMLElement,before:string[],after:string[],choices:MenuChoice[],prefix=''):void {
-  const names=new Map(choices.map(c=>[c.key,c.title]));
-  const added=after.filter(k=>!before.includes(k)),removed=before.filter(k=>!after.includes(k));
-  review.innerHTML+=`<h3>${esc(prefix)} · 新增 ${added.length} 项 / 关闭 ${removed.length} 项</h3><ul>${added.map(k=>`<li>开通：${esc(names.get(k)??k)}</li>`).join('')}${removed.map(k=>`<li>关闭：${esc(names.get(k)??k)}</li>`).join('')}</ul>`;
-}
-
 function openStoreEffectiveMenus(id:string,storeId:string,source:Source):void {
   authorizeBrandManagement(id,source);
   const store=getMerchantStores(id).find(s=>s.storeId===storeId);if(!store)throw Error('门店不属于当前品牌。');
@@ -167,11 +162,27 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
 
 function openBrandMenus(id:string,onSaved:()=>void):void {
   const cap=getMerchantCapability(id)!;const version=brandConfigurationVersion(id),before=[...brandRawMenuKeys(id)];
-  const choices=brandMenuChoices(cap.productLineIds);let read=()=>before;
-  const d=dialog('编辑品牌菜单','继承模式的门店自动同步；独立配置的门店按本店设置生效。','<div class="ba-note">取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。</div><div data-menu-picker></div>',(_form,review)=>{
-    const next=read();if(review.hidden){review.innerHTML='';menuDiff(review,before,next,choices,'品牌菜单');const impacted=getMerchantStores(id).filter(s=>(getStoreCapability(s.storeId)?.enabledKeys??[]).some(k=>!next.includes(k)));review.innerHTML+=`<p class="ba-muted">受收回影响的门店：${impacted.map(s=>esc(s.name)).join('、')||'无'}</p>`;review.hidden=false;return;}
-    saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'));showAppToast('品牌菜单已保存',{variant:'success'});onSaved();return true;
-  });read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before);
+  const choices=brandMenuChoices(cap.productLineIds);let read=()=>before,preview:HTMLDialogElement|null=null;
+  const d=dialog('编辑品牌菜单','继承模式的门店自动同步；独立配置的门店按本店设置生效。','<div class="ba-note">取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。</div><div data-menu-picker></div>',()=>{
+    if(preview?.open)return;
+    if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
+    const next=[...read()],added=next.filter(k=>!before.includes(k)),removed=before.filter(k=>!next.includes(k));
+    const impacted=getMerchantStores(id).filter(s=>(getStoreCapability(s.storeId)?.enabledKeys??[]).some(k=>removed.includes(k)));
+    const current=document.createElement('dialog');preview=current;current.className='ba ba-modal ba-brand-menu-preview';current.setAttribute('aria-label','品牌菜单配置预览');
+    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>品牌菜单配置预览</h2><button type="button" class="ba-btn" data-brand-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><h3>${esc(getMerchantById(id)?.name??'品牌菜单')}</h3><div class="ba-preview-metrics"><span>新增 <strong>${added.length}</strong> 项</span><span>关闭 <strong>${removed.length}</strong> 项</span></div><details><summary>受本次关闭影响的门店（${impacted.length} 家）</summary>${impacted.length?`<ul>${impacted.map(s=>`<li>${esc(s.name)} · ${esc(s.storeId)}</li>`).join('')}</ul>`:'<p class="ba-muted">无</p>'}</details><div class="ba-actions ba-preview-filters"><button type="button" class="ba-btn" data-brand-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-brand-preview-filter="removed">本次关闭</button></div><div data-brand-preview-tree></div><p class="ba-error" role="alert" data-brand-preview-error hidden></p></section><footer class="ba-footer"><span class="ba-muted">保存后更新品牌菜单，继承模式门店自动同步</span><div class="ba-actions"><button type="button" class="ba-btn" data-brand-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-brand-preview-save>确认保存</button></div></footer></div>`;
+    let filter:'added'|'removed'='added',saving=false;
+    const renderTree=()=>{current.querySelectorAll<HTMLButtonElement>('[data-brand-preview-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.brandPreviewFilter===filter)));bindOpenedBrandMenuTree(current.querySelector<HTMLElement>('[data-brand-preview-tree]')!,choices,new Set(filter==='added'?added:removed),{emptyText:filter==='added'?'本次没有新增菜单。':'本次没有关闭菜单。'});};
+    current.querySelectorAll<HTMLButtonElement>('[data-brand-preview-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.brandPreviewFilter as typeof filter;renderTree();});
+    current.querySelectorAll('[data-brand-preview-close]').forEach(b=>b.addEventListener('click',()=>current.close()));
+    current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
+    current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!.onclick=()=>{
+      if(saving||!current.open)return;const save=current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!,error=current.querySelector<HTMLElement>('[data-brand-preview-error]')!;error.hidden=true;
+      try{saving=true;save.disabled=true;saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'),'M 平台运营');current.close();d.close();d.remove();showAppToast('品牌菜单已保存',{variant:'success'});onSaved();}
+      catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{saving=false;save.disabled=false;}
+    };
+    document.body.append(current);renderTree();current.showModal();
+  },{action:'预览配置'});
+  d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before);
 }
 
 function openAssociation(id:string,onSaved:()=>void):void {
@@ -222,7 +233,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     const employee=draft.employees.find(e=>e.id===account.id);
     if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
     else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
-    saveBrandAccess(draft,state.version,actor,title);showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
+    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
   },{action,destructive:mode==='status'&&account.enabled,blocked,compact:true});
 }
 
@@ -278,7 +289,7 @@ export function bindBrandWorkspaces():void {
         root.innerHTML=`<header class="ba-head"><div><h2>账号与角色</h2></div>${admin?`<div class="ba-actions">${button('新建角色','new-role')}${button('开通账号','new-account',true)}</div>`:''}</header><section class="ba-card"><h3 style="margin-bottom:16px">登录账号 <span class="ba-tag">${state.accounts.length}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>账号</th><th>身份</th><th>角色与生效门店</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.accounts.map(a=>{const e=state.employees.find(e=>e.id===a.id);return `<tr><td>${esc(a.name)}<br><small>${esc(a.email)}</small></td><td><span class="ba-tag ${a.admin?'active':''}">${a.admin?'品牌 Admin':'普通账号'}</span></td><td>${a.admin?'全部品牌门店（含新增门店）':e?.bindings.map(b=>`${esc(state.roles.find(r=>r.id===b.roleId)?.name??'角色缺失')} · ${b.scope.ids.length} 家门店`).join('<br>')||'未分配'}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${admin?button('管理账号',`account:${a.id}`):'—'}</td></tr>`;}).join('')||`<tr><td colspan="5" class="ba-empty">尚未单独开通账号${merchant.accountProvisioningRequired?'，请先开通品牌 Admin':'；已有品牌管理员继续使用原登录方式'}</td></tr>`}</tbody></table></div></section><section class="ba-card"><h3>品牌角色 <span class="ba-tag">${state.roles.length}</span></h3>${state.roles.map(r=>`<div class="ba-role-line"><div><strong>${esc(r.name)}</strong><p class="ba-muted">${esc(r.description)||'未填写描述'} · ${state.employees.filter(e=>e.bindings.some(b=>b.roleId===r.id)).length} 个账号使用</p></div>${admin?button('编辑权限',`role:${r.id}`):''}</div>`).join('')||'<p class="ba-empty">尚未创建角色。建议按店长、财务等岗位建立，再分配给账号。</p>'}</section>`;
         }
       }else if(tab==='changelog'){
-        bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action})),...getMerchantChangelog(id)],choices,stores);
+        bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action,facts:l.facts??historicalAdminFacts(l)})),...getMerchantChangelog(id)],choices,stores);
       }else{
         root.innerHTML=`<header class="ba-head"><div><h2>品牌门店</h2></div><div class="ba-actions">${source==='m-platform'?button('关联已有门店','associate'):''}${admin?button('批量配置菜单','batch',true):''}</div></header>${stats}<div class="ba-toolbar"><input data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店"><span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span></div><div class="ba-table-wrap"><table><thead><tr><th><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th>门店名称 / MID</th><th>营业状态</th><th>菜单配置</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${stores.map(s=>{const sc=getStoreCapability(s.storeId);return `<tr data-store-row="${esc(s.name+' '+s.storeId)}"><td><input type="checkbox" data-store-id="${esc(s.storeId)}" aria-label="选择${esc(s.name)}"></td><td><strong>${esc(s.name)}</strong><br><small>${esc(s.storeId)} · ${esc(s.address??'暂无地址')}</small></td><td><span class="ba-tag">${esc(getStoreStatusLabel(s.status))}</span></td><td><span class="ba-tag ${sc?.enabledKeys.length?'active':''}">${sc?.menuMode==='inherit'?'继承品牌 · ':sc?.menuMode==='independent'?'独立配置 · ':''}${sc?.menuMode==='inherit'||sc?.menuMode==='independent'||sc?.enabledKeys.length?`${choices.filter(c=>c.isPage===true&&sc?.enabledKeys.includes(c.key)).length} 个页面`:'未开通'}</span></td><td><small>${sc?.updatedAt?esc(date(sc.updatedAt)):'—'}${sc?.updatedBy?`<br>${esc(sc.updatedBy)}`:''}</small></td><td>${admin?`<div class="ba-actions">${button('查看生效菜单',`effective:${s.storeId}`)}${button('配置菜单',`store:${s.storeId}`)}</div>`:'—'}</td></tr>`;}).join('')||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}</tbody></table></div>`;
         root.querySelector<HTMLInputElement>('[data-store-query]')!.oninput=e=>{const q=(e.target as HTMLInputElement).value.toLowerCase();root.querySelectorAll<HTMLElement>('[data-store-row]').forEach(row=>row.hidden=!row.dataset.storeRow!.toLowerCase().includes(q));};

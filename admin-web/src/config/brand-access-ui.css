@@ -38,11 +38,14 @@
 .ba-admin-warning{border-left:3px solid var(--color-destructive);padding-left:12px;margin:16px 0 0;color:var(--color-destructive);font-size:13px}
 .ba-danger{background:var(--color-destructive);color:#fff;border-color:var(--color-destructive)}.ba-danger:hover{filter:brightness(.94)}
 
-.ba-store-menu-preview{width:min(1180px,94vw)}.ba-preview-metrics{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;color:var(--color-muted-foreground);font-size:12px}.ba-preview-metrics strong{font-size:18px;color:var(--color-foreground);margin:0 4px}
-.ba-preview-filters{margin-bottom:14px}.ba-preview-filters [aria-pressed=true]{border-color:var(--color-primary);color:var(--color-primary);font-weight:600}.ba-store-menu-preview .ba-opened-menu{height:clamp(300px,44vh,480px)}
+.ba-store-menu-preview,.ba-brand-menu-preview{width:min(1180px,94vw)}.ba-preview-metrics{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;color:var(--color-muted-foreground);font-size:12px}.ba-preview-metrics strong{font-size:18px;color:var(--color-foreground);margin:0 4px}
+.ba-preview-filters{margin-bottom:14px}.ba-preview-filters [aria-pressed=true]{border-color:var(--color-primary);color:var(--color-primary);font-weight:600}.ba-store-menu-preview .ba-opened-menu,.ba-brand-menu-preview .ba-opened-menu{height:clamp(300px,44vh,480px)}
 
 .ba-discard-dialog{width:min(460px,94vw)}.ba-discard-dialog .ba-footer{justify-content:flex-end}.ba-discard-dialog .ba-dialog-body p{margin:0}
 
 .ba-store-effective{width:min(1080px,94vw)}.ba-store-effective .ba-dialog-body>p{margin:10px 0 16px}
 
 .ba-change-detail{width:min(1080px,94vw)}.ba-log-info{display:grid;grid-template-columns:90px 1fr;gap:10px;margin:0 0 20px}.ba-log-info dd{margin:0;overflow-wrap:anywhere}.ba-log-info dt{color:var(--color-muted-foreground)}.ba-change-detail [data-log-summary]{margin:16px 0}.ba-change-detail [data-log-unknown]{overflow-wrap:anywhere}
+
+.ba-brand-menu-preview .ba-preview-filters{margin-top:16px}
+.ba-change-list table{min-width:1200px}.ba-change-list th:nth-child(3),.ba-change-list td:nth-child(3),.ba-change-list th:nth-child(4),.ba-change-list td:nth-child(4){white-space:nowrap}.ba-change-list td:nth-child(5){min-width:210px}.ba-change-detail [data-log-fields] h3{margin:18px 0 10px}
