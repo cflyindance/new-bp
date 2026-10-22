@@ -1,9 +1,340 @@
 # M 平台入驻商户管理中心业务规格说明书（研发交付版）
 
-> V1.47 · 2026-10-22；职责：字段、状态、解析与测试。
-> 产品权威：[V1.48](./M平台-入驻商户管理中心设计方案.md)；[个人规范版 V1.47](./M平台-入驻商户管理中心需求文档（个人规范版）.md)。
-> 同一业务基线：品牌—门店—角色—账号四层模型；最新变更编号 IMPERSONATION-BANNER-20261022-51，权限基线 BRAND-ACCESS-20261021-01。
-> 状态：功能分支实现，验证结果见文末；生产服务未接入。
+> V1.49 · 2026-10-22 · MB-REVIEW-20261022-53
+> 配对：[产品 V1.50](./M平台-入驻商户管理中心设计方案.md) · [研发 V1.49](./M平台-入驻商户管理中心业务规格说明书（研发交付版）.md) · [个人规范 V1.49](./M平台-入驻商户管理中心需求文档（个人规范版）.md)
+> 状态：现状静态复核完成；目标分层待实现，生产服务未接入。
+
+## 版本记录
+
+| 版本 | 日期 | 变更编号 | 说明 |
+| --- | --- | --- | --- |
+| V1.49 | 2026-10-22 | MB-REVIEW-20261022-53 | 全面复核业务、字段、页面；有效正文与历史分开，目标和实现差距分开 |
+| V1.48 | 2026-10-22 | MB-AUTH-20261022-52 | M／B职责及五张流程图；承接本次续作 |
+
+## 阅读范围、证据与复核结论
+
+本轮变更 **MB-REVIEW-20261022-53**，源码基线 **main@3f0cb3d5**，在codex/mb-authorization-docs-20261022续作上一轮尚未提交的文档。仅修改三份文档；未调整代码、授权数据、迁移逻辑或生产服务。
+
+有效正文按“当前实现 → 已确认目标设计 → 待确认与验收”阅读；历史增量记录已折叠归档，不能作为当前操作指引。目标设计不能被代码反向覆盖，现状偏差不能写成已完成。下文截图复用仓库既有验收资产，标明历史来源；本轮未重新运行浏览器，不宣称全部截图与当前画面一致。
+
+| 复核面 | 当前事实与结论 |
+| --- | --- |
+| 页面与流程 | 品牌／门店管理、三步创建、独立详情、菜单编辑及变更预览、Admin管理、变更记录、代登录均有本地实现。 |
+| 字段与状态 | 按类型、筛选器和保存方法核对；服务状态不等于门店营业状态，开通进度是派生信息而非服务状态。 |
+| 菜单同源 | 品牌开通树消费已发布蓝图；无发布快照使用当前系统树；权限目录仍通过registry与Catalog映射，不宣称全链路已统一。 |
+| 权限闭环 | brand-access与通用permission-center-local:v4仍有两套状态；M/B门店菜单仍共用保存对象。已确认目标为统一与拆分，尚未实现。 |
+| 验证等级 | 本轮为源码／文档静态复核和链接、图片路径、版本、图示围栏检查；沿用的旧测试记录不是本轮重新执行结果。 |
+| 范围边界 | 重点为品牌、门店、菜单、管理员及B内部授权关联。集团、申请、SLA、合同旧流程仅核对关联字段，不声称逐页完成这些外围模块的业务验收。 |
+
+### 重要问题与处理
+
+| 编号／严重度 | 原问题 | 本轮修订与剩余状态 |
+| --- | --- | --- |
+| R01／重要 | 默认关闭与默认继承并存 | 明确新关联为inherit；历史无mode按independent，缺少能力配置保持无菜单。 |
+| R02／重要 | 列表、页签、按钮沿用旧文案 | 以品牌管理、门店管理、品牌管理员、门店菜单、详情／代登录及当前筛选布局重写有效说明。 |
+| R03／重要 | 预览仍混有生效菜单页签和逐店切换 | 变更预览仅新增／关闭；完整生效菜单单独查看；批量差异相同时不显示切换。 |
+| R04／重要 | M/B共写门店菜单与新上限分层冲突 | 当前实现与目标分别陈述，不虚构已拆分。 |
+| R05／阻断目标整体交付 | 两套员工权限存储尚未统一 | 记录为待实现和完整员工登录验收前置；本轮不以文档更改代替代码修复。 |
+| R06／重要 | 旧版本、旧提交授权与旧截图混为当前结论 | 顶部配对版本统一；旧记录归档，既有图片只作现状布局参考。 |
+| R07／重要 | 恢复授权和B新增资源同步缺少决策 | 共用待确认编号Q01/Q02，不擅自指定恢复或扩权行为。 |
+
+## 当前实现的业务口径
+
+### 组织、开通与登录
+
+- Enterprise、集团、品牌、区域、门店有现有兼容对象；merchantId为品牌内部主键，bid为对外BID，storeId为MID，不互换使用。旧brandId和linkedMerchantId不等同新建一个商家租户。
+- 当前创建向导三步为品牌信息、选择品牌门店、开通品牌菜单；第三步打开“核对创建信息”独立弹框，确认后才创建。成功进入品牌管理员页，不代表服务已经启用。
+- 新向导accountProvisioningRequired=true、activateImmediately=false、orgType=chain；初始不自动创建Admin、不自动发邮件。零门店可创建。关联已有门店保留MID，新能力记录使用inherit。
+- 品牌Admin由M单独“开通并启用”，随后概览执行品牌“启用服务”。账号启用和品牌服务启用是两件事。
+- 当前账号校验、菜单、角色、组织等为浏览器本地原型。新账号邮箱仅menusifu.cn／menusifu.com且密码至少6位；不能描述为面向真实商家已接入生产认证。
+
+### 状态与开通进度
+
+| 项目 | 当前实现 |
+| --- | --- |
+| 服务状态 | onboarding待启用、active已启用、suspended已暂停、closed已关闭；旧draft显示待启用，closing显示已暂停。旧底层枚举未删除。 |
+| 允许的服务操作 | 待启用→启用；已启用→暂停／关闭；已暂停→恢复／关闭；当前服务操作无已关闭→重新开启入口。 |
+| 启用／恢复条件 | 名称、联系人、所属集团完整；至少一名可用Admin或满足历史Admin兼容；至少一个品牌页面；填写的合同到期日有效且未到期。无需至少一店，不以完成首次登录为启用前置。 |
+| 操作原因 | 启用、暂停、恢复、关闭均必填2至200字；版本冲突拒绝，保留输入。品牌服务仅M运营调整。 |
+| 门店状态 | preparing筹备中、open营业中、closed停业、archived已归档；门店管理本轮没有独立启用／暂停品牌服务的替代按钮。 |
+| 开通进度 | 优先依次判定待开通管理员、待配置品牌菜单、初始化已完成、已首次登录、待首次登录；按Admin、菜单、完成时间与登录时间派生，不写入status。 |
+
+### 菜单、统计与变化传播
+
+- 显式品牌菜单保存services及menuResourceKeys身份快照，新增资源不自动扩权。目录结构用于承载已选下级，不把兄弟页面自动授权。
+- 新关联门店inherit动态取品牌开通范围与门店视角交集；独立门店保存自身enabledKeys。历史缺少mode按独立；缺少能力记录不自动继承。
+- 品牌缩减菜单：独立门店裁剪超出部分，继承门店动态减少；品牌增加：继承门店随父范围变化，独立门店不自动新增。旧角色授权记录保留，运行时受品牌上限限制。
+- 当前M运营与B品牌Admin调用同一门店配置保存链路，只有品牌上限，没有单独持久化M门店上限与B内部范围；这是目标偏差。
+- 页面统计使用MenuChoice.isPage；节点数量还可能含目录、分组、设置项。不得把“新增53项”直接解释为新增53个页面；变更记录区分页面／目录分组／设置项／历史菜单。
+- 品牌／门店配置版本包含发布路由版本、品牌、能力、门店归属与门店能力；firstLoginAt不参与该版本。账号角色另用整数version。
+
+### 权限与访问边界
+
+Admin品牌视角取品牌上限；门店视角受本店开通约束。普通账号使用命中门店的角色绑定，不拼接不同门店授权。品牌汇总普通账号页面可见性取至少一家可用店，聚合操作另按全部目标店校验。预设、订阅、发布及账号状态仍是附加限制，不能把仅有菜单开通视为所有条件满足。
+
+宿主页面对已注册的设置与操作有前端约束；未注册控件、嵌入应用内部操作和后端接口不能据此宣称已全部鉴权。无brand principal时部分入口仍走旧会话兼容，不能将其解释为生产统一拒绝模型。
+
+### 预览、关闭与代登录
+
+- 品牌编辑→预览配置：独立弹框只含本次新增／本次关闭，树状查看，返回修改保留草稿；确认保存才写入。
+- 门店编辑同样两阶段；inherit只读预览继承范围，独立配置可增量／替换（单店替换）；批量计划逐店算差异。当前页签差异相同时显示统一菜单、隐藏门店切换，不同才显示门店切换；新增／关闭数量不得跨店重复求和冒充菜单数。
+- 已保存完整菜单通过每家门店“查看生效菜单”查看；门店详情“门店菜单”也展示当前有效树，不属于本次变更预览。
+- 通用编辑弹框仅真实编辑标记dirty；关闭、取消、Esc触发独立放弃确认；继续编辑保留、放弃关闭无写入。创建向导的离开保护另走现有页面confirm，不把所有场景混成同一弹框。
+- 代登录立即显示“正在登录，请稍后”并防重复；中间范围准备不重绘列表；进入后台后移除Loading。目标视图15秒未挂载走超时恢复，定时器不能抢占同步任务。
+- 商家代管提示位于红色说明条下，全宽横跨侧栏和内容；退出清理会话、记录结束并返回来源。代登录不等于员工正常登录验收。
+
+
+## 当前数据字段、存储与计算契约
+
+下表为已实现原型字段，不能与后文目标逻辑对象混作已存在数据库表。未列为页面可编辑的兼容字段不代表当前有输入控件。源类型文件为额外可选字段的完整技术入口；本轮不发明必填、长度、默认或金额规则。
+
+### 品牌 EnterpriseMerchant
+
+| 字段 | 类型／默认／来源／约束 |
+| --- | --- |
+| merchantId | string，系统内部主键，创建生成；不由页面改写。 |
+| enterpriseId／groupId | string，Enterprise与集团归属；当前向导必选groupId，候选店按同集团校验。 |
+| bid | 可选string，对外BID；缺省展示—，不等同merchantId。 |
+| name／code | string；name去首尾空格且向导必填≤60字；code可空输入，创建自动生成；不把名称作为主键。 |
+| orgType | single-store或chain；当前三步向导固定chain，旧单店原型另有用途。 |
+| status | draft／onboarding／active／suspended／closing／closed；页面兼容映射见公共状态表。 |
+| timezone／locale | string；向导timezone三项之一，locale由既有创建逻辑补充，当前向导无locale输入。 |
+| contactName／contactPhone | 可选string类型；当前向导联系人必填≤30字，电话可空。 |
+| primaryAdminEmail | 可选string；新向导写空，账号另开；不能凭此空值自动生成Admin。旧品牌兼容主邮箱。 |
+| accountProvisioningRequired | 可选boolean；新向导true，缺省保留旧登录兼容。 |
+| createdAt／updatedAt | ISO时间string，系统生成；创建时间筛选用createdAt日期部分，开通时间显示activatedAt优先。 |
+| activatedAt／firstLoginAt／onboardingCompletedAt | 可选ISO时间；分别为激活、首次登录、完成初始化记录；首次登录不等于完成初始化。 |
+| contractExpiresAt／licenseStatus／licenseAutoSuspend | 可选；合同到期日及License状态active/expiring/expired/suspended、自动暂停标识；当前服务启用检查填写的到期日，不能据类型推断所有CRM能力已上线。 |
+| serviceReason／suspendedReason | 可选string，服务操作理由与旧暂停理由；新服务动作理由2至200字。 |
+| crmContractId／crmAccountId／contractStatus／crmLastSyncedAt | 可选兼容CRM字段，contractStatus=draft/signed/active/renewal/expired；本轮未核验生产CRM连接。 |
+| address／notes／onboardingInviteSentAt／closingStartedAt／closingEndsAt／closedAt | 可选历史资料及生命周期字段；不是新向导均可编辑或自动触发邮件/关停任务的承诺。 |
+
+### 门店 MerchantOrgStore 与 StoreCapabilitySnapshot
+
+| 字段 | 类型／默认／来源／约束 |
+| --- | --- |
+| storeId | MID string，既有门店身份，关联保留。 |
+| merchantId | 所属品牌内部ID；与本店能力记录一致，跨品牌保存拒绝。 |
+| linkedMerchantId／brandId／regionId | string，旧挂载身份及兼容品牌区域组织；按关联逻辑维护，不据此绕过权限。 |
+| name／code／status | string名称编码；status=preparing/open/closed/archived；列表分别显示筹备中/营业中/停业/已归档。 |
+| address／postalCode | 可选string，列表和候选搜索可用；缺失按各页面显示暂无地址或—。 |
+| openedAt／mountedAt | 可选ISO时间；既有业务记录，非每次查看产生。 |
+| menuMode | 可选inherit/independent；新关联显式inherit；历史缺省independent；无能力记录不自动继承。 |
+| enabledKeys | string[]；独立为存储选中键，inherit存储为空但读取计算有效键；读取结果不能反推磁盘存有全部继承键。 |
+| updatedAt／updatedBy | 可选string；保存时写时间及操作者；品牌变化引起继承动态变化不一定更新本店时间。 |
+
+### 品牌能力 MerchantCapabilitySnapshot
+
+| 字段 | 类型／默认／来源／约束 |
+| --- | --- |
+| merchantId | 所属品牌ID，品牌能力唯一关联。 |
+| businessTypeIds／productLineIds | string[]；向导均至少一项，POS默认产线，候选产线按既有产品线解析器处理。 |
+| presetCombos／syncedPresetAt | 预设组合及可选同步时间；兼容preset同步，不代表替代显式菜单授权。 |
+| menuGrantMode | 可选explicit；显式空选择保持空；缺省走旧预设兼容解析，不能一律视为显式全部允许。 |
+| services[].serviceId／nodeKey／enabled | 服务记录节点身份，nodeKey优先，enabled表示开通；显式保存每个选中键一条。 |
+| services[].billingType／storeScope／scopeIds | included/paid；all/regions/stores及可选范围数组，当前显式品牌菜单保存billingType沿用模块分类、storeScope=all。 |
+| services[].effectiveFrom／effectiveTo | 可选历史时间字段；不要仅因类型存在就声称当前显式开通已经逐项执行计费时段。 |
+| menuResourceKeys | 可选string[]，显式保存冻结权限资源映射，运行时与当前映射交集，不对新增资源自动授权。 |
+
+### 品牌账号、角色、员工与审计
+
+存储为menusifu:brand-access:v1:<merchantId>；schema=1，version新对象0，成功变更+1。无已存对象时可能使用演示品牌预置，不应写成所有品牌都必然空态。通用权限中心使用另一个menusifu:permission-center-local:v4，尚未统一。
+
+| 字段 | 类型／默认／来源／约束 |
+| --- | --- |
+| accounts[].id／name | id UUID；name必填≤30字，普通账号对应employees.id，Admin管理不要求每次生成员工角色绑定。 |
+| accounts[].email | trim并小写；menusifu.cn/com；品牌内及跨品牌不重复；现有邮箱在普通账号编辑只读。 |
+| accounts[].admin／enabled | boolean；Admin不由角色为空推导；新Admin enabled=true；普通账号按表单身份设置。至少保留可用Admin，兼容历史Admin判定。 |
+| accounts[].password | string，本地原型凭据；新建≥6位，普通账号编辑留空保留；禁止写入日志前后快照。不是生产密码哈希实现。 |
+| accounts[].createdAt／lastLoginAt | 可选ISO时间；lastLoginAt随成功登录记录，不把代登录自动当真实登录。 |
+| roles[].id／name／description | UUID；角色名必填≤30字，说明≤160字；按现有角色验证唯一性。 |
+| roles[].grants | 资源键到hidden/read/edit；action只hidden/edit，page仅hidden/read，setting可hidden/read/edit。新增超品牌上限授权拒绝，已存在旧超限记录保留供追溯。 |
+| employees[].id／name／email／status | 与账号及当前角色模型关联；status沿用unopened/pending/revoked/enabled/disabled；账号enabled与角色数据仍需运行时联合判断。 |
+| employees[].bindings | 每条id、roleId、scope；当前品牌账号保存限定scope.mode=stores且ids为本品牌门店非空集合，必须有对应角色。 |
+| employeeAuthorization／overrides | roles-only；个人overrides固定空；不能保存个人例外授权。 |
+| logs[].before／after | 脱敏JSON快照；账号去除password，保存角色／账号／员工前后值；事实字段优先用于可读展示。 |
+| facts | 可选category/title/source/target/fields及operationId；管理员、服务、归属等操作使用结构化事实。 |
+
+### 菜单变更与代登录记录
+
+| 字段 | 类型／默认／来源／约束 |
+| --- | --- |
+| MerchantChangeLogEntry.id／at／action／operatorEmail | string，唯一记录、时间、内部动作及实际操作者；列表不直接把动作码当唯一说明。 |
+| merchantId／storeId | 品牌必有，storeId可选；门店详情按MID筛选，不靠文本包含门店名。 |
+| menuChange.operationId／source／mode／beforeMode | 一次批量操作共享operationId；模式inherit/add/replace/brand等按记录展示，旧缺失明示历史未保存。 |
+| menuChange.added／removed／choices | 节点键差集及当时菜单名称结构快照；优先快照解释历史；无法识别key独立列出，不假造名称。 |
+| detail | 兼容旧摘要；解析旧新增/关闭格式只为展示，不能重写原审计事实。 |
+| 代管sessionId／merchantId／storeId | sessionStorage菜单会话，storeId可选；门店模式必须锁店且属于该品牌。 |
+| operatorEmail／impersonatedAsEmail／returnPath | 保留运营与模拟身份，记录返回入口；不得以模拟邮箱覆盖真实运营审计身份。 |
+| startedAt／endedAt／endedReason | 开始／结束时间，类型允许manual/timeout；当前Loading恢复调用现有结束方法，不以timeout类型存在宣称已有统一后台超时审计。 |
+
+### 筛选、保存与错误边界
+
+- 品牌条件：groupId/status/progress/menu/stores/from/to/query；门店条件：groupId/merchantId/status/brandStatus/mode/menu/query。全部string；空字符串为全部／不限制。查询草稿与授权数据分开，sessionStorage分别保存品牌、门店条件。
+- 品牌日期为字符串ISO日期部分闭区间；from>to报错且不应用新条件。不宣称跨时区日期转换已实现。下拉change立即应用，输入文本／日期通过提交查询生效；重置清空再应用。
+- brandConfigurationVersion是包含routeVersion、merchant（去firstLoginAt）、cap、stores、storeCaps的JSON字符串，不是单一整数或全局数据库版本。品牌账号保存使用整数version，服务操作组合两种版本。
+- 增量next=(prev∪selected)∩ceiling；替换next=selected∩ceiling；继承next=品牌门店视角范围；差集added=next-prev、removed=prev-next。批量保存不得用某一店的prev替代所有店。
+- 菜单批量在克隆快照中计算，一次localStorage写成功再发布事件；账号另行保存，跨对象／跨键不具备后端事务。不能据此承诺掉电回滚或多设备一致性。
+- 同集合无变化保存可直接返回，不增加审计；仅模式变化仍是变更，即使菜单差集为空。
+- 失败覆盖无品牌／无能力、菜单已退役、归属越界、版本冲突、无角色／无门店绑定、重复邮箱、密码不足、最后Admin保护、存储失败；UI显示错误并保留输入。失败后不自动降级为全部允许。
+
+
+## M／B 平台业务关系与授权框架（MB-AUTH-20261022-52）
+
+> 状态：用户要求将已讨论方案纳入目标设计；本节不是实现完成声明。本次仅更新文档，不修改代码或已有授权数据。目标来源为MB-AUTH-20261022-52；本轮配对产品V1.50／研发V1.49／个人V1.49，源码基线main@3f0cb3d5。下述规则替代旧文中“M与B共用同一门店菜单配置”的业务定义；旧流程截图仅作为现状证据。
+
+### 业务边界与统一术语（目标态）
+
+M平台是服务商管理端，B平台是商家后台。“菜单路由”统一指功能入口配置，不称“菜品路由”。统一功能资源目录定义模块、页面、设置项和操作能力；菜单是入口，API、导出等无独立菜单的能力仍须注册权限资源。资源注册不等于功能已实现或已授权。
+
+| 对象／职责 | 有效规则 |
+| --- | --- |
+| M菜单路由配置 | 维护资源标识、层级、路由和适用视角，发布可供开通的目录版本；品牌、门店与角色候选引用同一资源标识，不各造菜单。未发布草稿不参与开通。 |
+| M品牌管理 | 在已发布且可用的目录中配置品牌功能上限，开通和管理品牌Admin；不替商家维护日常员工角色。 |
+| M门店管理 | 在品牌上限和门店适用范围内维护门店开通上限；可继承品牌或独立配置。 |
+| B品牌Admin | 登录后查看已开通范围，管理内部角色、员工账号和生效门店；只能缩减或分配M已开通的能力，不能突破平台上限。 |
+| B员工 | 按角色、账号状态、门店范围及平台上限获得最终权限；能看到菜单不等于能编辑或执行敏感操作。 |
+| 总部／门店视角 | 总部页面按品牌范围计算；门店业务还须满足该店上限、内部启用范围与员工门店绑定，不机械地将所有总部页面套入某家门店。 |
+
+### 业务框架图
+
+```mermaid
+flowchart TB
+ subgraph M["M平台 · 服务商管理"]
+  A["统一功能资源目录"] --> B["菜单路由配置与版本发布"]
+  B --> C["品牌功能上限"] --> D["门店功能上限：继承或独立"]
+  C --> E["开通品牌Admin"]
+ end
+ subgraph BP["B平台 · 商家后台"]
+  F["Admin登录与查看已开通范围"] --> G["商家内部角色、员工、门店分配"]
+  G --> H["员工登录"] --> I["统一计算有效权限"] --> J["菜单、页面、操作及接口"]
+ end
+ E --> F
+ C --> I
+ D --> I
+ B --> I
+```
+
+### 配置到员工使用流程图
+
+```mermaid
+flowchart TD
+ A["维护资源及菜单路由"] --> B["校验标识、层级、路由"] --> C["发布目录版本"]
+ C --> D["创建品牌、关联门店"] --> E["开通品牌功能"] --> F{"M门店开通方式"}
+ F -->|继承| G["品牌范围中门店适用功能"]
+ F -->|独立| H["在品牌范围内指定门店功能"]
+ G --> I["开通品牌Admin"]
+ H --> I
+ I --> J["Admin登录B平台"] --> K["查看开通范围、配置内部启用范围"]
+ K --> L["创建角色并授权"] --> M["创建员工并绑定角色和门店"]
+ M --> N["员工登录"] --> O["计算有效权限"] --> P["按权限展示及执行业务"]
+```
+
+### 门店上下限及权限判断
+
+```mermaid
+flowchart TD
+ A["M品牌功能上限"] --> B["M门店功能上限：继承或独立"]
+ B --> C["B商家内部启用范围：只能缩减"]
+ C --> D["角色权限与员工门店绑定"] --> E["最终可用范围"]
+```
+
+门店员工最终权限为：已发布且可用资源 ∩ M品牌上限 ∩ M门店上限 ∩ B内部启用范围 ∩ 员工角色权限，并受账号、品牌服务状态和门店数据范围限制。查看、编辑、操作类型分别计算，不用集合相交代替权限等级判断。Admin在平台上限及适用视角内管理，不自动获得未开通能力。
+
+```mermaid
+flowchart TD
+ A["登录或发起访问／操作"] --> B{"会话、账号、品牌服务有效？"}
+ B -->|否| X["拒绝并说明原因"]
+ B -->|是| C{"资源可用且品牌已开通？"}
+ C -->|否| X
+ C -->|是| D{"门店业务？"}
+ D -->|是| E{"门店上限、内部启用、数据范围满足？"}
+ E -->|否| X
+ E -->|是| F{"Admin或角色具备本次权限？"}
+ D -->|否| F
+ F -->|否| X
+ F -->|是| G["允许相应查看或操作"]
+```
+
+### 技术框架与实现差距（目标设计对照现状）
+
+```mermaid
+flowchart TB
+ A["资源目录与发布版本"] --> E["统一权限计算服务"]
+ B["M品牌／门店授权上限"] --> E
+ C["B内部启用、角色与员工绑定"] --> E
+ D["认证会话与状态"] --> E
+ E --> F["导航及页面访问"]
+ E --> G["设置项及操作按钮"]
+ E --> H["服务端接口及数据范围"]
+ B --> I["统一审计"]
+ C --> I
+```
+
+| 事项 | 现状／目标／未闭合项 |
+| --- | --- |
+| 菜单同源 | 开通树已消费发布蓝图；系统导航、旧registry、权限Catalog仍有映射。目标为同一稳定资源标识，不能把展示树一致视为所有运行时已同源。 |
+| 账号角色 | brand-access按品牌存储；通用permission-center-local:v4另行存储。目标合并商家内部授权数据链路；尚未证明所有角色入口与员工登录已统一。 |
+| 门店配置 | 当前M/B调用同一门店菜单保存链路；目标拆分M上限与B内部配置，禁止B恢复M关闭的能力。此项待实现，不将既有代码写成目标行为。 |
+| 其他限制 | 订阅、预设及发布范围应有明确职责，最终统一解释有效权限及拒绝原因；不能出现只显示“已开通”却无法说明实际不可用原因。 |
+| 生产化 | 当前浏览器本地存储和前端登录属于原型；目标接入正式认证、租户隔离、后端授权与接口鉴权。本次未接入生产服务。 |
+| 新增资源 | 发布只增加可供开通的候选，不自动给品牌、门店、旧角色或员工扩权。继承仅在已确认的父范围授权内计算。 |
+| 撤销及恢复 | 撤销后最终权限应失效；保留审计。重新开通是否恢复原角色授权尚待确认，不能擅自清空或恢复历史授权。 |
+| 验收 | 必须验证真实Admin创建员工、分配角色、员工正常登录；代登录验证不能替代员工登录验收。 |
+
+
+### 研发对象与状态契约
+
+以下为逻辑对象，不是已批准的新接口或数据库表；实际API字段、迁移方案和兼容策略另行设计。
+
+| 逻辑字段／对象 | 类型、来源、默认与约束 |
+| --- | --- |
+| resourceId | 非空稳定字符串，平台资源目录生成；全局唯一，改名或调整父级不应更换标识；废弃资源不可借旧标识授予另一能力。 |
+| resourceType／parentId／route／perspectives | 模块、页面、设置项或操作；parentId允许根为空且禁止成环；route仅有页面入口时适用，无菜单操作可为空；视角限制由目录定义。具体枚举编码待研发设计。 |
+| 发布版本 | 非空版本标识及资源快照；消费已发布版本，草稿隔离；保存时版本不匹配应拒绝并保留用户输入。 |
+| 品牌授权上限 | 按brandId关联resourceId集合；显式空集合表示未开通，不能解释为全部允许。 |
+| 门店平台上限 | storeId归属一个品牌；继承模式按品牌中门店适用资源计算，独立模式保存子集；缺失旧数据须保留原语义，不自动扩权迁移。 |
+| B内部启用范围 | 与M上限分别持久化；新建默认沿用当前可用门店上限。品牌／门店后续新增资源是否自动纳入B已有配置待确认，不能按默认值规则隐式扩权。 |
+| 角色与员工绑定 | 租户内角色及资源权限；每次绑定必须同时包含角色与生效门店，不跨绑定拼接角色和门店。 |
+| 状态与审计 | 账号停用、品牌暂停拒绝访问；成功保存记录操作者、M/B来源、版本、对象、前后值及结果，密码不记明文；失败不得发布部分状态。 |
+
+测试算例：①品牌有报表、门店无报表、角色有报表→拒绝；②门店有订单、员工不在该店范围→拒绝；③员工可查看不可编辑→页面可见但编辑拒绝；④资源仅草稿新增→开通候选不变；⑤B保存包含M未开通资源→失败且原配置保留；⑥门店篡改为其他品牌ID→拒绝；⑦同版本并发保存→后提交冲突；⑧品牌Admin仍不得突破M上限。服务端测试在正式接口接入后执行，当前不标记通过。
+
+
+## 实现证据与验证清单
+
+| 范围 | 源码入口 |
+| --- | --- |
+| 类型、枚举、字段 | [enterprise-merchant-types.ts](../../src/config/enterprise-merchant-types.ts) |
+| 品牌／门店创建与保存 | [enterprise-merchant-store.ts](../../src/config/enterprise-merchant-store.ts) |
+| 页面与路由 | [enterprise-merchant-ui.ts](../../src/config/enterprise-merchant-ui.ts)、[enterprise-merchant-scope.ts](../../src/config/enterprise-merchant-scope.ts) |
+| 筛选 | [management-list-filters.ts](../../src/config/management-list-filters.ts) |
+| 菜单编辑、Admin与B入口 | [brand-access-ui.ts](../../src/config/brand-access-ui.ts) |
+| 生命周期 | [brand-service-lifecycle.ts](../../src/config/brand-service-lifecycle.ts)、[brand-service-policy.ts](../../src/config/brand-service-policy.ts) |
+| 发布菜单及身份映射 | [enterprise-merchant-services.ts](../../src/config/enterprise-merchant-services.ts)、[brand-menu-catalog.ts](../../src/config/brand-menu-catalog.ts) |
+| 登录及授权 | [brand-access-store.ts](../../src/config/brand-access-store.ts)、[brand-access-domain.ts](../../src/config/brand-access-domain.ts)、[login.ts](../../src/auth/login.ts) |
+| 另一权限中心 | [center-store.ts](../../src/permissions/center-store.ts)、[center-ui.ts](../../src/permissions/center-ui.ts) |
+| 审计与代登录 | [brand-change-log.ts](../../src/config/brand-change-log.ts)、[enterprise-merchant-impersonate.ts](../../src/config/enterprise-merchant-impersonate.ts)、[impersonation-loading.ts](../../src/config/impersonation-loading.ts) |
+
+### 待确认与交付准备度
+
+| 编号 | 未闭合项 | 影响 |
+| --- | --- | --- |
+| Q01 | 撤销后重新开通，是否恢复旧角色授权；当前保留记录，但目标恢复策略未定 | 目标态迁移与恢复验收不能定稿。 |
+| Q02 | M给门店新增能力后，B已有内部启用配置是否自动纳入 | 当前无B独立对象；拆分后不能默认为自动扩权。 |
+| Q03 | 统一商家角色入口、身份／租户服务及两套权限状态的迁移策略 | 方案需研发设计，不在文档更新中发明API。 |
+| Q04 | 系统目录无发布快照时是否继续允许默认树开通 | 当前有回退，目标发布治理需明确；维持现状且不隐式改变。 |
+| Q05 | 订阅、预设、发布范围与开通上限的最终职责和拒绝解释 | 当前多门限制仍在，需统一可用原因与有效权限展示。 |
+
+当前实现文档可用于理解与回归设计；整个目标架构的Implementation-Plan Readiness为 **Not ready**，Q01—Q05及权限数据统一、M/B门店分层尚未闭合。本次不承诺全部目标已可直接开发或已验收。
+
+建议回归：创建无Admin待启用→Admin开通→服务启用→真实Admin登录；分别验证继承／独立、品牌撤销、门店越界、角色越界、跨店绑定、版本冲突、存储失败、批量无变化、未知历史菜单、正常员工登录、代登录退出返回。上述为待执行清单，旧记录仅作历史证据。
+
+
+## 历史版本与增量记录（非当前操作规范）
+
+<details>
+<summary>展开旧版章节、图片与交付记录；其中授权状态和验收结果仅适用于当时任务</summary>
 
 ## 代管提示条全宽展示（IMPERSONATION-BANNER-20261022-51）
 
@@ -1277,7 +1608,7 @@ M 平台负责品牌菜单上限、门店归属、Admin 开通及凭据和状态
 
 ## 列表与菜单弹框文案精简（BRAND-LIST-COPY-20261021-05）
 
-移除品牌列表顶部“检索与管理企业名下所有入驻品牌……”整段说明；移除门店列表顶部“汇总全部 Enterprise……”整段动态数量说明；移除单店和批量门店菜单配置弹框标题下“可选菜单来自品牌开通范围；M 平台与品牌 Admin 共用本配置。”说明，不渲染空副标题。筛选、列表、组织树入口、新建品牌、菜单候选上限及保存行为不变，M 平台与商家 Admin 共用弹框均生效。最新页面截图见 assets/brand-menu-access/copy-clean-brand-list.png、copy-clean-store-list.png、copy-clean-store-dialog.png。本轮本轮已获授权提交并合入本地 main，未获推送授权。
+移除品牌列表顶部“检索与管理企业名下所有入驻品牌……”整段说明；移除门店列表顶部“汇总全部 Enterprise……”整段动态数量说明；移除单店和批量门店菜单配置弹框标题下“可选菜单来自品牌开通范围；历史实现为M平台与品牌Admin共用配置；目标态按MB-AUTH-20261022-52拆分平台上限与内部范围。”说明，不渲染空副标题。筛选、列表、组织树入口、新建品牌、菜单候选上限及保存行为不变，M 平台与商家 Admin 共用弹框均生效。最新页面截图见 assets/brand-menu-access/copy-clean-brand-list.png、copy-clean-store-list.png、copy-clean-store-dialog.png。本轮本轮已获授权提交并合入本地 main，未获推送授权。
 
 ## 品牌列表筛选栏布局（BRAND-FILTER-LAYOUT-20261021-06）
 
@@ -1507,3 +1838,5 @@ M 平台负责品牌菜单上限、门店归属、Admin 开通及凭据和状态
 ## 实际路由配置页面核对补充（MENU-JSON-PARITY-20261021-18）
 
 此前 214 项审计覆盖的是蓝图系统树和商家导航数据，不能证明实际 /m-platform/nav-blueprint 的 JSON 编辑器已更新。实际页面另用 json-menu-demo-data，此轮已修正其自动概览、缺失专用子菜单和拍平层级问题；实际 JSON 树 29 根、277 节点按商家导航双向整树比较，页面逐节点验证通过。产品有效定义见 [菜单路由产品 v1.1](./M平台-菜单路由可视化配置设计方案.md)，研发 V1.0 与个人规范 V1.0 在其顶部互链。品牌原有未提交改动保留，本轮本轮已获授权提交并合入本地 main，未获推送授权。
+
+</details>
