@@ -7,6 +7,8 @@ export type { StaffLoginAccount };
 
 const enterpriseStaffAccounts = createStaffAccountStore({
   storageKey: "menusifu:enterprise-staff-login-accounts:v1",
+  strictPersistence: true,
+  refreshOnRead: true,
   seedAccounts: () => {
     const now = new Date().toISOString();
     return [

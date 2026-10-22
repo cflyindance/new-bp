@@ -25,6 +25,8 @@ export interface StaffLoginAccount {
 export interface CreateStaffAccountStoreOptions {
   storageKey: string;
   seedAccounts: () => StaffLoginAccount[];
+  strictPersistence?: boolean;
+  refreshOnRead?: boolean;
 }
 
 function normalizeEmail(email: string): string {
@@ -65,12 +67,12 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
   let accounts: StaffLoginAccount[] = [];
 
   function saveAccounts(next: StaffLoginAccount[]): void {
-    accounts = next;
     try {
-      localStorage.setItem(options.storageKey, JSON.stringify(accounts));
-    } catch {
-      /* ignore */
+      localStorage.setItem(options.storageKey, JSON.stringify(next));
+    } catch (error) {
+      if (options.strictPersistence) throw error;
     }
+    accounts = next;
   }
 
   function mergeSeedAccounts(loaded: StaffLoginAccount[]): StaffLoginAccount[] {
@@ -121,6 +123,15 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
 
   accounts = loadAccounts();
 
+  function refreshAccounts(): void {
+    if (!options.refreshOnRead) return;
+    try {
+      const raw = localStorage.getItem(options.storageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      accounts = Array.isArray(parsed) ? parsed : [];
+    } catch { accounts = []; }
+  }
+
   function validateStaffAccountInput(input: {
     employeeId: string;
     employeeName: string;
@@ -130,6 +141,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
     requirePassword: boolean;
     excludeId?: string;
   }): string | null {
+    refreshAccounts();
     const employeeId = input.employeeId.trim();
     const employeeName = input.employeeName.trim();
     const loginEmail = input.loginEmail.trim();
@@ -161,15 +173,19 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
   }
 
   return {
-    listStaffLoginAccounts: () =>
-      accounts.slice().sort((a, b) => a.employeeName.localeCompare(b.employeeName, "zh-CN")),
-    getStaffLoginAccountById: (id) => accounts.find((a) => a.id === id),
+    listStaffLoginAccounts: () => {
+      refreshAccounts();
+      return accounts.slice().sort((a, b) => a.employeeName.localeCompare(b.employeeName, "zh-CN"));
+    },
+    getStaffLoginAccountById: (id) => { refreshAccounts(); return accounts.find((a) => a.id === id); },
     getStaffLoginAccountByEmail: (email) => {
+      refreshAccounts();
       const normalized = normalizeEmail(email);
       return accounts.find((a) => normalizeEmail(a.loginEmail) === normalized);
     },
     validateStaffAccountInput,
     upsertStaffLoginAccount: (account) => {
+      refreshAccounts();
       const idx = accounts.findIndex((a) => a.id === account.id);
       const row: StaffLoginAccount = {
         ...account,
@@ -202,6 +218,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       return row;
     },
     updateStaffLoginAccount: (id, patch) => {
+      refreshAccounts();
       const existing = accounts.find((a) => a.id === id);
       if (!existing) return null;
 
@@ -233,6 +250,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       return row;
     },
     deleteStaffLoginAccount: (id) => {
+      refreshAccounts();
       const row = accounts.find((a) => a.id === id);
       if (!row || row.isSystem) return false;
       saveAccounts(accounts.filter((a) => a.id !== id));
