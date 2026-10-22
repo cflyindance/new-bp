@@ -2030,6 +2030,21 @@ var ALLOC_KEY = 'tipout_allocated';
       return { eligible: true, reason: 'pure-clock-rules' };
     }
 
+    function prepareSystemAllocationSnapshot() {
+      var scope = getDetailPayoutScope();
+      TipOutDateState.assertDateWritable(scope.store, scope.dateKey);
+      var rules = ruleData.getRulesForStore(scope.store);
+      if (!rules.length || !getDetailBusinessStatus(scope.dateKey, rules).allocatable) throw new Error('当天没有可分配的小费规则或未营业');
+      rules.forEach(function(rule) {
+        if (TipOutRosterDirectory.validateRuleReferences(rule, scope.store).length) throw new Error('规则引用的角色或员工已失效，请先修正规则');
+      });
+      var snapshot = buildSystemDetailAllocationSnapshot(scope.store, scope.dateKey);
+      snapshot.allocationSource = 'system';
+      var error = TipOutAllocationResults.validate(snapshot);
+      if (error) throw new Error(error);
+      return snapshot;
+    }
+
     function prepareQuickAllocationSnapshot() {
       var scope = getDetailPayoutScope();
       var rules = ruleData.getRulesForStore(scope.store);
@@ -2153,6 +2168,7 @@ var ALLOC_KEY = 'tipout_allocated';
         draftNodes.forEach(function(node) { node.remove(); });
         detailForceRebuild = true;
         renderDetailPage();
+        document.querySelectorAll('.formula-rule-section.formula-section').forEach(function(section) { recalcFormulaPoolForBlock(section); });
         return collectDetailAllocationSnapshot(store, dateKey, detailAllRules);
       } finally {
         detailForceRebuild = false;

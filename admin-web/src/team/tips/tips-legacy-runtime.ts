@@ -38,7 +38,7 @@ import { parseTipsRoute, rewriteLegacyTipsUrl, type TipsRoute } from "./tips-nav
 import { renderTipsTemplate, type TipsView } from "./tips-templates";
 import { ensurePresetEmployeesPerStore } from "../../config/team-employee-roster-scope";
 
-export interface TipsRuntimeHandle { destroy(): void; prepareQuickSnapshot(): unknown }
+export interface TipsRuntimeHandle { destroy(): void; prepareQuickSnapshot(systemReallocation?: boolean): unknown }
 type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
@@ -68,7 +68,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
     programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
-    "return {prepareQuickSnapshot:function(){return prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
+    "return {prepareQuickSnapshot:function(system){return system?prepareSystemAllocationSnapshot():prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
 
@@ -108,7 +108,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }
     } : undefined,
     tipoutQuickPreparation: quickPreparation,
-    prepareTipoutQuickSnapshot: (store: string, dateKey: string) => {
+    prepareTipoutQuickSnapshot: (store: string, dateKey: string, systemReallocation = false) => {
       const host = realDocument.createElement('div');
       const isolatedShadow = host.attachShadow({ mode: 'open' });
       const isolatedRoot = realDocument.createElement('div');
@@ -117,7 +117,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
       const query = `?store=${encodeURIComponent(store)}&date=${encodeURIComponent(dateKey)}`;
       const isolatedContext: TipsPageContext = { ...context, setStoreScope: () => {}, subscribeScopeChange: () => () => {}, navigate: () => {}, replace: () => {}, getScrollOwner: () => null };
       const runtime = mountLegacyTipsRuntime(isolatedShadow, isolatedRoot, { view: 'details', query, href: `/team/tips/details${query}` }, isolatedContext, true);
-      try { return runtime.prepareQuickSnapshot(); } finally { runtime.destroy(); }
+      try { return runtime.prepareQuickSnapshot(systemReallocation); } finally { runtime.destroy(); }
     },
     document: scopedDocument, location: locationFacade, parent: null, top: null, self: null,
     addEventListener: (t:string,l:EventListenerOrEventListenerObject,o?:boolean|AddEventListenerOptions)=>on(realWindow,t,l,o), removeEventListener: realWindow.removeEventListener.bind(realWindow),
@@ -144,7 +144,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const observer = new MutationObserver((items)=>items.forEach((item)=>item.addedNodes.forEach((node)=>{if(node instanceof HTMLElement){normalizeHandlers(node);Array.from(node.attributes).forEach((a)=>{if(/^on/i.test(a.name)){node.setAttribute(`data-native-${a.name.toLowerCase()}`,a.value);node.removeAttribute(a.name);}})}})));
   observer.observe(root,{childList:true,subtree:true});
   observers.add(observer);
-  let api: { prepareQuickSnapshot(): unknown; runHandler(code:string,event:Event,element:HTMLElement): unknown };
+  let api: { prepareQuickSnapshot(systemReallocation?: boolean): unknown; runHandler(code:string,event:Event,element:HTMLElement): unknown };
   try {
     api = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(route.view))(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
     root.dispatchEvent(new Event("DOMContentLoaded"));
@@ -159,5 +159,5 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     event.stopPropagation();
     context.navigate(mapped);
   },true);
-  return { prepareQuickSnapshot: () => api.prepareQuickSnapshot(), destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };
+  return { prepareQuickSnapshot: (systemReallocation?: boolean) => api.prepareQuickSnapshot(systemReallocation), destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };
 }

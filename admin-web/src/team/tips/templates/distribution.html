@@ -313,11 +313,17 @@
               <label class="form-label" for="allocationDateEnd"><span class="tipout-required">*</span> 终止日期</label>
               <input id="allocationDateEnd" type="date" class="form-control">
             </div>
+            <div id="allocationOverwriteWarning" hidden>
+              <p id="allocationOverwriteScope" style="line-height:1.7;overflow-wrap:anywhere"></p>
+              <p>已手动调整过小费分配数据，将按照系统小费规则进行重新分配，分配后会覆盖手动调整的数据</p>
+              <p id="allocationOverwriteDates" style="line-height:1.7;overflow-wrap:anywhere"></p>
+            </div>
             <p id="allocationScopeError" class="tipout-allocation-modal__error" role="alert" hidden></p>
           </div>
           <div class="modal-footer">
             <button type="button" id="cancelTipAllocationBtn" class="btn" data-native-onclick="closeTipAllocationModal()">取消</button>
             <button type="button" id="confirmAllocateBtn" class="btn btn-primary" data-native-onclick="submitTipAllocationScope()">分配小费</button>
+            <button type="button" id="confirmTipOverwriteBtn" class="btn btn-primary" style="display:none" data-native-onclick="submitTipAllocationScope(true)">确认覆盖并分配</button>
           </div>
         </div>
       </div>

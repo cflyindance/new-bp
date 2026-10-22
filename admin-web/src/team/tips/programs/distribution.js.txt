@@ -2,6 +2,7 @@ var ALLOC_KEY = 'tipout_allocated';
     var quickAllocationPending = new Set();
     var summaryDateSort = TipOutSummaryDateSort.readDirection();
     var allocationSubmitting = false;
+    var allocationOverwriteDraft = null;
     var payoutDraft = null;
     function getAllocatedDatesForStore(store) {
       try {
@@ -1428,15 +1429,19 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function setAllocationSubmitting(submitting) {
       allocationSubmitting = submitting;
-      ['confirmAllocateBtn', 'cancelTipAllocationBtn', 'closeTipAllocationModalBtn', 'allocateBtn'].forEach(function(id) {
+      ['confirmAllocateBtn', 'confirmTipOverwriteBtn', 'cancelTipAllocationBtn', 'closeTipAllocationModalBtn', 'allocateBtn'].forEach(function(id) {
         var button = document.getElementById(id);
         if (button) button.disabled = submitting;
       });
       var confirmButton = document.getElementById('confirmAllocateBtn');
       if (confirmButton) confirmButton.textContent = submitting ? '分配中…' : '分配小费';
+      var overwriteButton = document.getElementById('confirmTipOverwriteBtn');
+      if (overwriteButton) overwriteButton.textContent = submitting ? '分配中…' : '确认覆盖并分配';
+      ['allocationStore','allocationDateStart','allocationDateEnd'].forEach(function(id) { document.getElementById(id).disabled = submitting || !!allocationOverwriteDraft; });
     }
 
     function openTipAllocationModal() {
+      resetAllocationOverwrite();
       if (redirectToTipRulesWhenMissing()) return;
       var pageStore = document.getElementById('storeSelect');
       var selectedStore = pageStore ? pageStore.value : '';
@@ -1465,6 +1470,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function closeTipAllocationModal(force) {
       if (allocationSubmitting && !force) return;
+      resetAllocationOverwrite();
       var modal = document.getElementById('tipAllocationModal');
       modal.classList.remove('show');
       modal.setAttribute('aria-hidden', 'true');
@@ -1485,52 +1491,80 @@ var ALLOC_KEY = 'tipout_allocated';
       updateEmployeeFilter(true);
     }
 
-    function executeTipAllocationScope(scope) {
+    function readAllocationScopeRows(scope) {
+      var inputs = ['storeSelect','dateStart','dateEnd'].map(function(id) { return document.getElementById(id); });
+      var previous = inputs.map(function(input) { return input.value; });
+      try {
+        inputs[0].value = scope.store; inputs[1].value = scope.startDate; inputs[2].value = scope.endDate;
+        invalidateDayPipelineCache();
+        return buildDailyDataset(getStoreEmployees());
+      } finally {
+        inputs.forEach(function(input,index) { input.value = previous[index]; });
+        invalidateDayPipelineCache();
+      }
+    }
+    function inspectAllocationOverwrite(scope) {
       invalidateDayPipelineCache();
-      var dates = buildDateRange(scope.startDate, scope.endDate);
       var statusByDate = Object.create(null);
-      buildDailyDataset(getStoreEmployees()).forEach(function(row) { statusByDate[row.dateKey] = row.businessStatusResult; });
-      var skippedClosedCount = 0;
-      var skippedPaidCount = 0;
-      dates = dates.filter(function(dateKey) {
-        var result = statusByDate[dateKey];
-        var allowed = result && result.allocatable;
-        if (!allowed) skippedClosedCount += 1;
-        if (allowed && window.TipOutDateState && TipOutDateState.inspect(scope.store, dateKey).locked) {
-          skippedPaidCount += 1;
-          allowed = false;
+      readAllocationScopeRows(scope).forEach(function(row) { statusByDate[row.dateKey] = row.businessStatusResult; });
+      var manualDates = [], eligibleDates = [], closed = 0, paid = 0;
+      var states = buildDateRange(scope.startDate, scope.endDate).map(function(dateKey) {
+        var available = !!(statusByDate[dateKey] && statusByDate[dateKey].allocatable);
+        var locked = !!TipOutDateState.inspect(scope.store, dateKey).locked;
+        var snapshot = TipOutAllocationResults.read(scope.store, dateKey);
+        if (!available) closed++;
+        else if (locked) paid++;
+        else {
+          eligibleDates.push(dateKey);
+          if (snapshot && snapshot.allocationSource === 'manual') manualDates.push(dateKey);
         }
-        return allowed;
+        return [dateKey, available, locked, snapshot && (snapshot.snapshotHash || JSON.stringify(snapshot))];
       });
-      if (!dates.length) {
-        var closedError = new Error(skippedPaidCount ? '所选日期均已发放或不可修改，未执行分配' : '所选日期均未营业，无法进行小费分配');
-        closedError.allocationStage = 'eligibility';
-        throw closedError;
-      }
-      var allocatedDates = getAllocatedDatesForStore(scope.store);
-      dates.forEach(function(k) { allocatedDates.add(k); });
+      return { manualDates: manualDates, eligibleDates: eligibleDates, closedSkippedCount: closed, paidSkippedCount: paid,
+        fingerprint: JSON.stringify([scope.store, scope.startDate, scope.endDate, states]) };
+    }
+    async function executeTipAllocationScope(scope) {
+      var inspection = inspectAllocationOverwrite(scope);
+      if (!inspection.eligibleDates.length) throw new Error('所选日期均未营业、已发放或不可修改，未执行分配');
+      if (typeof window.prepareTipoutQuickSnapshot !== 'function') throw new Error('系统分配计算器尚未就绪，请刷新重试');
+      // Validate the complete set before writing any date. Each date remains an independent atomic commit.
+      var prepared = inspection.eligibleDates.map(function(dateKey) {
+        var previous = TipOutAllocationResults.read(scope.store, dateKey);
+        var snapshot;
+        try { snapshot = window.prepareTipoutQuickSnapshot(scope.store, dateKey, true); }
+        catch (error) { error.message = dateKey + '：' + error.message; throw error; }
+        return { dateKey: dateKey, snapshot: snapshot, previous: previous };
+      });
+      if (inspectAllocationOverwrite(scope).fingerprint !== inspection.fingerprint) throw new Error('分配数据已变化，请重新选择日期并确认');
+      var successCount = 0;
       try {
-        saveAllocatedDatesForStore(scope.store, allocatedDates);
-      } catch (error) {
-        error.allocationStage = 'write';
-        throw error;
-      }
-      try {
-        if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
-        TipOutPayrollBridge.syncAfterAllocation(
-            scope.store,
-            scope.startDate,
-            scope.endDate
-        );
+        for (var item of prepared) {
+          var snapshot = item.snapshot;
+          await TipOutAllocationResults.commit(snapshot, { expectedSnapshotFingerprint: JSON.stringify(item.previous), onlyIfUnallocated: !item.previous && !getAllocatedDatesForStore(scope.store).has(item.dateKey) });
+          successCount++;
         }
       } catch (error) {
-        error.allocationStage = 'payroll';
+        error.allocationStage = 'write'; error.successCount = successCount;
         throw error;
       }
-      return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };
+      try {
+        if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) TipOutPayrollBridge.syncAfterAllocation(scope.store, scope.startDate, scope.endDate);
+      } catch (error) { error.allocationStage = 'payroll'; throw error; }
+      return { successCount: successCount, paidSkippedCount: inspection.paidSkippedCount, closedSkippedCount: inspection.closedSkippedCount };
     }
 
-    function submitTipAllocationScope() {
+    function resetAllocationOverwrite() {
+      allocationOverwriteDraft = null;
+      var warning = document.getElementById('allocationOverwriteWarning');
+      if (warning) { warning.hidden = true; warning.style.display = 'none'; }
+      ['allocationStore','allocationDateStart','allocationDateEnd'].forEach(function(id) { document.getElementById(id).disabled = false; });
+      document.getElementById('confirmAllocateBtn').style.display = '';
+      document.getElementById('confirmTipOverwriteBtn').style.display = 'none';
+      document.getElementById('tipAllocationModalTitle').textContent = '分配小费';
+      document.getElementById('tipAllocationModalDescription').style.display = '';
+      document.querySelectorAll('#tipAllocationModal .form-group').forEach(function(group) { group.style.display = ''; });
+    }
+    async function submitTipAllocationScope(confirmed) {
       if (allocationSubmitting) return;
       var scope = Object.freeze({
         store: (document.getElementById('allocationStore').value || '').trim(),
@@ -1540,9 +1574,31 @@ var ALLOC_KEY = 'tipout_allocated';
       var validationError = validateAllocationScope(scope);
       if (validationError) { showAllocationScopeError(validationError); return; }
       showAllocationScopeError(null);
+      try {
+        var inspection = inspectAllocationOverwrite(scope);
+        if (confirmed === true) {
+          if (!allocationOverwriteDraft || allocationOverwriteDraft.fingerprint !== inspection.fingerprint) {
+            resetAllocationOverwrite();
+            showAllocationScopeError({ message: '分配数据或日期范围已变化，请重新检查并确认' }); return;
+          }
+        } else if (inspection.manualDates.length) {
+          allocationOverwriteDraft = inspection;
+          ['allocationStore','allocationDateStart','allocationDateEnd'].forEach(function(id) { document.getElementById(id).disabled = true; });
+          document.getElementById('tipAllocationModalTitle').textContent = '确认覆盖手动调整？';
+          document.getElementById('tipAllocationModalDescription').style.display = 'none';
+          document.querySelectorAll('#tipAllocationModal .form-group').forEach(function(group) { group.style.display = 'none'; });
+          document.getElementById('allocationOverwriteScope').textContent = '门店：' + scope.store + '；日期：' + scope.startDate + ' 至 ' + scope.endDate;
+          var warning = document.getElementById('allocationOverwriteWarning');
+          warning.hidden = false; warning.style.display = '';
+          document.getElementById('allocationOverwriteDates').textContent = '将覆盖 ' + inspection.manualDates.length + ' 天手动保存结果：' + inspection.manualDates.join('、');
+          document.getElementById('confirmAllocateBtn').style.display = 'none';
+          var confirmOverwrite = document.getElementById('confirmTipOverwriteBtn');
+          confirmOverwrite.style.display = ''; confirmOverwrite.focus(); return;
+        }
+      } catch (error) { showNotification(error.message || '无法检查人工分配结果', 'error'); return; }
       setAllocationSubmitting(true);
       try {
-        var allocationResult = executeTipAllocationScope(scope);
+        var allocationResult = await executeTipAllocationScope(scope);
         syncPageFiltersToAllocationScope(scope);
         renderDailySummaryList();
         setAllocationSubmitting(false);
@@ -1557,7 +1613,7 @@ var ALLOC_KEY = 'tipout_allocated';
           showNotification(
             error.allocationStage === 'payroll'
               ? '分配结果已保存，但薪资同步失败，请重试同步'
-              : '分配未完整完成，请检查结果后重试',
+              : '分配未完整完成，已保存 ' + Number(error.successCount || 0) + ' 天，请检查结果后重试',
             'error'
           );
           return;

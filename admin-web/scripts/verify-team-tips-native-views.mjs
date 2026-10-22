@@ -538,11 +538,11 @@ for (const token of ["openTipAllocationModal", "closeTipAllocationModal", "submi
   if (!distributionProgram.includes(token)) failures.push(`distribution: allocation scope behavior missing ${token}`);
 }
 const allocationExecutorStart = distributionProgram.indexOf("function executeTipAllocationScope(scope)");
-const allocationExecutorEnd = distributionProgram.indexOf("function submitTipAllocationScope()", allocationExecutorStart);
+const allocationExecutorEnd = distributionProgram.indexOf("function resetAllocationOverwrite()", allocationExecutorStart);
 const allocationExecutor = allocationExecutorStart >= 0 && allocationExecutorEnd > allocationExecutorStart
   ? distributionProgram.slice(allocationExecutorStart, allocationExecutorEnd)
   : "";
-if (!allocationExecutor || !allocationExecutor.includes("return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };")) {
+if (!allocationExecutor || !allocationExecutor.includes("return { successCount: successCount, paidSkippedCount: inspection.paidSkippedCount, closedSkippedCount: inspection.closedSkippedCount };")) {
   failures.push("distribution: allocation executor must return batch result counters");
 }
 if (!distributionProgram.includes("row.allocationValidationError = snapshot ? TipOutAllocationResults.validate(snapshot) : null;")) {
