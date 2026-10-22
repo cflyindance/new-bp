@@ -11663,8 +11663,6 @@ function renderMain(): string {
       ? ' class="min-h-0 flex-1 flex flex-col overflow-hidden"'
       : "";
 
-  const impersonationBannerHtml = renderImpersonationBanner();
-
   const restartOnboardingBtn = shouldShowRestartOnboardingControl()
     ? `<button
             type="button"
@@ -11867,7 +11865,6 @@ function renderMain(): string {
 
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      ${impersonationBannerHtml}
       ${appHeaderHtml}
       <main class="${mainTagClass}">
         <div class="${innerWrapperClass}">
@@ -12419,6 +12416,7 @@ function mountInitializedPage(): void {
   app.innerHTML = `
     <div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden">
       ${renderFutureVersionDiffBanner()}
+      ${renderImpersonationBanner()}
       <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         ${renderSidebar()}
         ${renderMain()}
