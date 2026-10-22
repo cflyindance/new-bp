@@ -1436,7 +1436,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var confirmButton = document.getElementById('confirmAllocateBtn');
       if (confirmButton) confirmButton.textContent = submitting ? '分配中…' : '分配小费';
       var overwriteButton = document.getElementById('confirmTipOverwriteBtn');
-      if (overwriteButton) overwriteButton.textContent = submitting ? '分配中…' : '确认覆盖并分配';
+      if (overwriteButton) overwriteButton.textContent = submitting ? '分配中…' : '重新分配';
       ['allocationStore','allocationDateStart','allocationDateEnd'].forEach(function(id) { document.getElementById(id).disabled = submitting || !!allocationOverwriteDraft; });
     }
 
@@ -1584,13 +1584,13 @@ var ALLOC_KEY = 'tipout_allocated';
         } else if (inspection.manualDates.length) {
           allocationOverwriteDraft = inspection;
           ['allocationStore','allocationDateStart','allocationDateEnd'].forEach(function(id) { document.getElementById(id).disabled = true; });
-          document.getElementById('tipAllocationModalTitle').textContent = '确认覆盖手动调整？';
+          document.getElementById('tipAllocationModalTitle').textContent = '重新分配小费？';
           document.getElementById('tipAllocationModalDescription').style.display = 'none';
           document.querySelectorAll('#tipAllocationModal .form-group').forEach(function(group) { group.style.display = 'none'; });
-          document.getElementById('allocationOverwriteScope').textContent = '门店：' + scope.store + '；日期：' + scope.startDate + ' 至 ' + scope.endDate;
           var warning = document.getElementById('allocationOverwriteWarning');
           warning.hidden = false; warning.style.display = '';
-          document.getElementById('allocationOverwriteDates').textContent = '将覆盖 ' + inspection.manualDates.length + ' 天手动保存结果：' + inspection.manualDates.join('、');
+          document.getElementById('allocationOverwriteDayCount').textContent = inspection.manualDates.length + ' 天';
+          document.getElementById('allocationOverwriteDateList').textContent = inspection.manualDates.map(function(dateKey) { return dateKey.replace(/-/g, '/'); }).join('、');
           document.getElementById('confirmAllocateBtn').style.display = 'none';
           var confirmOverwrite = document.getElementById('confirmTipOverwriteBtn');
           confirmOverwrite.style.display = ''; confirmOverwrite.focus(); return;

@@ -36,7 +36,7 @@ console.log('range execution prevalidates all dates, commits real system snapsho
 
 const submit=p.slice(p.indexOf('    async function submitTipAllocationScope('),p.indexOf('    function doAllocateTips(',p.indexOf('    async function submitTipAllocationScope(')));
 const nodes={};
-for(const id of ['allocationStore','allocationDateStart','allocationDateEnd','tipAllocationModalTitle','tipAllocationModalDescription','allocationOverwriteScope','allocationOverwriteWarning','allocationOverwriteDates','confirmAllocateBtn','confirmTipOverwriteBtn'])nodes[id]={value:'',style:{},focus(){}};
+for(const id of ['allocationStore','allocationDateStart','allocationDateEnd','tipAllocationModalTitle','tipAllocationModalDescription','allocationOverwriteWarning','allocationOverwriteDates','allocationOverwriteDayCount','allocationOverwriteDateList','confirmAllocateBtn','confirmTipOverwriteBtn'])nodes[id]={value:'',style:{},focus(){}};
 nodes.allocationStore.value='S';nodes.allocationDateStart.value='2026-10-19';nodes.allocationDateEnd.value='2026-10-21';
 let fingerprint='before',writes=0,error='';
 const s={document:{getElementById:id=>nodes[id],querySelectorAll:()=>[]},Object,allocationSubmitting:false,allocationOverwriteDraft:null,
@@ -47,7 +47,13 @@ const s={document:{getElementById:id=>nodes[id],querySelectorAll:()=>[]},Object,
   closeTipAllocationModal(){},showNotification(){},
   resetAllocationOverwrite(){s.allocationOverwriteDraft=null;}};
 vm.createContext(s);vm.runInContext(submit,s);
-await s.submitTipAllocationScope();assert.equal(writes,0);assert.match(nodes.allocationOverwriteDates.textContent,/2 天/);
+await s.submitTipAllocationScope();assert.equal(writes,0);assert.equal(nodes.allocationOverwriteDayCount.textContent,'2 天');
+assert.equal(nodes.allocationOverwriteDateList.textContent,'2026/10/19、2026/10/21');
+assert.equal(nodes.tipAllocationModalTitle.textContent,'重新分配小费？');
+const template=fs.readFileSync('src/team/tips/templates/distribution.html','utf8');
+assert.doesNotMatch(template,/allocationOverwriteScope/);
+assert.match(template,/<strong>覆盖手动调整结果<\/strong>/);
+assert.match(template,/id="confirmTipOverwriteBtn"[^>]*>重新分配<\/button>/);
 fingerprint='changed';await s.submitTipAllocationScope(true);assert.equal(writes,0);assert.match(error,/已变化/);
 await s.submitTipAllocationScope();await s.submitTipAllocationScope(true);assert.equal(writes,1);
 assert.equal(s.allocationSubmitting,false);
