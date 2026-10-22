@@ -1,3 +1,5 @@
+import { renderMCenter, bindMCenter } from '../permissions/m-platform-ui';
+import { mCanVisit, mDenied, renderMNavigation, bindMNavigation, installMRuntimeGuards, applyMControlStates } from '../permissions/m-platform-runtime';
 /**
  * M 平台 · 精简 Shell（企业级配置）
  */
@@ -19,41 +21,24 @@ import {
   renderNavBlueprintPage,
   NAV_BLUEPRINT_ROUTE_PREFIX,
 } from "../config/nav-blueprint-ui";
-import {
-  ENTERPRISE_RBAC_SCOPE,
-  findRbacPageTitle,
-  isMPlatformPermissionsPath,
-  rbacHref,
-} from "../permissions/rbac-scope";
-import { bindPermissionsRbac, renderPermissionsRbacPage } from "../permissions/rbac-ui";
-import { bindStaffAccountsPage, renderStaffAccountsPage } from "../permissions/staff-accounts-ui";
+import { mPageForPath } from '../permissions/m-platform-catalog';
 import {
   findSubscriptionAdminPageTitle,
   isAnySubscriptionAdminPath,
-  isMerchantSubscriptionsPath,
   isSubscriptionServiceCreatePath,
-  isSubscriptionServicePath,
-  MERCHANT_SUBSCRIPTIONS_PATH,
-  SUBSCRIPTION_SERVICE_ROUTE_PREFIX,
 } from "../config/subscription-service-scope";
 import { bindSubscriptionServicePage, renderSubscriptionServicePage } from "../config/subscription-service-ui";
 import {
-  ENTERPRISE_HARDWARE_ROUTE_PREFIX,
   findHardwarePageTitle,
-  hardwareHref,
-  isEnterpriseDeviceDetailPath,
-  isEnterpriseDevicesByTypePath,
   isMPlatformHardwarePath,
 } from "../config/enterprise-hardware-scope";
 import { bindEnterpriseHardware, renderEnterpriseHardwarePage } from "../config/enterprise-hardware-ui";
 import {
   ENTERPRISE_MERCHANT_ROUTE_PREFIX,
-  findMerchantPageTitle,
-  isGroupMgmtPath,
-  isMPlatformMerchantPath,
-  merchantHref,
   parseMerchantDetailPath,
   parseStoreDetailPath,
+  findMerchantPageTitle,
+  isMPlatformMerchantPath,
 } from "../config/enterprise-merchant-scope";
 import { bindEnterpriseMerchant, renderEnterpriseMerchantPage } from "../config/enterprise-merchant-ui";
 import { exitMPlatformShell } from "./app-shell-mode";
@@ -62,12 +47,7 @@ import { mountDemoSwitchFab } from "./demo-switch-control";
 
 export const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
 export const M_PLATFORM_PERMISSIONS_PATH = "/m-platform/permissions/overview";
-const M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY = "menusifu:m-platform-permissions-nav-expanded";
-const M_PLATFORM_PERMISSIONS_SUBNAV_ID = "m-platform-permissions-subnav";
-const M_PLATFORM_HARDWARE_NAV_EXPANDED_KEY = "menusifu:m-platform-hardware-nav-expanded";
-const M_PLATFORM_HARDWARE_SUBNAV_ID = "m-platform-hardware-subnav";
-const M_PLATFORM_MERCHANTS_NAV_EXPANDED_KEY = "menusifu:m-platform-merchants-nav-expanded";
-const M_PLATFORM_MERCHANTS_SUBNAV_ID = "m-platform-merchants-subnav";
+const isMPlatformPermissionsPath = (path: string) => path === "/m-platform/permissions" || path.startsWith("/m-platform/permissions/");
 
 export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
@@ -89,275 +69,16 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function readPermissionsNavExpanded(path: string): boolean {
-  try {
-    const stored = sessionStorage.getItem(M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY);
-    if (stored === "1") return true;
-    if (stored === "0") return false;
-  } catch {
-    /* ignore */
-  }
-  return isMPlatformPermissionsPath(path) && !isAnySubscriptionAdminPath(path);
-}
-
-function readHardwareNavExpanded(path: string): boolean {
-  try {
-    const stored = sessionStorage.getItem(M_PLATFORM_HARDWARE_NAV_EXPANDED_KEY);
-    if (stored === "1") return true;
-    if (stored === "0") return false;
-  } catch {
-    /* ignore */
-  }
-  return isMPlatformHardwarePath(path);
-}
-
-function readMerchantsNavExpanded(path: string): boolean {
-  try {
-    const stored = sessionStorage.getItem(M_PLATFORM_MERCHANTS_NAV_EXPANDED_KEY);
-    if (stored === "1") return true;
-    if (stored === "0") return false;
-  } catch {
-    /* ignore */
-  }
-  return isMPlatformMerchantPath(path);
-}
-
-function renderMerchantsNav(path: string): string {
-  const merchantsActive = isMPlatformMerchantPath(path);
-  const expanded = readMerchantsNavExpanded(path);
-  const l1Class = merchantsActive
-    ? "flex min-h-10 w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-    : "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/60";
-
-  const subLinkClass = (subpath: string) => {
-    const full = subpath ? `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}${subpath}` : ENTERPRISE_MERCHANT_ROUTE_PREFIX;
-    const active =
-      path === full ||
-      (subpath === "/overview" && path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`) ||
-      (subpath === "/groups" && isGroupMgmtPath(path)) ||
-      (subpath === "/stores" && path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/stores`) ||
-      (subpath === "" &&
-        (path === ENTERPRISE_MERCHANT_ROUTE_PREFIX ||
-          !!parseMerchantDetailPath(path) ||
-          path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`));
-    return active
-      ? "flex min-h-9 items-center rounded-lg bg-primary/10 pl-6 pr-3 py-1.5 text-sm font-medium text-primary"
-      : "flex min-h-9 items-center rounded-lg pl-6 pr-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60";
-  };
-
-  const items = [
-    { sub: "/overview", label: t("shell.mPlatformNavMerchantOverview") },
-    { sub: "/groups", label: t("shell.mPlatformNavMerchantGroups") },
-    { sub: "", label: t("shell.mPlatformNavMerchantList") },
-    { sub: "/stores", label: t("shell.mPlatformNavMerchantStores") },
-    { sub: "/org-tree", label: t("shell.mPlatformNavMerchantOrgTree") },
-    { sub: "/requests", label: t("shell.mPlatformNavMerchantRequests") },
-    { sub: "/reports", label: t("shell.mPlatformNavMerchantReports") },
-    { sub: "/change-log", label: t("shell.mPlatformNavMerchantChangelog") },
-  ];
-
-  return `
-    <li>
-      <button
-        type="button"
-        data-m-platform-merchants-toggle
-        class="${l1Class}"
-        aria-expanded="${expanded ? "true" : "false"}"
-        aria-controls="${M_PLATFORM_MERCHANTS_SUBNAV_ID}"
-        aria-label="${escapeHtml(t("shell.mPlatformNavMerchantsToggle"))}"
-      >
-        <span class="min-w-0 flex-1 truncate text-left">${escapeHtml(t("shell.mPlatformNavMerchants"))}</span>
-        <span
-          data-m-platform-merchants-chevron
-          class="shrink-0 text-xs text-muted-foreground transition-transform duration-200 ${expanded ? "" : "-rotate-90"}"
-          aria-hidden="true"
-        >▼</span>
-      </button>
-      <ul
-        id="${M_PLATFORM_MERCHANTS_SUBNAV_ID}"
-        class="mt-0.5 space-y-0.5 ${expanded ? "" : "hidden"}"
-        role="list"
-        ${expanded ? "" : 'aria-hidden="true"'}
-      >
-        ${items
-          .map(
-            (item) => `<li>
-          <a href="${merchantHref(item.sub)}" class="${subLinkClass(item.sub)}" tabindex="${expanded ? "0" : "-1"}">${escapeHtml(item.label)}</a>
-        </li>`,
-          )
-          .join("")}
-      </ul>
-    </li>`;
-}
-
-function renderHardwareNav(path: string): string {
-  const hardwareActive = isMPlatformHardwarePath(path);
-  const expanded = readHardwareNavExpanded(path);
-  const l1Class = hardwareActive
-    ? "flex min-h-10 w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-    : "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/60";
-
-  const subLinkClass = (subpath: string) => {
-    const full = `${ENTERPRISE_HARDWARE_ROUTE_PREFIX}${subpath}`;
-    const active =
-      path === full ||
-      (subpath === "/overview" &&
-        (path === ENTERPRISE_HARDWARE_ROUTE_PREFIX || path === `${ENTERPRISE_HARDWARE_ROUTE_PREFIX}/overview`)) ||
-      (subpath === "/devices" &&
-        (path === full || isEnterpriseDevicesByTypePath(path) || isEnterpriseDeviceDetailPath(path)));
-    return active
-      ? "flex min-h-9 items-center rounded-lg bg-primary/10 pl-6 pr-3 py-1.5 text-sm font-medium text-primary"
-      : "flex min-h-9 items-center rounded-lg pl-6 pr-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60";
-  };
-
-  const items = [
-    { sub: "/overview", label: t("shell.mPlatformNavHwOverview") },
-    { sub: "/devices", label: t("shell.mPlatformNavHwDevices") },
-    { sub: "/alerts", label: t("shell.mPlatformNavHwAlerts") },
-  ];
-
-  return `
-    <li>
-      <button
-        type="button"
-        data-m-platform-hardware-toggle
-        class="${l1Class}"
-        aria-expanded="${expanded ? "true" : "false"}"
-        aria-controls="${M_PLATFORM_HARDWARE_SUBNAV_ID}"
-        aria-label="${escapeHtml(t("shell.mPlatformNavHardwareToggle"))}"
-      >
-        <span class="min-w-0 flex-1 truncate text-left">${escapeHtml(t("shell.mPlatformNavHardware"))}</span>
-        <span
-          data-m-platform-hardware-chevron
-          class="shrink-0 text-xs text-muted-foreground transition-transform duration-200 ${expanded ? "" : "-rotate-90"}"
-          aria-hidden="true"
-        >▼</span>
-      </button>
-      <ul
-        id="${M_PLATFORM_HARDWARE_SUBNAV_ID}"
-        class="mt-0.5 space-y-0.5 ${expanded ? "" : "hidden"}"
-        role="list"
-        ${expanded ? "" : 'aria-hidden="true"'}
-      >
-        ${items
-          .map(
-            (item) => `<li>
-          <a href="${hardwareHref(item.sub)}" class="${subLinkClass(item.sub)}" tabindex="${expanded ? "0" : "-1"}">${escapeHtml(item.label)}</a>
-        </li>`,
-          )
-          .join("")}
-      </ul>
-    </li>`;
-}
-
-function renderPermissionsNav(path: string): string {
-  const prefix = ENTERPRISE_RBAC_SCOPE.routePrefix;
-  const permissionsActive = isMPlatformPermissionsPath(path) && !isAnySubscriptionAdminPath(path);
-  const expanded = readPermissionsNavExpanded(path);
-  const l1Class = permissionsActive
-    ? "flex min-h-10 w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-    : "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/60";
-
-  const subLinkClass = (subpath: string) => {
-    const full = `${prefix}${subpath}`;
-    const active = path === full || (subpath === "/overview" && path === prefix);
-    return active
-      ? "flex min-h-9 items-center rounded-lg bg-primary/10 pl-6 pr-3 py-1.5 text-sm font-medium text-primary"
-      : "flex min-h-9 items-center rounded-lg pl-6 pr-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60";
-  };
-
-  const items = [
-    { sub: "/overview", label: t("shell.mPlatformNavPermOverview") },
-    { sub: "/roles", label: t("shell.mPlatformNavPermRoles") },
-    { sub: "/staff", label: t("shell.mPlatformNavPermStaff") },
-    { sub: "/staff-accounts", label: t("shell.mPlatformNavPermAccounts") },
-    { sub: "/change-log", label: t("shell.mPlatformNavPermChangelog") },
-  ];
-
-  return `
-    <li>
-      <button
-        type="button"
-        data-m-platform-permissions-toggle
-        class="${l1Class}"
-        aria-expanded="${expanded ? "true" : "false"}"
-        aria-controls="${M_PLATFORM_PERMISSIONS_SUBNAV_ID}"
-        aria-label="${escapeHtml(t("shell.mPlatformNavPermissionsToggle"))}"
-      >
-        <span class="min-w-0 flex-1 truncate text-left">${escapeHtml(t("shell.mPlatformNavPermissions"))}</span>
-        <span
-          data-m-platform-permissions-chevron
-          class="shrink-0 text-xs text-muted-foreground transition-transform duration-200 ${expanded ? "" : "-rotate-90"}"
-          aria-hidden="true"
-        >▼</span>
-      </button>
-      <ul
-        id="${M_PLATFORM_PERMISSIONS_SUBNAV_ID}"
-        class="mt-0.5 space-y-0.5 ${expanded ? "" : "hidden"}"
-        role="list"
-        ${expanded ? "" : 'aria-hidden="true"'}
-      >
-        ${items
-          .map(
-            (item) => `<li>
-          <a href="${rbacHref(ENTERPRISE_RBAC_SCOPE, item.sub)}" class="${subLinkClass(item.sub)}" tabindex="${expanded ? "0" : "-1"}">${escapeHtml(item.label)}</a>
-        </li>`,
-          )
-          .join("")}
-      </ul>
-    </li>`;
-}
-
 export function renderMPlatformSidebar(path: string): string {
-  const presetActive = isMPlatformPresetPath(path);
-  const blueprintActive = isNavBlueprintPath(path);
-  const subscriptionServiceActive = isSubscriptionServicePath(path);
-  const merchantSubscriptionsActive = isMerchantSubscriptionsPath(path);
-  const linkClass = (active: boolean) =>
-    active
-      ? "flex min-h-10 items-center rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-      : "flex min-h-10 items-center rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/60";
-
-  return `
-    <aside class="flex w-full min-h-0 shrink-0 flex-col border-r border-border bg-card sm:w-56 lg:w-64">
-      <div class="border-b border-border px-4 py-4">
-        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(t("shell.mPlatformKicker"))}</p>
-        <p class="mt-1 text-sm font-semibold text-card-foreground">${escapeHtml(t("shell.mPlatformTitle"))}</p>
-      </div>
-      <nav class="min-h-0 flex-1 overflow-y-auto p-3" aria-label="${escapeHtml(t("shell.mPlatformNavAria"))}">
-        <ul class="space-y-0.5" role="list">
-          <li>
-            <a href="#${NAV_BLUEPRINT_ROUTE_PREFIX}" class="${linkClass(blueprintActive)}">${escapeHtml(t("shell.mPlatformNavBlueprint"))}</a>
-          </li>
-          <li>
-            <a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}" class="${linkClass(subscriptionServiceActive)}">服务包管理</a>
-          </li>
-          <li>
-            <a href="#${MERCHANT_SUBSCRIPTIONS_PATH}" class="${linkClass(merchantSubscriptionsActive)}">商家订阅</a>
-          </li>
-          <li>
-            <a href="#${M_PLATFORM_PRESET_PATH}" class="${linkClass(presetActive)}">${escapeHtml(t("shell.mPlatformNavPreset"))}</a>
-          </li>
-          ${renderPermissionsNav(path)}
-          ${renderMerchantsNav(path)}
-          ${renderHardwareNav(path)}
-        </ul>
-      </nav>
-      <div class="border-t border-border p-3">
-        <button
-          type="button"
-          data-exit-m-platform
-          class="flex w-full min-h-10 items-center justify-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
-        >${escapeHtml(t("shell.mPlatformBackToMerchant"))}</button>
-      </div>
-    </aside>`;
+  return `<aside class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="p-4 border-b border-border"><p class="text-xs text-muted-foreground">服务商管理后台</p><h1 class="mt-1 font-semibold">M 平台</h1></header>${renderMNavigation(path)}<footer class="p-3 border-t border-border"><button type="button" data-exit-m-platform class="w-full rounded-lg border border-border px-3 py-2 text-sm">返回商家后台</button></footer></aside>`;
 }
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
+  if (!mCanVisit(path)) return { title: "访问受限", module: "M 平台" };
   return (
     findNavBlueprintPageTitle(path) ??
     findSubscriptionAdminPageTitle(path) ??
-    findRbacPageTitle(path, ENTERPRISE_RBAC_SCOPE) ??
+    (isMPlatformPermissionsPath(path) ? { title: mPageForPath(path)?.title ?? "权限管理中心", module: "M 平台" } : null) ??
     findHardwarePageTitle(path) ??
     findMerchantPageTitle(path) ??
     findPlatformPresetPageTitle(path, getPresetScopeForPath(path)) ?? {
@@ -393,14 +114,10 @@ function renderMPlatformHeader(path: string): string {
 }
 
 function renderMPlatformContent(path: string): string {
+  if (!mCanVisit(path)) return mDenied();
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
   if (isAnySubscriptionAdminPath(path)) return renderSubscriptionServicePage(path);
-  if (isMPlatformPermissionsPath(path)) {
-    if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
-      return renderStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
-    }
-    return renderPermissionsRbacPage(path, ENTERPRISE_RBAC_SCOPE);
-  }
+  if (isMPlatformPermissionsPath(path)) return renderMCenter(path);
   if (isMPlatformHardwarePath(path)) {
     return renderEnterpriseHardwarePage(path);
   }
@@ -416,7 +133,7 @@ function renderMPlatformMain(path: string): string {
       ${renderMPlatformHeader(path)}
       <main class="min-h-0 flex-1 flex flex-col overflow-hidden p-4 md:p-6 animate-fade-in">
         <div class="mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]">
-          <div role="tabpanel" class="min-h-0 flex-1 flex flex-col overflow-hidden">
+          <div data-m-platform-content role="tabpanel" class="min-h-0 flex-1 flex flex-col overflow-hidden">
             ${renderMPlatformContent(path)}
           </div>
         </div>
@@ -425,17 +142,20 @@ function renderMPlatformMain(path: string): string {
 }
 
 export function mountMPlatformShell(_onMount: () => void, path: string): string {
-  if (parseStoreDetailPath(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
+  if (parseStoreDetailPath(path) && mCanVisit(path)) {
+    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
-  if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
+  if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new` && mCanVisit(path)) {
+    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
-  if (parseMerchantDetailPath(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page>${renderEnterpriseMerchantPage(path)}</main>`;
+  if (parseMerchantDetailPath(path) && mCanVisit(path)) {
+    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
-  if (isSubscriptionServiceCreatePath(path)) {
-    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden">${renderSubscriptionServicePage(path)}</div>`;
+  if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
+    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
+  }
+  if (isSubscriptionServiceCreatePath(path) && mCanVisit(path)) {
+    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden" data-m-platform-content>${renderSubscriptionServicePage(path)}</div>`;
   }
   return `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden">
@@ -448,8 +168,12 @@ export function mountMPlatformShell(_onMount: () => void, path: string): string 
 
 export function bindMPlatformShell(onMount: () => void): void {
   const currentPath = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
-  if (isSubscriptionServiceCreatePath(currentPath)) {
+  installMRuntimeGuards();
+  bindMNavigation();
+  if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(currentPath) && mCanVisit(currentPath)) { bindMCenter(onMount); return; }
+  if (isSubscriptionServiceCreatePath(currentPath) && mCanVisit(currentPath)) {
     bindSubscriptionServicePage(onMount);
+    applyMControlStates();
     return;
   }
   document.querySelectorAll<HTMLElement>("[data-exit-m-platform]").forEach((btn) => {
@@ -469,88 +193,13 @@ export function bindMPlatformShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
 
-  document.querySelectorAll<HTMLButtonElement>("[data-m-platform-merchants-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const expanded = btn.getAttribute("aria-expanded") === "true";
-      const next = !expanded;
-      try {
-        sessionStorage.setItem(M_PLATFORM_MERCHANTS_NAV_EXPANDED_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      btn.setAttribute("aria-expanded", next ? "true" : "false");
-      const list = document.getElementById(M_PLATFORM_MERCHANTS_SUBNAV_ID);
-      const chevron = btn.querySelector<HTMLElement>("[data-m-platform-merchants-chevron]");
-      if (list) {
-        list.classList.toggle("hidden", !next);
-        if (next) list.removeAttribute("aria-hidden");
-        else list.setAttribute("aria-hidden", "true");
-        list.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
-          link.tabIndex = next ? 0 : -1;
-        });
-      }
-      chevron?.classList.toggle("-rotate-90", !next);
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-m-platform-hardware-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const expanded = btn.getAttribute("aria-expanded") === "true";
-      const next = !expanded;
-      try {
-        sessionStorage.setItem(M_PLATFORM_HARDWARE_NAV_EXPANDED_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      btn.setAttribute("aria-expanded", next ? "true" : "false");
-      const list = document.getElementById(M_PLATFORM_HARDWARE_SUBNAV_ID);
-      const chevron = btn.querySelector<HTMLElement>("[data-m-platform-hardware-chevron]");
-      if (list) {
-        list.classList.toggle("hidden", !next);
-        if (next) list.removeAttribute("aria-hidden");
-        else list.setAttribute("aria-hidden", "true");
-        list.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
-          link.tabIndex = next ? 0 : -1;
-        });
-      }
-      chevron?.classList.toggle("-rotate-90", !next);
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-m-platform-permissions-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const expanded = btn.getAttribute("aria-expanded") === "true";
-      const next = !expanded;
-      try {
-        sessionStorage.setItem(M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      btn.setAttribute("aria-expanded", next ? "true" : "false");
-      const list = document.getElementById(M_PLATFORM_PERMISSIONS_SUBNAV_ID);
-      const chevron = btn.querySelector<HTMLElement>("[data-m-platform-permissions-chevron]");
-      if (list) {
-        list.classList.toggle("hidden", !next);
-        if (next) list.removeAttribute("aria-hidden");
-        else list.setAttribute("aria-hidden", "true");
-        list.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
-          link.tabIndex = next ? 0 : -1;
-        });
-      }
-      chevron?.classList.toggle("-rotate-90", !next);
-    });
-  });
-
   const path = currentPath;
+  if (!mCanVisit(path)) return;
   bindNavBlueprint(onMount);
   if (isAnySubscriptionAdminPath(path)) {
     bindSubscriptionServicePage(onMount);
   } else if (isMPlatformPermissionsPath(path)) {
-    if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
-      bindStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
-    } else {
-      bindPermissionsRbac(ENTERPRISE_RBAC_SCOPE);
-    }
+    bindMCenter(onMount);
   } else if (isMPlatformHardwarePath(path)) {
     bindEnterpriseHardware(onMount);
   } else if (isMPlatformMerchantPath(path)) {
@@ -558,4 +207,5 @@ export function bindMPlatformShell(onMount: () => void): void {
   } else if (!isNavBlueprintPath(path)) {
     bindPlatformPreset(onMount, ENTERPRISE_PLATFORM_PRESET_SCOPE);
   }
+  applyMControlStates();
 }

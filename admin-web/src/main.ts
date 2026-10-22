@@ -1,3 +1,7 @@
+import { bindNavigationSubmenuActions } from './shell/navigation-submenu-actions';
+import { currentMAccount } from './permissions/m-platform-store';
+import { mCanVisit } from './permissions/m-platform-runtime';
+import { M_PAGES } from './permissions/m-platform-catalog';
 import { applyBrandOperationAccess, bindBrandRuntimeGuards } from './config/brand-access-store';
 import { settingsCategoryItems, settingsCategoryViewGroups } from "./config/settings-category-model";
 import {hasModuleSettingsCategorySidebar} from './config/settings-category-navigation';
@@ -2563,42 +2567,21 @@ function mountNavigationSubmenuSheet(app: HTMLElement): void {
 }
 
 function bindNavigationSubmenuSheets(app: HTMLElement): void {
-  app.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement;
-    const sheet = target.closest<HTMLElement>("[data-hub-sheet-root]");
-    if (!sheet) return;
-    const back = target.closest("[data-navigation-sheet-back]");
-    if (back) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
+  bindNavigationSubmenuActions(app, {
+    back: () => {
       navigationSheetStack?.levels.pop();
       if (!navigationSheetStack?.levels.length) navigationSheetStack = null;
       mount();
-      return;
-    }
-    const button = target.closest<HTMLButtonElement>("button[aria-controls]");
-    if (button && sheet.contains(button)) {
-      const controls = button.getAttribute("aria-controls");
-      const children = Array.from(sheet.querySelectorAll<HTMLElement>("[id]"))
-        .find((el) => el.id === controls);
-      if (controls && children?.querySelector("a[href], button")) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const hubId = sheet.dataset.hubSheetRoot!;
-        if (navigationSheetStack?.hubId !== hubId) navigationSheetStack = { hubId, levels: [] };
-        const title = button.querySelector("span")?.textContent?.trim() || button.textContent?.trim() || "";
-        navigationSheetStack!.levels.push({ controls, title });
-        activeTertiarySheetTrail = [];
-        clearAllHubSheetSearch();
-        mount();
-        return;
-      }
-    }
-    if (navigationSheetStack && target.closest("a[href^='#']")) {
-      // Keep the submenu visible while the native hash navigation opens its leaf page.
-      event.stopImmediatePropagation();
-    }
-  }, { capture: true });
+    },
+    open: (hubId, controls, title) => {
+      if (navigationSheetStack?.hubId !== hubId) navigationSheetStack = { hubId, levels: [] };
+      navigationSheetStack!.levels.push({ controls, title });
+      activeTertiarySheetTrail = [];
+      clearAllHubSheetSearch();
+      mount();
+    },
+    keepLeaf: () => !!navigationSheetStack,
+  });
 }
 
 type PcSheetDarkSubnavOpts = {
@@ -12086,7 +12069,7 @@ function mountLoginShell(): void {
   app.innerHTML = renderLoginPage();
   bindLoginPage(() => {
     syncSessionForAuthenticatedUser();
-    replaceHashPath(needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
+    replaceHashPath(currentMAccount() ? M_PAGES.find(page => mCanVisit(page.path))?.path ?? '/m-platform/permissions/overview' : needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
     mount();
   });
 }
@@ -12159,12 +12142,17 @@ function mountInitializedPage(): void {
   }
   if (ensureMvpGroupHqViewSwitchHidden(mount)) return;
   if (ensureMvpMPlatformViewSwitchHidden(mount)) return;
+  if (authPath === LOGIN_PATH && currentMAccount()) {
+    replaceHashPath(M_PAGES.find(page => mCanVisit(page.path))?.path ?? '/m-platform/permissions/overview');
+    mount();
+    return;
+  }
   if (authPath === LOGIN_PATH) {
     replaceHashPath(needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
     mount();
     return;
   }
-  if (needsPlatformPresetOnboarding()) {
+  if (!isMPlatformContentPath(authPath) && needsPlatformPresetOnboarding()) {
     if (!isPlatformPresetOnboardingPath(authPath)) {
       replaceHashPath(ONBOARDING_PATH);
     }
