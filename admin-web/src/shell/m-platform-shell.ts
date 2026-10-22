@@ -41,7 +41,6 @@ import {
   isMPlatformMerchantPath,
 } from "../config/enterprise-merchant-scope";
 import { bindEnterpriseMerchant, renderEnterpriseMerchantPage } from "../config/enterprise-merchant-ui";
-import { exitMPlatformShell } from "./app-shell-mode";
 import { bindViewSwitchControl } from "./view-switch-control";
 import { mountDemoSwitchFab } from "./demo-switch-control";
 
@@ -70,7 +69,7 @@ function escapeHtml(s: string): string {
 }
 
 export function renderMPlatformSidebar(path: string): string {
-  return `<aside class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="p-4 border-b border-border"><p class="text-xs text-muted-foreground">服务商管理后台</p><h1 class="mt-1 font-semibold">M 平台</h1></header>${renderMNavigation(path)}<footer class="p-3 border-t border-border"><button type="button" data-exit-m-platform class="w-full rounded-lg border border-border px-3 py-2 text-sm">返回商家后台</button></footer></aside>`;
+  return `<aside class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="p-4 border-b border-border"><p class="text-xs text-muted-foreground">服务商管理后台</p><h1 class="mt-1 font-semibold">M 平台</h1></header>${renderMNavigation(path)}</aside>`;
 }
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
@@ -100,11 +99,6 @@ function renderMPlatformHeader(path: string): string {
         <h1 id="main-content" tabindex="-1" class="truncate text-lg font-semibold tracking-tight text-card-foreground">${escapeHtml(title)}</h1>
       </div>
       <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
-        <button
-          type="button"
-          data-exit-m-platform
-          class="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:h-10"
-        >${escapeHtml(t("shell.mPlatformBackToMerchant"))}</button>
         <button type="button" id="theme-toggle" class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:size-11" aria-label="${escapeHtml(t("header.themeToggle"))}">
           <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -176,14 +170,6 @@ export function bindMPlatformShell(onMount: () => void): void {
     applyMControlStates();
     return;
   }
-  document.querySelectorAll<HTMLElement>("[data-exit-m-platform]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      exitMPlatformShell();
-      location.hash = "#/nav-home";
-      onMount();
-    });
-  });
-
   document.getElementById("theme-toggle")?.addEventListener("click", () => {
     document.documentElement.classList.toggle("dark");
     const dark = document.documentElement.classList.contains("dark");
