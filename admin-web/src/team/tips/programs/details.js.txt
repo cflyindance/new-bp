@@ -96,10 +96,11 @@ var ALLOC_KEY = 'tipout_allocated';
       } catch(error) { input.setCustomValidity(error.message); showNotification(error.message,'error'); }
       markDetailDirty();
     }
-    var detailDirty = false, detailRenderedScope = null, detailSavedSnapshot = null;
+    var detailDirty = false, detailManualDirty = false, detailRenderedScope = null, detailSavedSnapshot = null;
     var detailOwnUpdate = false, detailPreviousUpdate = null, detailForceRebuild = false;
     var detailEditToken = 'detail-edit-' + Date.now() + '-' + Math.random(), detailBaseHash = null;
-    function markDetailDirty() {
+    function markDetailDirty(manual) {
+      if (manual !== false && !detailAllocationSubmitting && detailRenderedScope) detailManualDirty = true;
       if (detailDirty || detailAllocationSubmitting || !detailRenderedScope) return;
       detailDirty = true;
       detailPreviousUpdate = TipOutDateState.readUnconfirmedUpdate(detailRenderedScope.store, detailRenderedScope.dateKey);
@@ -111,6 +112,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
     function discardDetailDraft() {
       detailDirty = false;
+      detailManualDirty = false;
       if (detailOwnUpdate && detailRenderedScope) {
         var marker = TipOutDateState.readUnconfirmedUpdate(detailRenderedScope.store, detailRenderedScope.dateKey);
         if (!marker || marker.fingerprint !== detailEditToken) { detailOwnUpdate = false; return; }
@@ -1998,9 +2000,16 @@ var ALLOC_KEY = 'tipout_allocated';
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(storeInput.value) : [];
       var business = getDetailBusinessStatus(dateInput.value, rules);
       button.textContent = allocated ? '重新确认分配' : '确认分配';
-      button.disabled = detailAllocationSubmitting || !business.allocatable || (allocated && !detailDirty && !TipOutDateState.hasUnconfirmedUpdate(storeInput.value, dateInput.value));
+      var locked = TipOutDateState.inspect(storeInput.value, dateInput.value).locked;
+      button.disabled = detailAllocationSubmitting || !business.allocatable || locked;
+      var saveButton = document.getElementById('saveCurrentDetailAllocationBtn');
+      if (saveButton) {
+        saveButton.disabled = detailAllocationSubmitting || !business.allocatable || locked || !allocated;
+        saveButton.setAttribute('aria-disabled', String(saveButton.disabled || !detailManualDirty));
+        saveButton.style.opacity = saveButton.disabled || !detailManualDirty ? '.45' : '';
+      }
       var hint = document.getElementById('detailAllocationScopeHint');
-      if (hint && detailDirty) hint.textContent = '存在未确认修改，请重新确认分配后保存';
+      if (hint && detailDirty) hint.textContent = '存在未保存修改，可保存当前分配，或按系统规则重新确认分配';
       button.title = business.allocatable ? '' : '当天未营业，无法进行小费分配';
       syncDetailPayoutAction();
     }
@@ -2035,7 +2044,8 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     async function executeDetailAllocation(options) {
-      var snapshot = collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
+      var snapshot = options.snapshot || collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
+      snapshot.allocationSource = options.manual ? 'manual' : 'system';
       if (!TipOutDetailRuleFilter.sameRuleSet(snapshot.pools, options.rules)) {
         throw new Error('规则数据已变化，请刷新页面后重新确认分配');
       }
@@ -2044,7 +2054,7 @@ var ALLOC_KEY = 'tipout_allocated';
       detailPayoutDomainWriteActive = true;
       try { snapshot = await TipOutAllocationResults.commit(snapshot, !options.wasAllocated ? { onlyIfUnallocated: true } : { expectedSnapshotHash: detailBaseHash }); }
       finally { detailPayoutDomainWriteActive = false; }
-      detailDirty = false; detailOwnUpdate = false;
+      detailDirty = false; detailManualDirty = false; detailOwnUpdate = false;
       sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({
         dateKey: options.dateKey,
         store: options.store,
@@ -2060,7 +2070,7 @@ var ALLOC_KEY = 'tipout_allocated';
         return { saved: true, payrollSynced: false };
       }
       showNotification(
-        options.automatic ? '已根据打卡规则自动完成分配' : (options.wasAllocated ? '重新分配成功' : '分配成功'),
+        options.manual ? '当前分配已保存' : (options.automatic ? '已根据打卡规则自动完成分配' : (options.wasAllocated ? '重新分配成功' : '分配成功')),
         'success'
       );
       return { saved: true, payrollSynced: true };
@@ -2094,6 +2104,57 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     }
 
+    function buildSystemDetailAllocationSnapshot(store, dateKey) {
+      // Keep the actual draft nodes (including input values/listeners) until commit succeeds.
+      var container = document.getElementById('detailRulesContainer');
+      var draftNodes = Array.from(container.childNodes);
+      var saved = { snapshot: detailSavedSnapshot, rules: detailAllRules, selected: detailSelectedRuleIds,
+        timeResults: detailTimeWindowResults, timeErrors: detailTimeWindowErrors, rule: currentRule };
+      var displayIds = ['detailOriginalTips','detailPoolAmount','detailAllocatedAmount','detailUnallocatedAmount','detailPoolCount','detailAllocationScopeHint'];
+      var display = displayIds.map(function(id) { var node = document.getElementById(id); return [node, node && node.textContent]; });
+      var filter = document.getElementById('detailRuleFilter');
+      var filterNodes = filter ? Array.from(filter.childNodes) : [];
+      var manualBackup = window.TipOutManualHours && TipOutManualHours.listForScope ? TipOutManualHours.listForScope(store, dateKey) : null;
+      try {
+        if (manualBackup) TipOutManualHours.clearForScope(store, dateKey);
+        draftNodes.forEach(function(node) { node.remove(); });
+        detailForceRebuild = true;
+        renderDetailPage();
+        return collectDetailAllocationSnapshot(store, dateKey, detailAllRules);
+      } finally {
+        detailForceRebuild = false;
+        if (manualBackup) TipOutManualHours.replaceScope(store, dateKey, manualBackup);
+        container.replaceChildren.apply(container, draftNodes);
+        if (filter) filter.replaceChildren.apply(filter, filterNodes);
+        detailSavedSnapshot = saved.snapshot; detailAllRules = saved.rules; detailSelectedRuleIds = saved.selected;
+        detailTimeWindowResults = saved.timeResults; detailTimeWindowErrors = saved.timeErrors; currentRule = saved.rule;
+        display.forEach(function(entry) { if (entry[0]) entry[0].textContent = entry[1]; });
+      }
+    }
+
+    async function saveCurrentDetailAllocation() {
+      if (detailAllocationSubmitting) return;
+      if (!detailManualDirty) { window.alert('当前系统分配数据未进行手动调整'); return; }
+      var store = document.getElementById('storeSelect').value;
+      var dateKey = document.getElementById('detailDate').value;
+      try {
+        TipOutDateState.assertDateWritable(store, dateKey);
+        if (!TipOutAllocationResults.isAllocated(store, dateKey)) throw new Error('请先完成系统分配');
+        if (!getDetailBusinessStatus(dateKey, detailAllRules).allocatable) throw new Error('当天未营业，无法进行小费分配');
+        if (!window.confirm('已手动调整过小费分配数据，将按照手动调整后的分配数据进行统计')) return;
+        detailAllocationSubmitting = true;
+        document.getElementById('detailRulesContainer').inert = true;
+        syncDetailAllocationAction();
+        await executeDetailAllocation({ store: store, dateKey: dateKey, rules: detailAllRules.slice(), wasAllocated: true, automatic: false, manual: true });
+      } catch (error) {
+        showNotification(error && error.message ? error.message : '保存失败，请重试', 'error');
+      } finally {
+        detailAllocationSubmitting = false;
+        document.getElementById('detailRulesContainer').inert = false;
+        syncDetailAllocationAction();
+      }
+    }
+
     async function confirmDetailAllocation() {
       if (detailAllocationSubmitting) return;
       var dateKey = (document.getElementById('detailDate').value || '').trim();
@@ -2105,14 +2166,19 @@ var ALLOC_KEY = 'tipout_allocated';
         return;
       }
       var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(store, dateKey);
-      if (allocated && !detailDirty && !TipOutDateState.hasUnconfirmedUpdate(store, dateKey)) return;
-      if (allocated && !window.confirm('该日期已分配，重新确认将覆盖当天原分配结果。')) return;
+      var hasManual = detailManualDirty || (detailSavedSnapshot && detailSavedSnapshot.allocationSource === 'manual');
+      if (allocated && !window.confirm(hasManual
+        ? '已手动调整过小费分配数据，将按照系统小费规则进行重新分配，分配后会覆盖手动调整的数据'
+        : '该日期已分配，重新确认将覆盖当天原分配结果。')) return;
       var button = document.getElementById('confirmDetailAllocationBtn');
       detailAllocationSubmitting = true;
       document.getElementById('detailRulesContainer').inert = true;
       if (button) { button.disabled = true; button.textContent = allocated ? '重新分配中…' : '分配中…'; }
       try {
-        await executeDetailAllocation({ store: store, dateKey: dateKey, rules: rules, wasAllocated: allocated, automatic: false });
+        TipOutDateState.assertDateWritable(store, dateKey);
+        var systemSnapshot = allocated ? buildSystemDetailAllocationSnapshot(store, dateKey) : null;
+        var systemRules = allocated ? ruleData.getRulesForStore(store) : rules;
+        await executeDetailAllocation({ store: store, dateKey: dateKey, rules: systemRules, wasAllocated: allocated, automatic: false, manual: false, snapshot: systemSnapshot });
       } catch (error) {
         showNotification(error && error.message ? error.message : '分配失败，请重试', 'error');
       } finally {
@@ -2170,7 +2236,8 @@ var ALLOC_KEY = 'tipout_allocated';
         try { detailForceRebuild = true; renderDetailPage(); }
         catch (renderError) { if (window.TipOutManualHours && TipOutManualHours.replaceScope) TipOutManualHours.replaceScope(context.store, context.dateKey, manualBackup); throw renderError; }
         finally { detailForceRebuild = false; if (window.TipOutManualHours && TipOutManualHours.replaceScope) TipOutManualHours.replaceScope(context.store, context.dateKey, manualBackup); }
-        markDetailDirty();
+        detailManualDirty = false;
+        markDetailDirty(false);
         cancelTipDataUpdate({ force: true }); syncDetailPayoutAction();
         showNotification('小费数据已更新，请重新检查并补充需要的手工调整。', 'success');
       } catch (error) {
@@ -2259,7 +2326,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (detail && (detail.storeId !== scope.store || detail.businessDate !== scope.dateKey)) return;
       if (detailPayoutDomainWriteActive) return;
       var incomingState = TipOutDateState.inspect(scope.store, scope.dateKey);
-      if (incomingState.locked) { detailDirty = false; detailOwnUpdate = false; }
+      if (incomingState.locked) { detailDirty = false; detailManualDirty = false; detailOwnUpdate = false; }
       if (detailPayoutDraft) {
         invalidateDetailPayoutIntent();
         hideDetailPayoutModal();

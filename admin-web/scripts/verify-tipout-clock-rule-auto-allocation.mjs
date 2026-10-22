@@ -30,7 +30,7 @@ assert.match(program, /setTimeout\(function\(\) \{ scheduleDetailAutoAllocation\
 assert.match(program, /detailAutoAllocationAttemptedKey === key/);
 assert.match(program, /automatic:\s*true/);
 const schedulerStart = program.indexOf("async function scheduleDetailAutoAllocation(store, dateKey, rules)");
-const schedulerEnd = program.indexOf("async function confirmDetailAllocation()", schedulerStart);
+const schedulerEnd = program.indexOf("function buildSystemDetailAllocationSnapshot(", schedulerStart);
 assert.doesNotMatch(program.slice(schedulerStart, schedulerEnd), /window\.confirm/);
 
 console.log("Tip clock-rule auto allocation verification passed.");
