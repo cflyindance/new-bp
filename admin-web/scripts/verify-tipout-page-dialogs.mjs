@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const program=fs.readFileSync('src/team/tips/programs/details.js.txt','utf8');
+const template=fs.readFileSync('src/team/tips/templates/details.html','utf8');
+assert.match(template,/id="detailAllocationDialog"/);
+const start=program.indexOf('    var detailAllocationDialogPending');
+const end=program.indexOf('    function buildSystemDetailAllocationSnapshot(',start);
+assert.ok(start>=0&&end>start);
+const nodes={};
+for(const id of ['detailAllocationDialog','detailAllocationDialogTitle','detailAllocationDialogMessage','cancelDetailAllocationDialogBtn','confirmDetailAllocationDialogBtn','saveCurrentDetailAllocationBtn','confirmDetailAllocationBtn']){
+  nodes[id]={hidden:false,attrs:{},classList:{add(){},remove(){}},setAttribute(k,v){this.attrs[k]=v;},focus(){this.focused=true;}};
+}
+let scope={store:'S',dateKey:'2026-10-19'};
+const ctx={document:{getElementById:id=>nodes[id]},getDetailPayoutScope:()=>scope,
+  detailBaseHash:'h1',Promise,showNotification(){}};
+vm.createContext(ctx);vm.runInContext(program.slice(start,end),ctx);
+let p=ctx.showDetailAllocationDialog('notice','no changes');
+assert.equal(nodes.cancelDetailAllocationDialogBtn.hidden,true);
+assert.equal(nodes.confirmDetailAllocationDialogBtn.textContent,'知道了');
+assert.equal(nodes.detailAllocationDialog.attrs['aria-hidden'],'false');
+ctx.closeDetailAllocationDialog(false);assert.equal(await p,false);
+assert.equal(nodes.saveCurrentDetailAllocationBtn.focused,true);
+p=ctx.showDetailAllocationDialog('save','manual');
+assert.equal(nodes.cancelDetailAllocationDialogBtn.hidden,false);
+assert.equal(nodes.confirmDetailAllocationDialogBtn.textContent,'保存当前分配');
+assert.equal(await ctx.showDetailAllocationDialog('save','duplicate'),false);
+ctx.closeDetailAllocationDialog(true);assert.equal(await p,true);
+p=ctx.showDetailAllocationDialog('reallocate','overwrite');
+assert.equal(nodes.confirmDetailAllocationDialogBtn.textContent,'重新确认分配');
+scope={store:'OTHER',dateKey:'2026-10-19'};
+ctx.closeDetailAllocationDialog(true);assert.equal(await p,false);
+scope={store:'S',dateKey:'2026-10-19'};
+p=ctx.showDetailAllocationDialog('save','manual');
+ctx.handleDetailAllocationDialogOverlay({target:{},currentTarget:{}});
+assert.ok(ctx.detailAllocationDialogPending);
+const overlay={};ctx.handleDetailAllocationDialogOverlay({target:overlay,currentTarget:overlay});
+assert.equal(await p,false);
+const operations=program.slice(program.indexOf('    async function saveCurrentDetailAllocation('),program.indexOf('    function buildTipUpdateContext('));
+assert.doesNotMatch(operations,/window\.(alert|confirm)\(/);
+console.log('page dialogs: notice/save/reallocate, cancel/confirm, duplicate and stale-scope guards passed');

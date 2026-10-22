@@ -21,7 +21,8 @@ function context(overrides={}) {
     buildSystemDetailAllocationSnapshot:()=>({system:true}),
     executeDetailAllocation:async options=>calls.push(options),
     showNotification:(...args)=>calls.push(args),
-    window:{alert:msg=>dialogs.push(msg),confirm:msg=>{dialogs.push(msg);return true;}},
+    showDetailAllocationDialog:async(kind,msg)=>{dialogs.push(msg);return true;},
+    window:{},
     ...overrides};
   ctx.window.TipOutAllocationResults=ctx.TipOutAllocationResults;
   vm.createContext(ctx);vm.runInContext(save+'\n'+confirm,ctx);
@@ -32,7 +33,7 @@ assert.deepEqual(run.dialogs,['当前系统分配数据未进行手动调整']);
 run=context({detailDirty:true,detailManualDirty:true});await run.ctx.saveCurrentDetailAllocation();
 assert.equal(run.calls[0].manual,true);assert.equal(run.calls[0].snapshot,undefined);
 assert.equal(run.dialogs[0],'已手动调整过小费分配数据，将按照手动调整后的分配数据进行统计');
-run=context({detailDirty:true,detailManualDirty:true});run.ctx.window.confirm=()=>false;
+run=context({detailDirty:true,detailManualDirty:true});run.ctx.showDetailAllocationDialog=async()=>false;
 await run.ctx.saveCurrentDetailAllocation();await run.ctx.confirmDetailAllocation();assert.equal(run.calls.length,0);
 run=context({detailDirty:true,detailManualDirty:true});await run.ctx.confirmDetailAllocation();
 assert.equal(run.calls[0].snapshot.system,true);assert.equal(run.calls[0].manual,false);

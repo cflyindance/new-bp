@@ -2104,6 +2104,39 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     }
 
+    var detailAllocationDialogPending = null;
+    function showDetailAllocationDialog(kind, message) {
+      if (detailAllocationDialogPending) return Promise.resolve(false);
+      var modal = document.getElementById('detailAllocationDialog');
+      var scope = getDetailPayoutScope();
+      var titles = { notice: '提示', save: '保存当前分配？', reallocate: '重新确认分配？' };
+      document.getElementById('detailAllocationDialogTitle').textContent = titles[kind] || '提示';
+      document.getElementById('detailAllocationDialogMessage').textContent = message;
+      document.getElementById('cancelDetailAllocationDialogBtn').hidden = kind === 'notice';
+      var confirmButton = document.getElementById('confirmDetailAllocationDialogBtn');
+      confirmButton.textContent = kind === 'notice' ? '知道了' : (kind === 'save' ? '保存当前分配' : '重新确认分配');
+      return new Promise(function(resolve) {
+        detailAllocationDialogPending = { resolve: resolve, scope: scope, baseHash: detailBaseHash,
+          trigger: document.getElementById(kind === 'reallocate' ? 'confirmDetailAllocationBtn' : 'saveCurrentDetailAllocationBtn') };
+        modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
+        confirmButton.focus();
+      });
+    }
+    function closeDetailAllocationDialog(confirmed) {
+      var pending = detailAllocationDialogPending;
+      if (!pending) return;
+      detailAllocationDialogPending = null;
+      var scope = getDetailPayoutScope();
+      var sameContext = scope.store === pending.scope.store && scope.dateKey === pending.scope.dateKey && detailBaseHash === pending.baseHash;
+      var modal = document.getElementById('detailAllocationDialog');
+      modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true');
+      if (pending.trigger) pending.trigger.focus();
+      pending.resolve(!!confirmed && sameContext);
+    }
+    function handleDetailAllocationDialogOverlay(event) {
+      if (event.target === event.currentTarget) closeDetailAllocationDialog(false);
+    }
+
     function buildSystemDetailAllocationSnapshot(store, dateKey) {
       // Keep the actual draft nodes (including input values/listeners) until commit succeeds.
       var container = document.getElementById('detailRulesContainer');
@@ -2134,14 +2167,14 @@ var ALLOC_KEY = 'tipout_allocated';
 
     async function saveCurrentDetailAllocation() {
       if (detailAllocationSubmitting) return;
-      if (!detailManualDirty) { window.alert('当前系统分配数据未进行手动调整'); return; }
+      if (!detailManualDirty) { await showDetailAllocationDialog('notice', '当前系统分配数据未进行手动调整'); return; }
       var store = document.getElementById('storeSelect').value;
       var dateKey = document.getElementById('detailDate').value;
       try {
         TipOutDateState.assertDateWritable(store, dateKey);
         if (!TipOutAllocationResults.isAllocated(store, dateKey)) throw new Error('请先完成系统分配');
         if (!getDetailBusinessStatus(dateKey, detailAllRules).allocatable) throw new Error('当天未营业，无法进行小费分配');
-        if (!window.confirm('已手动调整过小费分配数据，将按照手动调整后的分配数据进行统计')) return;
+        if (!await showDetailAllocationDialog('save', '已手动调整过小费分配数据，将按照手动调整后的分配数据进行统计')) return;
         detailAllocationSubmitting = true;
         document.getElementById('detailRulesContainer').inert = true;
         syncDetailAllocationAction();
@@ -2167,7 +2200,7 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(store, dateKey);
       var hasManual = detailManualDirty || (detailSavedSnapshot && detailSavedSnapshot.allocationSource === 'manual');
-      if (allocated && !window.confirm(hasManual
+      if (allocated && !await showDetailAllocationDialog('reallocate', hasManual
         ? '已手动调整过小费分配数据，将按照系统小费规则进行重新分配，分配后会覆盖手动调整的数据'
         : '该日期已分配，重新确认将覆盖当天原分配结果。')) return;
       var button = document.getElementById('confirmDetailAllocationBtn');
@@ -2325,6 +2358,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var scope = getDetailPayoutScope();
       if (detail && (detail.storeId !== scope.store || detail.businessDate !== scope.dateKey)) return;
       if (detailPayoutDomainWriteActive) return;
+      if (detailAllocationDialogPending) closeDetailAllocationDialog(false);
       var incomingState = TipOutDateState.inspect(scope.store, scope.dateKey);
       if (incomingState.locked) { detailDirty = false; detailManualDirty = false; detailOwnUpdate = false; }
       if (detailPayoutDraft) {
@@ -2344,6 +2378,17 @@ var ALLOC_KEY = 'tipout_allocated';
       tipoutDetailDateStateChannel.addEventListener('message', function(event) { handleDetailDateStateChange(event.data); });
     }
     document.addEventListener('keydown', function(event) {
+      if (detailAllocationDialogPending) {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDetailAllocationDialog(false); return; }
+        if (event.key === 'Tab') {
+          var controls = Array.from(document.getElementById('detailAllocationDialog').querySelectorAll('button:not([hidden]):not(:disabled)'));
+          var focused = controls.findIndex(function(node) { return node.matches(':focus'); });
+          if (focused < 0 || (!event.shiftKey && focused === controls.length - 1) || (event.shiftKey && focused === 0)) {
+            event.preventDefault(); controls[event.shiftKey ? controls.length - 1 : 0].focus();
+          }
+        }
+        return;
+      }
       if (event.key === 'Escape' && document.getElementById('detailConfirmPayoutModal').classList.contains('show') && !detailPayoutSubmitting) closeDetailPayoutModal();
       if (event.key === 'Escape' && document.getElementById('tipDataUpdateModal').classList.contains('show') && !isTipDataUpdatePending) cancelTipDataUpdate();
     });

@@ -1,4 +1,5 @@
 <style data-team-tips-view-style>
+#detailAllocationDialog [hidden] { display: none !important; }
 .formula-section { margin-bottom: 24px; }
     .formula-display {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -203,6 +204,21 @@
           </div>
         </div>
       </div>
+<div class="modal-overlay" id="detailAllocationDialog" aria-hidden="true" data-native-onclick="handleDetailAllocationDialogOverlay(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailAllocationDialogTitle" aria-describedby="detailAllocationDialogMessage" style="width:520px;max-width:calc(100vw - 32px)">
+    <div class="modal-header">
+      <h3 id="detailAllocationDialogTitle">提示</h3>
+      <button class="modal-close" aria-label="关闭" data-native-onclick="closeDetailAllocationDialog(false)">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="detailAllocationDialogMessage" style="margin:0;line-height:1.7"></p>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelDetailAllocationDialogBtn" class="btn" data-native-onclick="closeDetailAllocationDialog(false)">取消</button>
+      <button id="confirmDetailAllocationDialogBtn" class="btn btn-primary" data-native-onclick="closeDetailAllocationDialog(true)">确认</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="tipDataUpdateModal" aria-hidden="true" data-native-onclick="handleTipDataUpdateOverlayClick(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tipDataUpdateTitle" aria-describedby="tipDataUpdateWarning" style="width:560px">
     <div class="modal-header">
