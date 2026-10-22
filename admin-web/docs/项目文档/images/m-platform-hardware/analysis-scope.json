@@ -1,0 +1,64 @@
+{
+  "mode": "standalone",
+  "rootCauseStatus": "confirmed",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "planStatus": "implemented",
+  "entryPoints": [
+    "/m-platform/hardware/devices",
+    "/m-platform/hardware/devices/by-type"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/config/enterprise-hardware-store.ts",
+      "to": "src/config/enterprise-hardware-ui.ts",
+      "evidence": "filterEnterpriseDevices consumes readFilterFromForm; absent empty option selects first store on mount"
+    }
+  ],
+  "references": [
+    {
+      "path": "src/config/enterprise-hardware-ui.ts",
+      "symbol": "renderFilterBar",
+      "relation": "definition",
+      "status": "affected"
+    },
+    {
+      "path": "src/config/enterprise-hardware-store.ts",
+      "symbol": "filterEnterpriseDevices",
+      "relation": "data_source",
+      "status": "not_affected"
+    }
+  ],
+  "deepReadPaths": [
+    "src/config/enterprise-hardware-ui.ts",
+    "src/config/enterprise-hardware-store.ts",
+    "src/config/enterprise-hardware-scope.ts"
+  ],
+  "sharedCallers": [
+    "renderDevicesAllPage",
+    "renderDevicesByTypePage"
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "clean",
+    "evidence": "New worktree from fetched main 5b99d69e before edit"
+  },
+  "plan": [
+    "Add empty all-stores option only",
+    "Keep store IDs and other filters",
+    "Verify defaults and store selection in browser"
+  ],
+  "tdd": {
+    "red": "5192 default store M00000003, hasAll=false, no matches",
+    "green": "5193 default empty hasAll=true; 19 devices, Shanghai 8, all restored 19"
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "No build boundary touched"
+  },
+  "unverifiedScopes": [
+    "CI",
+    "production deployment"
+  ]
+}

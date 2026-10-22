@@ -144,7 +144,7 @@ function renderFilterBar(
       ${select(
         "storeId",
         "门店",
-        getDemoScopeStores().map((s) => ({ value: s.value, label: s.labelZh })),
+        [{ value: "", label: "全部门店" }, ...getDemoScopeStores().map((s) => ({ value: s.value, label: s.labelZh }))],
       )}
       ${select(
         "status",
