@@ -1,8 +1,8 @@
 # M 平台内部权限业务规格说明书（研发交付版）
 
-版本：V1.1；日期：2026-10-22；变更编号：M-PERM-DEFAULT-20261022-02。
-共同基线：main@48c9c24b + codex/m-platform-permissions-20261022 工作区。
-配套：[产品权威 V1.1](M平台内部权限产品权威需求文档.md) · [研发交付 V1.1](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.1](M平台内部权限需求文档（个人规范版）.md)。
+版本：V1.2；日期：2026-10-22；变更编号：M-PERM-NAV-20261022-03。
+共同基线：main@70a4b717 + codex/m-platform-nav-header-20261022 工作区。
+配套：[产品权威 V1.2](M平台内部权限产品权威需求文档.md) · [研发交付 V1.2](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.2](M平台内部权限需求文档（个人规范版）.md)。
 状态：按本次确认实现的本地原型；生产服务端鉴权、真实账号服务尚未接入。三份采用同一业务定义。
 
 本文件展开产品权威的字段、计算、状态、存储与测试，不新增业务规则。
@@ -70,6 +70,16 @@ currentMAccount：先按已认证邮箱查询企业账号；精确命中既有�
 
 ## 4. 前端执行控制点
 
+### M 平台子层头部（M-PERM-NAV-20261022-03）
+
+![导航头部验收](images/m-platform-permissions/nav-heading-staff.png)
+图注：2026-10-22，V1.2 功能分支，权限子层与员工页面。
+
+m-platform-runtime.ts 在各 data-m-nav-layer 顶部渲染同一行 header：保留 data-m-nav-back、data-navigation-sheet-back 和 aria-label=返回上一级菜单，按钮内部仅含 aria-hidden SVG，无可见文本；紧随其后的 h2 显示经过转义的 module.title。沿用商家后台 h-14、size-10、18px SVG、text-sm/font-semibold 及对应边线、悬停和 focus 样式。
+
+m-platform.css 仅将子层容器 padding 设为 0、overflow 设为 hidden，菜单列表在独立滚动区使用 px-2/py-3；主层样式与父子事件处理不变。浏览器实测 header 56px、button 40×40px、icon 18px、title 14px/600；箭头可见文本为空，标题与按钮中心线一致。真实点击返回及重入、当前叶子高亮已验证。本次不新增镜像样式测试；执行 TypeScript 和公共导航回归。
+
+
 ![只读设置页](images/m-platform-permissions/readonly-settings.png)
 图注：2026-10-22 功能分支，受限员工查看 POS 预设，复选框与发布禁用。
 
@@ -88,6 +98,8 @@ src/auth/login.ts：企业账号在品牌和演示回退前校验，停用及密
 - TypeScript：tsc --noEmit。商家仅角色授权回归和公共导航回归通过。verify-permission-center.ts 的“Operation page cannot be selected: /team/shift-scheduling”断言失败；在 main@48c9c24b 的独立干净源码快照复现同一失败（第 37 行），属于基线问题，本次未修改商家权限目录，不宣称该脚本全通过。未运行 CI/部署。
 
 ## 6. 版本记录
+
+V1.2，M-PERM-NAV-20261022-03：导航头部同排，样式及尺寸对齐商家后台；配对产品/个人 V1.2。
 
 V1.1，M-PERM-DEFAULT-20261022-02：默认演示账号复用现有初始管理员身份，补默认访问与隔离回归；配对产品/个人 V1.1。
 
