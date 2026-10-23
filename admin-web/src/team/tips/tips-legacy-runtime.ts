@@ -32,6 +32,7 @@ import distribution from "./programs/distribution.js.txt?raw";
 import details from "./programs/details.js.txt?raw";
 import rules from "./programs/rules.js.txt?raw";
 import editor from "./programs/rule-editor.js.txt?raw";
+import contributorSharesEditor from "./programs/contributor-shares-editor.js.txt?raw";
 import employeeReconciliation from "./programs/employee-reconciliation.js.txt?raw";
 import type { TipsPageContext } from "./tips-context";
 import { parseTipsRoute, rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
@@ -67,7 +68,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
-    programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
+    programs[view], view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
     "return {prepareQuickSnapshot:function(system){return system?prepareSystemAllocationSnapshot():prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }

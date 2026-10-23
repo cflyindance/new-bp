@@ -728,6 +728,21 @@
       </div>
     </div>
   </div>
+<div class="drawer-overlay" id="contributorSharesDrawer-overlay" data-native-onclick="closeContributorSharesDrawer()"></div>
+<div class="drawer contributor-shares-drawer" id="contributorSharesDrawer" role="dialog" aria-modal="true" aria-labelledby="contributorSharesTitle" aria-hidden="true" inert>
+  <div class="drawer-header"><h3 id="contributorSharesTitle">员工承担比例</h3><button type="button" class="modal-close" aria-label="关闭员工承担比例" data-native-onclick="closeContributorSharesDrawer()">×</button></div>
+  <div class="drawer-body">
+    <p id="contributorSharesContext"></p>
+    <p class="contributor-shares-note">以下比例分摊本条贡献规则计算出的应贡献金额。所有选中角色的员工共同合计100%，不是各角色分别100%；不受接收方参与资格限制。</p>
+    <label class="checkbox-item"><input type="checkbox" id="contributorSharesEnabled" checked data-native-onchange="updateContributorSharesTotal()"> 自定义员工承担比例</label>
+    <table class="data-table"><thead><tr><th>角色</th><th>员工</th><th>承担比例</th></tr></thead><tbody id="contributorSharesRows"></tbody></table>
+    <p id="contributorSharesTotal" aria-live="polite"></p>
+    <p id="contributorSharesError" role="alert" class="contributor-shares-error"></p>
+    <p class="contributor-shares-note">示例：本规则应贡献100元，A承担40%应扣40元、B承担60%应扣60元。A只有20元可扣时仅扣20元，不转给B；实际贡献80元，再按P/C规则计算。此处为说明示例，不是当天金额。</p>
+    <p class="contributor-shares-note">确定仅更新本页规则草稿，最终需点击“保存规则”；取消不应用本次输入。</p>
+  </div>
+  <div class="drawer-footer"><button type="button" class="btn" data-native-onclick="closeContributorSharesDrawer()">取消</button><button type="button" class="btn btn-primary" data-native-onclick="saveContributorSharesDrawer()">确定</button></div>
+</div>
 <div class="drawer-overlay" id="salesDrawer-overlay"></div>
 <div class="drawer" id="salesDrawer">
     <div class="drawer-header">

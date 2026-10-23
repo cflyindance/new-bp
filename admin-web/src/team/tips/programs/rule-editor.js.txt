@@ -2550,6 +2550,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     var deductCondDrawerSnapshot = null;
     /** 按卡片 id 存取值条件 */
     var deductValueConditions = {};
+    var deductEmployeeShares = {};
 
     function getDeductBasisBlock(basis) {
       return document.getElementById('deduct-panel-' + basis);
@@ -2803,6 +2804,10 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         delete sc.tipTypes;
         entry.salesConditions = sc;
       }
+      if (deductEmployeeShares[cardId]) {
+        entry.employeeShares = JSON.parse(JSON.stringify(deductEmployeeShares[cardId]));
+        entry.id = cardId;
+      }
       return entry;
     }
 
@@ -2834,7 +2839,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     function buildPersonalSalesPctExtraHtml() {
-      return '<div style="font-size:12px;color:var(--text-tertiary);line-height:1.5">每人扣额 = 本人符合条件销售额 × 卡片占比，从本人小费收入扣除；不受其他员工销售额影响。</div>';
+      return '<div style="font-size:12px;color:var(--text-tertiary);line-height:1.5">未配置员工承担比例时：每人扣额＝本人符合条件销售额×贡献比例。配置后：汇总所选角色符合条件的销售额×贡献比例，再按员工承担比例分摊；仅从各员工可扣小费中扣除，余额不足不转嫁。</div>';
     }
 
     function buildDeductBasisPanelHtml(basis) {
@@ -2956,7 +2961,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         '</div></div>' +
         '<div class="pool-rule-conditions empty" id="deduct-card-' + cardId + '-conditions">' +
         '<span class="cond-label">取值条件<span style="color:var(--danger);margin-left:2px">*</span>：</span>' +
-        '<span class="cond-text">未设置</span></div>';
+        '<span class="cond-text">未设置</span></div>' +
+        '<div class="contributor-share-entry"><span id="deduct-share-summary-' + cardId + '">员工承担：沿用现有扣除方式</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
       var rateInpEl = getDeductRateInput(cardId);
       if (rateInpEl) {
@@ -2982,6 +2988,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           setTimeout(function() {
             card.remove();
             delete deductValueConditions[cardId];
+            delete deductEmployeeShares[cardId];
             syncExistingDeductFlags();
             if (basis === 'personal_sales_pct' && !hasDeductBasis('personal_sales_pct')) {
               personalSalesPctConditions = { revenueType: 'Net Sales (税前营业额)', role: [] };
@@ -3024,6 +3031,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var textEl = el.querySelector('.cond-text');
       if (textEl) textEl.textContent = text || '未设置';
       el.classList.toggle('empty', !text);
+      if (typeof updateContributorSharesSummary === 'function') updateContributorSharesSummary(cardId);
     }
 
     function parkDeductPanel(basis) {
@@ -3075,6 +3083,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var container = document.getElementById('deductRulesContainer');
       if (container) container.innerHTML = '';
       deductValueConditions = {};
+      deductEmployeeShares = {};
       deductRuleCounter = { sales_pct: 0, tip_income: 0, personal_sales_pct: 0 };
       DEDUCT_BASIS_LIST.forEach(function(basis) {
         existingDeductRules[basis] = false;
@@ -3221,6 +3230,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     function applyDeductScopeEntry(cardId, entry) {
       if (!entry) return;
       var basis = parseDeductCardBasis(cardId);
+      if (entry.employeeShares) deductEmployeeShares[cardId] = JSON.parse(JSON.stringify(entry.employeeShares));
       deductValueConditions[cardId] = conditionsFromDeductEntry(entry, basis);
       if (basis === 'personal_sales_pct') {
         personalSalesPctConditions = deductValueConditions[cardId];
@@ -4830,6 +4840,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         return;
       }
       if (!validateWorkHoursConfig()) return;
+      if (typeof validateContributorSharesBeforeSave === 'function' && !validateContributorSharesBeforeSave()) return;
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {

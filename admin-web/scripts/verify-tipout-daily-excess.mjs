@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const file=n=>fs.readFileSync(new URL('../src/team/tips/'+n,import.meta.url),'utf8');
 const program=file('programs/details.js.txt');
-const fn=program.slice(program.indexOf('    function renderDetailFundingSummary('),program.indexOf('    function renderSavedDetailFunding('));
+const fn=program.slice(program.indexOf('    function renderDetailFundingSummary('),program.indexOf('    function renderDetailContributionSummary('));
 const render=vm.runInNewContext('('+fn.trim()+')',{money:n=>'$'+Number(n).toFixed(2)});
 for(const [t,c] of [[10,10],[0,0]]){
  assert.equal(render({version:2,target:t,contributed:c,actual:Math.max(t,c),ownerContribution:Math.max(t-c,0),excess:Math.max(c-t,0)},true),'','C=P must not show the extra funding panel');

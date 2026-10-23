@@ -474,7 +474,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var rows = (pool.employees || []).map(function(employee) {
           return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + detailSavedWeightText(employee) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';
         }).join('');
-        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p>'+renderDetailFundingSummary(pool.funding,true)+'<table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>员工权重</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p>'+renderDetailFundingSummary(pool.funding,true)+renderDetailContributionSummary(pool.funding,true)+'<table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>员工权重</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
       container.innerHTML = banner + cards;
       var savedEmployees = snapshot.pools.reduce(function(all,pool) { return all.concat(pool.employees || []); }, []);
@@ -1480,6 +1480,21 @@ var ALLOC_KEY = 'tipout_allocated';
           '<details class="tipout-funding-excess tipout-funding-shortfall"><summary><span>老板补足 '+money(funding.ownerContribution)+'</span><span aria-label="查看贡献不足说明">?</span></summary><p>员工贡献小于小费池计算金额，本次按计划 '+money(funding.target)+' 分配，差额 '+money(funding.ownerContribution)+' 由老板补足。员工仅扣实际贡献 '+money(funding.contributed)+'；补足金额是资金承担记录，不代表已经付款。</p></details>')+
         '<p class="tipout-funding-source">'+(confirmed?'已确认快照；资金承担记录不代表已付款。':'预计试算，尚未形成正式扣款。')+'</p></div>';
     }
+    function renderDetailContributionSummary(funding, confirmed) {
+      if(!funding||!Array.isArray(funding.contributionRules)||!funding.contributionRules.length)return '';
+      var prefix=confirmed?'':'预计';
+      return '<section class="detail-contribution-section">'+funding.contributionRules.map(function(rule){
+        var rows=(rule.employees||[]).map(function(e){
+          return '<tr><td>'+escHtml(e.name)+'</td><td>'+escHtml(e.role)+'</td><td>'+(e.pct==null?'—':Number(e.pct).toFixed(2)+'%')+'</td><td>'+money(e.due)+'</td><td>'+money(e.available)+'</td><td><strong>'+money(e.amount)+'</strong></td></tr>';
+        }).join('');
+        var shortage=Number(rule.shortfall)>0;
+        var explanation=(rule.employees||[]).filter(function(e){return Number(e.shortfall)>0;}).map(function(e){return escHtml(e.name)+'应扣'+money(e.due)+'，可扣余额'+money(e.available)+'，实际扣除'+money(e.amount);}).join('；');
+        return '<div class="detail-contribution-rule"><h4>小费贡献方规则 · '+escHtml(rule.label||'贡献规则')+' · '+(Number(rule.rate)*100).toFixed(2)+'%</h4>'+
+          '<p class="contributor-shares-note">'+prefix+'应扣总额 <strong>'+money(rule.plannedContribution)+'</strong>　'+prefix+'实际扣除 <strong>'+money(rule.actualContribution)+'</strong>'+(shortage?'　少扣金额 <strong>'+money(rule.shortfall)+'</strong>':'')+'</p>'+
+          '<div class="tipout-table-wrap"><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>承担比例</th><th>'+prefix+'应扣金额</th><th>可扣余额</th><th>'+prefix+'实际扣除</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+          (shortage?'<details class="tipout-funding-excess contribution-shortage"><summary><span>可扣余额不足，少扣 '+money(rule.shortfall)+'</span><span aria-label="查看少扣明细">?</span></summary><p>'+explanation+'。差额不转由其他员工承担。实际贡献按实际扣除计算，最终分配及老板补足仍按P/C规则计算；少扣金额不等于老板补足金额。</p></details>':'')+'</div>';
+      }).join('')+'<p class="tipout-funding-source">'+(confirmed?'已确认贡献快照，不代表实际付款。':'预计试算，尚未形成正式扣除。')+'</p></section>';
+    }
     function renderSavedDetailFunding(snapshot) {
       (snapshot.pools||[]).forEach(function(pool){
         var bundle=Array.from(document.querySelectorAll('.detail-rule-bundle')).find(function(el){return el.getAttribute('data-rule-id')===String(pool.ruleId);});
@@ -1487,9 +1502,11 @@ var ALLOC_KEY = 'tipout_allocated';
         var strip=bundle.querySelector('.formula-rule-section');
         if(!strip)return;
         var previous=strip.querySelector('.tipout-funding-summary');if(previous)previous.remove();
+        var oldContribution=bundle.querySelector('.detail-contribution-section');if(oldContribution)oldContribution.remove();
         if(pool.funding&&pool.funding.version===2){
           var value=strip.querySelector('.formula-pool-val');if(value)value.textContent=money(pool.funding.target);
           strip.insertAdjacentHTML('beforeend',renderDetailFundingSummary(pool.funding,true));
+          strip.insertAdjacentHTML('afterend',renderDetailContributionSummary(pool.funding,true));
         }
       });
     }
@@ -1501,8 +1518,10 @@ var ALLOC_KEY = 'tipout_allocated';
         var views=window.TipOutFunding.projectIndependent(detailAllRules,TipOutScenarioSource.day(scope.dateKey,scope.store),scope.dateKey,targets);
         strips.forEach(function(strip){
           var id=strip.getAttribute('data-rule-id'),view=views[id],previous=strip.querySelector('.tipout-funding-summary');if(previous)previous.remove();
+          var oldContribution=strip.closest('.detail-rule-bundle').querySelector('.detail-contribution-section');if(oldContribution)oldContribution.remove();
           if(!view)return;
           strip.insertAdjacentHTML('beforeend',renderDetailFundingSummary(view,false));
+          strip.insertAdjacentHTML('afterend',renderDetailContributionSummary(view,false));
           var card=strip.closest('.detail-rule-bundle').querySelector('.detail-card');
           if(card){card.setAttribute('data-pool',view.actual);if(card.getAttribute('data-hours-based')==='1')recalcDetailHoursCard(card);else recalcDetailLegacyCard(card);}
         });

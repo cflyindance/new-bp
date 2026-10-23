@@ -1,0 +1,20 @@
+{
+  "changeId": "TIPOUT-CONTRIBUTOR-SHARES-20261023-01",
+  "baseline": "03afacb8",
+  "branch": "codex/tips-contributor-shares-20261023",
+  "origin": "http://127.0.0.1:65122",
+  "session": "tips-shares-20261023",
+  "fixtureSetup": "seed-tipout-contributor-shares-browser.mjs adds isolated identities and initial unconfigured rule only; shares saved through actual editor",
+  "scope": "Golden store, 2026-10-23, fixture rule19",
+  "captures": {
+    "drawer-default.png": "drawer initial empty percentages, two role employees",
+    "invalid-total.png": "40+50=90 blocked, no stored employeeShares",
+    "cancel-retains-legacy.png": "cancel leaves inherited summary and storage unchanged",
+    "draft-summary.png": "40/60 applied to page draft only, not persisted",
+    "edit-restored.png": "after actual Save rule and reopen, 40/60 restored",
+    "detail-shortfall.png": "confirmed pool: target100, contribution80, owner20, A due40 actual20, B60",
+    "detail-shortfall-expanded.png": "shortfall question expanded, no transfer to B",
+    "paid-snapshot.png": "payout-confirmed locked view retains contribution details"
+  },
+  "remainingScreenshotGaps": ["store/roles/roster changes", "disable custom mode", "multiple insufficient employees", "keyboard cycle", "storage/save failure"]
+}
