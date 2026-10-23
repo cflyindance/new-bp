@@ -405,6 +405,7 @@
 
           <!-- Rule Name -->
           <div class="form-section tipout-form-card" id="ruleSectionBasic">
+            <h2 class="tipout-rule-group-title">基础信息</h2>
             <div class="tipout-form-grid">
             <div class="form-group">
               <label class="form-label"><span class="required">*</span>规则名称</label>
@@ -422,24 +423,8 @@
             </div>
           </div>
 
-          <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
-            <div class="distribution-method-cards">
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合参与资格的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card" id="distributionOrdersRow">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
-                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
-              </div>
-            </div>
-          </div>
-
+          <section class="tipout-editor-rule-group" id="allocationRulesGroup" aria-labelledby="allocationRulesTitle">
+            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">分配规则</h2>
           <!-- 小费池贡献规则：两种计算模式共用 -->
           <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
@@ -479,23 +464,6 @@
           </details>
 
           <div id="legacyAllocationSections">
-          <!-- Deduction Rules -->
-          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
-            <div id="deductRulesContainer"></div>
-            <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
-            <div class="add-option-dropdown" id="deductAddOptionWrap">
-              <button type="button" class="btn" data-native-onclick="toggleDeductAddMenu()" id="deductAddMenuBtn">
-                <span style="font-size:16px">+</span> 新增选项
-              </button>
-              <div class="add-option-menu" id="deductAddOptionMenu">
-                <div class="add-option-menu-item" data-basis="sales_pct" data-native-onclick="addDeductRule('sales_pct')">按照销售额占比</div>
-                <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')">按照个人销售额占比</div>
-                <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
-              </div>
-            </div>
-          </div>
-
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
             <div class="form-section-title">
@@ -557,6 +525,24 @@
             </div>
           </div>
 
+          <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
+            <div class="distribution-method-cards">
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合参与资格的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card" id="distributionOrdersRow">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
+              </div>
+            </div>
+          </div>
+
           <div id="distributionSection" class="tipout-rule-distribution-section tipout-form-card">
             <!-- Clock-in Method -->
             <div class="form-section">
@@ -611,6 +597,28 @@
                   <div class="work-hours-config-error" id="workHoursConfigError"></div>
                 </div>
           </div>
+
+          </section>
+          <section class="tipout-editor-rule-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
+            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">贡献规则</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工不受接收方参与资格限制。</p></div></details></div>
+          <!-- Deduction Rules -->
+          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
+            <div id="deductRulesContainer"></div>
+            <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
+            <div class="add-option-dropdown" id="deductAddOptionWrap">
+              <button type="button" class="btn" data-native-onclick="toggleDeductAddMenu()" id="deductAddMenuBtn">
+                <span style="font-size:16px">+</span> 新增选项
+              </button>
+              <div class="add-option-menu" id="deductAddOptionMenu">
+                <div class="add-option-menu-item" data-basis="sales_pct" data-native-onclick="addDeductRule('sales_pct')">按照销售额占比</div>
+                <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')">按照个人销售额占比</div>
+                <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
+              </div>
+            </div>
+          </div>
+
+          </section>
 
           <!-- Employee Weight -->
           <!-- 

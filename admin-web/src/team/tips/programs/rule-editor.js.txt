@@ -313,6 +313,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var ord = document.getElementById('orderTipAllocationSection');
       if (leg) leg.style.display = v === 'legacy_pool' ? '' : 'none';
       if (ord) ord.style.display = v === 'order_tip_then_residual' ? '' : 'none';
+      syncContributorGroupVisibility();
       if (v === 'order_tip_then_residual' && !skipEnsureClaimRow) {
         var tb = document.getElementById('tipClaimsTableBody');
         if (tb && !tb.querySelector('tr.tip-claim-row')) addTipClaimRow();
@@ -3375,11 +3376,18 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       return { deductConfig: deductConfig, deductRoles: deductRoles, deductEmployees: deductEmployees };
     }
 
+    function syncContributorGroupVisibility() {
+      var group=document.getElementById('contributorRulesGroup');
+      var mode=(document.querySelector('input[name="allocationMode"]:checked')||{}).value||'legacy_pool';
+      if(group)group.style.display=!isSurchargePoolKind()&&mode==='legacy_pool'?'':'none';
+    }
+
     function updateDeductRulesVisibility() {
       var el = document.getElementById('deductRulesSection');
       // A1：小费规则下始终可配置扣除（不依赖销售额池卡片）；加收池不展示
       var show = !isSurchargePoolKind();
       if (el) el.style.display = show ? 'block' : 'none';
+      syncContributorGroupVisibility();
       if (show) ensureDeductTabsInited();
     }
 

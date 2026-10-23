@@ -2361,6 +2361,11 @@ select.form-control {
   gap: 16px;
 }
 
+.tipout-page-rule-editor .tipout-editor-rule-group { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.tipout-page-rule-editor .tipout-rule-group-title { margin:0; font-size:18px; line-height:1.5; font-weight:700; color:var(--text-primary); }
+.tipout-page-rule-editor #ruleSectionBasic > .tipout-rule-group-title { margin-bottom:16px; }
+.tipout-page-rule-editor .tipout-rule-group-heading { display:flex; align-items:center; gap:8px; margin-top:8px; }
+
 .tipout-page-rule-editor #legacyAllocationSections,
 .tipout-page-rule-editor #orderTipAllocationSection {
   min-width: 0;
