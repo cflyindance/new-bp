@@ -24,6 +24,8 @@ import {
   isAuthenticated,
   LOGIN_PATH,
   renderLoginPage,
+  DEMO_LOGIN_ACCOUNT,
+  getAuthenticatedEmail,
 } from "./auth/login";
 import {
   DEFAULT_LOCKED_STORE_ID,
@@ -324,11 +326,13 @@ import {
   isLegacyBShellMode,
   isMPlatformShellMode,
   isPitShellMode,
+  writeAppShellMode,
 } from "./shell/app-shell-mode";
 import {
   bindViewSwitchControl,
   ensureMvpGroupHqViewSwitchHidden,
   ensureMvpMPlatformViewSwitchHidden,
+  switchToBrandView,
 } from "./shell/view-switch-control";
 import { bindVersionSwitchControl } from "./shell/version-switch-control";
 import { mountDemoSwitchFab, unmountDemoSwitchFab } from "./shell/demo-switch-control";
@@ -12062,6 +12066,13 @@ function bindFullscreenIframeModal(dialogId: string, closeButtonId: string): voi
   });
 }
 
+function applyDefaultDemoBrandView(): boolean {
+  if (getAuthenticatedEmail()?.trim().toLowerCase() !== DEMO_LOGIN_ACCOUNT || isViewSwitchRestricted()) return false;
+  // Default presentation only: retain account identity, grants and explicit deep links.
+  writeAppShellMode("merchant");
+  return switchToBrandView(() => {});
+}
+
 function mountLoginShell(): void {
   unmountDemoSwitchFab();
   const app = document.getElementById("app");
@@ -12069,7 +12080,13 @@ function mountLoginShell(): void {
   app.innerHTML = renderLoginPage();
   bindLoginPage(() => {
     syncSessionForAuthenticatedUser();
-    replaceHashPath(currentMAccount() ? M_PAGES.find(page => mCanVisit(page.path))?.path ?? '/m-platform/permissions/overview' : needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
+    const useBrandDefault = getAuthenticatedEmail()?.trim().toLowerCase() === DEMO_LOGIN_ACCOUNT && !isViewSwitchRestricted();
+    if (useBrandDefault) {
+      // Leave /login before scope-change events can synchronously remount the shell.
+      replaceHashPath(APP_NAV_HOME_PATH);
+      applyDefaultDemoBrandView();
+    }
+    replaceHashPath(useBrandDefault ? APP_NAV_HOME_PATH : currentMAccount() ? M_PAGES.find(page => mCanVisit(page.path))?.path ?? '/m-platform/permissions/overview' : needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
     mount();
   });
 }
@@ -12142,6 +12159,12 @@ function mountInitializedPage(): void {
   }
   if (ensureMvpGroupHqViewSwitchHidden(mount)) return;
   if (ensureMvpMPlatformViewSwitchHidden(mount)) return;
+  if (authPath === LOGIN_PATH && getAuthenticatedEmail()?.trim().toLowerCase() === DEMO_LOGIN_ACCOUNT && !isViewSwitchRestricted()) {
+    replaceHashPath(APP_NAV_HOME_PATH);
+    applyDefaultDemoBrandView();
+    mount();
+    return;
+  }
   if (authPath === LOGIN_PATH && currentMAccount()) {
     replaceHashPath(M_PAGES.find(page => mCanVisit(page.path))?.path ?? '/m-platform/permissions/overview');
     mount();
@@ -13316,6 +13339,11 @@ function mountInitializedPage(): void {
     scrollToModuleSettingsCategoryFromPath(mountPathForSheet);
   }
   bindModuleSettingsScrollSpy();
+}
+
+// Run only once per document open; in-app view switching and explicit routes remain untouched.
+if (["", "#", "#/", "#/home", "#/home/"].includes(location.hash) && applyDefaultDemoBrandView()) {
+  replaceHashPath(APP_NAV_HOME_PATH);
 }
 
 bindPageSaveGuard();
