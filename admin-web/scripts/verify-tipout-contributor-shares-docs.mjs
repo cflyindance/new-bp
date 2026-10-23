@@ -5,6 +5,9 @@ for(const name of names){
 const text=fs.readFileSync(path.join(dir,name),'utf8');
 assert.ok(text.includes('TIPOUT-CONTRIBUTOR-SHARES-20261023-01'));
 assert.ok(text.includes('V4.11')&&text.includes('V3.11')&&text.includes('V2.9'));
+assert.ok(text.includes('TIPOUT-CONTRIBUTOR-SHARE-MODES-20261023-01'));
+assert.ok(text.includes('V4.12')&&text.includes('V3.12')&&text.includes('V2.10'));
+assert.doesNotMatch(text,/取消勾选后点确定，移除本条自定义配置/);
 assert.match(text,/少扣金额不等于老板补足金额|不能把少扣直接等同于补足/);
 for(const m of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)){
 let link=m[1];if(/^[a-z]+:/i.test(link)||link.startsWith('#'))continue;

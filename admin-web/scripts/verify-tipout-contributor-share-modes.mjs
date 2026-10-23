@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const window={};vm.runInNewContext(fs.readFileSync('src/team/tips/legacy/tipout-funding.js.txt','utf8'),{window});const api=window.TipOutFunding;
+const facts=['A','B','C'].map((id,i)=>({employeeId:id,name:id,role:i?'Bar':'Server',originalTips:i?100:20,reportedTips:0,orders:[{salesAmount:i?300:400,tipAmount:100}]}));
+const entry={roles:['Server','Bar'],rate:.1,employeeShares:{version:1,mode:'average',roles:['Server','Bar']}};
+const rule={id:1,store:'S',deductConfig:{salesPct:entry},poolRules:[{type:'sales',pct:10}]};
+const p=api.previewIndependent(rule,facts,'2026-10-23',100);const r=p.contributionRules[0];
+assert.equal(r.shareMode,'average');assert.deepEqual(Array.from(r.employees,x=>x.due),[33.34,33.33,33.33]);
+assert.deepEqual(Array.from(r.employees,x=>x.amount),[20,33.33,33.33]);assert.equal(p.contributed,86.66);assert.equal(p.ownerContribution,13.34);
+const four=facts.concat({employeeId:'D',name:'D',role:'Bar',originalTips:100,orders:[]});assert.deepEqual(Array.from(api.previewIndependent(rule,four,'2026-10-23',100).contributionRules[0].employees,x=>x.due),[25,25,25,25]);
+const snap={dateKey:'2026-10-23',scenarioFacts:facts,pools:[{ruleId:1,poolAmount:100,employees:[{employeeId:'B',amount:100}]}]};api.validateSnapshot(api.reconcileExisting(snap,[rule]));
+const bad=JSON.parse(JSON.stringify(entry.employeeShares));bad.mode='balance';assert.throws(()=>api.validateEmployeeShares(bad,entry.roles,facts),/方式/);
+const html=fs.readFileSync('src/team/tips/templates/rule-editor.html','utf8');assert.match(html,/name="contributorShareMode" value="average"/);assert.match(html,/name="contributorShareMode" value="custom"/);assert.doesNotMatch(html,/id="contributorSharesEnabled"/);
+const editor=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');assert.match(editor,/if\(!silent\)deductEmployeeShares\[cardId\]=\{version:1,mode:'average'/);
+console.log('PASS average modes: dynamic roster, exact equal cents, cap without transfer, snapshot, invalid mode and two options');

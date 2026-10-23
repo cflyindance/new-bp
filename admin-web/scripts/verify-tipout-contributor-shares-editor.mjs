@@ -11,7 +11,7 @@ window.TipOutRosterDirectory={listEmployees:()=>members};
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-funding.js.txt','utf8'),ctx);
 vm.runInContext(fs.readFileSync('src/team/tips/programs/contributor-shares-editor.js.txt','utf8'),ctx);
 ctx.updateContributorSharesSummary('sales_pct_1');assert.equal(nodes['deduct-share-button-sales_pct_1'].disabled,false);
-assert.match(nodes['deduct-share-summary-sales_pct_1'].textContent,/沿用/);
+assert.match(nodes['deduct-share-summary-sales_pct_1'].textContent,/未设置/);
 ctx.deductEmployeeShares.sales_pct_1={version:1,store:'S',roles:['R1','R2'],employees:[{employeeId:'A',pct:40},{employeeId:'B',pct:60}]};
 assert.equal(ctx.validateContributorSharesBeforeSave(),true);ctx.updateContributorSharesSummary('sales_pct_1');assert.match(nodes['deduct-share-summary-sales_pct_1'].textContent,/40%.*60%/);
 const main=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');

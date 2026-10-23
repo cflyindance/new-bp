@@ -21,13 +21,15 @@
       var label=document.getElementById('deduct-share-summary-'+cardId),button=document.getElementById('deduct-share-button-'+cardId);
       if(!label||!button)return;
       var roles=(deductValueConditions[cardId]||{}).role||[],shares=deductEmployeeShares[cardId];
+      if(shares&&shares.mode==='average'){shares.roles=Array.from(new Set(roles));shares.store=getRuleEditorStoreName();}
       button.disabled=!getRuleEditorStoreName()||!roles.length;
       button.title=button.disabled?'请先选择门店并设置贡献角色':'';
       button.textContent=shares?'修改员工承担比例':'设置员工承担比例';
-      label.textContent='员工承担：沿用现有扣除方式';
+      label.textContent='员工承担：未设置';
+      if(shares&&shares.mode==='average'&&button.disabled){label.textContent='员工承担：按员工人数平均分担（请先选择门店及贡献角色）';return;}
       if(shares){
         try{checkContributorShares(cardId);var members=contributorShareMembers(cardId);
-          label.textContent='员工承担：自定义 · '+(members.length>3?'已配置'+members.length+'人':members.map(function(e){var row=shares.employees.find(function(x){return x.employeeId===e.id;});return e.name+' '+row.pct+'%';}).join('、'));
+          label.textContent=shares.mode==='average'?'员工承担：按员工人数平均分担（按当天有效员工人数计算）':'员工承担：自定义 · '+(members.length>3?'已配置'+members.length+'人':members.map(function(e){var row=shares.employees.find(function(x){return x.employeeId===e.id;});return e.name+' '+row.pct+'%';}).join('、'));
         }catch(error){label.textContent='员工承担：'+error.message;}
       }
     }
@@ -40,10 +42,11 @@
         var saved=deductEmployeeShares[cardId];
         contributorSharesDraft={cardId:cardId,scope:contributorShareScope(cardId),members:members,roles:Array.from(new Set((deductValueConditions[cardId]||{}).role||[]))};
         document.getElementById('contributorSharesContext').textContent=(DEDUCT_BASIS_LABELS[parseDeductCardBasis(cardId)]||'贡献规则')+' · 贡献比例 '+(readDeductRatePct(cardId)||0)+'%';
-        document.getElementById('contributorSharesEnabled').checked=true;
+        var shareMode=saved?(saved.mode||'custom'):'average';
+        document.querySelectorAll('input[name="contributorShareMode"]').forEach(function(input){input.checked=input.value===shareMode;});
         document.getElementById('contributorSharesRows').innerHTML=members.map(function(e){
-          var row=saved&&saved.employees.find(function(x){return x.employeeId===e.id;});
-          return '<tr data-share-employee-id="'+escapeHtmlAttr(e.id)+'"><td>'+escapeHtmlText(e.role)+'</td><td>'+escapeHtmlText(e.name)+'</td><td><input type="number" min="0" max="100" step="0.01" aria-label="'+escapeHtmlAttr(e.name+'承担比例')+'" value="'+escapeHtmlAttr(row?String(row.pct):'')+'" data-native-oninput="updateContributorSharesTotal()"> %</td></tr>';
+          var row=saved&&saved.employees&&saved.employees.find(function(x){return x.employeeId===e.id;});
+          return '<tr data-share-employee-id="'+escapeHtmlAttr(e.id)+'"><td>'+escapeHtmlText(e.role)+'</td><td>'+escapeHtmlText(e.name)+'</td><td><span class="share-average-preview">约 '+(100/members.length).toFixed(2)+'%</span><span class="share-custom-input"><input type="number" min="0" max="100" step="0.01" aria-label="'+escapeHtmlAttr(e.name+'承担比例')+'" value="'+escapeHtmlAttr(row?String(row.pct):'')+'" data-native-oninput="updateContributorSharesTotal()"> %</span></td></tr>';
         }).join('');
         document.getElementById('contributorSharesError').textContent='';
         var drawer=document.getElementById('contributorSharesDrawer');drawer.removeAttribute('inert');drawer.setAttribute('aria-hidden','false');
@@ -55,10 +58,13 @@
       return Array.from(document.querySelectorAll('#contributorSharesRows tr')).map(function(tr){var value=tr.querySelector('input').value;return {employeeId:tr.getAttribute('data-share-employee-id'),pct:value.trim()===''?null:Number(value)};});
     }
     function updateContributorSharesTotal() {
-      var enabled=document.getElementById('contributorSharesEnabled').checked,rows=readContributorSharesDraft();
-      document.querySelectorAll('#contributorSharesRows input').forEach(function(e){e.disabled=!enabled;});
+      var average=(document.querySelector('input[name="contributorShareMode"]:checked')||{}).value==='average',rows=readContributorSharesDraft();
+      document.querySelectorAll('#contributorSharesRows input').forEach(function(e){e.disabled=average;});
+      document.querySelectorAll('#contributorSharesRows .share-average-preview').forEach(function(e){e.hidden=!average;});
+      document.querySelectorAll('#contributorSharesRows .share-custom-input').forEach(function(e){e.hidden=average;});
       var total=rows.reduce(function(n,r){return n+(Number.isFinite(r.pct)?Math.round(r.pct*100):0);},0)/100;
-      document.getElementById('contributorSharesTotal').textContent=enabled?'合计：'+total.toFixed(2)+'%'+(Math.round(total*100)===10000?'':'（须为100%）'):'沿用现有扣除方式，不使用本次员工比例';
+      document.getElementById('contributorSharesTotal').textContent=average?'按当天有效贡献员工人数平均分担；当前名单仅供预览。比例为近似值，金额按人数精确分币。':'合计：'+total.toFixed(2)+'%'+(Math.round(total*100)===10000?'':'（须为100%）');
+      document.getElementById('contributorSharesExample').textContent=average?'示例：本条应贡献100元，A、B两人各应扣50元；A只有20元可扣时仅扣20元，B仍扣50元，实际贡献70元。差额不转给B，再按P/C规则计算。此处为说明示例，不是当天金额。':'示例：本条应贡献100元，A承担40%应扣40元、B承担60%应扣60元；A只有20元可扣时仅扣20元，B仍扣60元，实际贡献80元。差额不转给B，再按P/C规则计算。此处为说明示例，不是当天金额。';
       document.getElementById('contributorSharesError').textContent='';
     }
     function closeContributorSharesDrawer() {
@@ -71,11 +77,11 @@
       var draft=contributorSharesDraft;if(!draft||!document.getElementById('contributorSharesDrawer').classList.contains('show'))return;
       try{
         if(!document.getElementById('deduct-card-'+draft.cardId)||contributorShareScope(draft.cardId)!==draft.scope)throw new Error('门店、角色或员工已变化，请取消后重新设置');
-        var shares={version:1,store:getRuleEditorStoreName(),roles:draft.roles.slice(),employees:readContributorSharesDraft()};
-        if(document.getElementById('contributorSharesEnabled').checked){
-          window.TipOutFunding.validateEmployeeShares(shares,draft.roles,draft.members);
-          deductEmployeeShares[draft.cardId]=shares;
-        }else delete deductEmployeeShares[draft.cardId];
+        var mode=(document.querySelector('input[name="contributorShareMode"]:checked')||{}).value;
+        var shares={version:1,mode:mode,store:getRuleEditorStoreName(),roles:draft.roles.slice()};
+        if(mode==='custom')shares.employees=readContributorSharesDraft();
+        window.TipOutFunding.validateEmployeeShares(shares,draft.roles,draft.members);
+        deductEmployeeShares[draft.cardId]=shares;
         updateContributorSharesSummary(draft.cardId);closeContributorSharesDrawer();
         showNotification('员工承担比例已应用到草稿，请保存规则');
       }catch(error){document.getElementById('contributorSharesError').textContent=error.message;}
