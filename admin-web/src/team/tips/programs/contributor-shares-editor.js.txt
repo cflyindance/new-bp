@@ -22,11 +22,11 @@
       if(!label||!button)return;
       var roles=(deductValueConditions[cardId]||{}).role||[],shares=deductEmployeeShares[cardId];
       if(shares&&shares.mode==='average'){shares.roles=Array.from(new Set(roles));shares.store=getRuleEditorStoreName();}
-      button.disabled=!getRuleEditorStoreName()||!roles.length;
-      button.title=button.disabled?'请先选择门店并设置贡献角色':'';
+      button.disabled=!!getRuleEditorStoreName()&&!roles.length;
+      button.title=!getRuleEditorStoreName()?'请先选择门店':button.disabled?'请先设置贡献角色':'';
       button.textContent=shares?'修改员工承担比例':'设置员工承担比例';
       label.textContent='员工承担：未设置';
-      if(shares&&shares.mode==='average'&&button.disabled){label.textContent='员工承担：按员工人数平均分担（请先选择门店及贡献角色）';return;}
+      if(shares&&shares.mode==='average'&&(!getRuleEditorStoreName()||!roles.length)){label.textContent='员工承担：按员工人数平均分担（请先选择门店及贡献角色）';return;}
       if(shares){
         try{checkContributorShares(cardId);var members=contributorShareMembers(cardId);
           label.textContent=shares.mode==='average'?'员工承担：按员工人数平均分担（按当天有效员工人数计算）':'员工承担：自定义 · '+(members.length>3?'已配置'+members.length+'人':members.map(function(e){var row=shares.employees.find(function(x){return x.employeeId===e.id;});return e.name+' '+row.pct+'%';}).join('、'));
@@ -35,6 +35,7 @@
     }
     function openContributorSharesDrawer(cardId) {
       try{
+        if(!getRuleEditorStoreName())throw new Error('请先选择门店');
         if(!document.getElementById('deduct-card-'+cardId))throw new Error('贡献规则已变化');
         var mode=(document.querySelector('input[name="allocationMode"]:checked')||{}).value,clock=(document.querySelector('input[name="clockin"]:checked')||{}).value;
         if(mode!=='legacy_pool'||clock==='time_window')throw new Error('当前计提／时段模式暂不支持自定义员工承担比例');
