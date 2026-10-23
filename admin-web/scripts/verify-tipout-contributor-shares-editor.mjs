@@ -21,5 +21,7 @@ store='Other';assert.equal(ctx.validateContributorSharesBeforeSave(),false);asse
 members.push({id:'C',name:'C',role:'R1'});assert.equal(ctx.validateContributorSharesBeforeSave(),false);assert.match(messages.at(-1),/变化/);members.pop();
 ctx.deductValueConditions.sales_pct_1.role=['R1'];assert.equal(ctx.validateContributorSharesBeforeSave(),false);
 ctx.deductValueConditions.sales_pct_1.role=[];ctx.updateContributorSharesSummary('sales_pct_1');assert.equal(nodes['deduct-share-button-sales_pct_1'].disabled,true);
+store='';ctx.updateContributorSharesSummary('sales_pct_1');assert.equal(nodes['deduct-share-button-sales_pct_1'].disabled,false,'missing store must allow click to show notice');
+ctx.openContributorSharesDrawer('sales_pct_1');assert.equal(messages.at(-1),'请先选择门店');store='S';
 delete ctx.deductEmployeeShares.sales_pct_1;const old=ctx.entryFromDeductValueConditions('sales_pct_1');assert.equal(old.employeeShares,undefined);assert.equal(old.id,undefined);
 console.log('PASS editor shares: disabled/no-role, summary, serialization, store/role/roster stale guards and legacy untouched');
