@@ -64,8 +64,9 @@
       document.querySelectorAll('#contributorSharesRows .share-average-preview').forEach(function(e){e.hidden=!average;});
       document.querySelectorAll('#contributorSharesRows .share-custom-input').forEach(function(e){e.hidden=average;});
       var total=rows.reduce(function(n,r){return n+(Number.isFinite(r.pct)?Math.round(r.pct*100):0);},0)/100;
-      document.getElementById('contributorSharesTotal').textContent=average?'按当天有效贡献员工人数平均分担；当前名单仅供预览。比例为近似值，金额按人数精确分币。':'合计：'+total.toFixed(2)+'%'+(Math.round(total*100)===10000?'':'（须为100%）');
-      document.getElementById('contributorSharesExample').textContent=average?'示例：本条应贡献100元，A、B两人各应扣50元；A只有20元可扣时仅扣20元，B仍扣50元，实际贡献70元。差额不转给B，再按P/C规则计算。此处为说明示例，不是当天金额。':'示例：本条应贡献100元，A承担40%应扣40元、B承担60%应扣60元；A只有20元可扣时仅扣20元，B仍扣60元，实际贡献80元。差额不转给B，再按P/C规则计算。此处为说明示例，不是当天金额。';
+      document.getElementById('contributorSharesTotal').hidden=average;
+      document.getElementById('contributorSharesTotal').textContent=average?'':'合计：'+total.toFixed(2)+'%'+(Math.round(total*100)===10000?'':'（须为100%）');
+      document.getElementById('contributorSharesExample').textContent=average?'示例：本条应贡献100元，A、B两人各应扣50元；A只有20元可扣时仅扣20元，B仍扣50元，实际贡献70元。差额不转给B。':'示例：本条应贡献100元，A承担40%应扣40元、B承担60%应扣60元；A只有20元可扣时仅扣20元，B仍扣60元，实际贡献80元。差额不转给B。';
       document.getElementById('contributorSharesError').textContent='';
     }
     function closeContributorSharesDrawer() {
