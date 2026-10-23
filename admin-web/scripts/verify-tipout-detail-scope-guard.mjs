@@ -52,4 +52,3 @@ assert.equal(own.isOwnDetailDraftNotification({locked:true,snapshot:{snapshotHas
 own.TipOutDateState.readUnconfirmedUpdate=()=>({fingerprint:'other'});
 assert.equal(own.isOwnDetailDraftNotification({locked:false,snapshot:{snapshotHash:'base'}}),false);
 console.log('PASS detail leave: clean/saving/cancel/confirm and scope restoration; first manual/system source');
-

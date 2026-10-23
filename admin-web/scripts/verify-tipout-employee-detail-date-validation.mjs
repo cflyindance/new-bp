@@ -31,4 +31,3 @@ for(const name of ['toggleEmployeeDetailExportMenu','collectEmployeeDetailExport
  vm.runInContext(extract(source,name),c);assert.equal(c[name](),null,'invalid export aborts before side effects');
 }
 console.log('PASS employee daily date validation: empty/reversed/bounds/same-day/recovery and blocked export');
-

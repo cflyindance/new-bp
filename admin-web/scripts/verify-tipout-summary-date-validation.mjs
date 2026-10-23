@@ -79,4 +79,3 @@ assert.match(template,/id="summaryDateRangeError"[^>]*role="alert"/);
 assert.match(template,/id="dateStart"[^>]*aria-label="开始日期"[^>]*handleSummaryDateRangeChange\(\)/);
 assert.match(template,/id="dateEnd"[^>]*aria-label="结束日期"[^>]*handleSummaryDateRangeChange\(\)/);
 console.log('PASS summary date validation: empty, invalid, reversed, same-day, preserved results/history, guarded actions, recovery');
-
