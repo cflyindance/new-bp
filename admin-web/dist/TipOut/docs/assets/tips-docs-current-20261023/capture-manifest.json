@@ -1,0 +1,182 @@
+{
+  "baseline": "e8d203b0ef36696f7882d9fd016affbf7cbd2648",
+  "origin": "http://127.0.0.1:65132",
+  "fixture": "复制既有专用员工承担验收夹具至独立本地端口，不含真实交易；未改用户会话",
+  "records": [
+    {
+      "file": "editor-top.png",
+      "state": "新增规则默认／基础与分配分组，未保存",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:08.282Z",
+      "sha256": "0231ed38bab9e60026350a3d3455ae7e2e2a18bc1327223feccf27a062b04715"
+    },
+    {
+      "file": "hours-clock.png",
+      "state": "工时法＋仅打卡，标题帮助展开",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:09.107Z",
+      "sha256": "a810b889787becbc3cb10aa1aa01c8a39b1285eb81a6b7ef7274dfbf4effab13"
+    },
+    {
+      "file": "hours-unrestricted.png",
+      "state": "工时法＋不限打卡／帮助展开",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:09.934Z",
+      "sha256": "2f8789a101882b4eee8c5719a553794ab461a2140db39788efbd43263603f4f0"
+    },
+    {
+      "file": "hours-time-window.png",
+      "state": "工时法＋在岗时段，只读时段工时",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:10.693Z",
+      "sha256": "629935153950648d60b1cd532d115e209484f84bd25abf5904d3a4800c95b6bb"
+    },
+    {
+      "file": "contribution-no-role.png",
+      "state": "无角色时不展示员工承担整行",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:11.434Z",
+      "sha256": "849d3a2a94cea175d75308d4bce005301d4204ba686b270f45872b14cbca37d4"
+    },
+    {
+      "file": "commission.png",
+      "state": "计提模式：贡献分组隐藏",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip",
+      "capturedAt": "2026-10-23T09:29:12.191Z",
+      "sha256": "fec5889c3719ba362057505d43a2eaea0077e4f1ad67446798f21bfb606135c7"
+    },
+    {
+      "file": "rules.png",
+      "state": "规则列表／隔离演示",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules",
+      "capturedAt": "2026-10-23T09:29:13.362Z",
+      "sha256": "a24cc0ce67babb1e1d6fe4670702616e4aec8f1187b35078c10cdc5d6d4f4cf6"
+    },
+    {
+      "file": "pool-type.png",
+      "state": "新增规则／选择池类型",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules",
+      "capturedAt": "2026-10-23T09:29:14.135Z",
+      "sha256": "ab10f1a7d5760c8bb1d2bbaad2f9e4761f16f7610eab71ec85da67440c82d1c1"
+    },
+    {
+      "file": "contribution-configured.png",
+      "state": "既有规则／有角色，展示承担摘要与修改入口",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip&mode=edit&id=19",
+      "capturedAt": "2026-10-23T09:29:15.685Z",
+      "sha256": "9a486b20b5ee97b634811ebdd06a60824448eae78ed3c19d263d61f4b0d9be32"
+    },
+    {
+      "file": "share-custom.png",
+      "state": "自定义员工承担／回填40/60",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip&mode=edit&id=19",
+      "capturedAt": "2026-10-23T09:29:16.502Z",
+      "sha256": "4ada15d75558c782aca347b36a6f11c2c91f5d9842132f741d1f43e1c3f23fd8"
+    },
+    {
+      "file": "share-average.png",
+      "state": "平均分担／只读比例，不显示长说明",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip&mode=edit&id=19",
+      "capturedAt": "2026-10-23T09:29:17.288Z",
+      "sha256": "49f138c8e349257b470a2c7e9cfbfc18325a80397dd4e1c6506a559c6316a4b6"
+    },
+    {
+      "file": "share-invalid.png",
+      "state": "自定义40+50合计90，确定后校验拒绝",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip&mode=edit&id=19",
+      "capturedAt": "2026-10-23T09:29:18.067Z",
+      "sha256": "32f4f855d950a62a3692528be66fbc976b235fbb44b3c12fb04d65bfcc2f3015"
+    },
+    {
+      "file": "share-cancel.png",
+      "state": "取消后抽屉关闭，原草稿40/60保留",
+      "url": "http://127.0.0.1:65132/#/team/tips/rules/editor?poolKind=tip&mode=edit&id=19",
+      "capturedAt": "2026-10-23T09:29:18.888Z",
+      "sha256": "ca8057020de399ea4a6e6b3a364cba7cc09e3909b5daca1b24a1761806e86930"
+    },
+    {
+      "file": "daily.png",
+      "state": "日期汇总／隔离快照",
+      "url": "http://127.0.0.1:65132/#/team/tips/distribution",
+      "capturedAt": "2026-10-23T09:29:20.499Z",
+      "sha256": "f91bd1762d8e1faf8592660dbde66c2a16d4ece3799dcf61045eb7de4d649861"
+    },
+    {
+      "file": "employees.png",
+      "state": "员工汇总／隔离快照",
+      "url": "http://127.0.0.1:65132/#/team/tips/distribution?view=employee",
+      "capturedAt": "2026-10-23T09:29:21.892Z",
+      "sha256": "a9db8f62585b784a460a07ad5bd0f19a9c2946870412f63afe7f79d624f17af3"
+    },
+    {
+      "file": "detail.png",
+      "state": "分配明细／已有确认快照",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "capturedAt": "2026-10-23T09:29:23.133Z",
+      "sha256": "82feddc4af690fa75215541ddd2b557dbd3af819aa428ce04242f44e95345320"
+    },
+    {
+      "file": "detail-actions.png",
+      "state": "已发放明细：操作不可用，非可编辑按钮图",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "capturedAt": "2026-10-23T09:29:23.881Z",
+      "sha256": "82feddc4af690fa75215541ddd2b557dbd3af819aa428ce04242f44e95345320"
+    },
+    {
+      "file": "contribution-shortage.png",
+      "state": "已发放快照：应扣40实扣20，少扣提示展开",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "selectedDate": "2026-10-23",
+      "capturedAt": "2026-10-23T09:34:37.335Z",
+      "sha256": "f53669ddab68676eca9213cd5fc8cdb1cbbf8457937cdac4919588334e07794f"
+    },
+    {
+      "file": "funding-excess.png",
+      "state": "C>P的该条规则：按C分配提示展开",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "selectedDate": "2026-10-23",
+      "capturedAt": "2026-10-23T09:34:38.437Z",
+      "sha256": "6ec786c83441b8bf387c6f1ca98717dcefffffd55946b7d64395a798511c9360"
+    },
+    {
+      "file": "funding-shortfall.png",
+      "state": "C<P的该条规则：老板补足提示展开",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "selectedDate": "2026-10-23",
+      "capturedAt": "2026-10-23T09:34:39.603Z",
+      "sha256": "cbab318af6d4e0d95c8405ba83dfa74b6d6a099af2c50b3fb168de1782661b36"
+    },
+    {
+      "file": "detail-editable.png",
+      "state": "10/21未发放：当前可编辑操作文案",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "selectedDate": "2026-10-21",
+      "capturedAt": "2026-10-23T09:34:44.587Z",
+      "sha256": "ab02dd77b1fe1269ae1e30e72bcc5edd02461f4abfa91476404b188c688a92f1"
+    },
+    {
+      "file": "detail-no-change.png",
+      "state": "未调整时点击灰色保存，页面原因提示",
+      "url": "http://127.0.0.1:65132/#/team/tips/details?date=2026-10-23&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history",
+      "selectedDate": "2026-10-21",
+      "capturedAt": "2026-10-23T09:34:45.629Z",
+      "sha256": "d5ba14d02314c15d472577066af00cb729d0e3f53731d8d414d52fb29ded0d93"
+    },
+    {
+      "file": "employee-list.png",
+      "state": "员工汇总／实际员工行与工时、贡献列",
+      "url": "http://127.0.0.1:65132/#/team/tips/distribution?view=employee",
+      "selectedDate": null,
+      "capturedAt": "2026-10-23T09:34:48.226Z",
+      "sha256": "78ef4646a1158fe0146e455d4aa6e02c8c51ce6ad8d7683b4aac83f68f199419"
+    },
+    {
+      "file": "employee-daily.png",
+      "state": "员工每日考勤分配／只读，确认与预计贡献混合周期",
+      "url": "http://127.0.0.1:65132/#/team/tips/employee-reconciliation?employeeId=roster%3Atipout-share-test-b&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&start=2026-09-23&end=2026-10-23&from=summary&return=history",
+      "selectedDate": null,
+      "capturedAt": "2026-10-23T09:34:49.655Z",
+      "sha256": "94dca67ddd7594a8cf537e51f908c86d9fb0348e3e81d10a99845d3310afc17d"
+    }
+  ]
+}
