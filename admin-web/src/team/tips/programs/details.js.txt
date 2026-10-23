@@ -474,7 +474,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var rows = (pool.employees || []).map(function(employee) {
           return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + detailSavedWeightText(employee) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';
         }).join('');
-        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>员工权重</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p>'+renderDetailFundingSummary(pool.funding,true)+'<table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>员工权重</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
       container.innerHTML = banner + cards;
       var savedEmployees = snapshot.pools.reduce(function(all,pool) { return all.concat(pool.employees || []); }, []);
@@ -713,8 +713,10 @@ var ALLOC_KEY = 'tipout_allocated';
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
       renderVisibleRuleView();
+      if(!detailSavedSnapshot) refreshDetailFunding();
       installDetailWeights();
       if (detailSavedSnapshot) window.TipOutDetailSnapshot.restore(document, detailSavedSnapshot, money);
+      if(detailSavedSnapshot) renderSavedDetailFunding(detailSavedSnapshot);
       renderDetailAttendance(!detailSavedSnapshot);
       syncDetailAllocationAction();
       if (!window.tipoutQuickPreparation) setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
@@ -1460,7 +1462,49 @@ var ALLOC_KEY = 'tipout_allocated';
           else if (!card.getAttribute('data-order-tip-mode')) recalcDetailLegacyCard(card);
         }
       }
+      refreshDetailFunding();
       return pool;
+    }
+
+    function renderDetailFundingSummary(funding, confirmed) {
+      if(!funding || funding.version!==2 && funding.contributed==null)return '';
+      var prefix=confirmed?'':'预计';
+      var excess=Math.round(Number(funding.excess)*100)>0;
+      return '<div class="tipout-funding-summary" data-funding-state="'+(confirmed?'confirmed':'estimated')+'">'+
+        '<div><span>小费池计算金额</span><strong>'+money(funding.target)+'</strong></div>'+
+        '<div><span>'+prefix+'员工贡献金额</span><strong>'+money(funding.contributed)+'</strong></div>'+
+        '<div><span>'+prefix+'实际可分配金额</span><strong>'+money(funding.actual)+'</strong></div>'+
+        '<div><span>'+prefix+'老板补足金额</span><strong>'+money(funding.ownerContribution)+'</strong></div>'+
+        (excess?'<details class="tipout-funding-excess"><summary><span>贡献超出计划 '+money(funding.excess)+'</span><span aria-label="查看超额分配说明">?</span></summary><p>员工实际贡献超过小费池计算金额，本次按实际贡献 '+money(funding.actual)+' 分配，超出部分全部参与分配，老板无需补足。</p></details>':'')+
+        '<p class="tipout-funding-source">'+(confirmed?'已确认快照；资金承担记录不代表已付款。':'预计试算，尚未形成正式扣款。')+'</p></div>';
+    }
+    function renderSavedDetailFunding(snapshot) {
+      (snapshot.pools||[]).forEach(function(pool){
+        var bundle=Array.from(document.querySelectorAll('.detail-rule-bundle')).find(function(el){return el.getAttribute('data-rule-id')===String(pool.ruleId);});
+        if(!bundle)return;
+        var strip=bundle.querySelector('.formula-rule-section');
+        if(!strip)return;
+        var previous=strip.querySelector('.tipout-funding-summary');if(previous)previous.remove();
+        if(pool.funding&&pool.funding.version===2){
+          var value=strip.querySelector('.formula-pool-val');if(value)value.textContent=money(pool.funding.target);
+          strip.insertAdjacentHTML('beforeend',renderDetailFundingSummary(pool.funding,true));
+        }
+      });
+    }
+    function refreshDetailFunding() {
+      if(!window.TipOutFunding||!window.TipOutScenarioSource)return;
+      var scope=getDetailPayoutScope(),targets={},strips=Array.from(document.querySelectorAll('#detailRulesContainer .formula-rule-section'));
+      strips.forEach(function(strip){var value=strip.querySelector('.formula-pool-val');if(value)targets[strip.getAttribute('data-rule-id')]=detailNumberFromText(value.textContent);});
+      try{
+        var views=window.TipOutFunding.projectIndependent(detailAllRules,TipOutScenarioSource.day(scope.dateKey,scope.store),scope.dateKey,targets);
+        strips.forEach(function(strip){
+          var id=strip.getAttribute('data-rule-id'),view=views[id],previous=strip.querySelector('.tipout-funding-summary');if(previous)previous.remove();
+          if(!view)return;
+          strip.insertAdjacentHTML('beforeend',renderDetailFundingSummary(view,false));
+          var card=strip.closest('.detail-rule-bundle').querySelector('.detail-card');
+          if(card){card.setAttribute('data-pool',view.actual);if(card.getAttribute('data-hours-based')==='1')recalcDetailHoursCard(card);else recalcDetailLegacyCard(card);}
+        });
+      }catch(error){showNotification(error.message||'贡献资金无法试算','error');}
     }
 
     function recalcFormulaPool() {
@@ -1523,7 +1567,7 @@ var ALLOC_KEY = 'tipout_allocated';
         '<h4 class="detail-rule-block-title">' + escHtml(rule.ruleName || '未命名规则') + '</h4>' +
         '<p class="detail-rule-meta">小费池汇总分配</p>' +
         '<div class="formula-display">' +
-          '<div class="formula-block"><span class="lbl">小费池总金额</span><span class="val formula-pool-val">' + money(data.pool || 0) + '</span></div>' +
+          '<div class="formula-block"><span class="lbl">小费池计算金额</span><span class="val formula-pool-val">' + money(data.pool || 0) + '</span></div>' +
           '<span class="formula-operator">=</span>' + formulaHtml +
           '<div class="formula-link"><a href="javascript:void(0)" class="btn-link" onclick="openFormulaRuleModal(\'' + safeRidJs + '\')" style="font-size:14px">公式详情</a></div>' +
         '</div>' + sourceErrorHtml + personalNote + '</div>';

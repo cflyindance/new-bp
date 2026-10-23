@@ -80,6 +80,18 @@
     });
     var nextId = rules.reduce(function(max, rule) { return Math.max(max, Number(rule.id) || 0); }, 0);
     var added = 0;
+    // Dedicated deterministic fixtures: never change ordinary-store facts or existing edited rules.
+    var fixtureStore='【演示】贡献超计划验收门店',fixtureKey='funding-excess-10-20-v1';
+    if(markers.indexOf(fixtureKey)<0){
+      if(!rules.some(function(rule){return rule.demoScenarioKey===fixtureKey;})){
+        var roster=JSON.parse(global.localStorage.getItem('tipout-employees-roster-v1')||'[]');
+        [['funding-source','贡献服务员','Server'],['funding-kitchen','接收后厨','Kitchen'],['funding-busser','接收打杂','Busser']].forEach(function(row){if(!roster.some(function(e){return e.id===row[0];}))roster.push({id:row[0],name:row[1],role:row[2],store:fixtureStore,active:true});});
+        global.localStorage.setItem('tipout-employees-roster-v1',JSON.stringify(roster));
+        rules.push({id:++nextId,ruleName:'【演示】计划10·贡献20·按20分配',demoScenarioKey:fixtureKey,store:fixtureStore,poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'sales',pct:10,conditions:{role:['Server']}}],deductConfig:{tipIncome:{scopeType:'role',roles:['Server'],rate:1}},deductRoles:['Server'],receivers:[{roles:['Kitchen'],pct:60},{roles:['Busser'],pct:40}],distribution:'average',clockin:'clock'});
+        added++;
+      }
+      markers.push(fixtureKey);
+    }
     stores.forEach(function(store) {
       // Do not inject legacy demo semantics into a deliberately configured funded store.
       if (rules.some(function(rule) { return rule.funding && directory.canonicalRosterStoreName(rule.store) === directory.canonicalRosterStoreName(store); })) return;

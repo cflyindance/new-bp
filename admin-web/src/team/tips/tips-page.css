@@ -3266,3 +3266,15 @@ select.form-control {
 .team-tips-page input[aria-invalid="true"] {
   border-color: var(--danger, #cf1322);
 }
+.team-tips-page .tipout-funding-summary {
+  display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 28px;
+  padding-top:16px;margin-top:16px;border-top:1px solid var(--border-color,#e5e7eb);
+}
+.team-tips-page .tipout-funding-summary>div { display:flex;flex-direction:column;gap:6px;min-width:130px; }
+.team-tips-page .tipout-funding-summary>div>span { color:var(--text-tertiary,#667085);font-size:12px; }
+.team-tips-page .tipout-funding-excess { color:#175cd3;font-size:12px;max-width:440px; }
+.team-tips-page .tipout-funding-excess summary { cursor:pointer;display:flex;gap:8px;align-items:center;padding:6px 10px;background:#eff6ff;border-radius:6px;list-style:none; }
+.team-tips-page .tipout-funding-excess summary:focus-visible { outline:2px solid #175cd3;outline-offset:3px; }
+.team-tips-page .tipout-funding-excess summary>span:last-child { border:1px solid currentColor;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center; }
+.team-tips-page .tipout-funding-excess p { margin:8px 0 0;line-height:1.6; }
+.team-tips-page .tipout-funding-source { flex-basis:100%;margin:0;color:var(--text-tertiary,#667085);font-size:12px; }

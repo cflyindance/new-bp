@@ -14,7 +14,9 @@ for (const name of ['ruleData','tipout-demo-rules','tipout-scenario-data','tipou
   vm.runInContext(fs.readFileSync('src/team/tips/legacy/'+name+'.js.txt','utf8'),context);
 }
 context.TipOutDemoRules.ensure();
-const rules=JSON.parse(storage.get('tipout_rules'));
+const allRules=JSON.parse(storage.get('tipout_rules'));
+assert.equal(allRules.filter(r=>r.store==='【演示】贡献超计划验收门店').length,1);
+const rules=allRules.filter(r=>r.store===store);
 assert.equal(rules.length,11);
 assert.deepEqual(rules[0].poolRules[0].conditions.role,['Server','Bartender','Cashier']);
 const data=context.TipOutScenarioData, funding=context.TipOutFunding;
@@ -23,8 +25,9 @@ for(let roster=0;roster<8;roster++) {
   for(let day=0;day<62;day++) {
     const dateKey=new Date(Date.UTC(2026,7,30+day)).toISOString().slice(0,10);
     const facts=data.day({storeId:store,employees:employees.map(e=>({...e,id:e.id+'-'+roster})),dateKey});
+    const views=funding.projectIndependent(rules,facts,dateKey);
     const pools=rules.map(rule=>{
-      const poolAmount=Math.round(rule.poolRules.reduce((sum,p)=>sum+Math.round(funding.sourceBase(p,facts,dateKey)*p.pct),0))/100;
+      const poolAmount=views[String(rule.id)]?.actual??Math.round(rule.poolRules.reduce((sum,p)=>sum+Math.round(funding.sourceBase(p,facts,dateKey)*p.pct),0))/100;
       const receiver=facts.find(f=>rule.receivers.some(r=>r.roles.includes(f.role))&&f.attendance.punchSessions.length);
       return {ruleId:String(rule.id),ruleName:rule.ruleName,poolAmount,employees:receiver?[{employeeId:receiver.employeeId,amount:poolAmount}]:[]};
     });

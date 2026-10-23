@@ -1,0 +1,38 @@
+{
+  "changeId": "TIPOUT-FUNDING-EXCESS-20261023-01",
+  "baseline": "fb78f5e715b80d4be36a2528ba0eec81bac6b6f2",
+  "branch": "codex/tips-funding-definition-20261023",
+  "uncommitted": true,
+  "preview": "http://127.0.0.1:65116/",
+  "source": "real app; isolated agent-browser tips-excess-20261023; deterministic demo store; no production deduction or payment",
+  "date": "2026-10-23",
+  "files": [
+    {
+      "file": "confirmed-excess.png",
+      "sha256": "121413f07e14f32bdf6ec528fbf1cd2e51930f32a29d5ea406fc7c6de737d1be",
+      "state": "2026-10-20 confirmed target10 contributed20 actual20 owner0; receivers12/8",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "excess-explanation.png",
+      "sha256": "d3afca93ef2c74b5a8cfcb417e73dc75096294165515239c55c1444b86bca194",
+      "state": "same confirmed snapshot, explanation expanded",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "draft-excess.png",
+      "sha256": "6b218823f5351642eabcaae928d45f80bd578c08362cf69e77d02aad39812885",
+      "state": "draft base100->50, target5 contributed20 actual20 excess15, persisted target remains10",
+      "width": 1500,
+      "height": 1050
+    }
+  ],
+  "limits": [
+    "no screenshots for all legacy modes",
+    "no real transfer",
+    "historical snapshots not recomputed",
+    "salesPct/legacy funding/residual/time-window not migrated"
+  ]
+}

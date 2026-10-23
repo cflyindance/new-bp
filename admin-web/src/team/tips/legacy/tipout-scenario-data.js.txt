@@ -65,6 +65,13 @@
     var identity = JSON.stringify([VERSION, storeId, employeeId]);
     var seed = hash(identity), combination = ((calendarDay + seed) % 8 + 8) % 8;
     var key = JSON.stringify([VERSION, storeId, employeeId, options.dateKey]);
+    if(storeId==='【演示】贡献超计划验收门店'){
+      var donor=employeeId==='funding-source',tip=donor?20:0,sales=donor?100:0,punch=attendance(['funding-source','funding-kitchen','funding-busser'].indexOf(employeeId)>=0,0);
+      punch.punchSessions=punch.punchSessions.map(function(item){return datedSession(item,options.dateKey);});
+      return {version:VERSION,key:key,storeId:storeId,employeeId:employeeId,name:String(employee.name||''),role:String(employee.role||''),dateKey:options.dateKey,scenarioId:'FUNDING-EXCESS',contributionScenario:'隔离演示：计划10、贡献20，后厨12、打杂8',attendance:punch,
+        orders:donor?[{id:key+':order:0',employeeId:employeeId,businessDate:options.dateKey,salesAmount:100,tipAmount:20,surcharge:0,orderType:'dine_in',area:'main',paymentMethod:'card',localTime:'11:30',completedPaymentAt:options.dateKey+'T11:30:00'+chicagoOffset(options.dateKey),lines:[{productId:'demo-main',productLine:'POS',category:'主菜',amount:100}]}]:[],
+        reportedTipEvents:[],salesAmount:sales,orderTips:tip,reportedTips:0,originalTips:tip,surcharge:0};
+    }
     var dailySeed = hash(key), hasOrders = combination % 4 < 2, hasTips = combination % 2 === 0;
     var salesCents = hasOrders ? 12000 + dailySeed % 50001 : 0;
     var tipCents = hasTips ? 1 + hash(key + ':tip') % 6000 : 0;

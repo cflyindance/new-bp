@@ -72,10 +72,17 @@
   function projectDate(options) {
     var rules = Array.isArray(options.rules) ? options.rules : [];
     var allocated = options.allocated === true;
+    var fundingViews={},fundingError=null;
+    if(root.TipOutFunding && root.TipOutScenarioSource){
+      try{fundingViews=root.TipOutFunding.projectIndependent(rules,root.TipOutScenarioSource.day(options.dateKey),options.dateKey);}
+      catch(error){fundingError=error.message||'贡献资金无法试算';}
+    }
     var executions = rules.map(function(rule, index) {
       var id = rule.id != null && rule.id !== '' ? String(rule.id) : 'pool-' + (index + 1);
       var dayData = buildDayData(options.dateKey, rule.poolRules || [], id);
+      if(fundingError)dayData.sourceErrors.push(fundingError);
       var amount = roundMoney(dayData.pool);
+      if(fundingViews[String(rule.id)])amount=fundingViews[String(rule.id)].actual;
       return {
         id: id,
         name: rule.ruleName || rule.name || ((rule.poolKind === 'surcharge' ? '加收服务费池 ' : '小费池 ') + (index + 1)),

@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const context={window:{}};vm.createContext(context);
+for(const f of ['tipout-employee-weights','tipout-funding']) vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/'+f+'.js.txt',import.meta.url),'utf8'),context);
+const engine=context.window.TipOutFunding;
+const facts=[['s','Server',20],['k','Kitchen',0],['b','Busser',0]].map(([id,role,tips])=>({employeeId:id,name:id,role,originalTips:tips,orderTips:tips,reportedTips:0,orders:[{id:id+'-order',salesAmount:100,tipAmount:tips}],attendance:{effectiveHours:8,punchSessions:[{}]}}));
+const rule={id:'excess',poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'sales',pct:10,conditions:{role:['Server']}}],deductConfig:{tipIncome:{scopeType:'role',roles:['Server'],rate:1}},distribution:'average',clockin:'clock',receivers:[{roles:['Kitchen'],pct:60},{roles:['Busser'],pct:40}]};
+for(const [contribution,pool,owner] of [[20,20,0],[10,10,0],[5,10,5],[0,10,10]]){
+ const r=JSON.parse(JSON.stringify(rule));r.deductConfig.tipIncome.rate=contribution/20;
+ const view=engine.previewIndependent(r,facts,'2026-10-19',10);
+ assert.equal(view.target,10);assert.equal(view.contributed,contribution);assert.equal(view.actual,pool);assert.equal(view.ownerContribution,owner);
+ const snapshot={store:'fixture',dateKey:'2026-10-19',scenarioFacts:facts,pools:[{ruleId:'excess',poolAmount:pool,employees:[{employeeId:'k',name:'k',role:'Kitchen',amount:pool*.6},{employeeId:'b',name:'b',role:'Busser',amount:pool*.4}]}]};
+ const result=engine.reconcileExisting(snapshot,[r]);engine.validateSnapshot(result);
+ assert.equal(result.pools[0].funding.target,10);assert.equal(result.pools[0].funding.contributed,contribution);assert.equal(result.pools[0].funding.actual,pool);
+ assert.equal(result.employeeAmounts[0].deducted,contribution);assert.equal(result.summary.poolAmount,pool);assert.equal(result.summary.unallocatedAmount,0);
+ if(contribution===20)assert.deepEqual(Array.from(result.pools[0].employees,e=>e.amount),[12,8]);
+ const bad=JSON.parse(JSON.stringify(result));bad.pools[0].funding.ownerContribution++;assert.throws(()=>engine.validateSnapshot(bad));
+}
+const left=engine.previewIndependent(rule,facts,'2026-10-19',10,{s:500,k:0,b:0});assert.equal(left.contributed,5);assert.equal(left.ownerContribution,5);
+assert.throws(()=>engine.previewIndependent(rule,facts,'2026-10-19',NaN),/金额/);
+assert.equal(engine.previewIndependent({...rule,deductConfig:{}},facts,'2026-10-19',10),null,'no automatic migration of old role-only contracts');
+const partial={store:'fixture',dateKey:'2026-10-19',scenarioFacts:facts,pools:[{ruleId:'excess',poolAmount:20,employees:[{employeeId:'k',amount:6},{employeeId:'b',amount:8}]}]};
+assert.equal(engine.reconcileExisting(partial,[rule]).summary.unallocatedAmount,6,'manual under-allocation remains a balance, not forced out');
+const zeroBase={store:'fixture',dateKey:'2026-10-19',scenarioFacts:facts,pools:[{ruleId:'excess',poolAmount:20,employees:[]}]};
+assert.equal(engine.reconcileExisting(zeroBase,[rule]).summary.unallocatedAmount,20,'no receiver does not lose the excess or force allocation');
+const original=JSON.stringify(facts);engine.previewIndependent(rule,facts,'2026-10-19',10);assert.equal(JSON.stringify(facts),original);
+vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-scenario-data.js.txt',import.meta.url),'utf8'),context);
+const fixture=context.window.TipOutScenarioData.day({storeId:'【演示】贡献超计划验收门店',employees:[{id:'funding-source',role:'Server'},{id:'funding-kitchen',role:'Kitchen'},{id:'funding-busser',role:'Busser'},{id:'extra-server',role:'Server'}],dateKey:'2026-10-20'});
+assert.deepEqual(Array.from(fixture,f=>f.originalTips),[20,0,0,0]);
+assert.equal(engine.previewIndependent(rule,fixture,'2026-10-20',10).actual,20);
+const source=fs.readFileSync(new URL('../src/team/tips/programs/details.js.txt',import.meta.url),'utf8');
+assert.match(source,/贡献超出计划/);assert.match(source,/实际可分配金额/);assert.match(source,/renderDetailFundingSummary/);
+console.log('PASS funding excess: 20/10 =>20, 12/8 receivers, equal/short/zero, independent deductions, owner and conservation');
