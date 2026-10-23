@@ -21,6 +21,7 @@
       var label=document.getElementById('deduct-share-summary-'+cardId),button=document.getElementById('deduct-share-button-'+cardId);
       if(!label||!button)return;
       var roles=(deductValueConditions[cardId]||{}).role||[],shares=deductEmployeeShares[cardId];
+      var entry=document.getElementById('deduct-share-entry-'+cardId);if(entry)entry.hidden=!roles.length;
       if(shares&&shares.mode==='average'){shares.roles=Array.from(new Set(roles));shares.store=getRuleEditorStoreName();}
       button.disabled=!!getRuleEditorStoreName()&&!roles.length;
       button.title=!getRuleEditorStoreName()?'请先选择门店':button.disabled?'请先设置贡献角色':'';

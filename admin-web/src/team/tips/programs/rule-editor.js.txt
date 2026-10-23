@@ -2962,7 +2962,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         '<div class="pool-rule-conditions empty" id="deduct-card-' + cardId + '-conditions">' +
         '<span class="cond-label">取值条件<span style="color:var(--danger);margin-left:2px">*</span>：</span>' +
         '<span class="cond-text">未设置</span></div>' +
-        '<div class="contributor-share-entry"><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
+        '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
       if(!silent)deductEmployeeShares[cardId]={version:1,mode:'average',store:getRuleEditorStoreName(),roles:((deductValueConditions[cardId]||{}).role||[]).slice()};
       var rateInpEl = getDeductRateInput(cardId);
