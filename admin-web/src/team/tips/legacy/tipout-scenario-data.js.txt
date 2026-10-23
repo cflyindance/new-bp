@@ -65,11 +65,13 @@
     var identity = JSON.stringify([VERSION, storeId, employeeId]);
     var seed = hash(identity), combination = ((calendarDay + seed) % 8 + 8) % 8;
     var key = JSON.stringify([VERSION, storeId, employeeId, options.dateKey]);
-    if(storeId==='【演示】贡献超计划验收门店'){
-      var donor=employeeId==='funding-source',tip=donor?20:0,sales=donor?100:0,punch=attendance(['funding-source','funding-kitchen','funding-busser'].indexOf(employeeId)>=0,0);
+    var shortFixture=['上海陆家嘴店','Golden Dragon Chinese Kitchen - Dallas, TX 75231'].indexOf(storeId)>=0&&employeeId==='tipout-daily-shortfall-source';
+    var dailyFixture=['上海陆家嘴店','Golden Dragon Chinese Kitchen - Dallas, TX 75231'].indexOf(storeId)>=0&&['tipout-daily-excess-source','tipout-daily-excess-kitchen','tipout-daily-excess-busser','tipout-daily-shortfall-source'].indexOf(employeeId)>=0;
+    if(storeId==='【演示】贡献超计划验收门店'||dailyFixture){
+      var donor=employeeId==='funding-source'||employeeId==='tipout-daily-excess-source'||shortFixture,tip=donor?(shortFixture?5:20):0,sales=donor?100:0,punch=attendance(dailyFixture||['funding-source','funding-kitchen','funding-busser'].indexOf(employeeId)>=0,0);
       punch.punchSessions=punch.punchSessions.map(function(item){return datedSession(item,options.dateKey);});
-      return {version:VERSION,key:key,storeId:storeId,employeeId:employeeId,name:String(employee.name||''),role:String(employee.role||''),dateKey:options.dateKey,scenarioId:'FUNDING-EXCESS',contributionScenario:'隔离演示：计划10、贡献20，后厨12、打杂8',attendance:punch,
-        orders:donor?[{id:key+':order:0',employeeId:employeeId,businessDate:options.dateKey,salesAmount:100,tipAmount:20,surcharge:0,orderType:'dine_in',area:'main',paymentMethod:'card',localTime:'11:30',completedPaymentAt:options.dateKey+'T11:30:00'+chicagoOffset(options.dateKey),lines:[{productId:'demo-main',productLine:'POS',category:'主菜',amount:100}]}]:[],
+      return {version:VERSION,key:key,storeId:storeId,employeeId:employeeId,name:String(employee.name||''),role:String(employee.role||''),dateKey:options.dateKey,scenarioId:shortFixture?'FUNDING-SHORTFALL':'FUNDING-EXCESS',contributionScenario:shortFixture?'隔离演示：计划10、贡献5、老板补5，后厨6、打杂4':'隔离演示：计划10、贡献20，后厨12、打杂8',attendance:punch,
+        orders:donor?[{id:key+':order:0',employeeId:employeeId,businessDate:options.dateKey,salesAmount:100,tipAmount:tip,surcharge:0,orderType:'dine_in',area:'main',paymentMethod:'card',localTime:'11:30',completedPaymentAt:options.dateKey+'T11:30:00'+chicagoOffset(options.dateKey),lines:[{productId:'demo-main',productLine:'POS',category:'主菜',amount:100}]}]:[],
         reportedTipEvents:[],salesAmount:sales,orderTips:tip,reportedTips:0,originalTips:tip,surcharge:0};
     }
     var dailySeed = hash(key), hasOrders = combination % 4 < 2, hasTips = combination % 2 === 0;

@@ -1,7 +1,7 @@
 (function(root) {
   'use strict';
 
-  function roundMoney(value) { return +(Number(value) || 0).toFixed(2); }
+  function roundMoney(value) { return Math.round((Number(value) || 0) * 100) / 100; }
   function seedRandom(seed) {
     var value = seed;
     return function() { value = (value * 16807 + 0) % 2147483647; return (value - 1) / 2147483646; };

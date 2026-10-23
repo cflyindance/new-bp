@@ -80,6 +80,32 @@
     });
     var nextId = rules.reduce(function(max, rule) { return Math.max(max, Number(rule.id) || 0); }, 0);
     var added = 0;
+    var dailyKey='daily-excess-golden-v1';
+    var dailyStore=stores.find(function(store){return ['上海陆家嘴店','Golden Dragon Chinese Kitchen - Dallas, TX 75231'].indexOf(directory.canonicalRosterStoreName(store))>=0;});
+    if(dailyStore&&markers.indexOf(dailyKey)<0&&!rules.some(function(rule){return rule.funding&&directory.canonicalRosterStoreName(rule.store)===directory.canonicalRosterStoreName(dailyStore);})){
+      if(!rules.some(function(rule){return rule.demoScenarioKey===dailyKey;})){
+        var dailyRoster=JSON.parse(global.localStorage.getItem('tipout-employees-roster-v1')||'[]');
+        var actors=[['tipout-daily-excess-source','【演示】超额贡献员工','演示贡献员'],['tipout-daily-excess-kitchen','【演示】超额接收后厨','演示后厨'],['tipout-daily-excess-busser','【演示】超额接收打杂','演示打杂']];
+        if(actors.some(function(row){return dailyRoster.some(function(e){return e.id===row[0];});}))throw new Error('每日超额演示身份已被占用，未覆盖已有人员');
+        actors.forEach(function(row){dailyRoster.push({id:row[0],name:row[1],role:row[2],store:dailyStore,active:true});});
+        global.localStorage.setItem('tipout-employees-roster-v1',JSON.stringify(dailyRoster));
+        rules.unshift({id:++nextId,ruleName:'【演示】每日超额·计划10／贡献20',demoScenarioKey:dailyKey,store:dailyStore,poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'sales',pct:10,conditions:{employee:['tipout-daily-excess-source']}}],deductConfig:{tipIncome:{scopeType:'employee',employee:['【演示】超额贡献员工'],rate:1}},receivers:[{roles:['演示后厨'],pct:60},{roles:['演示打杂'],pct:40}],distribution:'average',clockin:'clock'});
+        added++;
+      }
+      markers.push(dailyKey);
+    }
+    var shortKey='daily-shortfall-golden-v1';
+    if(dailyStore&&markers.indexOf(shortKey)<0&&!rules.some(function(rule){return rule.funding&&directory.canonicalRosterStoreName(rule.store)===directory.canonicalRosterStoreName(dailyStore);})){
+      if(!rules.some(function(rule){return rule.demoScenarioKey===shortKey;})){
+        var shortRoster=JSON.parse(global.localStorage.getItem('tipout-employees-roster-v1')||'[]');
+        if(shortRoster.some(function(e){return e.id==='tipout-daily-shortfall-source';}))throw new Error('每日不足演示身份已被占用，未覆盖已有人员');
+        shortRoster.push({id:'tipout-daily-shortfall-source',name:'【演示】不足贡献员工',role:'演示不足贡献员',store:dailyStore,active:true});
+        global.localStorage.setItem('tipout-employees-roster-v1',JSON.stringify(shortRoster));
+        rules.unshift({id:++nextId,ruleName:'【演示】每日不足·计划10／贡献5',demoScenarioKey:shortKey,store:dailyStore,poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'sales',pct:10,conditions:{employee:['tipout-daily-shortfall-source']}}],deductConfig:{tipIncome:{scopeType:'employee',employee:['【演示】不足贡献员工'],rate:1}},receivers:[{roles:['演示后厨'],pct:60},{roles:['演示打杂'],pct:40}],distribution:'average',clockin:'clock'});
+        added++;
+      }
+      markers.push(shortKey);
+    }
     // Dedicated deterministic fixtures: never change ordinary-store facts or existing edited rules.
     var fixtureStore='【演示】贡献超计划验收门店',fixtureKey='funding-excess-10-20-v1';
     if(markers.indexOf(fixtureKey)<0){

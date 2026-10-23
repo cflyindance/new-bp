@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+const session='tips-daily-excess-20261023';
+const code=`(()=>{const root=Array.from(document.querySelectorAll('*')).find(e=>e.shadowRoot)?.shadowRoot;const s=Object.values(JSON.parse(localStorage.getItem('tipout_allocation_results_v1')||'{}')).find(s=>s.dateKey==='2026-10-25'&&s.store.startsWith('Golden'));return {pools:s?.pools.filter(p=>p.ruleName.includes('每日不足')||p.ruleName.includes('每日超额')),source:s?.employeeAmounts.find(e=>e.employeeId==='tipout-daily-shortfall-source'),text:root?.querySelector('.tipout-funding-shortfall')?.textContent};})()`;
+const args=['--session',session,'eval','-b',Buffer.from(code).toString('base64')];
+const r=JSON.parse(execFileSync('cmd.exe',['/d','/s','/c','agent-browser.cmd '+args.join(' ')],{encoding:'utf8'}));
+const s=r.pools.find(p=>p.ruleName.includes('每日不足')),e=r.pools.find(p=>p.ruleName.includes('每日超额'));
+assert.equal(s.funding.target,10);assert.equal(s.funding.contributed,5);assert.equal(s.funding.ownerContribution,5);assert.equal(s.poolAmount,10);
+assert.equal(r.source.deducted,5);assert.deepEqual(s.employees.map(e=>e.amount),[6,4]);
+assert.equal(e.poolAmount,20);assert.deepEqual(e.employees.map(e=>e.amount),[12,8]);
+assert.match(r.text,/老板补足 \$5.00/);
+console.log('PASS browser daily shortfall: confirmed10, employee5, owner5, receivers6/4, excess20 unchanged');

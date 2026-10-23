@@ -16,7 +16,8 @@ for (const name of ['ruleData','tipout-demo-rules','tipout-scenario-data','tipou
 context.TipOutDemoRules.ensure();
 const allRules=JSON.parse(storage.get('tipout_rules'));
 assert.equal(allRules.filter(r=>r.store==='【演示】贡献超计划验收门店').length,1);
-const rules=allRules.filter(r=>r.store===store);
+assert.equal(allRules.filter(r=>r.store===store&&r.demoScenarioKey==='daily-excess-golden-v1').length,1);
+const rules=allRules.filter(r=>r.store===store&&r.demoScenarioKey!=='daily-excess-golden-v1'&&r.demoScenarioKey!=='daily-shortfall-golden-v1');
 assert.equal(rules.length,11);
 assert.deepEqual(rules[0].poolRules[0].conditions.role,['Server','Bartender','Cashier']);
 const data=context.TipOutScenarioData, funding=context.TipOutFunding;

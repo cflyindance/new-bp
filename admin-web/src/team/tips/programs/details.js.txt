@@ -1468,6 +1468,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function renderDetailFundingSummary(funding, confirmed) {
       if(!funding || funding.version!==2 && funding.contributed==null)return '';
+      if(typeof funding.target!=='number'||typeof funding.contributed!=='number'||!Number.isFinite(funding.target)||!Number.isFinite(funding.contributed)||Math.round(funding.contributed*100)===Math.round(funding.target*100))return '';
       var prefix=confirmed?'':'预计';
       var excess=Math.round(Number(funding.excess)*100)>0;
       return '<div class="tipout-funding-summary" data-funding-state="'+(confirmed?'confirmed':'estimated')+'">'+
@@ -1475,7 +1476,8 @@ var ALLOC_KEY = 'tipout_allocated';
         '<div><span>'+prefix+'员工贡献金额</span><strong>'+money(funding.contributed)+'</strong></div>'+
         '<div><span>'+prefix+'实际可分配金额</span><strong>'+money(funding.actual)+'</strong></div>'+
         '<div><span>'+prefix+'老板补足金额</span><strong>'+money(funding.ownerContribution)+'</strong></div>'+
-        (excess?'<details class="tipout-funding-excess"><summary><span>贡献超出计划 '+money(funding.excess)+'</span><span aria-label="查看超额分配说明">?</span></summary><p>员工实际贡献超过小费池计算金额，本次按实际贡献 '+money(funding.actual)+' 分配，超出部分全部参与分配，老板无需补足。</p></details>':'')+
+        (excess?'<details class="tipout-funding-excess"><summary><span>贡献超出计划 '+money(funding.excess)+'</span><span aria-label="查看超额分配说明">?</span></summary><p>员工实际贡献超过小费池计算金额，本次按实际贡献 '+money(funding.actual)+' 分配，超出部分全部参与分配，老板无需补足。</p></details>':
+          '<details class="tipout-funding-excess tipout-funding-shortfall"><summary><span>老板补足 '+money(funding.ownerContribution)+'</span><span aria-label="查看贡献不足说明">?</span></summary><p>员工贡献小于小费池计算金额，本次按计划 '+money(funding.target)+' 分配，差额 '+money(funding.ownerContribution)+' 由老板补足。员工仅扣实际贡献 '+money(funding.contributed)+'；补足金额是资金承担记录，不代表已经付款。</p></details>')+
         '<p class="tipout-funding-source">'+(confirmed?'已确认快照；资金承担记录不代表已付款。':'预计试算，尚未形成正式扣款。')+'</p></div>';
     }
     function renderSavedDetailFunding(snapshot) {

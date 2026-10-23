@@ -1,0 +1,52 @@
+{
+  "changeId": "TIPOUT-DAILY-EXCESS-20261023-01",
+  "baseline": "aff91c4cecaeae1ce661d29dc11b8bc8325ce2b8",
+  "branch": "codex/tips-daily-excess-20261023",
+  "uncommitted": true,
+  "source": "real 65117 app; isolated agent-browser tips-daily-excess-20261023; Golden default demo store, no production payment",
+  "files": [
+    {
+      "file": "closed-day.png",
+      "sha256": "285061a884737c0611cf44ede3335b950ea5d275c8b9d70d8c34dd2703910435",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "day-23-expanded.png",
+      "sha256": "2943975265d2d156972404b3d4b5742d2f0de98fe85dfa4504c0ec8ba7e792a4",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "day-23.png",
+      "sha256": "56ddd5521103949ba450dc34855ec75614451e87da2b81da1efed6ef873ca919",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "day-24.png",
+      "sha256": "b13502d117b08ef99707d4e83202280ebff37bbd85c879acc94295e238bc8ec9",
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "normal-rule-hidden.png",
+      "sha256": "c762d05b3cedb3319edf0c09c87179f1b0776db7dcf27925c3e059b2c24bff4a",
+      "width": 1500,
+      "height": 1050
+    }
+  ],
+  "verified": [
+    "2026-10-23 and 24 actual snapshots include daily target10 contributed20 actual20, receivers12/8",
+    "C<=target rule hides panel",
+    "2026-10-22 closed, original0 panelcount0",
+    "31-day deterministic regression incl 26 operating, 5 closed",
+    "seed does not rewrite saved history"
+  ],
+  "limits": [
+    "not all historical data rewritten",
+    "closed days intentionally excluded from excess facts",
+    "old funding mode not automatically migrated",
+    "not committed or deployed"
+  ]
+}
