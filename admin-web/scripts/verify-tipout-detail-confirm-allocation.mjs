@@ -30,6 +30,7 @@ assert.match(program, /分配结果已保存，但薪资同步失败，请重试
 assert.match(distribution, /TipOutAllocationResults\.read/);
 assert.match(payroll, /TipOutAllocationResults\.read/);
 const cancelBody = distribution.match(/async function doCancelAllocate\(\)\s*\{[\s\S]*?\n\s*\}/)?.[0] || "";
-assert.match(cancelBody, /TipOutAllocationResults\.cancel/);
+assert.match(cancelBody, /inspectCancelAllocation/);
+assert.match(distribution, /TipOutAllocationResults\.resetConfirmed/);
 
 console.log("Tip detail confirmation allocation verification passed.");

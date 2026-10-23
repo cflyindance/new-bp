@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-const warning = '本操作仅记录发放状态，不执行转账。确认后分配结果将永久锁定，不能重新分配、取消、更新或修改。';
+const warning = '本操作仅记录发放状态，不执行转账。确认后分配结果锁定；仅可通过汇总页“取消分配”演示重置，撤销标记不会撤回实际付款。';
 for (const name of ['distribution','details']) {
   const html = readFileSync(`src/team/tips/templates/${name}.html`, 'utf8');
   assert.ok(html.includes('确认小费已发放？'));

@@ -1,0 +1,15 @@
+{
+  "changeId": "TIPOUT-CANCEL-PAID-20261023-01",
+  "baseline": "649225c3",
+  "branch": "codex/tips-cancel-paid-20261023",
+  "origin": "http://127.0.0.1:65118",
+  "session": "tips-cancel-paid-20261023",
+  "scope": "isolated Golden store demo, 2026-10-21 through 2026-10-23",
+  "captures": {
+    "before.png": "23 paid, 21 allocated pending payout, 22 closed; red outline actions",
+    "confirm.png": "in-page cancellation confirmation, frozen store/date and no actual payment reversal warning",
+    "kept.png": "retain action leaves paid and allocation snapshots unchanged",
+    "reset.png": "23 and 21 pending allocation, 22 closed; two archived snapshots, one original payout"
+  },
+  "notCaptured": ["concurrency errors", "storage rollback errors", "payroll sync failure", "keyboard focus cycle"]
+}

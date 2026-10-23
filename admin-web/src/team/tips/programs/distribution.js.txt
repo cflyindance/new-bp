@@ -1672,30 +1672,73 @@ var ALLOC_KEY = 'tipout_allocated';
       openTipAllocationModal();
     }
 
+    var cancelAllocationDraft=null, cancelAllocationBusy=false;
+    function cancelAllocationScope() {
+      return {store:(document.getElementById('storeSelect').value||'').trim(),
+        startDate:document.getElementById('dateStart').value,endDate:document.getElementById('dateEnd').value};
+    }
+    function inspectCancelAllocation(scope) {
+      var status=Object.create(null);
+      readAllocationScopeRows(scope).forEach(function(row){status[row.dateKey]=!!(row.businessStatusResult&&row.businessStatusResult.allocatable);});
+      return buildDateRange(scope.startDate,scope.endDate).filter(function(d){return status[d];}).map(function(d){
+        return {date:d,fingerprint:TipOutAllocationResults.cancelFingerprint(scope.store,d)};
+      });
+    }
+    function closeCancelAllocationModal() {
+      if(cancelAllocationBusy)return;
+      cancelAllocationDraft=null;
+      var modal=document.getElementById('cancelAllocationModal');modal.classList.remove('show');modal.setAttribute('aria-hidden','true');
+      var content=document.querySelector('.team-tips-page .content-area');if(content)content.removeAttribute('inert');
+      document.getElementById('cancelAllocationBtn').focus();
+    }
+    function handleCancelAllocationOverlay(event) {if(event.target===event.currentTarget)closeCancelAllocationModal();}
     async function doCancelAllocate() {
-      if (!validateSummaryDateRange(true)) return;
-      invalidateDayPipelineCache();
-      var dates = getDateRange();
-      var storeSel = document.getElementById('storeSelect');
-      var storeVal = storeSel ? (storeSel.value || '').trim() : '';
-      var paidSkipped = 0;
-      var canceledCount = 0;
-      for (var i = 0; i < dates.length; i += 1) {
-        if (!TipOutAllocationResults.isAllocated(storeVal, dates[i])) continue;
-        try { await TipOutAllocationResults.cancel(storeVal, dates[i]); canceledCount += 1; }
-        catch (error) { if (/已发放|锁定/.test(error.message || '')) paidSkipped += 1; else throw error; }
+      if(!validateSummaryDateRange(true))return;
+      if(cancelAllocationBusy)return;
+      try {
+        var scope=cancelAllocationScope();
+        if(!scope.store)throw new Error('请选择门店');
+        var rows=inspectCancelAllocation(scope);
+        cancelAllocationDraft={scope:scope,rows:rows};
+        document.getElementById('cancelAllocationScope').textContent=scope.store+' · '+scope.startDate+' 至 '+scope.endDate;
+        document.getElementById('cancelAllocationError').textContent='';
+        document.getElementById('submitCancelAllocationBtn').disabled=false;
+        var modal=document.getElementById('cancelAllocationModal');modal.classList.add('show');modal.setAttribute('aria-hidden','false');
+        var content=document.querySelector('.team-tips-page .content-area');if(content)content.setAttribute('inert','');
+        document.getElementById('submitCancelAllocationBtn').focus();
+      }catch(error){showNotification(error.message||'无法检查取消范围','error');}
+    }
+    async function submitCancelAllocation() {
+      if(cancelAllocationBusy||!cancelAllocationDraft)return;
+      var draft=cancelAllocationDraft, count=0, executionError=null;
+      try {
+        if(JSON.stringify(cancelAllocationScope())!==JSON.stringify(draft.scope)||
+          JSON.stringify(inspectCancelAllocation(draft.scope))!==JSON.stringify(draft.rows))throw new Error('日期范围或分配数据已变化，请关闭后重新确认');
+        cancelAllocationBusy=true;
+        document.getElementById('submitCancelAllocationBtn').disabled=true;
+        for(var i=0;i<draft.rows.length;i++){
+          if(await TipOutAllocationResults.resetConfirmed(draft.scope.store,draft.rows[i].date,
+            {confirmed:true,expectedFingerprint:draft.rows[i].fingerprint}))count++;
+        }
+      }catch(error){executionError=error;}
+      finally {
+        cancelAllocationBusy=false;document.getElementById('submitCancelAllocationBtn').disabled=false;
       }
-      renderDailySummaryList();
-      if (canceledCount > 0 && window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
-        var ds = document.getElementById('dateStart');
-        var de = document.getElementById('dateEnd');
-        TipOutPayrollBridge.syncAfterAllocation(
-          storeVal,
-          ds ? ds.value : '',
-          de ? de.value : ''
-        );
+      if(count){
+        invalidateDayPipelineCache();renderDailySummaryList();
+        if(window.TipOutPayrollBridge&&TipOutPayrollBridge.syncAfterAllocation){
+          try{await TipOutPayrollBridge.syncAfterAllocation(draft.scope.store,draft.scope.startDate,draft.scope.endDate);}
+          catch(error){executionError=new Error('已取消 '+count+' 天，但薪资同步失败，请重试同步');}
+        }
       }
-      showNotification(paidSkipped ? (canceledCount ? '已取消 ' + canceledCount + ' 天；已发放日期跳过 ' + paidSkipped + ' 天' : '所选范围均已发放，未执行任何变更') : '已取消分配，状态已恢复为待分配', 'info');
+      if(executionError){
+        document.getElementById('cancelAllocationError').textContent=(count?'已取消 '+count+' 天；':'')+executionError.message;
+        cancelAllocationDraft=null;
+        document.getElementById('submitCancelAllocationBtn').disabled=true;
+        showNotification(document.getElementById('cancelAllocationError').textContent,'error');return;
+      }
+      closeCancelAllocationModal();
+      showNotification(count?'已取消 '+count+' 天，状态已恢复为待分配':'当前范围没有需要取消的分配记录','info');
     }
 
     function getFilteredEmployees() {
@@ -1804,6 +1847,17 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     });
     document.addEventListener('keydown', function(event) {
+      var cancelModal=document.getElementById('cancelAllocationModal');
+      if(cancelModal&&cancelModal.classList.contains('show')){
+        if(event.key==='Escape'){event.preventDefault();closeCancelAllocationModal();return;}
+        if(event.key==='Tab'){
+          var buttons=Array.from(cancelModal.querySelectorAll('button:not([disabled])'));
+          var firstCancel=buttons[0],lastCancel=buttons[buttons.length-1];
+          if(event.shiftKey&&document.activeElement===firstCancel){event.preventDefault();lastCancel.focus();}
+          else if(!event.shiftKey&&document.activeElement===lastCancel){event.preventDefault();firstCancel.focus();}
+          return;
+        }
+      }
       if (event.key === 'Escape' && document.getElementById('allocationHoursDetailModal') && document.getElementById('allocationHoursDetailModal').classList.contains('show')) closeAllocationHoursDetail();
       var payoutModal = document.getElementById('confirmPayoutModal');
       if (payoutModal && payoutModal.classList.contains('show') && event.key === 'Escape') {

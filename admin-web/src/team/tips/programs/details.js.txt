@@ -469,7 +469,7 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('detailAllocatedAmount').textContent = money(Number(summary.allocatedAmount) || 0);
       document.getElementById('detailUnallocatedAmount').textContent = money(Number(summary.unallocatedAmount) || 0);
       document.getElementById('detailPoolCount').textContent = Number(summary.poolCount) || (snapshot.pools || []).length;
-      var banner = '<div class="tipout-lock-banner"><strong>已发放 · 分配结果已锁定</strong><span>' + escHtml(payout.paidAt || '') + ' · ' + escHtml(payout.paidByDisplayNameAtConfirmation || '当前用户') + '</span><p>以下内容来自确认发放时保存的快照，不能重新分配、取消或修改。</p></div>';
+      var banner = '<div class="tipout-lock-banner"><strong>已发放 · 分配结果已锁定</strong><span>' + escHtml(payout.paidAt || '') + ' · ' + escHtml(payout.paidByDisplayNameAtConfirmation || '当前用户') + '</span><p>以下内容来自确认发放时保存的快照，不可直接修改或重新分配；汇总页“取消分配”可演示重置，实际付款不会撤回。</p></div>';
       var cards = (snapshot.pools || []).map(function(pool) {
         var rows = (pool.employees || []).map(function(employee) {
           return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + detailSavedWeightText(employee) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';

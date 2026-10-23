@@ -4,7 +4,7 @@
     if (!anchor || document.getElementById('tipoutScenarioListButton')) return;
     var trigger = document.createElement('button');
     trigger.id = 'tipoutScenarioListButton'; trigger.type = 'button'; trigger.className = 'btn';
-    trigger.textContent = '测试场景清单'; trigger.classList.add('btn-lg');
+    trigger.textContent = '测试场景清单'; trigger.classList.add('btn-lg','btn-danger');
     anchor.insertBefore(trigger, anchor.firstChild);
     trigger.addEventListener('click', function() {
       var existing = document.getElementById('tipoutScenarioDialog'); if (existing) existing.remove();

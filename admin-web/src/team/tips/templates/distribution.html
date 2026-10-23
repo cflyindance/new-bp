@@ -271,7 +271,7 @@
       <div id="summaryActionBar" class="tipout-summary-action-bar" aria-label="小费汇总操作">
         <div id="summaryTestActions" class="tipout-summary-test-actions" role="group" aria-label="测试操作">
           <div id="summaryDateActions" class="tipout-summary-date-actions">
-            <button type="button" class="btn btn-lg" data-native-onclick="doCancelAllocate()">取消分配</button>
+            <button type="button" id="cancelAllocationBtn" class="btn btn-lg btn-danger" data-native-onclick="doCancelAllocate()">取消分配</button>
           </div>
         </div>
         <div class="export-dropdown">
@@ -328,6 +328,13 @@
           </div>
         </div>
       </div>
+      <div class="modal-overlay" id="cancelAllocationModal" aria-hidden="true" data-native-onclick="handleCancelAllocationOverlay(event)">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancelAllocationTitle" aria-describedby="cancelAllocationWarning">
+          <div class="modal-header"><h3 id="cancelAllocationTitle">取消分配？</h3><button type="button" class="modal-close" aria-label="关闭" data-native-onclick="closeCancelAllocationModal()">×</button></div>
+          <div class="modal-body"><p id="cancelAllocationScope"></p><p id="cancelAllocationWarning">取消后将恢复为待分配，已发放标记也将撤销。此操作不会撤回实际付款。</p><p id="cancelAllocationError" role="alert"></p></div>
+          <div class="modal-footer"><button type="button" class="btn" data-native-onclick="closeCancelAllocationModal()">保留分配</button><button type="button" id="submitCancelAllocationBtn" class="btn btn-danger" data-native-onclick="submitCancelAllocation()">确认取消分配</button></div>
+        </div>
+      </div>
       <div class="modal-overlay" id="allocationHoursDetailModal" aria-hidden="true" data-native-onclick="handleAllocationHoursDetailOverlay(event)">
         <div class="modal tipout-hours-detail-modal" role="dialog" aria-modal="true" aria-labelledby="allocationHoursDetailTitle">
           <div class="modal-header"><h3 id="allocationHoursDetailTitle">分配工时明细</h3><button id="allocationHoursDetailClose" type="button" class="modal-close" aria-label="关闭分配工时明细" data-native-onclick="closeAllocationHoursDetail()">×</button></div>
@@ -348,7 +355,7 @@
               <div><dt>已分配金额（参考）</dt><dd id="confirmPayoutAmount">—</dd></div>
               <div><dt>员工人数</dt><dd id="confirmPayoutEmployees">—</dd></div>
             </dl>
-            <p id="confirmPayoutWarning" class="tipout-payout-warning"><strong>本操作仅记录发放状态，不执行转账。确认后分配结果将永久锁定，不能重新分配、取消、更新或修改。</strong></p>
+            <p id="confirmPayoutWarning" class="tipout-payout-warning"><strong>本操作仅记录发放状态，不执行转账。确认后分配结果锁定；仅可通过汇总页“取消分配”演示重置，撤销标记不会撤回实际付款。</strong></p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" data-native-onclick="closeConfirmPayoutModal()">取消</button>

@@ -111,5 +111,45 @@
     execute();
   }
 
-  root.TipOutAllocationResults = { RESULT_KEY: RESULT_KEY, read: read, isAllocated: isAllocated, validate: validate, commit: commit, cancel: cancel };
+  var CANCEL_HISTORY_KEY = 'tipout-allocation-cancel-history-v1';
+  function cancelFingerprint(store, dateKey) {
+    if (!root.TipOutDateState) throw new Error('取消分配状态服务尚未就绪');
+    return JSON.stringify([isAllocated(store,dateKey),root.TipOutDateState.readAllocation(store,dateKey),
+      root.TipOutDateState.readPayout(store,dateKey),root.TipOutDateState.readUnconfirmedUpdate(store,dateKey)]);
+  }
+  async function resetConfirmed(store, dateKey, options) {
+    if (!options || options.confirmed !== true || typeof options.expectedFingerprint !== 'string') throw new Error('请先确认取消分配');
+    if (!String(store||'').trim() || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey||''))) throw new Error('取消分配范围无效');
+    return root.TipOutDateState.withLock(store,dateKey,function() {
+      if (cancelFingerprint(store,dateKey)!==options.expectedFingerprint) throw new Error('分配或发放数据已变化，请重新确认');
+      var state=root.TipOutDateState.inspect(store,dateKey);
+      if (state.error) throw new Error(state.error);
+      if (!state.snapshot && !state.payout && !isAllocated(store,dateKey)) return false;
+      var historyRaw=localStorage.getItem(CANCEL_HISTORY_KEY);
+      var history=historyRaw ? JSON.parse(historyRaw) : [];
+      if (!Array.isArray(history)) throw new Error('取消分配历史已损坏');
+      var results=resultDocument(),allocated=allocatedDocument();
+      var payouts=parseDocument(root.TipOutDateState.PAYOUT_KEY),updates=parseDocument(root.TipOutDateState.UPDATE_KEY);
+      history.push({recordId:root.TipOutDateState.requestId(),storeId:String(store),businessDate:String(dateKey),
+        canceledAt:new Date().toISOString(),source:'summary-demo-reset',snapshot:state.snapshot,payout:state.payout,
+        unconfirmedUpdate:root.TipOutDateState.readUnconfirmedUpdate(store,dateKey)});
+      delete results[key(store,dateKey)];delete payouts[key(store,dateKey)];delete updates[key(store,dateKey)];
+      allocated[String(store)]=(allocated[String(store)]||[]).filter(function(d){return d!==dateKey;});
+      var writes=[[CANCEL_HISTORY_KEY,history],[RESULT_KEY,results],[ALLOC_KEY,allocated],
+        [root.TipOutDateState.PAYOUT_KEY,payouts],[root.TipOutDateState.UPDATE_KEY,updates]];
+      var before=writes.map(function(w){return localStorage.getItem(w[0]);});
+      try { writes.forEach(function(w){localStorage.setItem(w[0],JSON.stringify(w[1]));}); }
+      catch(error) {
+        var rollbackError=null;
+        writes.forEach(function(w,i){try{if(before[i]==null)localStorage.removeItem(w[0]);else localStorage.setItem(w[0],before[i]);}catch(e){rollbackError=e;}});
+        if(rollbackError)throw new Error('取消失败且回滚不完整，请停止操作并检查本地数据');
+        throw error;
+      }
+      root.TipOutDateState.notify(store,dateKey);
+      return true;
+    });
+  }
+  root.TipOutAllocationResults = { RESULT_KEY: RESULT_KEY, CANCEL_HISTORY_KEY:CANCEL_HISTORY_KEY,
+    read: read, isAllocated: isAllocated, validate: validate, commit: commit, cancel: cancel,
+    cancelFingerprint:cancelFingerprint,resetConfirmed:resetConfirmed };
 })(window);
