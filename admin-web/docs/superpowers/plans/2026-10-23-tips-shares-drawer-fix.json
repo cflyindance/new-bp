@@ -1,0 +1,24 @@
+{
+  "entryPoints": ["src/team/tips/templates/rule-editor.html"],
+  "rootCauseStatus": "confirmed",
+  "rootCause": "680px custom drawer inherits -400px closed right offset and exposes 280px while inert",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "workspace": {"status":"clean","evidence":"fresh main 05775454 isolated codex/tips-shares-drawer-fix-20261023; remote main behind local 3 commits"},
+  "references": [
+    {"path":"src/team/tips/templates/rule-editor.html","symbol":"contributorSharesDrawer","relation":"entry_point","status":"affected"},
+    {"path":"src/team/tips/tips-page.css","symbol":".contributor-shares-drawer","relation":"definition","status":"affected"},
+    {"path":"src/team/tips/programs/contributor-shares-editor.js.txt","symbol":"openContributorSharesDrawer","relation":"direct_caller","status":"not_affected"}
+  ],
+  "deepReadPaths":["src/team/tips/templates/rule-editor.html","src/team/tips/tips-page.css","src/team/tips/programs/contributor-shares-editor.js.txt"],
+  "dataFlow":[{"from":"src/team/tips/templates/rule-editor.html","to":"src/team/tips/programs/contributor-shares-editor.js.txt","evidence":"entry click opens drawer, removes inert; close restores inert"},{"from":"src/team/tips/programs/contributor-shares-editor.js.txt","to":"src/team/tips/tips-page.css","evidence":"show class controls open position and visibility"}],
+  "sharedCallers":[],
+  "sharedCallersComplete":true,
+  "wikiQueries":[{"question":"custom drawer closed position","mode":"wiki_bypass","reason":"local UI regression bounded by current source; no connected wiki query infrastructure used"}],
+  "plan":["RED default visibility test","CSS scoped full-width closed offset and hidden visibility","GREEN targeted test, editor regression, live browser, types and diff","update three documentation implementation records"],
+  "rollback":"revert only custom drawer CSS and related repair artifacts",
+  "build":{"required":false,"status":"skipped","reason":"CSS only runtime fix; no build boundary touched; CI unknown"},
+  "e2e":{"required":true,"status":"passed","evidence":["node scripts/verify-tipout-shares-drawer-browser.mjs: default hidden, click editable, 40/60 confirm closes and updates draft"]},
+  "tdd":{"status":"passed","redEvidence":["visibility assertion failed on width680 default closed rule"],"greenEvidence":["node scripts/verify-tipout-shares-drawer-visibility.mjs"]},
+  "unverifiedScopes":["fresh rule persistence not rerun","other services not updated"]
+}

@@ -2393,7 +2393,8 @@ select.form-control {
 }
 
 .contributor-share-entry { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 20px; border-top:1px solid var(--border-light); font-size:12px; color:var(--text-secondary); }
-.contributor-shares-drawer { width:680px; max-width:100vw; }
+.contributor-shares-drawer { width:680px; max-width:100vw; right:-680px; visibility:hidden; }
+.contributor-shares-drawer.show { visibility:visible; right:0; }
 .contributor-shares-drawer .data-table { margin-top:16px; }
 .contributor-shares-drawer input[type="number"] { width:90px; padding:6px 8px; border:1px solid var(--border-color); border-radius:6px; color:var(--text-primary); background:var(--bg-primary); }
 .contributor-shares-note { font-size:12px; line-height:1.6; color:var(--text-secondary); margin:12px 0; }
