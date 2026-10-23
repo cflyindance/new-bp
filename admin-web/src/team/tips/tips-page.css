@@ -2365,6 +2365,7 @@ select.form-control {
 .tipout-page-rule-editor .tipout-rule-group-title { margin:0; font-size:18px; line-height:1.5; font-weight:700; color:var(--text-primary); }
 .tipout-page-rule-editor #ruleSectionBasic > .tipout-rule-group-title { margin-bottom:16px; }
 .tipout-page-rule-editor .tipout-rule-group-heading { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.tipout-page-rule-editor .work-hours-config-heading { display:flex; align-items:center; gap:6px; }
 
 .tipout-page-rule-editor #legacyAllocationSections,
 .tipout-page-rule-editor #orderTipAllocationSection {
