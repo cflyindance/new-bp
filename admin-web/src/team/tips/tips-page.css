@@ -2388,6 +2388,18 @@ select.form-control {
   font-size: 14px;
 }
 
+.tipout-page-rule-editor #allocationModeSection {
+  border-color: var(--danger);
+}
+
+.tipout-page-rule-editor #timeWindowParticipationOption {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
 .tipout-page-rule-editor .tipout-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
