@@ -2392,6 +2392,38 @@ select.form-control {
   border-color: var(--danger);
 }
 
+.tipout-page-rule-editor #allocationModeSection > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tipout-page-rule-editor #allocationModeSection > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tipout-page-rule-editor #allocationModeSection > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.tipout-page-rule-editor #allocationModeSection[open] > summary {
+  margin-bottom: 16px;
+}
+
+.tipout-page-rule-editor #allocationModeSection[open] > summary::after {
+  transform: rotate(225deg);
+}
+
 .tipout-page-rule-editor #timeWindowParticipationOption {
   width: fit-content;
   max-width: 100%;

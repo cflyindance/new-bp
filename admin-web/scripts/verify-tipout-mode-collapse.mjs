@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const html=fs.readFileSync('src/team/tips/templates/rule-editor.html','utf8');
+const m=html.match(/<details\b([^>]*id="allocationModeSection"[^>]*)>([\s\S]*?)<\/details>/);
+assert.ok(m,'mode block must use native details');assert.doesNotMatch(m[1],/\bopen\b/);
+assert.match(m[2],/<summary class="form-section-title">小费池计算模式<\/summary>/);
+assert.match(m[2],/name="allocationMode" value="legacy_pool" checked/);
+assert.match(m[2],/name="allocationMode" value="order_tip_then_residual"/);
+assert.match(m[2],/id="allocationModeHint"/);
+assert.equal((html.match(/id="allocationModeSection"/g)||[]).length,1);
+console.log('PASS native collapsed mode: no open default, accessible summary, original fields and default intact');

@@ -463,8 +463,8 @@
             </div>
           </div>
 
-          <div class="form-section tipout-form-card" id="allocationModeSection">
-            <div class="form-section-title">小费池计算模式</div>
+          <details class="form-section tipout-form-card" id="allocationModeSection">
+            <summary class="form-section-title">小费池计算模式</summary>
             <div class="radio-group">
               <label class="radio-item">
                 <input type="radio" name="allocationMode" value="legacy_pool" checked data-native-onchange="onAllocationModeChange(false)">
@@ -476,7 +476,7 @@
               </label>
             </div>
             <p id="allocationModeHint" data-pool-label="「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。" style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。</p>
-          </div>
+          </details>
 
           <div id="legacyAllocationSections">
           <!-- Deduction Rules -->
