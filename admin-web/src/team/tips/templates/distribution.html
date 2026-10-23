@@ -132,12 +132,14 @@
             <div class="filter-field filter-field--daterange tipout-store-date-filter-field" id="dateRangeFilterField">
               <span class="filter-field-label">日期范围</span>
               <div class="date-range-group">
-                <input type="date" id="dateStart" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
+                <input type="date" id="dateStart" class="form-control form-control-lg" aria-label="开始日期" aria-describedby="summaryDateRangeError" data-native-onchange="handleSummaryDateRangeChange()">
                 <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
-                <input type="date" id="dateEnd" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
+                <input type="date" id="dateEnd" class="form-control form-control-lg" aria-label="结束日期" aria-describedby="summaryDateRangeError" data-native-onchange="handleSummaryDateRangeChange()">
               </div>
             </div>
           </div>
+
+          <p id="summaryDateRangeError" class="tipout-summary-date-error" role="alert" hidden></p>
 
           <div class="tipout-view-filter-row">
             <!-- Filters：移动端默认折叠 -->

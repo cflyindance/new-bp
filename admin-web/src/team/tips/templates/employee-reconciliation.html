@@ -18,9 +18,9 @@
       </div>
       <div id="employeeDetailContent">
         <div class="tipout-detail-date-range" aria-label="分配汇总日期范围">
-          <input id="employeeDetailStartDate" type="date" aria-label="开始日期">
+          <input id="employeeDetailStartDate" type="date" aria-label="开始日期" aria-describedby="employeeDetailDateRangeError">
           <span aria-hidden="true">～</span>
-          <input id="employeeDetailEndDate" type="date" aria-label="结束日期">
+          <input id="employeeDetailEndDate" type="date" aria-label="结束日期" aria-describedby="employeeDetailDateRangeError">
           <label class="tipout-detail-attendance-filter">
             <span>考勤状态</span>
             <select id="employeeDetailAttendanceFilter" aria-label="考勤状态">
@@ -41,6 +41,7 @@
             </select>
           </label>
         </div>
+        <p id="employeeDetailDateRangeError" class="tipout-summary-date-error" role="alert" hidden></p>
         <div class="tipout-employee-detail-metrics" aria-label="员工分配汇总金额概览">
           <div><span>打卡总工时</span><strong id="employeeDetailPunchHours">—</strong></div>
           <div><span>分配计入工时</span><button id="employeeDetailAllocationHours" type="button" class="tipout-allocation-hours-button" disabled data-native-onclick="openEmployeeDetailAllocationHours(event, employeeDetailRangeHourEntries, '')">—</button></div>

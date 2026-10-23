@@ -21,7 +21,7 @@ assert.match(program, /async function confirmTipDataUpdate\(\)/);
 assert.match(program, /小费数据已更新，请重新检查并补充需要的手工调整。/);
 assert.match(program, /TipOutDateState\.markUnconfirmedUpdate/);
 assert.match(program, /async function executeDetailAllocation\(options\)/);
-assert.match(program, /manual: false, snapshot: systemSnapshot/);
+assert.match(program, /manual: !allocated && detailManualDirty, snapshot: systemSnapshot/);
 assert.match(program, /async function saveCurrentDetailAllocation\(\)/);
 assert.match(program, /该日期已分配，重新确认将覆盖当天原分配结果。/);
 assert.match(program, /await TipOutAllocationResults\.commit\(snapshot,/);

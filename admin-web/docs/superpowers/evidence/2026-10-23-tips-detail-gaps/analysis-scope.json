@@ -1,0 +1,19 @@
+{
+  "changeId": "TIPOUT-DETAIL-GAPS-20261023-01",
+  "scope": [
+    "details program/template shared dialog",
+    "tips legacy runtime hash listener",
+    "employee reconciliation program/template",
+    "tips scoped error CSS",
+    "three TipOut docs and operation checklist"
+  ],
+  "dataFlow": "input -> scope/date validator -> deferred discard or query -> existing snapshot storage; no funding algorithm change",
+  "sharedCallers": [
+    "returnToSummary",
+    "renderDetailPage",
+    "employee export collection/menu/email"
+  ],
+  "workspace": "continuation of owned uncommitted batch1; original dirty main preserved",
+  "extension": "own draft broadcast race narrowed to same fingerprint and unchanged snapshot",
+  "wikiQueries": []
+}

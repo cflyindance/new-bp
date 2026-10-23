@@ -1,0 +1,128 @@
+{
+  "change": "TIPOUT-DATE-VALIDATION-20261023-01",
+  "date": "2026-10-23",
+  "baseline": "44ca87232e5d60479f1e58001d396c227199a776",
+  "branch": "codex/tips-summary-date-validation-20261023",
+  "uncommitted": true,
+  "preview": "http://127.0.0.1:65115/#/team/tips/distribution",
+  "viewport": {
+    "width": 1500,
+    "height": 1050
+  },
+  "scope": "isolated demo browser only; no payout or allocation performed in this validation",
+  "evidence": {
+    "validRange": [
+      "2026-10-19",
+      "2026-10-23"
+    ],
+    "visibleDateRows": 5,
+    "amounts": [
+      "$773.97",
+      "$430.16",
+      "$0.00",
+      "$430.16"
+    ],
+    "invalidRange": [
+      "2026-10-24",
+      "2026-10-23"
+    ],
+    "rowsUnchanged": true,
+    "amountsUnchanged": true,
+    "ledgerUnchanged": true,
+    "urlUnchanged": true,
+    "savedHistoryStart": "2026-10-19",
+    "allocationDialogBlocked": true,
+    "exportMenuBlocked": true,
+    "correctedAllocationDialogOpens": true,
+    "employeeViewValidated": true,
+    "errorsInBrowser": 0
+  },
+  "images": [
+    {
+      "file": "valid-range.png",
+      "sha256": "4df66fac43ae12e34ed8c4384b33013fecffdd62d5706ab370f679cade06488f",
+      "state": "有效范围10/19—10/23",
+      "operation": "D02",
+      "action": "Actual UI date input and guarded button actions"
+    },
+    {
+      "file": "missing-start.png",
+      "sha256": "e60515b77ffd8c7d9338e61b2afc6b361d0d2615696fc905c7ba1f039410fbaf",
+      "state": "清空开始日期，保留上次结果",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','')"
+    },
+    {
+      "file": "missing-end.png",
+      "sha256": "fa01522b3a724da2118596da461c211c5af37891a58f245ff11136f2122eaeb0",
+      "state": "清空结束日期，保留上次结果",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','2026-10-19');window.tipDateSet('dateEnd','')"
+    },
+    {
+      "file": "reversed-range.png",
+      "sha256": "c4a278656762431c211ef111d50c6fccf09b19049a1bbef2834173c9b9cc26ef",
+      "state": "开始晚于结束，字段报错，原金额保留",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateEnd','2026-10-23');window.tipDateSet('dateStart','2026-10-24')"
+    },
+    {
+      "file": "invalid-actions-blocked.png",
+      "sha256": "c4a278656762431c211ef111d50c6fccf09b19049a1bbef2834173c9b9cc26ef",
+      "state": "日期错误期间阻止批量、取消、导出、视角及明细入口；金额与有效历史保留",
+      "operation": "D02",
+      "action": "Actual UI date input and guarded button actions"
+    },
+    {
+      "file": "corrected-range.png",
+      "sha256": "8d8f5ee8eef016c9bc5351021f7b0b439e5ece0ec3b3c9d83309b89012def39d",
+      "state": "修正为10/19—10/23，错误清除并更新",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','2026-10-19')"
+    },
+    {
+      "file": "same-day.png",
+      "sha256": "cb0c98236b83fe110e3ed27be010068e60ab26920ea5f3fffed9c539ba78bdb7",
+      "state": "同日10/20—10/20合法，展示一天",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','2026-10-20');window.tipDateSet('dateEnd','2026-10-20')"
+    },
+    {
+      "file": "employee-valid.png",
+      "sha256": "b0f7ba7d725967685de3d8b3190e147325cae11a567f950e13c3c5e4de247148",
+      "state": "员工视角有效周期",
+      "operation": "D02",
+      "action": "window.tipDateRoot().querySelector('#employeeReconciliationTab').click()"
+    },
+    {
+      "file": "employee-invalid.png",
+      "sha256": "f378e7f038a81ce5bb6cdd46da9d72fe4520d924725c3b0bb708b3f13abc3b23",
+      "state": "员工视角倒置日期提示，原角色卡和列表保留",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','2026-10-21')"
+    },
+    {
+      "file": "employee-corrected.png",
+      "sha256": "362959335ed91fc0f7fe796069378275f01ffdfcabe0e56c8e592a954dcc4fe2",
+      "state": "员工视角修正后错误清除",
+      "operation": "D02",
+      "action": "window.tipDateSet('dateStart','2026-10-20')"
+    }
+  ],
+  "tests": {
+    "pass": [
+      "scripts/verify-tipout-summary-date-validation.mjs",
+      "scripts/verify-tipout-summary-switch-performance.mjs",
+      "scripts/verify-tipout-summary-entry-performance.mjs",
+      "scripts/verify-tipout-batch-manual-warning.mjs",
+      "tsc --noEmit",
+      "git diff --check"
+    ],
+    "baselineFailure": "verify-team-tips-summary-date-sort.mjs: old missing .tipout-date-sort-button CSS selector assertion also fails on unchanged baseline"
+  },
+  "limitations": [
+    "Only first batch: summary date validation",
+    "Other pages, downloads and compatibility screenshot gaps remain",
+    "No CI deployment or production acceptance"
+  ]
+}

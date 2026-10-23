@@ -124,11 +124,15 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       detailOwnUpdate = false;
     }
-    function allowDetailLeave() {
+    function allowDetailLeave(onLeave) {
       if (detailAllocationSubmitting) { showNotification('正在保存分配，请稍候', 'warning'); return false; }
       if (!detailDirty) return true;
-      if (!window.confirm('存在未保存的修改，确定放弃修改并离开？')) return false;
-      discardDetailDraft(); return true;
+      showDetailAllocationDialog('leave', '存在未保存的修改。放弃后将丢失当前调整，已保存的分配结果不变。').then(function(confirmed) {
+        if (!confirmed || detailAllocationSubmitting) return;
+        discardDetailDraft();
+        if (typeof onLeave === 'function') onLeave();
+      });
+      return false;
     }
     window.tipoutAllowLeave = allowDetailLeave;
     function renderDetailAttendance(enforce) {
@@ -625,9 +629,25 @@ var ALLOC_KEY = 'tipout_allocated';
       var dateKey = document.getElementById('detailDate').value;
       var storeSel = document.getElementById('storeSelect');
       var store = storeSel ? storeSel.value || '' : '';
-      if (!dateKey) return;
+      if (!dateKey || !store) {
+        if (detailRenderedScope) {
+          storeSel.value = detailRenderedScope.store;
+          document.getElementById('detailDate').value = detailRenderedScope.dateKey;
+          showNotification('请选择门店和有效日期', 'error');
+        }
+        return;
+      }
       if (detailRenderedScope && (detailRenderedScope.store !== store || detailRenderedScope.dateKey !== dateKey)) {
-        if (!allowDetailLeave()) { storeSel.value = detailRenderedScope.store; document.getElementById('detailDate').value = detailRenderedScope.dateKey; return; }
+        var nextScope = { store: store, dateKey: dateKey };
+        storeSel.value = detailRenderedScope.store;
+        document.getElementById('detailDate').value = detailRenderedScope.dateKey;
+        if (!allowDetailLeave(function() {
+          storeSel.value = nextScope.store;
+          document.getElementById('detailDate').value = nextScope.dateKey;
+          renderDetailPage();
+        })) return;
+        storeSel.value = store;
+        document.getElementById('detailDate').value = dateKey;
       } else if (detailDirty && !detailForceRebuild) return;
       detailRenderedScope = { store: store, dateKey: dateKey };
       if (window.TipOutDateState && renderPaidDetailState(TipOutDateState.inspect(store, dateKey))) { syncDetailPayoutAction(); return; }
@@ -2124,17 +2144,19 @@ var ALLOC_KEY = 'tipout_allocated';
       if (detailAllocationDialogPending) return Promise.resolve(false);
       var modal = document.getElementById('detailAllocationDialog');
       var scope = getDetailPayoutScope();
-      var titles = { notice: '提示', save: '保存当前分配？', reallocate: '重新确认分配？' };
+      var titles = { notice: '提示', save: '保存当前分配？', reallocate: '重新确认分配？', leave: '放弃未保存修改？' };
       document.getElementById('detailAllocationDialogTitle').textContent = titles[kind] || '提示';
       document.getElementById('detailAllocationDialogMessage').textContent = message;
-      document.getElementById('cancelDetailAllocationDialogBtn').hidden = kind === 'notice';
+      var cancelButton = document.getElementById('cancelDetailAllocationDialogBtn');
+      cancelButton.hidden = kind === 'notice';
+      cancelButton.textContent = kind === 'leave' ? '继续编辑' : '取消';
       var confirmButton = document.getElementById('confirmDetailAllocationDialogBtn');
-      confirmButton.textContent = kind === 'notice' ? '知道了' : (kind === 'save' ? '保存当前分配' : '重新确认分配');
+      confirmButton.textContent = kind === 'leave' ? '放弃修改' : (kind === 'notice' ? '知道了' : (kind === 'save' ? '保存当前分配' : '重新确认分配'));
       return new Promise(function(resolve) {
         detailAllocationDialogPending = { resolve: resolve, scope: scope, baseHash: detailBaseHash,
-          trigger: document.getElementById(kind === 'reallocate' ? 'confirmDetailAllocationBtn' : 'saveCurrentDetailAllocationBtn') };
+          trigger: kind === 'leave' ? document.activeElement : document.getElementById(kind === 'reallocate' ? 'confirmDetailAllocationBtn' : 'saveCurrentDetailAllocationBtn') };
         modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
-        confirmButton.focus();
+        (kind === 'leave' ? cancelButton : confirmButton).focus();
       });
     }
     function closeDetailAllocationDialog(confirmed) {
@@ -2227,7 +2249,7 @@ var ALLOC_KEY = 'tipout_allocated';
         TipOutDateState.assertDateWritable(store, dateKey);
         var systemSnapshot = allocated ? buildSystemDetailAllocationSnapshot(store, dateKey) : null;
         var systemRules = allocated ? ruleData.getRulesForStore(store) : rules;
-        await executeDetailAllocation({ store: store, dateKey: dateKey, rules: systemRules, wasAllocated: allocated, automatic: false, manual: false, snapshot: systemSnapshot });
+        await executeDetailAllocation({ store: store, dateKey: dateKey, rules: systemRules, wasAllocated: allocated, automatic: false, manual: !allocated && detailManualDirty, snapshot: systemSnapshot });
       } catch (error) {
         showNotification(error && error.message ? error.message : '分配失败，请重试', 'error');
       } finally {
@@ -2333,7 +2355,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function returnToSummary() {
-      if (!allowDetailLeave()) return;
+      if (!allowDetailLeave(function() { window.location.href = 'index.html'; })) return;
       window.location.href = 'index.html';
     }
 
@@ -2370,12 +2392,20 @@ var ALLOC_KEY = 'tipout_allocated';
     });
     window.addEventListener('beforeunload', function(event) { if (detailDirty || detailAllocationSubmitting) { event.preventDefault(); event.returnValue = ''; } });
     window.addEventListener('pagehide', function() { discardDetailDraft(); });
+    function isOwnDetailDraftNotification(state) {
+      if (!detailDirty || !detailOwnUpdate || !state || state.locked) return false;
+      var scope = getDetailPayoutScope();
+      var marker = TipOutDateState.readUnconfirmedUpdate(scope.store, scope.dateKey);
+      var hash = state.snapshot && state.snapshot.snapshotHash || null;
+      return !!marker && marker.fingerprint === detailEditToken && hash === detailBaseHash;
+    }
     function handleDetailDateStateChange(detail) {
       var scope = getDetailPayoutScope();
       if (detail && (detail.storeId !== scope.store || detail.businessDate !== scope.dateKey)) return;
       if (detailPayoutDomainWriteActive) return;
-      if (detailAllocationDialogPending) closeDetailAllocationDialog(false);
       var incomingState = TipOutDateState.inspect(scope.store, scope.dateKey);
+      if (isOwnDetailDraftNotification(incomingState)) return;
+      if (detailAllocationDialogPending) closeDetailAllocationDialog(false);
       if (incomingState.locked) { detailDirty = false; detailManualDirty = false; detailOwnUpdate = false; }
       if (detailPayoutDraft) {
         invalidateDetailPayoutIntent();

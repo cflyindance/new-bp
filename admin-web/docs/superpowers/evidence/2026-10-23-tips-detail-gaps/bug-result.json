@@ -1,0 +1,43 @@
+{
+  "changeId": "TIPOUT-DETAIL-GAPS-20261023-01",
+  "status": "partially_fixed",
+  "wiki": {
+    "status": "wiki_bypass",
+    "reason": "wiki_not_configured"
+  },
+  "red": [
+    "old leave helper called window.confirm",
+    "employee date validator missing"
+  ],
+  "green": [
+    "detail-scope-guard",
+    "employee-detail-date-validation",
+    "detail-confirm-allocation",
+    "save-current",
+    "page-dialogs",
+    "batch-manual-warning",
+    "detail-manual-allocation",
+    "summary-date-validation",
+    "tsc --noEmit",
+    "git diff --check"
+  ],
+  "e2e": {
+    "passed": [
+      "date cancel/confirm",
+      "store confirm",
+      "daily empty/reversed/bounds/recovery"
+    ],
+    "failed": [
+      "cross-menu route protection"
+    ],
+    "pending": [
+      "first manual confirmation",
+      "employee replacement",
+      "exports"
+    ],
+    "baselineFailure": "verify-tipout-manual-detail-browser.cjs line72 timeout reproduced on baseline65114"
+  },
+  "build": "skipped - no dependency/build config/import entry changes",
+  "ci": "not_checked",
+  "release": "not_committed"
+}

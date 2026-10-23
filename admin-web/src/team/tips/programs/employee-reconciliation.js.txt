@@ -32,6 +32,33 @@ function detailNumber(value) { return Number(value) || 0; }
         ? { start: end, end: end }
         : { start: start, end: start };
     }
+    function validateEmployeeDetailDateRange(snapshot, focusError) {
+      var start = document.getElementById('employeeDetailStartDate');
+      var end = document.getElementById('employeeDetailEndDate');
+      var feedback = document.getElementById('employeeDetailDateRangeError');
+      var s = start.value, e = end.value, message = '', invalid = null;
+      if (!s) { message = '请选择开始日期'; invalid = start; }
+      else if (!e) { message = '请选择结束日期'; invalid = end; }
+      else if (!TipOutSummaryDateSort.isValidDateRange(s, s)) { message = '请输入有效的开始日期'; invalid = start; }
+      else if (!TipOutSummaryDateSort.isValidDateRange(e, e)) { message = '请输入有效的结束日期'; invalid = end; }
+      else if (s > e) { message = '开始日期不能晚于结束日期'; invalid = start; }
+      else if (snapshot && (s < snapshot.dateStart || e > snapshot.dateEnd)) {
+        message = '日期范围不能超出 ' + snapshot.dateStart + ' 至 ' + snapshot.dateEnd;
+        invalid = s < snapshot.dateStart ? start : end;
+      }
+      [start, end].forEach(function(input) {
+        if (input === invalid) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+      });
+      if (feedback) {
+        feedback.hidden = !message;
+        feedback.textContent = message ? message + '。' + (employeeDetailViewState
+          ? '当前仍显示上次有效查询结果（' + employeeDetailViewState.range.start + '—' + employeeDetailViewState.range.end + '），修正日期后更新。'
+          : '修正日期后查询。') : '';
+      }
+      if (invalid && focusError) invalid.focus();
+      return !invalid;
+    }
     function filterEmployeeDetailRows(rows, start, end, attendance, allocationStatus) {
       return (rows || []).filter(function(row) {
         var inDateRange = row.dateKey >= start && row.dateKey <= end;
@@ -240,6 +267,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function collectEmployeeDetailExportData() {
+      if (employeeDetailViewState && !validateEmployeeDetailDateRange(employeeDetailViewState.snapshot, true)) return null;
       var state = getEmployeeDetailViewState();
       if (!state || !state.rows || state.rows.length === 0) {
         showNotification('当前筛选条件下没有可导出的数据', 'warning');
@@ -345,6 +373,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function toggleEmployeeDetailExportMenu(event) {
+      if (employeeDetailViewState && !validateEmployeeDetailDateRange(employeeDetailViewState.snapshot, true)) return null;
       if (event && event.stopPropagation) event.stopPropagation();
       var menu = document.getElementById('employeeDetailExportMenu');
       var button = document.getElementById('employeeDetailExportButton');
@@ -379,6 +408,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function sendEmployeeDetailEmail() {
+      if (employeeDetailViewState && !validateEmployeeDetailDateRange(employeeDetailViewState.snapshot, true)) return null;
       var emailInput = document.getElementById('employeeDetailExportEmail');
       var emails = parseEmployeeDetailEmails(emailInput ? emailInput.value : '');
       if (!emails) {
@@ -468,13 +498,12 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function renderEmployeeDetailRange(snapshot, changedSide) {
+      if (!validateEmployeeDetailDateRange(snapshot, true)) return false;
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
       var attendanceInput = document.getElementById('employeeDetailAttendanceFilter');
       var allocationStatusInput = document.getElementById('employeeDetailAllocationStatusFilter');
-      var range = normalizeEmployeeDetailRange(startInput.value, endInput.value, changedSide);
-      startInput.value = range.start;
-      endInput.value = range.end;
+      var range = { start: startInput.value, end: endInput.value };
       var attendance = attendanceInput ? attendanceInput.value : '全部状态';
       var allocationStatus = allocationStatusInput ? allocationStatusInput.value : '全部状态';
       var filteredRows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end, attendance, allocationStatus);

@@ -1,0 +1,103 @@
+{
+  "changeId": "TIPOUT-DETAIL-GAPS-20261023-01",
+  "baseline": "44ca87232e5d60479f1e58001d396c227199a776",
+  "preview": "http://127.0.0.1:65115/",
+  "branch": "codex/tips-summary-date-validation-20261023",
+  "uncommitted": true,
+  "source": "isolated agent-browser session tips-detail-gaps-20261023; real app; controlled store B fixture not production",
+  "limitations": [
+    "route leave did not block navigation; not evidence of successful guard",
+    "first manual confirmation and employee replacement not browser verified",
+    "export files and real email not verified"
+  ],
+  "files": [
+    {
+      "file": "detail-date-confirm.png",
+      "sha256": "5aa67fd9886936e0d061e228bb43a0449e775d979a7b9e04df552b74d700c682",
+      "operation": "T02",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "detail-date-leave.png",
+      "sha256": "9acb82fd0fbd65f68ab976789a95f25f6adcb351fcdf37903018733dc56ad4b3",
+      "operation": "T02",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "detail-leave-cancel.png",
+      "sha256": "b48562f2e227ebf8914f81323d697c88d204aef7c510e833dcf11dc76573b8dc",
+      "operation": "T02",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "detail-route-leave.png",
+      "sha256": "dfa5cb68fbed3d6d2943896bd656b23727a2e89c5ee27e5b167baf9e43b775a5",
+      "operation": "unverified-route",
+      "accepted": false,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "detail-store-confirm.png",
+      "sha256": "89b5245d53247286b4c3a39a42a43eddb9d4948b5de479e5aeff9b406512fec0",
+      "operation": "T01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "detail-store-leave.png",
+      "sha256": "711021f0fd77595ac2144626882fc1f5209ed386410cde84f83dfe6600a54ac5",
+      "operation": "T01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "employee-date-bounds.png",
+      "sha256": "78be29552b7ad695229ee4560dc516dcc3a8fd7b3d840c970f8ac67d289d46ac",
+      "operation": "P01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "employee-date-default.png",
+      "sha256": "509e7a0c45fb31b51f18b0fefbb532d065bd140af09182a7fd31d0651aabc933",
+      "operation": "P01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "employee-date-empty.png",
+      "sha256": "8a4f8499400d81f476963841b14bd41c419ae1c0cb8ee1723435a70a59fbc278",
+      "operation": "P01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "employee-date-recovered.png",
+      "sha256": "868eef4d01f133f724d3e457177f31495005a228bdfbba7dc99d2cb4a899e00e",
+      "operation": "P01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    },
+    {
+      "file": "employee-date-reversed.png",
+      "sha256": "cff620da7cc5cf75aae2d9ec0e2197fa20ccfe5c4c0cefa14e2abd40723e99cf",
+      "operation": "P01",
+      "accepted": true,
+      "width": 1500,
+      "height": 1050
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 /* export.js — PDF / CSV / Email export */
 
 function toggleExportMenu() {
+  if (typeof validateSummaryDateRange === 'function' && !validateSummaryDateRange(true)) return;
   document.getElementById('exportMenu').classList.toggle('show');
 }
 document.addEventListener('click', function(e) {
@@ -115,6 +116,7 @@ function assertPaidExportSnapshotsAvailable() {
 }
 
 function exportAs(type) {
+  if (typeof validateSummaryDateRange === 'function' && !validateSummaryDateRange(true)) return;
   document.getElementById('exportMenu').classList.remove('show');
   try { assertPaidExportSnapshotsAvailable(); }
   catch (error) { if (typeof showNotification === 'function') showNotification(error.message, 'error'); return; }
@@ -532,11 +534,13 @@ function generateDatePoolJsPDF(data) {
 
 /* ─── Email ─── */
 function openEmailModal() {
+  if (typeof validateSummaryDateRange === 'function' && !validateSummaryDateRange(true)) return;
   document.getElementById('exportMenu').classList.remove('show');
   openModal('emailModal');
 }
 
 function sendEmail() {
+  if (typeof validateSummaryDateRange === 'function' && !validateSummaryDateRange(true)) return;
   var email = document.getElementById('exportEmail').value.trim();
   if (!email) { showNotification('请输入邮箱地址', 'error'); return; }
   var emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

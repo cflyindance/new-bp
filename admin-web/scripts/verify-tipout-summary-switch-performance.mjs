@@ -21,6 +21,7 @@ function exercise(initialView, nextView, mode = 'push') {
     replaceState(state, _title, url) { calls.push('replace'); this.state = state; if (url) browser.location.hash = url.slice(url.indexOf('#')); },
   };
   const context = {
+    validateSummaryDateRange: () => true,
     activeSummaryView: initialView, window: browser, history,
     TipOutSummaryUi: { normalizeSummaryView: (value) => value === 'employee' ? 'employee' : 'date', buildSummaryViewHref: (value) => value === 'employee' ? 'index.html?view=employee' : 'index.html' },
     syncSummaryViewUi: () => calls.push('sync'),

@@ -3256,3 +3256,13 @@ select.form-control {
 .tipout-lock-banner span { display: block; margin-top: 4px; font-size: 12px; color: var(--text-secondary); }
 .tipout-lock-banner p { margin: 8px 0 0; color: var(--text-secondary); }
 .tipout-lock-banner--error { border-color: #ffccc7; background: #fff2f0; color: #cf1322; }
+.tipout-summary-date-error {
+  margin: -6px 0 16px;
+  color: var(--danger, #cf1322);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.tipout-summary-date-error[hidden] { display: none; }
+.team-tips-page input[aria-invalid="true"] {
+  border-color: var(--danger, #cf1322);
+}

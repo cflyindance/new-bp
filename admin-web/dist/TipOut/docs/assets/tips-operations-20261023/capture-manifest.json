@@ -1,0 +1,1440 @@
+{
+  "capturedOn": "2026-10-23",
+  "sourceCommit": "44ca87232e5d60479f1e58001d396c227199a776",
+  "branch": "codex/tips-personal-doc-history-20261023",
+  "preview": "http://127.0.0.1:65114/",
+  "session": "tips-doc-images-20261023",
+  "scope": "isolated local demo only; no transfer; original user browser untouched",
+  "coverage": {
+    "operationRows": 106,
+    "rowsWithSomeNewEvidence": 99,
+    "withoutNewSpecificEvidence": [
+      "T01",
+      "T02",
+      "T08",
+      "T14",
+      "R22",
+      "X02",
+      "X03"
+    ],
+    "completeAllBranches": false
+  },
+  "limitations": [
+    "CSV/PDF files not obtained; scenario CSV download canceled",
+    "No real email delivery",
+    "No fabricated unimplemented or historical compatibility UI",
+    "No production transaction or release acceptance"
+  ],
+  "images": [
+    {
+      "file": "navigation-team.png",
+      "operations": [
+        "N01"
+      ],
+      "state": "进入小费管理前",
+      "sha256": "43d2c4913c40d15b98e735947de2a3e76d24d3fae00e4fdd6499af243036a9bd",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "navigation-tips.png",
+      "operations": [
+        "N01",
+        "N03"
+      ],
+      "state": "小费子导航与日期汇总",
+      "sha256": "136d9e34b309dbd042bd5910c6c989e5b0f976ab6ee1a5dcb48ebd8ad7ee2444",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "navigation-back.png",
+      "operations": [
+        "N02"
+      ],
+      "state": "返回团队导航，业务页不变",
+      "sha256": "3db93395940f6fe6c73f05ce6cfc90dc064921a7ffcc254c5f0a04f46304ab4c",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-default.png",
+      "operations": [
+        "D01",
+        "D02"
+      ],
+      "state": "默认最近一个月与有效门店",
+      "sha256": "136d9e34b309dbd042bd5910c6c989e5b0f976ab6ee1a5dcb48ebd8ad7ee2444",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-range.png",
+      "operations": [
+        "D02",
+        "D13"
+      ],
+      "state": "改为10/19—10/23",
+      "sha256": "a1ca99e607e9ae399059b96779c266555bce7ff43905fa9ca77e1ae3c9506cdd",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-closed.png",
+      "operations": [
+        "D03"
+      ],
+      "state": "未营业过滤",
+      "sha256": "c564bb2ff96a5a7f6c04f5f21255575b2c484f92faf1a0211d5d3d2812071c28",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-open.png",
+      "operations": [
+        "D03"
+      ],
+      "state": "正常营业过滤",
+      "sha256": "129fb1e5bad3f1a13d69292898b72aa04f314fe47495a8c5b5de6291fc1dffed",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-allocated-empty.png",
+      "operations": [
+        "D04"
+      ],
+      "state": "已分配过滤空态",
+      "sha256": "febb4a510aaaf0a9d7f2fa28f8027962bc90cd6cc4f0ad336ee0542571431ad2",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-unallocated.png",
+      "operations": [
+        "D04"
+      ],
+      "state": "未分配过滤",
+      "sha256": "a68b55936252b27820f8ca145227eec82f10544e4f4e392f89442e822b8333de",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-no-payout.png",
+      "operations": [
+        "D05"
+      ],
+      "state": "无需发放过滤",
+      "sha256": "00e14f352fdf3cd99aa92e2272a04886fbfb2988ca78ce71b2ec530c9029e154",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-ascending.png",
+      "operations": [
+        "D06"
+      ],
+      "state": "顺序下拉",
+      "sha256": "8529734fbb10d8916982e4c1690bdadeaa36d0f23aac242a52e274a1cd747dc0",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-header-descending.png",
+      "operations": [
+        "D07"
+      ],
+      "state": "表头切倒序",
+      "sha256": "a1ca99e607e9ae399059b96779c266555bce7ff43905fa9ca77e1ae3c9506cdd",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "date-closed-block.png",
+      "operations": [
+        "D09"
+      ],
+      "state": "未营业拦截",
+      "sha256": "d69741295803db0dc5f55f7a7eaaecf96359059128486da71e1b463a48ed5206",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "batch-selection.png",
+      "operations": [
+        "D11",
+        "D12"
+      ],
+      "state": "批量门店日期选择",
+      "sha256": "38f87cb2d02657c6a4d8966961fa323ae41d61688ea30f6fc06b79c97c11de14",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#allocateBtn').click();"
+    },
+    {
+      "file": "batch-invalid-range.png",
+      "operations": [
+        "D12"
+      ],
+      "state": "开始晚于结束字段校验",
+      "sha256": "2a7ffd3716341832ebc7ccb446f680cb3391e6c6b1908697834fc832fb1ac2e7",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('allocationDateStart','2026-10-23');window.tipSet('allocationDateEnd','2026-10-19');window.tipDocRoot().querySelector('#confirmAllocateBtn').click();"
+    },
+    {
+      "file": "batch-cancel-result.png",
+      "operations": [
+        "D13"
+      ],
+      "state": "取消范围弹框返回汇总",
+      "sha256": "1ed425e3d6be8587fc9551951150fbadd964eb2f3683302e46f02104a3bc93eb",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#cancelTipAllocationBtn').click();"
+    },
+    {
+      "file": "export-menu.png",
+      "operations": [
+        "D18",
+        "X01"
+      ],
+      "state": "导出格式菜单",
+      "sha256": "7b17be95821695538dbb8c79c5810c68b5e64f98e26fcf425b41c8aa3618fe2d",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"toggleExportMenu()\"]').click();"
+    },
+    {
+      "file": "export-email.png",
+      "operations": [
+        "X04"
+      ],
+      "state": "发送邮箱输入框",
+      "sha256": "4cf419613909395dd40f55f92d44cdebadab9e1f8eaa24592aaaf4cec7e60490",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"openEmailModal()\"]').click();"
+    },
+    {
+      "file": "export-email-invalid.png",
+      "operations": [
+        "X04"
+      ],
+      "state": "无效邮箱提示",
+      "sha256": "07300cadb7e6963e8abf3090bb5bc836146beb1de6a25ae3a1645a6a59e94578",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('exportEmail','not-an-email');window.tipDocRoot().querySelector('[data-native-onclick=\"sendEmail()\"]').click();"
+    },
+    {
+      "file": "export-email-cancel.png",
+      "operations": [
+        "X04"
+      ],
+      "state": "取消邮箱弹框",
+      "sha256": "4907b3a8917ab48b685f99b41ac4fabd7714ea6887fc8941445b198315b2956a",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#emailModal [data-native-onclick]').click();"
+    },
+    {
+      "file": "scenario-list.png",
+      "operations": [
+        "D19",
+        "X05"
+      ],
+      "state": "真实只读测试场景清单",
+      "sha256": "9b4d263ddd1a1ad194116f351f99f2ca555cd5fb0282f35da3518c47615d07cf",
+      "width": 1500,
+      "height": 1050,
+      "action": "Array.from(window.tipDocRoot().querySelectorAll('button')).find(e=>e.textContent.trim()==='测试场景清单').click();"
+    },
+    {
+      "file": "scenario-export-result.png",
+      "operations": [
+        "X06"
+      ],
+      "state": "尝试清单CSV下载被浏览器取消，未取得文件",
+      "sha256": "66172cd94b8bd07ed211e5c5363a617fcd2ce8190d15fbb04168e7836a0adba4",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above",
+      "gap": "CSV文件结果未完成"
+    },
+    {
+      "file": "scenario-closed.png",
+      "operations": [
+        "X07"
+      ],
+      "state": "关闭清单回原汇总",
+      "sha256": "4df66fac43ae12e34ed8c4384b33013fecffdd62d5706ab370f679cade06488f",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "employee-summary.png",
+      "operations": [
+        "D08"
+      ],
+      "state": "员工汇总及角色卡默认待分配",
+      "sha256": "e3aa2ae9d379c4ee5e646c362bba0b25353e3a14158722e6cea91f24d26c923f",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "employee-contribution-breakdown.png",
+      "operations": [
+        "E07"
+      ],
+      "state": "确认与预计贡献说明",
+      "sha256": "805eb5eaaaee2befe48bb4ec358689fa1c57e5787139e82520ebc7a818846c9c",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "employee-role-server.png",
+      "operations": [
+        "E01"
+      ],
+      "state": "角色过滤Server",
+      "sha256": "c1c4175629a01e8025defadccf9e92916507a2646ba87e8db14705fb825ad9e0",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('employeeSummaryRoleFilter','Server');"
+    },
+    {
+      "file": "employee-picker.png",
+      "operations": [
+        "E02"
+      ],
+      "state": "员工多选下拉",
+      "sha256": "94e905bb0dd2caf2efb86f1c6f90c2383260ececda14445f211369d6b5dd4fd8",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "employee-none-selected.png",
+      "operations": [
+        "E02"
+      ],
+      "state": "取消员工选择后空态",
+      "sha256": "94e905bb0dd2caf2efb86f1c6f90c2383260ececda14445f211369d6b5dd4fd8",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelectorAll('#employeeSummaryEmployeeOptions input')[1].click();"
+    },
+    {
+      "file": "employee-completed-empty.png",
+      "operations": [
+        "E03"
+      ],
+      "state": "已完成状态筛选空态",
+      "sha256": "87150c509b520939351ebbfba2facf27259fe2bdd88259ab1d6fba05b0e81ca0",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelectorAll('#employeeSummaryEmployeeOptions input')[1].click();window.tipSet('employeeSummaryRoleFilter','');window.tipSet('employeeSummaryStatusFilter','已完成');"
+    },
+    {
+      "file": "employee-sort-name.png",
+      "operations": [
+        "E04"
+      ],
+      "state": "按员工排序",
+      "sha256": "05a5a43428477441869019ff970b31082d26034b256bd9fd22f37cfca5462508",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('employeeSummaryStatusFilter','');window.tipDocRoot().querySelector('#employeeSortEmployee').click();"
+    },
+    {
+      "file": "employee-sort-hours.png",
+      "operations": [
+        "E05"
+      ],
+      "state": "按打卡工时排序",
+      "sha256": "70639efd66e7c368fcef4776c5722e5e48891ef62a1ac2c28342a09e485a59db",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#employeeSortHours').click();"
+    },
+    {
+      "file": "employee-sort-final.png",
+      "operations": [
+        "E06"
+      ],
+      "state": "分配后金额排序",
+      "sha256": "edd1e8b7f6a2ae972a37a0104e3eb02576355ce3cd1ed432207bdf71325ed8bf",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#employeeSortFinalAmount').click();"
+    },
+    {
+      "file": "hours-period.png",
+      "operations": [
+        "E08",
+        "H01"
+      ],
+      "state": "周期工时明细弹框",
+      "sha256": "8e6d554bff8429242bf08674d8f1adfff436c9ea89be1a052e41afd4e70bb0ea",
+      "width": 1500,
+      "height": 1050,
+      "action": "Array.from(window.tipDocRoot().querySelectorAll('#employeeReconciliationList button')).find(e=>e.textContent.includes('按规则查看')).click();"
+    },
+    {
+      "file": "hours-close-result.png",
+      "operations": [
+        "H03"
+      ],
+      "state": "关闭工时弹框回汇总",
+      "sha256": "edd1e8b7f6a2ae972a37a0104e3eb02576355ce3cd1ed432207bdf71325ed8bf",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#allocationHoursDetailClose').click();"
+    },
+    {
+      "file": "hours-overlay-result.png",
+      "operations": [
+        "H04"
+      ],
+      "state": "遮罩关闭工时说明",
+      "sha256": "edd1e8b7f6a2ae972a37a0104e3eb02576355ce3cd1ed432207bdf71325ed8bf",
+      "width": 1500,
+      "height": 1050,
+      "action": "Array.from(window.tipDocRoot().querySelectorAll('#employeeReconciliationList button')).find(e=>e.textContent.includes('按规则查看')).click();window.tipDocRoot().querySelector('#allocationHoursDetailModal').click();"
+    },
+    {
+      "file": "hours-escape-result.png",
+      "operations": [
+        "H05"
+      ],
+      "state": "Esc关闭工时说明",
+      "sha256": "a5c41529b90578c240001e632158ac280d22910711534679249a5e525f162cb8",
+      "width": 1500,
+      "height": 1050,
+      "action": "Array.from(window.tipDocRoot().querySelectorAll('#employeeReconciliationList button')).find(e=>e.textContent.includes('按规则查看')).click();"
+    },
+    {
+      "file": "employee-daily.png",
+      "operations": [
+        "E09"
+      ],
+      "state": "员工每日考勤及预计贡献",
+      "sha256": "0fa92198ebeda43905063cd01a4d2516894e866fab9d67d7a935150dc1a902b5",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "hours-day.png",
+      "operations": [
+        "P05",
+        "H02"
+      ],
+      "state": "单日工时弹框",
+      "sha256": "9bd0524ba9b3d04c0f5c5e91bb529604e514735bff2a937b598e38bb8412a35c",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "daily-range.png",
+      "operations": [
+        "P01"
+      ],
+      "state": "员工每日调整周期",
+      "sha256": "bcdb6348ec34f2716532c7d664d024c67af5c7903d93f9afe2803746cb7bbbe3",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#employeeDetailHoursClose').click();window.tipSet('employeeDetailStartDate','2026-10-20');"
+    },
+    {
+      "file": "daily-attendance-filter.png",
+      "operations": [
+        "P02"
+      ],
+      "state": "员工每日未打卡过滤",
+      "sha256": "211b8530b56ca9e9e60357740ae9d22c8ff099c3f1ce4339e8b30a9352ad0f9f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('employeeDetailAttendanceFilter','未打卡');"
+    },
+    {
+      "file": "daily-allocated-empty.png",
+      "operations": [
+        "P03"
+      ],
+      "state": "员工每日已分配过滤空态",
+      "sha256": "684162c932ac70f4652831dfd83808aac3539aa3348e5ae19f5d04e1fd89ba23",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('employeeDetailAttendanceFilter','全部状态');window.tipSet('employeeDetailAllocationStatusFilter','已分配');"
+    },
+    {
+      "file": "daily-date-ascending.png",
+      "operations": [
+        "P04"
+      ],
+      "state": "员工每日顺序列表",
+      "sha256": "b4cce4c45996b0dc2abc819e38a0e044fcd249cde9d7f25daf319173179ed8a3",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('employeeDetailAllocationStatusFilter','全部状态');"
+    },
+    {
+      "file": "daily-return-summary.png",
+      "operations": [
+        "P06"
+      ],
+      "state": "员工每日返回汇总并恢复原周期",
+      "sha256": "cd138ce554f4a2a4f342d48da80318fb84fcb944366984a7af63fa2173d72816",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"returnToEmployeeReconciliation()\"]').click();"
+    },
+    {
+      "file": "employee-return-date.png",
+      "operations": [
+        "E10"
+      ],
+      "state": "员工页签切回日期",
+      "sha256": "e9386a5915e5a6cd46d1636332aada4e5c518555af1e89fbc0fecb6a77be40e3",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#dateTaskTab').click();"
+    },
+    {
+      "file": "date-quick-allocation-result.png",
+      "operations": [
+        "D10"
+      ],
+      "state": "单日快捷分配成功",
+      "sha256": "93ebf3dcd5814581d17504cd52385727f4aa763fe291219fc7f058463ef5cb90",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "payout-summary-dialog.png",
+      "operations": [
+        "D17",
+        "F01"
+      ],
+      "state": "日期行整日发放确认弹框",
+      "sha256": "746adf6b8fc85670e95b45dfb533d88225cb4a2d7958a70beeead12990f2fae1",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-date=\"2026-10-19\"] button').click();"
+    },
+    {
+      "file": "payout-summary-cancel.png",
+      "operations": [
+        "F03"
+      ],
+      "state": "取消发放确认，状态仍待发放",
+      "sha256": "5473ee83ea9607c4e6efea28e1b502ba856c89a6a76c0fdf5b43d2faed5e2714",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmPayoutModal [data-native-onclick=\"closeConfirmPayoutModal()\"]').click();"
+    },
+    {
+      "file": "detail-system.png",
+      "operations": [
+        "D09",
+        "T15",
+        "T16"
+      ],
+      "state": "当天已分配系统结果",
+      "sha256": "b68335b20e4005d206b4c0a8e352214c938caa17c15a3b94a086cf6367714e24",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-date=\"2026-10-19\"]').click();"
+    },
+    {
+      "file": "detail-save-no-change.png",
+      "operations": [
+        "T16"
+      ],
+      "state": "未调整保存原因提示",
+      "sha256": "fcbd57afb161527f15842b8db62a63a0100ddb8a6e4735140e50f20f598dea76",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#saveCurrentDetailAllocationBtn').click();"
+    },
+    {
+      "file": "payout-detail-dialog.png",
+      "operations": [
+        "T19",
+        "F01"
+      ],
+      "state": "明细整日发放确认",
+      "sha256": "f1717ac5d445665639ff51a61ecdb7c5159ed876dce7ebe16758c24fb0c4cdf3",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationDialogBtn').click();window.tipDocRoot().querySelector('#confirmDetailPayoutBtn').click();"
+    },
+    {
+      "file": "payout-detail-cancel.png",
+      "operations": [
+        "F03"
+      ],
+      "state": "取消明细发放确认",
+      "sha256": "b68335b20e4005d206b4c0a8e352214c938caa17c15a3b94a086cf6367714e24",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#cancelDetailPayoutBtn').click();"
+    },
+    {
+      "file": "detail-rule-filter.png",
+      "operations": [
+        "T03"
+      ],
+      "state": "规则多选下拉",
+      "sha256": "9672319db3727c5fd8143e1805c91f370a23b0cdce0302837b13fe7c5532167f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"toggleDetailRuleFilter()\"]').click();"
+    },
+    {
+      "file": "detail-one-rule.png",
+      "operations": [
+        "T03"
+      ],
+      "state": "仅显示一条规则",
+      "sha256": "e2824f29b556d7deaf93f31c86172a3eff0fe2653469ec7876b515a833d65136",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#detailRuleFilterAll').click();window.tipDocRoot().querySelector('#detailRuleFilterOptions input').click();"
+    },
+    {
+      "file": "detail-formula.png",
+      "operations": [
+        "T04"
+      ],
+      "state": "实际公式详情弹框",
+      "sha256": "2f04d62a6d2ccbb48b161666e8ce1d70396f6ac52011c6e206f6fa299f4b1a66",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#detailRulesContainer a').click();"
+    },
+    {
+      "file": "detail-collapsed.png",
+      "operations": [
+        "T05"
+      ],
+      "state": "折叠角色员工表",
+      "sha256": "a177af9df9f769c446d9b574171cbab77b3371ef3f0fd84aff727b30bbaf7b2f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#formulaModal .modal-close').click();window.tipDocRoot().querySelector('#detailRulesContainer button').click();"
+    },
+    {
+      "file": "detail-formula-adjusted.png",
+      "operations": [
+        "T06"
+      ],
+      "state": "手动修改公式基数210",
+      "sha256": "9c48952477f71aff9438b7fea7e5cf52587a57966b9e7da2923e37ec364c7546",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#detailRulesContainer button').click();window.tipInput=(sel,v)=>{const e=window.tipDocRoot().querySelector(sel);if(!e)throw Error(sel);e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return e.value};window.tipInput('.formula-input','210');"
+    },
+    {
+      "file": "detail-invalid-share-confirm.png",
+      "operations": [
+        "T07"
+      ],
+      "state": "组占比超100后的保存确认",
+      "sha256": "ab361f5410f41d44c8f39f41a05e414f807344cb87980681a4d3e21c359a9048",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipInput('.detail-role-pct-input','60');window.tipDocRoot().querySelector('#saveCurrentDetailAllocationBtn').click();"
+    },
+    {
+      "file": "detail-invalid-share-error.png",
+      "operations": [
+        "T07"
+      ],
+      "state": "完整组占比校验失败",
+      "sha256": "6626f5fb34949b79744777862b30ac3bb44ba1320ae6183fbceaf1930fee0b15",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationDialogBtn').click();"
+    },
+    {
+      "file": "detail-add-row.png",
+      "operations": [
+        "T09"
+      ],
+      "state": "新增员工分配行",
+      "sha256": "c99915550e3e2679e3e48253b459646ae43feaa2c1022cadbc233dfdecd1b0c9",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipInput('.detail-role-pct-input','50');Array.from(window.tipDocRoot().querySelectorAll('#detailRulesContainer a')).find(e=>e.textContent==='新增行').click();"
+    },
+    {
+      "file": "detail-delete-row.png",
+      "operations": [
+        "T10"
+      ],
+      "state": "删除新增行恢复",
+      "sha256": "65b925ab285eeb9bd31e7038742027483b9fd914d9f55e62b87e06c96f6851f7",
+      "width": 1500,
+      "height": 1050,
+      "action": "const sec=window.tipDocRoot().querySelector('.detail-result-section');const rows=sec.querySelectorAll('tbody tr');rows[rows.length-1].querySelector('a.danger').click();"
+    },
+    {
+      "file": "detail-weight-adjusted.png",
+      "operations": [
+        "T11"
+      ],
+      "state": "员工权重手动2",
+      "sha256": "a30c485c3c4fa0490d96f2a2f9a2f760672c5917db97aa58f7b706b23db69412",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipInput('.detail-emp-weight-input','2');"
+    },
+    {
+      "file": "detail-hours-adjusted.png",
+      "operations": [
+        "T12"
+      ],
+      "state": "未打卡员工补分配工时4",
+      "sha256": "de25792203f4971cc315f22b9412a82613f6b09d6577a4b41abbb3cb68f62e55",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipInput('.detail-emp-hours-input','4');"
+    },
+    {
+      "file": "detail-percent-adjusted.png",
+      "operations": [
+        "T13"
+      ],
+      "state": "手动最终比例80留余额",
+      "sha256": "b970885f506532902a37c732b8111ad64d314cb03c7eb611eedfcc7b6c30a356",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipInput('.detail-emp-pct-input','80');"
+    },
+    {
+      "file": "detail-save-confirm.png",
+      "operations": [
+        "T15"
+      ],
+      "state": "保存人工分配确认",
+      "sha256": "c20f650feb9585e27eff4ccbecd5444fbad5b1ee69c20208960603afa6f9e08c",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#saveCurrentDetailAllocationBtn').click();"
+    },
+    {
+      "file": "detail-save-result.png",
+      "operations": [
+        "T15"
+      ],
+      "state": "人工分配保存成功",
+      "sha256": "cf5828fffda7e7e9d8e180b17da13df4f3a4ef40972d1f2930f84de5933710d5",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationDialogBtn').click();"
+    },
+    {
+      "file": "detail-reallocate-confirm.png",
+      "operations": [
+        "T17"
+      ],
+      "state": "系统重新分配覆盖人工确认",
+      "sha256": "892fde689d4c39412b490e6d7b2229280529f7f81b3dd739158e72c9ed55ad11",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationBtn').click();"
+    },
+    {
+      "file": "detail-reallocate-cancel.png",
+      "operations": [
+        "T17"
+      ],
+      "state": "取消重分配保留人工结果",
+      "sha256": "7bc3c3dbe8659af660250af1a1f5509060696899070e720be0afc756a8bc06bf",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#cancelDetailAllocationDialogBtn').click();"
+    },
+    {
+      "file": "detail-update-dialog.png",
+      "operations": [
+        "T18",
+        "U01"
+      ],
+      "state": "更新小费覆盖确认",
+      "sha256": "ab138f311928013cb634ff1704ad71a4071d4442a9c9297fa66e6b7889f83ad1",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"updateTipData()\"]').click();"
+    },
+    {
+      "file": "detail-update-cancel.png",
+      "operations": [
+        "U03"
+      ],
+      "state": "取消更新保留手工数据",
+      "sha256": "3d25fef3228570c49950541b0567efde23981d53c9dff4635e78c70b9cccd4f2",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#cancelTipDataUpdateBtn').click();"
+    },
+    {
+      "file": "detail-updated-draft.png",
+      "operations": [
+        "U02"
+      ],
+      "state": "更新成功但未重新确认，发放禁用",
+      "sha256": "d3e03c34f1b90eb9503fcc3c212a4816c7708f08e1bc8e239a43aaa1a3bb7e49",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"updateTipData()\"]').click();window.tipDocRoot().querySelector('#confirmTipDataUpdateBtn').click();"
+    },
+    {
+      "file": "detail-updated-reconfirm.png",
+      "operations": [
+        "T17"
+      ],
+      "state": "更新后重新确认系统分配",
+      "sha256": "16c213a3385c7f477e053d30615c223d39855e759e962622fdcc5c7b38ed6c61",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationBtn').click();"
+    },
+    {
+      "file": "detail-reallocated-result.png",
+      "operations": [
+        "T17"
+      ],
+      "state": "系统重分配成功恢复默认",
+      "sha256": "af45b031e187087ff36fcea293b0e0414b75e4d49a40811a068f3b193f4c3cc1",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmDetailAllocationDialogBtn').click();"
+    },
+    {
+      "file": "detail-return-summary.png",
+      "operations": [
+        "T20"
+      ],
+      "state": "明细返回日期汇总",
+      "sha256": "271efa88d9cca03d3e6a3aef6dc374b38b62de39a63bad2309d904fc6e6b33f8",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"returnToSummary()\"]').click();"
+    },
+    {
+      "file": "detail-manual-before-batch.png",
+      "operations": [
+        "T15"
+      ],
+      "state": "隔离人工保存用于覆盖确认",
+      "sha256": "e038084e6809670b5143cdadce704833860fa4a63860109f650527463324ee97",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-date=\"2026-10-19\"]').click();window.tipInput('.detail-emp-weight-input','2');window.tipDocRoot().querySelector('#saveCurrentDetailAllocationBtn').click();window.tipDocRoot().querySelector('#confirmDetailAllocationDialogBtn').click();"
+    },
+    {
+      "file": "batch-manual-warning.png",
+      "operations": [
+        "D12",
+        "D14"
+      ],
+      "state": "范围含人工日覆盖确认",
+      "sha256": "4b7be16eb46023c49dc97c3239e8b44b20f96cc3fbb8a50ccefe9decef276abd",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"returnToSummary()\"]').click();window.tipDocRoot().querySelector('#allocateBtn').click();window.tipSet('allocationDateStart','2026-10-19');window.tipSet('allocationDateEnd','2026-10-21');window.tipDocRoot().querySelector('#confirmAllocateBtn').click();"
+    },
+    {
+      "file": "batch-warning-cancel.png",
+      "operations": [
+        "D15"
+      ],
+      "state": "取消覆盖后人工结果保留",
+      "sha256": "5950365eb2b1568a3fc96513fdd69fcd213a9a428238d63571f5ca80c5f6b333",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#cancelTipAllocationBtn').click();"
+    },
+    {
+      "file": "batch-manual-single.png",
+      "operations": [
+        "D14"
+      ],
+      "state": "单日含人工保存确认",
+      "sha256": "d1181e4d1e0c2a2089b95d20591cd43f4861fa5c6869af576d84340ab95aa0a0",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#allocateBtn').click();window.tipSet('allocationDateStart','2026-10-19');window.tipSet('allocationDateEnd','2026-10-19');window.tipDocRoot().querySelector('#confirmAllocateBtn').click();"
+    },
+    {
+      "file": "batch-reallocated.png",
+      "operations": [
+        "D14"
+      ],
+      "state": "确认系统覆盖人工完成",
+      "sha256": "cfd6891dc96476d77e5b39c8f05bba568012982f9aff1a23984528f725ca200d",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#confirmTipOverwriteBtn').click();"
+    },
+    {
+      "file": "payout-demo-locked-summary.png",
+      "operations": [
+        "F02"
+      ],
+      "state": "隔离演示发放登记成功，仅本地标记锁定",
+      "sha256": "185c22be443a15469eda9b60cfb95ecd54f64ad3bda21adb2e292c183adedd1b",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-date=\"2026-10-19\"] .tipout-confirm-payout').click();window.tipDocRoot().querySelector('#submitConfirmPayoutBtn').click();"
+    },
+    {
+      "file": "payout-demo-locked-detail.png",
+      "operations": [
+        "F02"
+      ],
+      "state": "已发放锁定明细只读",
+      "sha256": "b68335b20e4005d206b4c0a8e352214c938caa17c15a3b94a086cf6367714e24",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-date=\"2026-10-19\"]').click();"
+    },
+    {
+      "file": "cancel-allocation-skips-locked.png",
+      "operations": [
+        "D16"
+      ],
+      "state": "演示取消分配跳过已发放",
+      "sha256": "6b08c1ebbfc54991b097cc7b856461d70bba18789efd17236c3ae062be91babe",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"returnToSummary()\"]').click();window.tipDocRoot().querySelector('[data-native-onclick=\"doCancelAllocate()\"]').click();"
+    },
+    {
+      "file": "rules-list.png",
+      "operations": [
+        "N04"
+      ],
+      "state": "分配规则列表",
+      "sha256": "4ed12a65c0c6aff9ffb712eb1e4fbbde612ba66abe89c9a22ced787da1418c7b",
+      "width": 1500,
+      "height": 1050,
+      "action": "location.hash='/team/tips/rules';"
+    },
+    {
+      "file": "rule-pool-type.png",
+      "operations": [
+        "L02",
+        "L07"
+      ],
+      "state": "新增规则选择池类型",
+      "sha256": "d9ea984109c328dd0a80d958bfee18508108363e1e389ae85052a09f7adf882c",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"openAddRuleModal()\"]').click()"
+    },
+    {
+      "file": "rule-new.png",
+      "operations": [
+        "L08"
+      ],
+      "state": "新增小费规则默认页面",
+      "sha256": "9b7e175fa10a1ede26b682be6176e38c492dcf802997a95f269ec472ff2b8ca8",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"confirmPoolTypeSelection()\"]').click()"
+    },
+    {
+      "file": "rule-average-help.png",
+      "operations": [
+        "R02"
+      ],
+      "state": "平均分配说明示例展开",
+      "sha256": "6c2054bbe1321b4abc139258e3c097306f4d62e206c6299403ad17fb725e4084",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('.distribution-method-help summary').click()"
+    },
+    {
+      "file": "rule-hours-clock.png",
+      "operations": [
+        "R01",
+        "R19",
+        "R21"
+      ],
+      "state": "工时分配与仅打卡资格联动",
+      "sha256": "950d5da88d76f23d199b3963887187df22c12a24877de93236c67ef957651309",
+      "width": 1500,
+      "height": 1050,
+      "action": "const r=window.tipDocRoot();r.querySelector('details[open] summary')?.click();r.querySelector('input[name=distribution][value=hours]').click();r.querySelector('#distributionSection').scrollIntoView()"
+    },
+    {
+      "file": "rule-hours-unrestricted.png",
+      "operations": [
+        "R19",
+        "R21"
+      ],
+      "state": "不限打卡资格工时设置",
+      "sha256": "260dfef1b127adf529bffea920ed8e331ad0b25efc80d0ae124a17003777ff3c",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('input[name=clockin][value=unrestricted]').click()"
+    },
+    {
+      "file": "rule-hours-timewindow.png",
+      "operations": [
+        "R19",
+        "R21"
+      ],
+      "state": "发生时在岗资格工时提示",
+      "sha256": "c348ef324ba40d1ec0a6a7af39fd0a9e1289672e64a85e404b347c958f28ac03",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('input[name=clockin][value=time_window]').click()"
+    },
+    {
+      "file": "rule-orders.png",
+      "operations": [
+        "R01"
+      ],
+      "state": "订单占比分配选中",
+      "sha256": "d3e9b4aa57a19982f4004fb1b1450e4efeba9421b4a6854f946c8fd9c6c20d76",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('input[name=distribution][value=orders]').click();window.tipDocRoot().querySelector('.distribution-method-cards').scrollIntoView()"
+    },
+    {
+      "file": "rule-claim-mode.png",
+      "operations": [
+        "R10"
+      ],
+      "state": "计提及剩余接收方区域",
+      "sha256": "407ac7ff2f6d8539d8028162cadc966495241cd69a19164040418155754bc903",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('input[name=allocationMode][value=order_tip_then_residual]').click();window.tipDocRoot().querySelector('#orderTipAllocationSection').scrollIntoView()"
+    },
+    {
+      "file": "rule-save-validation.png",
+      "operations": [
+        "R23"
+      ],
+      "state": "新增规则缺名称校验",
+      "sha256": "d92631ec09beb345dbae9531007d4f034b88931284238af55464d3c29890627f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"submitRule()\"]').click();window.scrollTo(0,0)"
+    },
+    {
+      "file": "rule-leave-confirm.png",
+      "operations": [
+        "R24"
+      ],
+      "state": "离开有修改规则的提示",
+      "sha256": "da3232400e4fe58bac946322ec1ea077d109298dfcaa928062273d7a813fb510",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"cancelRule()\"]').click()"
+    },
+    {
+      "file": "rule-edit.png",
+      "operations": [
+        "L03"
+      ],
+      "state": "既有规则编辑回填",
+      "sha256": "d63425436ade08b2a4d77c487f1b3eccdfb8a1962cf1ae9efd55ff34847a46de",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.scrollTo(0,0)"
+    },
+    {
+      "file": "rule-weight-dialog.png",
+      "operations": [
+        "W01",
+        "R15"
+      ],
+      "state": "接收组员工权重弹框",
+      "sha256": "cfc986d1f0aaa5c243078fc923180f80e7c095f99dd317a95236521d43148a43",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#receiverTable').scrollIntoView();window.tipDocRoot().querySelector('.weight-link').click()"
+    },
+    {
+      "file": "rule-weight-adjusted.png",
+      "operations": [
+        "W02",
+        "R16"
+      ],
+      "state": "权重修改后的换算比例",
+      "sha256": "97a8211e64ae0349e02821e4f6d45a07b700e19769a8a36fdb99ef971d68209d",
+      "width": 1500,
+      "height": 1050,
+      "action": "const x=window.tipDocRoot().querySelector('#weightModalBody input[type=number]');x.value='2';x.dispatchEvent(new Event('input',{bubbles:true}));x.dispatchEvent(new Event('change',{bubbles:true}))"
+    },
+    {
+      "file": "rule-weight-confirmed.png",
+      "operations": [
+        "W03",
+        "R17"
+      ],
+      "state": "确认权重回编辑页，尚未保存整条规则",
+      "sha256": "5d89330af1d5982f188067c5e6d75ff8455279fd46c96c6bf84c6a5a6a20263a",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"saveWeight()\"]').click()"
+    },
+    {
+      "file": "rule-source-drawer.png",
+      "operations": [
+        "C01",
+        "R05"
+      ],
+      "state": "小费来源条件抽屉",
+      "sha256": "0f6bfba8c61a7e77568b948acb59a546d0c0db54869b7eed1ecc928ecd606a58",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#poolRulesContainer button').click()"
+    },
+    {
+      "file": "condition-menu.png",
+      "operations": [
+        "C02",
+        "R06"
+      ],
+      "state": "小费来源新增条件菜单",
+      "sha256": "6be8ed1b89a1580e0e93d75692a36732f6cf666340910a9179ba76d19d686758",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#tipsDrawer [data-native-onclick*=\"toggleAddConditionMenu\"]').click()"
+    },
+    {
+      "file": "condition-hours.png",
+      "operations": [
+        "C02",
+        "R06"
+      ],
+      "state": "新增订单时间段条件",
+      "sha256": "1fc55d36361d1d5d29b412170160c0ae361c631a8800bad1aa58ee8f077f2b9b",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"addTipsCondition(\\'hours\\')\"]').click()"
+    },
+    {
+      "file": "condition-validation.png",
+      "operations": [
+        "C04",
+        "R08"
+      ],
+      "state": "条件提交成功回父配置（截图为实际成功，不作为非法条件拦截证据）",
+      "sha256": "6de1965f214155a30edd6357a3aee325dd06a9ad5fa12f8f63ccf194541a0165",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#tipsDrawer [data-native-onclick=\"saveTipsCondition()\"]').click()"
+    },
+    {
+      "file": "contribution-drawer.png",
+      "operations": [
+        "R11",
+        "C01",
+        "R05"
+      ],
+      "state": "销售额贡献方取值条件抽屉",
+      "sha256": "79a73adeb477e9e68676b98556c9c42d0d648d56ee6d92a64039a9f41db1a34d",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#tipsDrawer [data-native-onclick=\"closeDrawer(\\'tipsDrawer\\')\"]').click();window.tipDocRoot().querySelector('#deductRulesContainer button').click()"
+    },
+    {
+      "file": "rule-source-menu.png",
+      "operations": [
+        "R03"
+      ],
+      "state": "金额计算项新增菜单",
+      "sha256": "c0aa33a6288f7faa4f7e8c353663a61d31e92c0a19b56ebbd1e779769fd79c80",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#salesDrawer [data-native-onclick=\"closeDrawer(\\'salesDrawer\\')\"]').click();window.tipDocRoot().querySelector('#addMenuBtn').click();window.tipDocRoot().querySelector('#addMenuBtn').scrollIntoView()"
+    },
+    {
+      "file": "sales-source-drawer.png",
+      "operations": [
+        "C01",
+        "R05"
+      ],
+      "state": "销售额来源条件抽屉",
+      "sha256": "1f55a6c31b9fef8cddbd4d645063cda465484b6ab6bcb91430e5cb07c43e62d0",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"addPoolRule(\\'sales\\')\"]').click();Array.from(window.tipDocRoot().querySelectorAll('#poolRulesContainer button')).filter(e=>e.textContent.includes('设置取值条件')).at(-1).click()"
+    },
+    {
+      "file": "manual-source-drawer.png",
+      "operations": [
+        "C01",
+        "R05"
+      ],
+      "state": "手动上报来源条件抽屉",
+      "sha256": "139251c061745da6198cf3cdd6981c930d7895cc2f1bc2a70ba13b33ff217421",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#salesDrawer [data-native-onclick=\"closeDrawer(\\'salesDrawer\\')\"]').click();window.tipDocRoot().querySelector('#addMenuBtn').click();window.tipDocRoot().querySelector('[data-native-onclick=\"addPoolRule(\\'manual\\')\"]').click();Array.from(window.tipDocRoot().querySelectorAll('#poolRulesContainer button')).filter(e=>e.textContent.includes('设置取值条件')).at(-1).click()"
+    },
+    {
+      "file": "surcharge-source-drawer.png",
+      "operations": [
+        "C01",
+        "R05"
+      ],
+      "state": "加收服务费来源条件抽屉",
+      "sha256": "f99409d2c74fc0116a6546731bd6604afefc0dd3782b965986da0a9699c6b740",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#manualDrawer [data-native-onclick=\"closeDrawer(\\'manualDrawer\\')\"]').click();window.tipDocRoot().querySelector('#addMenuBtn').click();window.tipDocRoot().querySelector('[data-native-onclick=\"addPoolRule(\\'surcharge\\')\"]').click();Array.from(window.tipDocRoot().querySelectorAll('#poolRulesContainer button')).filter(e=>e.textContent.includes('设置取值条件')).at(-1).click()"
+    },
+    {
+      "file": "rules-more.png",
+      "operations": [
+        "L04"
+      ],
+      "state": "规则更多操作菜单",
+      "sha256": "529f8b3648da289d845e2a36b7553877d57df9e1adeb624216dadecd3141975c",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "rules-copy-result.png",
+      "operations": [
+        "L05"
+      ],
+      "state": "隔离演示复制生成副本",
+      "sha256": "144aa73c9d7377563e5259d5dc5b4739df47f9a8d83232efd2d8764c6997ce6f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#rulesTableBody tr:last-child').scrollIntoView()"
+    },
+    {
+      "file": "rules-delete-confirm.png",
+      "operations": [
+        "L06"
+      ],
+      "state": "仅删除隔离演示副本的确认框",
+      "sha256": "fdfd86f8ade437600e100df35bd77dba279928c1c4894b88deb0775d010c2793",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#rulesTableBody tr:last-child button').click();window.tipDocRoot().querySelector('#rulesTableBody tr:last-child [role=menuitem].danger').click()"
+    },
+    {
+      "file": "rules-delete-result.png",
+      "operations": [
+        "L06"
+      ],
+      "state": "隔离演示副本删除成功，原11条规则保留",
+      "sha256": "6a44157ee4f276762438fe5a8283ee6cdd8b3ed1a8c9380c7959dc629eb859bd",
+      "width": 1500,
+      "height": 1050,
+      "action": "Actual browser UI action; state described above"
+    },
+    {
+      "file": "rules-store-filter.png",
+      "operations": [
+        "L01"
+      ],
+      "state": "单店规则筛选",
+      "sha256": "5fedec19c07ca1e3a82edb3824ba0b371e1aeb0c758b9e66740e5ef3e7068869",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipSet('storeFilter','Golden Dragon Chinese Kitchen - Dallas, TX 75231')"
+    },
+    {
+      "file": "rule-pool-surcharge.png",
+      "operations": [
+        "L07"
+      ],
+      "state": "选择加收服务费池",
+      "sha256": "38db77dbc8d9fcddcaece76ca8af29ea13eee7988f449d5f6337fa8b548a0eb1",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"openAddRuleModal()\"]').click();window.tipDocRoot().querySelector('[data-pool-type=surcharge] input').click()"
+    },
+    {
+      "file": "rule-pool-cancel.png",
+      "operations": [
+        "L09"
+      ],
+      "state": "取消池类型选择返回列表",
+      "sha256": "c2f180aa94f083b8f4b23be84dbe49bdab24b0737df1fe425079685889cb498a",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"closePoolTypeModal()\"]').click()"
+    },
+    {
+      "file": "rule-edit-default.png",
+      "operations": [
+        "L03"
+      ],
+      "state": "既有规则编辑默认",
+      "sha256": "ed2499bc762ce9cc6fdd3bef90e39cea3c6e5c5723836b9509a38e8688bb885b",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#rulesTableBody a').click()"
+    },
+    {
+      "file": "rule-hours-cap.png",
+      "operations": [
+        "R21"
+      ],
+      "state": "每日计入工时上限5小时",
+      "sha256": "7aec4b183763904d68821928a8a70f33537371cf1dcb220fb48ced74d5d12b90",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#distributionSection').scrollIntoView();window.tipDocRoot().querySelector('input[name=workHoursMode][value=capped]').click();window.tipInput('#maxHoursPerDay','5')"
+    },
+    {
+      "file": "rule-clock-help.png",
+      "operations": [
+        "R20"
+      ],
+      "state": "工时算法仅打卡资格动态示例",
+      "sha256": "9c37e54216e0903a7d9bbf720464d425ebbcc513f79786c9a21f135725634e94",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[aria-label=\"查看仅打卡员工说明示例\"]').click()"
+    },
+    {
+      "file": "rule-unrestricted-help.png",
+      "operations": [
+        "R20"
+      ],
+      "state": "工时算法不限打卡资格动态示例",
+      "sha256": "8adda1caff8c52c2e39a3c67a7966e056550502768bec888e3e4dcedb2b78048",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[aria-label=\"查看仅打卡员工说明示例\"]').click();window.tipDocRoot().querySelector('input[name=clockin][value=unrestricted]').click();window.tipDocRoot().querySelector('[aria-label=\"查看不限打卡状态说明示例\"]').click()"
+    },
+    {
+      "file": "rule-timewindow-help.png",
+      "operations": [
+        "R20"
+      ],
+      "state": "工时算法发生时在岗动态示例",
+      "sha256": "b3f115e08392d641ce2a61077015a6594fed9e00d0bbdcf074ca35e7adc4518d",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[aria-label=\"查看不限打卡状态说明示例\"]').click();window.tipDocRoot().querySelector('input[name=clockin][value=time_window]').click();window.tipDocRoot().querySelector('[aria-label=\"查看仅限小费产生时在岗员工说明示例\"]').click()"
+    },
+    {
+      "file": "rule-receiver-add.png",
+      "operations": [
+        "R13"
+      ],
+      "state": "新增接收组",
+      "sha256": "ea6096135b98d42df7e4831b3837e3e4a7dabb518e20ccf14aaecbae01feeea3",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[aria-label=\"查看仅限小费产生时在岗员工说明示例\"]').click();window.tipDocRoot().querySelector('[data-native-onclick=\"addReceiverRow()\"]').click();window.tipDocRoot().querySelector('#receiverTableBody tr:last-child').scrollIntoView()"
+    },
+    {
+      "file": "rule-receiver-delete.png",
+      "operations": [
+        "R14"
+      ],
+      "state": "删除新建接收组后的配置",
+      "sha256": "c4edaea800a1e3bfbd5ad12e66842774341de916eb4eb5d0d304898ebf8d0efb",
+      "width": 1500,
+      "height": 1050,
+      "action": "Array.from(window.tipDocRoot().querySelectorAll('#receiverTableBody .receiver-primary-row')).at(-1).querySelector('[data-native-onclick=\"removeReceiverPrimaryRow(this)\"]').click()"
+    },
+    {
+      "file": "rule-weight-cancel.png",
+      "operations": [
+        "W04",
+        "R18"
+      ],
+      "state": "取消临时权重3，父配置保留旧权重",
+      "sha256": "c4edaea800a1e3bfbd5ad12e66842774341de916eb4eb5d0d304898ebf8d0efb",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('.weight-link').click();const e=window.tipDocRoot().querySelector('#weightModalBody input');e.value='3';e.dispatchEvent(new Event('input',{bubbles:true}));window.tipDocRoot().querySelector('#weightModal [data-native-onclick=\"closeModal(\\'weightModal\\')\"]').click()"
+    },
+    {
+      "file": "condition-delete.png",
+      "operations": [
+        "C03",
+        "R07"
+      ],
+      "state": "删除抽屉中的角色条件",
+      "sha256": "86c67016786b9ebf4b5fa384af451d030fe7aa7eaacf271e217550405498868c",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#poolRulesContainer button').click();window.tipDocRoot().querySelector('#tipsDrawer .condition-card button').click()"
+    },
+    {
+      "file": "condition-cancel.png",
+      "operations": [
+        "C05",
+        "R09"
+      ],
+      "state": "取消抽屉回父配置，未保存整条规则",
+      "sha256": "d05c3deeaf344736fc78067a9bb6e1209c2a515b942ef4c7866b72b079ad19c4",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#tipsDrawer [data-native-onclick=\"closeDrawer(\\'tipsDrawer\\')\"]').click()"
+    },
+    {
+      "file": "rule-source-delete.png",
+      "operations": [
+        "R04"
+      ],
+      "state": "金额计算项删除确认框（未确认删除）",
+      "sha256": "693d3c50bed0f1c5c6a8baa1ef21084d75cb8daa54ff94fccb9890037aa0b86f",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#poolRulesContainer [data-native-onclick*=\"removePoolRule\"]').click();window.tipDocRoot().querySelector('#poolRulesContainer').scrollIntoView()"
+    },
+    {
+      "file": "rule-contribution-delete.png",
+      "operations": [
+        "R12"
+      ],
+      "state": "贡献方删除确认框（未确认删除）",
+      "sha256": "22a70cf053098fb2481c562e87eced48dcedd979afc95af620ab8e8d0740bdc1",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('#deductRulesContainer [data-native-onclick*=\"removeDeductRule\"]').click()"
+    },
+    {
+      "file": "rule-return-protection.png",
+      "operations": [
+        "R25"
+      ],
+      "state": "返回规则列表结果（不证明未保存保护已生效）",
+      "sha256": "d5df9a8b7f1b1a6aa2083d5f9fed1b890173561df07a61907bc4e50d203e605d",
+      "width": 1500,
+      "height": 1050,
+      "action": "window.tipDocRoot().querySelector('[data-native-onclick=\"window.location.href=\\'rules.html\\'\"]').click()"
+    }
+  ]
+}

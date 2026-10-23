@@ -528,6 +528,40 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       return dates;
     }
+    var lastValidSummaryDateRange = null;
+
+    function validateSummaryDateRange(focusError) {
+      var start = document.getElementById('dateStart');
+      var end = document.getElementById('dateEnd');
+      var feedback = document.getElementById('summaryDateRangeError');
+      var s = start.value, e = end.value, message = '', invalid = null;
+      if (!s) { message = '请选择开始日期'; invalid = start; }
+      else if (!e) { message = '请选择结束日期'; invalid = end; }
+      else if (!TipOutSummaryDateSort.isValidDateRange(s, s)) { message = '请输入有效的开始日期'; invalid = start; }
+      else if (!TipOutSummaryDateSort.isValidDateRange(e, e)) { message = '请输入有效的结束日期'; invalid = end; }
+      else if (s > e) { message = '开始日期不能晚于结束日期'; invalid = start; }
+      [start, end].forEach(function(input) {
+        if (input === invalid) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+      });
+      if (feedback) {
+        feedback.hidden = !message;
+        feedback.textContent = message ? message + '。' + (lastValidSummaryDateRange
+          ? '当前仍显示上次有效查询结果（' + lastValidSummaryDateRange.startDate.replace(/-/g, '/') + '—' + lastValidSummaryDateRange.endDate.replace(/-/g, '/') + '），修正日期后更新。'
+          : '修正日期后查询。') : '';
+      }
+      if (invalid && focusError) invalid.focus();
+      return !invalid;
+    }
+
+    function handleSummaryDateRangeChange() {
+      if (!validateSummaryDateRange(true)) return false;
+      invalidateDayPipelineCache();
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+      return true;
+    }
+
     function getDateRange() {
       const s = document.getElementById('dateStart').value;
       const e = document.getElementById('dateEnd').value;
@@ -547,6 +581,7 @@ var ALLOC_KEY = 'tipout_allocated';
     var restoredSummaryStateSignature = null;
 
     function captureSummaryUiState(returnDate, returnEmployeeId) {
+      if (!validateSummaryDateRange(false)) return;
       var state = TipOutSummaryUi.buildSummaryHistoryState({
         dateStart: document.getElementById('dateStart').value,
         dateEnd: document.getElementById('dateEnd').value,
@@ -611,6 +646,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function setSummaryView(view, options) {
+      if (!validateSummaryDateRange(true)) return;
       var nextView = TipOutSummaryUi.normalizeSummaryView(view);
       var historyMode = options && options.historyMode || 'push';
       if (nextView === activeSummaryView && historyMode === 'push') return;
@@ -744,6 +780,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function openDailyDetail(dateKey) {
+      if (!validateSummaryDateRange(true)) return;
       var snapshotRow = buildDailyDataset(getFilteredEmployees()).filter(function(row) { return row.dateKey === dateKey; })[0];
       if (snapshotRow && snapshotRow.businessStatusResult.status === 'closed') {
         showNotification('当天未营业，无法查看分配明细', 'warning');
@@ -777,6 +814,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function openEmployeeReconciliationDetail(employeeId) {
+      if (!validateSummaryDateRange(true)) return;
       var aggregate = employeeAggregateById[employeeId];
       if (!aggregate) return;
       var store = (document.getElementById('storeSelect') || {}).value || '';
@@ -992,6 +1030,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     async function quickAllocateDay(dateKey, event) {
       if (event) { event.preventDefault(); event.stopPropagation(); }
+      if (!validateSummaryDateRange(true)) return;
       var store = document.getElementById('storeSelect').value;
       var key = store + '\u0000' + dateKey;
       if (quickAllocationPending.has(key)) return;
@@ -1025,6 +1064,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     async function openConfirmPayoutModal(dateKey, event) {
       if (event) { event.preventDefault(); event.stopPropagation(); }
+      if (!validateSummaryDateRange(true)) return;
       var store = ((document.getElementById('storeSelect') || {}).value || '').trim();
       try {
         var snapshot = await TipOutDateState.ensureSnapshot(store, dateKey);
@@ -1322,6 +1362,11 @@ var ALLOC_KEY = 'tipout_allocated';
     function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
+      if (!validateSummaryDateRange(false)) return false;
+      lastValidSummaryDateRange = {
+        startDate: document.getElementById('dateStart').value,
+        endDate: document.getElementById('dateEnd').value
+      };
       if (window.TipOutScenarioSource && window.TipOutScenarioSource.withReadCache) {
         return window.TipOutScenarioSource.withReadCache(renderSummaryViewsFromFacts);
       }
@@ -1441,6 +1486,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function openTipAllocationModal() {
+      if (!validateSummaryDateRange(true)) return;
       resetAllocationOverwrite();
       if (redirectToTipRulesWhenMissing()) return;
       var pageStore = document.getElementById('storeSelect');
@@ -1627,6 +1673,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     async function doCancelAllocate() {
+      if (!validateSummaryDateRange(true)) return;
       invalidateDayPipelineCache();
       var dates = getDateRange();
       var storeSel = document.getElementById('storeSelect');

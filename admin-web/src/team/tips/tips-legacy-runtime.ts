@@ -47,7 +47,7 @@ const dependencies: Record<TipsView, string[]> = {
   details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot, detailManualAllocation, attendanceLabel],
   rules: [common, ruleData, rosterDirectory, demoRules],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
-  "employee-reconciliation": [common, attendance, summary, rosterDirectory],
+  "employee-reconciliation": [common, attendance, summary, summaryDateSort, rosterDirectory],
 };
 
 function runtimeSource(view: TipsView): string {
@@ -132,7 +132,11 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     on(realWindow, 'hashchange', (event: Event) => {
       if (realWindow.location.href === mountedUrl) return;
       const allow = winTarget.tipoutAllowLeave;
-      if (typeof allow === 'function' && !allow()) {
+      const targetUrl = realWindow.location.href, targetHistoryState = realWindow.history.state;
+      if (typeof allow === 'function' && !allow(() => {
+        realWindow.history.replaceState(targetHistoryState, '', targetUrl);
+        realWindow.dispatchEvent(new HashChangeEvent('hashchange', { oldURL: mountedUrl, newURL: targetUrl }));
+      })) {
         event.stopImmediatePropagation();
         realWindow.history.replaceState(mountedHistoryState, '', mountedUrl);
       }
