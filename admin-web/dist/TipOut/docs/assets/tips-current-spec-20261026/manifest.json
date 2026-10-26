@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-RULE-ORDER-20261026-01",
-  "baseline": "916bcdcf",
+  "documentId": "TIPOUT-RULE-GROUPING-20261026-01",
+  "baseline": "5501da2d",
   "versions": {
-    "PRD_产品需求文档.md": "V4.28",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.28",
-    "小费管理需求文档（个人规范版）.md": "V2.26"
+    "PRD_产品需求文档.md": "V4.31",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.31",
+    "小费管理需求文档（个人规范版）.md": "V2.29"
   },
   "images": [
     {
@@ -286,28 +286,34 @@
       "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
     },
     {
-      "file": "assets/tips-rule-order-20261026/editor.png",
-      "caption": "规则编辑页布局与范围模式",
-      "sha256": "4562f13b6d0d2a04d569f3d22736af8d5e559d3805070bbda8673f6422115f1e",
-      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+      "file": "assets/tips-scope-cards-20261026/day.png",
+      "caption": "统计与分配范围卡片",
+      "sha256": "8070c6be73a2360cc4df6393d0e08fc6a65c8961ab73b60fd3c761a130cf6739",
+      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     },
     {
-      "file": "assets/tips-rule-order-20261026/hours.png",
-      "caption": "规则编辑页布局与范围模式",
-      "sha256": "58be45569e1322ae65a45fc646d509be8f3556b2657510efd07d3f972ba0e816",
-      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+      "file": "assets/tips-scope-cards-20261026/hours.png",
+      "caption": "统计与分配范围卡片",
+      "sha256": "507204abbea6840fa9e4a31d66e14bc8af591656e8bbbbd203d77da6c65b4afd",
+      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     },
     {
-      "file": "assets/tips-rule-order-20261026/time-window.png",
-      "caption": "规则编辑页布局与范围模式",
-      "sha256": "f140d62258027c1deb944d4608854a348c013efc6292415a4f43b2f4347c02a1",
-      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+      "file": "assets/tips-scope-cards-20261026/time-window.png",
+      "caption": "统计与分配范围卡片",
+      "sha256": "b293a871f8bb52d8521b2f54e6246472ace1c1ef2f972fbfa30039a6853b23ca",
+      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     },
     {
-      "file": "assets/tips-rule-order-20261026/shift.png",
-      "caption": "规则编辑页布局与范围模式",
-      "sha256": "cf56c232cdc9de3e9721b5c0ad78373f56f38bd009e09505c1dc8dd937c83197",
-      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+      "file": "assets/tips-scope-cards-20261026/shift.png",
+      "caption": "统计与分配范围卡片",
+      "sha256": "6d2ad65201e12f15341bd788906fbce9da8127813540ec7fe9b91d12e4f55005",
+      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-scope-cards-20261026/mobile.png",
+      "caption": "统计与分配范围卡片",
+      "sha256": "be4a5ea2b72a374f90f51597d723e2c0c79847f73fc070835760660c2106162a",
+      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -347,19 +353,19 @@
     "src/team/tips/programs/details.js.txt": "edd2b3de8331a081f20de7d096f9c7cea64e4ce3cbbfa8f48d86bbb80db4b23e",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "0376a148b4bb8561a31fdbfc4d416b71a449fa7211640ee4dfd4afeb0d275311",
+    "src/team/tips/programs/rule-editor.js.txt": "6281685c1196a189567b3fdfb1e97ec43107905d5f528f40e59ffe1ec48494ad",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "6f1ba2bffaab9b38f2f14843a436e327cc4293e9a2afa9fb43f3603ecacdcc6f",
+    "src/team/tips/templates/rule-editor.html": "b2bf847bf7d2faeff79dec3508af4b650cc46dac5deee0087cfe645d0e039501",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
     "src/team/tips/tips-legacy-runtime.ts": "5881e0b4c5f257ce4831cde270f50cc17bf1ed007c2d0914ac4cd179b68a9e94",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "c2516dd5ec4f4e6057d703e94270023c799bbd635732ed395c2a9d427bc51a9f",
+    "src/team/tips/tips-page.css": "c151f0a78ca8a9efb9311cb8e5ec4f1de32eb6f1078a9743fdefb1438ac1a905",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f",
     "src/config/team-shift-scheduling-ui.ts": "ac8ab6d8cd9dcb5fbf40efbc45a8821a967145fb24506febaea7b20050444b8f",
