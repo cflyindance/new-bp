@@ -46,5 +46,15 @@
     "手工及已发放保护有断言，独立状态截图待补",
     "失败后关闭可继续单日入口，补录后成功截图待补",
     "未执行生产结算或CI部署"
-  ]
+  ],
+  "normalizedSourceHashes": {
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "12c09c48b565ab3b0aaa7e12094630a4e9755239dcae9e86449d5aea07850a82",
+    "src/team/tips/legacy/tipout-auto-allocation.js.txt": "3d7ea3cce3fc58cdd78a94c78204d17460db00ffe05742be9ddd7c5020ddabbd",
+    "src/team/tips/programs/distribution.js.txt": "65751e99bb49f1de55f685b2af2e9bdf5f7736652d143b1d8be7c900aa989181",
+    "src/team/tips/legacy/tipout-allocation-results-store.js.txt": "d29c7554e41adb0a0207c5f8ca8769b46fb85d6dbf9248c24d28251037bd4956",
+    "src/team/tips/templates/distribution.html": "cd58a0036778ba28266c89c2be6781137bb617d2f0870d08a889197e291a3932",
+    "src/team/tips/tips-page.css": "0e8504a0485ecc15085572bcffd5fefa404b5898d96cd5a75b28f72d469577f3",
+    "src/team/tips/tips-legacy-runtime.ts": "203fc290e204f1e69d52d5cfc563441070102764bbd784e9ca71717a1a08a93a"
+  },
+  "sourceHashPolicy": "原sourceHashes保留采集时原始字节；跨平台检出校验使用normalizedSourceHashes（仅CRLF转LF），图片仍逐字节校验。"
 }

@@ -6,7 +6,7 @@ const files=['PRD_产品需求文档.md','小费分配业务规格说明书（�
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-auto-allocation-20261026/capture-manifest.json','utf8'));
 const sha=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 assert.equal(manifest.changeId,'TIPOUT-AUTO-ALLOCATION-20261026-01');assert.equal(manifest.records.length,6);
-for(const [file,hash]of Object.entries(manifest.sourceHashes))assert.equal(sha(file),hash,file);
+for(const [file,hash]of Object.entries(manifest.normalizedSourceHashes)){const text=fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');assert.equal(crypto.createHash('sha256').update(text).digest('hex'),hash,file);}
 for(const record of manifest.records)assert.equal(sha(base+'/assets/tips-auto-allocation-20261026/'+record.file),record.sha256);
 for(const [i,file]of files.entries()){
  const text=fs.readFileSync(base+'/'+file,'utf8');
