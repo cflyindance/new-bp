@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-TIME-RANGE-TITLE-20261026-01",
-  "baseline": "4727496c",
+  "documentId": "TIPOUT-PLANNING-TOOLTIP-20261026-01",
+  "baseline": "6713fce5",
   "versions": {
-    "PRD_产品需求文档.md": "V4.41",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.41",
-    "小费管理需求文档（个人规范版）.md": "V2.39"
+    "PRD_产品需求文档.md": "V4.42",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.42",
+    "小费管理需求文档（个人规范版）.md": "V2.40"
   },
   "images": [
     {
@@ -422,6 +422,24 @@
       "caption": "小费分配时间范围标题",
       "sha256": "671d7b2332a3d5fc90471a2e69e2b5e543d6437e3e91ee95e3a73b6839a34225",
       "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-planning-tooltip-20261026/allocationModeSection.png",
+      "caption": "悬停规划提示",
+      "sha256": "03e2da009f3b3830b53bcd1169922401e2453bcdeae1fffd2a8eae7e7f022525",
+      "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-planning-tooltip-20261026/shiftScopeOption.png",
+      "caption": "悬停规划提示",
+      "sha256": "cdb42b0f0436d2d654477dc4f5b57de930172c6835eeb1a22d8970ed76858485",
+      "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-planning-tooltip-20261026/timeWindowParticipationOption.png",
+      "caption": "悬停规划提示",
+      "sha256": "0874f26bab0fff600376c005af54946e866eb63a6fa8e87affe0a877010f05f2",
+      "source": "真实模板与运行时受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -467,13 +485,13 @@
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "d7e57a883cf6d0754d67b3ab99d8a4196060276da839316d095c9393d8d0b132",
+    "src/team/tips/templates/rule-editor.html": "373c72ebad7b1ecd9300795339b09a9430b1b01f94fa06a3d85f8f457bb3651d",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
     "src/team/tips/tips-legacy-runtime.ts": "5881e0b4c5f257ce4831cde270f50cc17bf1ed007c2d0914ac4cd179b68a9e94",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "92e01b226e1dc31f23767c0a6a8525e3e6a76a00266cb9a1d4fbaeb74d081bc8",
+    "src/team/tips/tips-page.css": "235cf2d2fc3a40f6180a342d01721a77ea49f1464857912c1823a87934697a2a",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f",
     "src/config/team-shift-scheduling-ui.ts": "ac8ab6d8cd9dcb5fbf40efbc45a8821a967145fb24506febaea7b20050444b8f",
