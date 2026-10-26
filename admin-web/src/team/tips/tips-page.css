@@ -3414,32 +3414,5 @@ select.form-control {
 .tipout-page-rule-editor .tipout-work-hours-wrap .work-hours-config { margin:16px 0 0; max-width:none; padding:16px; background:#fff; }
 @media(max-width:600px){.tipout-page-rule-editor .tipout-settings-group{padding:16px;}}
 
-/* Planning markers share a hover hint without changing their controls. */
-.tipout-page-rule-editor [data-planning-hint] { position: relative; }
-.tipout-page-rule-editor [data-planning-hint]::before {
-  content: attr(data-planning-hint);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 12px;
-  z-index: 40;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #222;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.5;
-  white-space: normal;
-  width: max-content;
-  max-width: min(360px, calc(100vw - 48px));
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-}
-.tipout-page-rule-editor [data-planning-hint]:hover::before,
-.tipout-page-rule-editor [data-planning-hint]:focus-visible::before {
-  opacity: 1;
-  visibility: visible;
-}
-
-.tipout-page-rule-editor #timeWindowParticipationOption[data-planning-hint]::before { left: auto; right: 12px; }
+.tipout-planning-tooltip { position:fixed; inset:auto; margin:0; padding:8px 12px; width:max-content; max-width:min(360px,calc(100vw - 32px)); box-sizing:border-box; border:0; border-radius:6px; background:#222; color:#fff; font:400 12px/1.5 sans-serif; white-space:normal; pointer-events:none; z-index:10000; }
+.tipout-planning-tooltip[hidden] { display:none; }

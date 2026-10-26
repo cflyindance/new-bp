@@ -439,7 +439,7 @@
               </button>
               <div class="add-option-menu" id="addOptionMenu">
                 <div class="add-option-menu-item" data-type="sales" data-native-onclick="addPoolRule('sales')">销售额</div>
-                <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="personal_sales" data-native-onclick="addPoolRule('personal_sales')">按个人销售额</div>
+                <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="personal_sales" data-native-onclick="addPoolRule('personal_sales')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">按个人销售额</div>
                 <div class="add-option-menu-item" data-type="tips" data-pool-label="小费" data-native-onclick="addPoolRule('tips')">小费</div>
                 <div class="add-option-menu-item" data-type="surcharge" data-native-onclick="addPoolRule('surcharge')">加收服务费</div>
                 <div class="add-option-menu-item" data-type="manual" data-pool-label="手动上报小费" data-native-onclick="addPoolRule('manual')">手动上报小费</div>
@@ -463,7 +463,7 @@
           </details>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="allocationRulesGroup" aria-labelledby="allocationRulesTitle">
-            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">2. 分配设置</h2>
+            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">2. 小费分配设置</h2>
 <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
             <div class="distribution-method-cards">
@@ -543,7 +543,7 @@
 </div>
 </div>
           </section>
-<section class="tipout-editor-rule-group tipout-settings-group" id="receiverRulesGroup" aria-labelledby="receiverRulesTitle"><h2 class="tipout-rule-group-title" id="receiverRulesTitle">3. 接收设置</h2>
+<section class="tipout-editor-rule-group tipout-settings-group" id="receiverRulesGroup" aria-labelledby="receiverRulesTitle"><h2 class="tipout-rule-group-title" id="receiverRulesTitle">3. 小费接收设置</h2>
 <div id="legacyAllocationSections">
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
@@ -606,7 +606,7 @@
           </div>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
-            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
+            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 小费贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
@@ -618,7 +618,7 @@
               </button>
               <div class="add-option-menu" id="deductAddOptionMenu">
                 <div class="add-option-menu-item" data-basis="sales_pct" data-native-onclick="addDeductRule('sales_pct')">按照销售额占比</div>
-                <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')">按照个人销售额占比</div>
+                <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">按照个人销售额占比</div>
                 <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
               </div>
             </div>
@@ -781,8 +781,8 @@
           <div class="add-option-menu-item" data-type="orderTipStatus" data-native-onclick="addSalesCondition('orderTipStatus')">订单小费状态</div>
           <div class="add-option-menu-item" data-type="paymentMethods" data-native-onclick="addSalesCondition('paymentMethods')">支付方式</div>
           <div class="add-option-menu-item" data-type="hours" data-native-onclick="addSalesCondition('hours')">营业时间</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addSalesCondition('shift')">班次</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addSalesCondition('weekday')">周期（星期）</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addSalesCondition('shift')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">班次</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addSalesCondition('weekday')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">周期（星期）</div>
         </div>
       </div>
     </div>
@@ -826,8 +826,8 @@
           <div class="add-option-menu-item" data-type="revenueType" data-native-onclick="addTipClaimSalesCondition('revenueType')">营业额类型</div>
           <div class="add-option-menu-item" data-type="paymentMethods" data-native-onclick="addTipClaimSalesCondition('paymentMethods')">支付方式</div>
           <div class="add-option-menu-item" data-type="hours" data-native-onclick="addTipClaimSalesCondition('hours')">营业时间</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addTipClaimSalesCondition('shift')">班次</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addTipClaimSalesCondition('weekday')">周期（星期）</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addTipClaimSalesCondition('shift')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">班次</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addTipClaimSalesCondition('weekday')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">周期（星期）</div>
         </div>
       </div>
     </div>
@@ -856,8 +856,8 @@
           <div class="add-option-menu-item" data-type="hours" data-native-onclick="addSurchargeCondition('hours')">订单时间段</div>
           <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" data-native-onclick="addSurchargeCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="surchargeType" data-native-onclick="addSurchargeCondition('surchargeType')" style="display:none">加收类型</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addSurchargeCondition('shift')">班次</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addSurchargeCondition('weekday')">周期（星期）</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addSurchargeCondition('shift')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">班次</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addSurchargeCondition('weekday')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">周期（星期）</div>
         </div>
       </div>
     </div>
@@ -886,8 +886,8 @@
           <div class="add-option-menu-item" data-type="hours" data-native-onclick="addTipsCondition('hours')">订单时间段</div>
           <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" data-native-onclick="addTipsCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="containsProduct" data-native-onclick="addTipsCondition('containsProduct')">订单需包含商品</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addTipsCondition('shift')">班次</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addTipsCondition('weekday')">周期（星期）</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addTipsCondition('shift')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">班次</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addTipsCondition('weekday')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">周期（星期）</div>
         </div>
       </div>
     </div>
@@ -912,8 +912,8 @@
           <div class="add-option-menu-item" data-type="role" data-native-onclick="addManualCondition('role')">角色</div>
           <div class="add-option-menu-item" data-type="employee" data-native-onclick="addManualCondition('employee')">员工</div>
           <div class="add-option-menu-item" data-type="hours" data-native-onclick="addManualCondition('hours')">订单时间段</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addManualCondition('shift')">班次</div>
-          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addManualCondition('weekday')">周期（星期）</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="shift" data-native-onclick="addManualCondition('shift')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">班次</div>
+          <div class="add-option-menu-item" style="border:1px solid #ff4d4f;border-radius:6px" data-type="weekday" data-native-onclick="addManualCondition('weekday')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">周期（星期）</div>
         </div>
       </div>
     </div>
