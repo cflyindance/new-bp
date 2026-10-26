@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-SCHEDULE-SOURCE-20261026-01",
-  "baseline": "bfbbd6aa",
+  "documentId": "TIPOUT-RULE-ORDER-20261026-01",
+  "baseline": "916bcdcf",
   "versions": {
-    "PRD_产品需求文档.md": "V4.27",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.27",
-    "小费管理需求文档（个人规范版）.md": "V2.25"
+    "PRD_产品需求文档.md": "V4.28",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.28",
+    "小费管理需求文档（个人规范版）.md": "V2.26"
   },
   "images": [
     {
@@ -46,13 +46,6 @@
       "file": "assets/tips-docs-current-20261023/detail.png",
       "caption": "当日小费分配明细",
       "sha256": "82feddc4af690fa75215541ddd2b557dbd3af819aa428ce04242f44e95345320",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/editor-top.png",
-      "caption": "新增／编辑分配规则",
-      "sha256": "0231ed38bab9e60026350a3d3455ae7e2e2a18bc1327223feccf27a062b04715",
       "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
       "source": "项目实页截图；核对页面字段，未重新制作界面"
     },
@@ -281,24 +274,6 @@
       "source": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
-      "file": "assets/tips-shift-scope-20261026/day.png",
-      "caption": "班次范围及模式联动",
-      "sha256": "88b77db0f7e2fe2e42557f7e0e8f8e90abbaeec3c671de457ae5b1b7feac77cc",
-      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-shift-scope-20261026/time-window.png",
-      "caption": "班次范围及模式联动",
-      "sha256": "d7eceecbd011668af08e0c5f771a9a287b82aba087824a3fa596d84ec9f7c617",
-      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-schedule-source-20261026/editor.png",
-      "caption": "按排班表班次分配",
-      "sha256": "7baa3661acec37dff099639230aaf4be1b89710d83cbf547250770d02e1338fb",
-      "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
-    },
-    {
       "file": "assets/tips-schedule-source-20261026/details.png",
       "caption": "按排班表班次分配",
       "sha256": "e3502cd15683521a667ba8ab898dc825b844adb260cf77c99efc643252a48985",
@@ -309,6 +284,30 @@
       "caption": "按排班表班次分配",
       "sha256": "91077cfafd6edc1c081480c13cb1bb12c2353791adb07ae1338b317e87870195",
       "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
+    },
+    {
+      "file": "assets/tips-rule-order-20261026/editor.png",
+      "caption": "规则编辑页布局与范围模式",
+      "sha256": "4562f13b6d0d2a04d569f3d22736af8d5e559d3805070bbda8673f6422115f1e",
+      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-rule-order-20261026/hours.png",
+      "caption": "规则编辑页布局与范围模式",
+      "sha256": "58be45569e1322ae65a45fc646d509be8f3556b2657510efd07d3f972ba0e816",
+      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-rule-order-20261026/time-window.png",
+      "caption": "规则编辑页布局与范围模式",
+      "sha256": "f140d62258027c1deb944d4608854a348c013efc6292415a4f43b2f4347c02a1",
+      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-rule-order-20261026/shift.png",
+      "caption": "规则编辑页布局与范围模式",
+      "sha256": "cf56c232cdc9de3e9721b5c0ad78373f56f38bd009e09505c1dc8dd937c83197",
+      "source": "916bcdcf基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -354,7 +353,7 @@
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "de584d6d6ca89d5b072a09b7cfcb2db6bfec52da59408daab41aa5e6a8a2260d",
+    "src/team/tips/templates/rule-editor.html": "6f1ba2bffaab9b38f2f14843a436e327cc4293e9a2afa9fb43f3603ecacdcc6f",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
