@@ -3436,8 +3436,31 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       }
     }
 
+    // Keep the existing persisted clockin contract; scope is its page-level presentation.
+    var dailyParticipationDraft = 'clock';
+    function changeAllocationScope() {
+      var scope = document.querySelector('input[name="allocationScope"]:checked');
+      var current = document.querySelector('input[name="clockin"]:checked');
+      var timed = scope && scope.value === 'time_window';
+      if (timed && current && current.value !== 'time_window') dailyParticipationDraft = current.value;
+      var target = document.querySelector('input[name="clockin"][value="' + (timed ? 'time_window' : dailyParticipationDraft) + '"]');
+      if (target) target.checked = true;
+      updateDistributionOptions();
+    }
+    function syncAllocationScopeUi() {
+      var current = document.querySelector('input[name="clockin"]:checked');
+      var timed = !!(current && current.value === 'time_window');
+      if (current && !timed) dailyParticipationDraft = current.value;
+      document.querySelectorAll('input[name="allocationScope"]').forEach(function(input) { input.checked = input.value === (timed ? 'time_window' : 'day'); });
+      var eligibility = document.getElementById('dailyParticipationSection');
+      if (eligibility) eligibility.hidden = timed;
+      var notice = document.getElementById('allocationScopeTimeNotice');
+      if (notice) notice.hidden = !timed;
+    }
+
     var legacyTimeWindowHoursCap = false;
     function updateWorkHoursConfigUi() {
+      syncAllocationScopeUi();
       var panel = document.getElementById('workHoursConfigPanel');
       if (!panel) return;
       var distRadio = document.querySelector('input[name="distribution"]:checked');

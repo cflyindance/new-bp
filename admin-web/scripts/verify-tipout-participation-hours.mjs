@@ -7,7 +7,7 @@ const get=id=>elements[id] ||= {style:{},value:'5',checked:false,focus(){}};
 const radios={distribution:{value:'hours'},clockin:{value:'clock'},workHoursMode:{value:'capped'}};
 const c={document:{getElementById:get,querySelector:s=>radios[s.match(/name="([^"]+)"/)?.[1]],querySelectorAll:()=>[radios.workHoursMode]},clearWorkHoursConfigError(){},showNotification(){}};
 vm.createContext(c);
-vm.runInContext(source.slice(source.indexOf('    var legacyTimeWindowHoursCap = false;'),source.indexOf('    var poolNumChars')),c);
+vm.runInContext(source.slice(source.indexOf('    var dailyParticipationDraft'),source.indexOf('    var poolNumChars')),c);
 c.updateWorkHoursConfigUi();
 assert.equal(get('workHoursActualLabel').textContent,'按有效打卡工时');
 assert.equal(get('maxHoursPerDay').disabled,false);
