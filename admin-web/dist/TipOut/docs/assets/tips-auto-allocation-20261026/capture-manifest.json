@@ -1,0 +1,50 @@
+{
+  "baseline": "b67ca455d14df8cfea7da8f6af62f2291647c85b",
+  "branch": "codex/tips-auto-allocation-20261026",
+  "changeId": "TIPOUT-AUTO-ALLOCATION-20261026-01",
+  "origin": "http://127.0.0.1:65135",
+  "status": "uncommitted feature preview",
+  "fixture": "专用agent-browser会话；重置仅9月1—10日测试记录；9月4日一次写锁失败及180ms延迟为受控注入。真实计算与本地快照保存；未操作用户65133或生产数据。",
+  "capturedAt": "2026-10-26T11:23:46.973904+08:00",
+  "sourceHashes": {
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "12c09c48b565ab3b0aaa7e12094630a4e9755239dcae9e86449d5aea07850a82",
+    "src/team/tips/legacy/tipout-auto-allocation.js.txt": "3d7ea3cce3fc58cdd78a94c78204d17460db00ffe05742be9ddd7c5020ddabbd",
+    "src/team/tips/programs/distribution.js.txt": "05eccc0f81c2bc1d44511d8a9c7e815f8267a1e7a6122962051db21baebe7489",
+    "src/team/tips/legacy/tipout-allocation-results-store.js.txt": "c0552fb2a42de528d537d85b62489cb5bde8a9532b7e13c174b47f101eda8401",
+    "src/team/tips/templates/distribution.html": "7f44820dc90b6b9b9272b8e6fa515a188e1a7a1ced343192bfa71e4726f5aeaa",
+    "src/team/tips/tips-page.css": "c57fe3717350c26556e2d71b11d87aefbfd6bbe0518c00eef703019297e74559",
+    "src/team/tips/tips-legacy-runtime.ts": "f3bf3eced0a477a499946b89c5172f7dfb5fa50d282e02c98acea6d2b139bbc6"
+  },
+  "records": [
+    {
+      "file": "closed.png",
+      "sha256": "51673dc9646d612f5407631cf94ffae8699c21643c2a0be6f1c16243c4fc7270"
+    },
+    {
+      "file": "default-result.png",
+      "sha256": "1e27a530a6e9b2489ee8a2caf496ae36f7eb6ac5bb6e45eda3e3deaa12492341"
+    },
+    {
+      "file": "existing-skipped.png",
+      "sha256": "95c234aa5af7dd4a6f450cd54c864b3a80bc0d515b856bd0f4cb53ab4bfe7633"
+    },
+    {
+      "file": "mixed-result.png",
+      "sha256": "a3a7fe56ac95618efb8a286c29262ab777767d3026d3a43e291247cc1c1f694f"
+    },
+    {
+      "file": "retry-result.png",
+      "sha256": "3faed5d6551be52dd55087108b8e19d209c5e651d26a7b8c478e1cd981c21c50"
+    },
+    {
+      "file": "running.png",
+      "sha256": "e1268ede11cffbf2c2e2e04ffb6455298a962b63b48ddae8226b7cfbe78826d1"
+    }
+  ],
+  "limits": [
+    "离开页面停止写入有单元断言，暂无独立截图",
+    "手工及已发放保护有断言，独立状态截图待补",
+    "失败后关闭可继续单日入口，补录后成功截图待补",
+    "未执行生产结算或CI部署"
+  ]
+}

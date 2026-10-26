@@ -154,5 +154,7 @@
       "capturedAt": "2026-10-26T02:33:58.131Z",
       "sha256": "13b1b1444a9291d0a3063fde4fa884c87589739806c96bfcdd5fb9373cc2204a"
     }
-  ]
+  ],
+  "supersededBy": "TIPOUT-AUTO-ALLOCATION-20261026-01",
+  "historicalNote": "保留原图和源码哈希；默认范围和仅查询行为已被自动分配替代，不作为当前源码新鲜度证据。"
 }

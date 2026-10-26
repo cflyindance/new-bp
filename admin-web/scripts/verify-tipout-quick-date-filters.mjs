@@ -14,13 +14,15 @@ function element(){return {value:'',attrs:{},hidden:true,textContent:'',setAttri
 const nodes={dateStart:element(),dateEnd:element(),summaryDateRangeError:element()};
 const buttons=Object.keys(expected).map(key=>({...element(),dataset:{datePreset:key}}));
 nodes.summaryDatePresets={querySelectorAll:()=>buttons};
-let renders=0,captures=0,invalidations=0;
+let renders=0,captures=0,invalidations=0,scheduled=0;
+context.scheduleSummaryAutoAllocation=()=>scheduled++;
 Object.assign(context,{document:{getElementById:id=>nodes[id]},TipOutSummaryDateSort:api,activeSummaryDatePreset:'',lastValidSummaryDateRange:{startDate:'2026-09-26',endDate:'2026-10-26'},invalidateDayPipelineCache(){invalidations++;},renderSummaryViews(){renders++;},captureSummaryUiState(){captures++;}});
 const source=fs.readFileSync('src/team/tips/programs/distribution.js.txt','utf8');
 function extract(name){const start=source.match(new RegExp('^( *)function '+name+'\\([^\\n]*\\) \\{','m'));assert.ok(start,name);const tail=source.slice(start.index+start[0].length),end=tail.match(new RegExp('^'+start[1]+'\\}','m'));return start[0]+tail.slice(0,end.index)+end[0];}
 for(const name of ['validateSummaryDateRange','syncSummaryDatePresetUi','handleSummaryDateRangeChange','applySummaryDatePreset'])vm.runInContext(extract(name),context);
 for(const [key,range]of Object.entries(expected)){assert.equal(context.applySummaryDatePreset(key),true);assert.deepEqual([nodes.dateStart.value,nodes.dateEnd.value],range);assert.deepEqual(buttons.filter(b=>b.attrs['aria-pressed']==='true').map(b=>b.dataset.datePreset),[key]);}
 assert.equal(renders,6);assert.equal(captures,6);assert.equal(invalidations,6,'one update per click');
+assert.equal(scheduled,6,'valid ranges schedule allocation once; invalid ranges do not');
 assert.equal(context.applySummaryDatePreset('bad'),false);assert.equal(renders,6);
 nodes.dateStart.value='';assert.equal(context.handleSummaryDateRangeChange(),false);assert.ok(buttons.every(b=>b.attrs['aria-pressed']==='false'));assert.equal(renders,6,'invalid manual date preserves previous results');
 assert.equal(context.applySummaryDatePreset('today'),true);assert.equal(nodes.summaryDateRangeError.hidden,true,'shortcut repairs invalid manual date');

@@ -1,0 +1,29 @@
+(function(root){
+  'use strict';
+  function create(dates, execute, changed) {
+    var stopped=false, pending=null;
+    var queue={items:dates.map(function(date){return {date:date,status:'pending',message:''};}),running:false,
+      stop:function(){stopped=true;},
+      run:function(retry){
+        if(pending)return pending;
+        if(stopped)return Promise.resolve();
+        var targets=queue.items.filter(function(item){return item.status===(retry?'failed':'pending');});
+        targets.forEach(function(item){item.status='pending';item.message='';});
+        queue.running=true;
+        pending=Promise.resolve().then(async function(){
+          changed(queue);
+          for(var i=0;i<targets.length&&!stopped;i++){
+            var item=targets[i]; item.status='running'; changed(queue);
+            try {
+              var result=await execute(item.date);
+              item.status=result.status==='skipped'?'skipped':'success'; item.message=result.message||'';
+            } catch(error){item.status='failed';item.message=error.message||'分配失败，请重试';}
+            if(!stopped)changed(queue);
+          }
+        }).finally(function(){queue.running=false;pending=null;if(!stopped)changed(queue);});
+        return pending;
+      }};
+    return queue;
+  }
+  root.TipOutAutoAllocation={create:create};
+})(window);

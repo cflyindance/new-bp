@@ -10,5 +10,6 @@ const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-quick-dates-2026102
 assert.equal(manifest.branch,'codex/tips-quick-date-filters-20261026');
 assert.equal(manifest.records.length,13);
 for(const r of manifest.records){const bytes=fs.readFileSync(base+'/assets/tips-quick-dates-20261026/'+r.file);assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),r.sha256);}
-for(const [file,hash]of Object.entries(manifest.sourceHashes))assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),hash,file+' changed after screenshots');
-console.log('PASS quick-date docs: paired versions/shared ID, six operations in each authority, 13 screenshots and source hashes fresh');
+if(!manifest.supersededBy)for(const [file,hash]of Object.entries(manifest.sourceHashes))assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),hash,file+' changed after screenshots');
+else assert.equal(manifest.supersededBy,'TIPOUT-AUTO-ALLOCATION-20261026-01');
+console.log('PASS quick-date historical docs: original versions, operations and 13 image hashes; current behavior covered by auto-allocation manifest');

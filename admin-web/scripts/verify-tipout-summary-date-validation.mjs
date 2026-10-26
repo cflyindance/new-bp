@@ -22,6 +22,7 @@ els.dateStart.value='2026-10-19';els.dateEnd.value='2026-10-23';
 let renders=0, captures=0, invalidations=0, reads=0;
 const context={window:{},document:{getElementById:id=>els[id]},lastValidSummaryDateRange:null,
   activeSummaryDatePreset:'',
+  scheduleSummaryAutoAllocation(){},
   renderSummaryViewsFromFacts(){renders++;},
   invalidateDayPipelineCache(){invalidations++;},
   captureSummaryUiState(){captures++;},

@@ -1,0 +1,94 @@
+    var summaryAutoQueue=null, summaryAutoDisposed=false, summaryAutoTimer=null, summaryAutoScope=null;
+    var summaryAutoFocus=null, summaryAutoInert=[], summaryAutoDatePending=false;
+    function assertSummaryAutoActive(){
+      if(summaryAutoDisposed)throw new Error('页面已离开，停止自动分配');
+      if(summaryAutoScope&&document.getElementById('storeSelect').value!==summaryAutoScope.store)throw new Error('门店已变化，请返回原门店重新分配');
+    }
+    function summaryAutoExisting(store,date){
+      var state=TipOutDateState.inspect(store,date);
+      if(state.error)throw new Error(state.error);
+      if(state.payoutStatus==='paid')return {status:'skipped',message:'已发放，保留原结果'};
+      if(state.snapshot||TipOutAllocationResults.isAllocated(store,date))return {status:'skipped',message:'已分配，保留原结果'};
+      return null;
+    }
+    async function executeSummaryAutoDate(date){
+      // Yield between dates so progress is painted before preparation starts.
+      await new Promise(function(resolve){window.setTimeout(resolve,30);});
+      assertSummaryAutoActive();
+      var store=summaryAutoScope.store, existing=summaryAutoExisting(store,date);
+      if(existing)return existing;
+      var rows=readAllocationScopeRows({store:store,startDate:date,endDate:date});
+      if(!rows[0]||!rows[0].businessStatusResult)throw new Error('无法读取当天营业数据');
+      if(!rows[0].businessStatusResult.allocatable)return {status:'skipped',message:'未营业，无需分配'};
+      var rules=getRulesForCurrentStore();
+      if(!rules.length)throw new Error('当前门店没有可用的小费分配规则');
+      if(rules.some(function(rule){return rule.clockin==='noclock';}))throw new Error('需在当天明细补全手动工时后分配');
+      var snapshot=window.prepareTipoutQuickSnapshot(store,date);
+      try {await TipOutAllocationResults.commit(snapshot,{onlyIfUnallocated:true,assertActive:assertSummaryAutoActive});}
+      catch(error){assertSummaryAutoActive();var concurrent=summaryAutoExisting(store,date);if(concurrent)return concurrent;throw error;}
+      var message='系统分配已保存';
+      try{TipOutDateState.notify(store,date);}catch(_){message+='；汇总刷新通知失败，请刷新查看';}
+      try{if(window.TipOutPayrollBridge)TipOutPayrollBridge.syncAfterAllocation(store,date,date);}
+      catch(_){message+='；Payroll同步失败，请单独更新员工数据';}
+      return {status:'success',message:message};
+    }
+    function renderSummaryAutoProgress(queue){
+      if(summaryAutoDisposed)return;
+      var items=queue.items, counts={success:0,failed:0,skipped:0}, current='';
+      items.forEach(function(item){if(counts[item.status]!==undefined)counts[item.status]++;if(item.status==='running')current=item.date;});
+      var processed=counts.success+counts.failed+counts.skipped;
+      document.getElementById('summaryAutoTitle').textContent=queue.running?'正在自动分配小费':'自动分配结果';
+      document.getElementById('summaryAutoScope').textContent=summaryAutoScope.store+' · '+summaryAutoScope.startDate+' 至 '+summaryAutoScope.endDate;
+      document.getElementById('summaryAutoCounts').textContent='成功 '+counts.success+' 天　失败 '+counts.failed+' 天　跳过 '+counts.skipped+' 天';
+      document.getElementById('summaryAutoCurrent').textContent=(current?'正在分配 '+current+' · ':'')+'已处理 '+processed+' / '+items.length+' 天';
+      var progress=document.getElementById('summaryAutoProgress');progress.max=items.length||1;progress.value=processed;
+      var labels={pending:'等待分配',running:'分配中',success:'分配成功',failed:'分配失败',skipped:'已跳过'};
+      document.getElementById('summaryAutoRows').innerHTML=items.map(function(item){return '<tr><td>'+escapeSummaryHtml(item.date)+'</td><td>'+labels[item.status]+'</td><td>'+escapeSummaryHtml(item.message||'—')+'</td></tr>';}).join('');
+      document.getElementById('summaryAutoRetry').disabled=queue.running||!counts.failed;
+      document.getElementById('summaryAutoClose').disabled=queue.running;
+      if(!queue.running){invalidateDayPipelineCache();renderSummaryViews();document.getElementById(counts.failed?'summaryAutoRetry':'summaryAutoClose').focus();}
+    }
+    function startSummaryAutoAllocation(){
+      if(summaryAutoDisposed||(summaryAutoQueue&&summaryAutoQueue.running)||!validateSummaryDateRange(false))return;
+      var store=document.getElementById('storeSelect').value;if(!store)return;
+      summaryAutoScope={store:store,startDate:document.getElementById('dateStart').value,endDate:document.getElementById('dateEnd').value};
+      summaryAutoQueue=window.TipOutAutoAllocation.create(buildDateRange(summaryAutoScope.startDate,summaryAutoScope.endDate),executeSummaryAutoDate,renderSummaryAutoProgress);
+      var modal=document.getElementById('summaryAutoModal');
+      if(!modal.classList.contains('show')){
+        summaryAutoFocus=document.activeElement;
+        Array.prototype.forEach.call(modal.parentElement.children,function(element){if(element!==modal&&!element.inert){element.inert=true;summaryAutoInert.push(element);}});
+      }
+      modal.classList.add('show');modal.setAttribute('aria-hidden','false');modal.querySelector('[role="dialog"]').focus();
+      summaryAutoQueue.run();
+    }
+    function scheduleSummaryAutoAllocation(){
+      summaryAutoDatePending=true;
+      if(summaryAutoTimer)window.clearTimeout(summaryAutoTimer);
+      summaryAutoTimer=window.setTimeout(function(){
+        summaryAutoTimer=null;
+        var focus=document.activeElement;
+        if(focus&&(focus.id==='dateStart'||focus.id==='dateEnd'))return;
+        summaryAutoDatePending=false;
+        startSummaryAutoAllocation();
+      },200);
+    }
+    function retrySummaryAutoAllocation(){if(summaryAutoQueue&&!summaryAutoQueue.running)summaryAutoQueue.run(true);}
+    function closeSummaryAutoAllocation(){
+      if(summaryAutoQueue&&summaryAutoQueue.running)return;
+      var modal=document.getElementById('summaryAutoModal');modal.classList.remove('show');modal.setAttribute('aria-hidden','true');
+      summaryAutoInert.forEach(function(element){element.inert=false;});summaryAutoInert=[];
+      if(summaryAutoFocus&&summaryAutoFocus.isConnected)summaryAutoFocus.focus();
+    }
+    document.addEventListener('focusout',function(event){if(summaryAutoDatePending&&event.target&&(event.target.id==='dateStart'||event.target.id==='dateEnd'))scheduleSummaryAutoAllocation();});
+    document.addEventListener('keydown',function(event){
+      var modal=document.getElementById('summaryAutoModal');if(!modal.classList.contains('show'))return;
+      if(event.key==='Escape'){event.preventDefault();closeSummaryAutoAllocation();}
+      if(event.key==='Tab'){
+        var buttons=Array.prototype.filter.call(modal.querySelectorAll('button'),function(button){return !button.disabled;});
+        if(!buttons.length){event.preventDefault();return;}
+        var first=buttons[0],last=buttons[buttons.length-1];
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      }
+    });
+    window.registerTipOutCleanup(function(){summaryAutoDisposed=true;if(summaryAutoQueue)summaryAutoQueue.stop();});
