@@ -20,7 +20,7 @@ const outside=[person('A','10:00','14:00',[order('before','09:00',10),order('end
 const night=person('A','10:00','14:00');night.attendance.punchSessions=[{status:'complete',clockInAt:'2026-10-26T22:00:00-05:00',clockOutAt:'2026-10-27T02:00:00-05:00'}];night.orders=[{...order('n','23:00',20),completedPaymentAt:'2026-10-27T01:00:00-05:00'}];schedule=[{...original[0],start:'22:00',end:'02:00'}];assert.equal(run(rule,[night]).poolAmount,20);schedule=original;
 const result=run();const saved=c.window.TipOutFunding.reconcileExisting({store:'s',dateKey:'2026-10-26',scenarioFacts:facts,pools:[{ruleId:1,poolAmount:result.poolAmount,timeWindow:result,employees:result.employeeAmounts}]},[rule]);assert.equal(saved.summary.allocatedAmount,120);
 vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-date-pool-view.js.txt','utf8'),c);c.window.TipOutScenarioSource={day:()=>outside,totals:()=>({sales:0,tips:60,manual:0,surcharge:0})};assert.equal(c.window.TipOutDatePoolView.projectDate({dateKey:'2026-10-26',rules:[rule],allocated:false,originalTips:60}).poolAmount,30);
-console.log('PASS schedule-backed shifts: scheduled membership, all methods, no inline limits, missing schedule, overlap protection, boundaries, cross-day, funding and date summary');
+console.log('PASS schedule-backed shifts: scheduled membership, all methods, unlimited defaults, missing schedule, overlap protection, boundaries, cross-day, funding and date summary');
 
 const writes=new Map();c.localStorage={getItem:k=>writes.get(k)||null,setItem:(k,v)=>writes.set(k,v),removeItem:k=>writes.delete(k)};c.window.localStorage=c.localStorage;
 vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-allocation-results-store.js.txt','utf8'),c);
@@ -28,3 +28,25 @@ const ready=JSON.parse(JSON.stringify(saved));ready.pools[0].employees.forEach(e
 schedule=[{...original[0],end:'15:00'}];await assert.rejects(c.window.TipOutAllocationResults.commit(ready),/排班表已变化/);assert.equal(writes.size,0);
 schedule=original;await c.window.TipOutAllocationResults.commit(ready);assert.ok(writes.size>0);
 console.log('PASS commit race: schedule changes block writes; unchanged schedule commits successfully');
+
+assert.deepEqual(Array.from(run({...rule,shiftWorkHours:{minMinutes:30,maxMinutes:0}},uneven).employeeAmounts,p=>p.amount),[0,120]);
+assert.equal(run({...rule,shiftWorkHours:{minMinutes:130,maxMinutes:0}}).unallocated,120);
+assert.equal(run({...rule,shiftWorkHours:{minMinutes:120,maxMinutes:0}}).unallocated,0);
+const cappedFacts=[person('A','10:00','11:00',[order('a','11:00',60)]),person('B','10:00','14:00',[order('b','13:00',60)])];
+const limited=run({...rule,distribution:'hours',shiftWorkHours:{minMinutes:30,maxMinutes:120}},cappedFacts);
+assert.deepEqual(Array.from(limited.employeeAmounts,p=>p.amount),[40,80]);assert.equal(limited.lines[0].participants[1].actualMinutes,240);assert.equal(limited.lines[0].participants[1].allocationMinutes,120);assert.equal(JSON.stringify(limited.scheduleSource),JSON.stringify(original),'limits must not alter raw schedule fingerprint');
+assert.deepEqual(Array.from(run({...rule,distribution:'orders',shiftWorkHours:{minMinutes:30,maxMinutes:0}},uneven).employeeAmounts,p=>p.amount),[0,120]);
+assert.throws(()=>run({...rule,distribution:'hours',shiftWorkHours:{minMinutes:30,maxMinutes:20}}),/上限不能小于/);
+assert.throws(()=>engine.validateShiftWorkHours({minMinutes:-1},'average'),/非负整数/);
+assert.throws(()=>engine.validateShiftWorkHours({minMinutes:1.5},'average'),/非负整数/);
+assert.throws(()=>engine.validateShiftWorkHours({maxMinutes:NaN},'hours'),/非负整数/);
+schedule=[{...original[0],name:'早',start:'10:00',end:'12:00'},{...original[0],id:'pm',name:'午',start:'12:00',end:'14:00'}];
+const fullFacts=[person('A','10:00','14:00',[order('a','11:00',60)]),person('B','10:00','14:00',[order('b','13:00',60)])];
+assert.equal(run({...rule,shiftWorkHours:{minMinutes:150,maxMinutes:0}},fullFacts).unallocated,120,'minimum applies per shift, not daily sum');
+assert.equal(run({...rule,distribution:'hours',shiftWorkHours:{minMinutes:0,maxMinutes:60}},fullFacts).employeeAmounts[0].allocationHours,2,'cap applies independently to each shift');
+schedule=original;
+console.log('PASS shift hour limits: admission boundary, average/orders gating, capped hour shares, per-shift limits, validation and raw schedule evidence');
+
+const withLimits=c.window.TipOutFunding.reconcileExisting({store:'s',dateKey:'2026-10-26',scenarioFacts:cappedFacts,pools:[{ruleId:1,poolAmount:limited.poolAmount,timeWindow:limited,employees:limited.employeeAmounts.map(e=>({...e,hours:e.allocationHours,percentage:0}))}]},[{...rule,distribution:'hours',shiftWorkHours:{minMinutes:30,maxMinutes:120}}]);
+await c.window.TipOutAllocationResults.commit(withLimits);assert.equal(c.window.TipOutAllocationResults.read('s','2026-10-26').pools[0].timeWindow.shiftWorkHours.maxMinutes,120);
+console.log('PASS limited snapshot funding and commit with unchanged schedule');

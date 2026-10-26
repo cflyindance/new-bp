@@ -58,12 +58,23 @@
     });
     return events.sort(function(a, b) { return a.at - b.at || String(a.id).localeCompare(String(b.id)); });
   }
-  function scheduledShifts(rule,facts,dateKey){
+  function readScheduleSource(rule,facts,dateKey){
     if(!root.TipOutSchedule||typeof root.TipOutSchedule.read!=='function')throw new Error('排班数据尚未就绪');
     var store=rule.store||(facts[0]&&facts[0].storeId)||'';
     var shifts=root.TipOutSchedule.read(store,dateKey);
     if(!shifts.length)throw new Error('当前门店当日没有已保存的排班，请先设置排班表');
-    return validateShifts(shifts,rule.distribution);
+    return shifts;
+  }
+  function validateShiftWorkHours(config,distribution){
+    config=config||{};
+    var min=config.minMinutes==null||config.minMinutes===''?0:Number(config.minMinutes),max=config.maxMinutes==null||config.maxMinutes===''?0:Number(config.maxMinutes);
+    if(!Number.isSafeInteger(min)||min<0||!Number.isSafeInteger(max)||max<0)throw new Error('班次工时限制须为非负整数分钟');
+    if(distribution==='hours'&&max>0&&max<min)throw new Error('班次计入工时上限不能小于最低参与工时');
+    return {minMinutes:min,maxMinutes:max};
+  }
+  function scheduledShifts(rule,facts,dateKey,source){
+    var limits=validateShiftWorkHours(rule.shiftWorkHours,rule.distribution);
+    return validateShifts((source||readScheduleSource(rule,facts,dateKey)).map(function(shift){return Object.assign({},shift,{minClockMinutes:limits.minMinutes,maxClockMinutes:rule.distribution==='hours'?limits.maxMinutes:0});}),rule.distribution);
   }
   function ruleEvents(rule, facts, dateKey) {
     var events = [], formulas = rule.poolRules || [];
@@ -218,7 +229,7 @@
     return merged.reduce(function(n,p){return n+(p.end-p.start)/60000;},0);
   }
   function allocateShifts(rule,facts,dateKey) {
-    var shifts=scheduledShifts(rule,facts,dateKey),events=ruleEvents(rule,facts,dateKey),groups=root.TipOutEmployeeWeights.groups(rule.receivers),totals={},lines=[];
+    var scheduleSource=readScheduleSource(rule,facts,dateKey),shifts=scheduledShifts(rule,facts,dateKey,scheduleSource),events=ruleEvents(rule,facts,dateKey),groups=root.TipOutEmployeeWeights.groups(rule.receivers),totals={},lines=[];
     var zones=Array.from(new Set(events.map(function(e){return e.timeZone;})));if(zones.length>1)throw new Error('同一班次的小费必须使用同一门店时区');
     if(!zones.length)zones=Array.from(new Set(facts.reduce(function(out,f){return out.concat(f.orders||[],f.reportedTipEvents||[]);},[]).map(function(e){return e.timeZone;}).filter(Boolean)));
     if(zones.length!==1)throw new Error('缺少或存在不一致的门店时区，无法统计班次');
@@ -241,7 +252,7 @@
       });
       lines.push({id:'shift:'+index,scope:'shift',shiftName:shift.name,scheduleShiftId:shift.id,scheduledEmployeeIds:shift.employeeIds,minClockMinutes:Number(shift.minClockMinutes||0),maxClockMinutes:rule.distribution==='hours'?Number(shift.maxClockMinutes||0):0,occurredAt:new Date(window.start).toISOString(),windowStartAt:new Date(window.start).toISOString(),windowEndAt:new Date(window.end).toISOString(),timeZone:zone,source:'shift',sourceId:shift.name,sourceEvents:selected,amount:amount/100,unallocated:(amount-paid)/100,participants:participants,status:paid===amount?'allocated':paid?'partial':'unallocated'});
     });
-    return {version:1,weightSchemaVersion:1,scope:'shift',scheduleSource:shifts,dateKey:dateKey,distribution:rule.distribution,lines:lines,poolAmount:lines.reduce(function(n,l){return n+cents(l.amount);},0)/100,unallocated:lines.reduce(function(n,l){return n+cents(l.unallocated);},0)/100,employeeAmounts:facts.map(function(f){return {employeeId:f.employeeId,name:f.name,role:f.role,amount:(totals[f.employeeId]||0)/100,allocationHours:lines.reduce(function(n,line){var p=line.participants.find(function(p){return p.employeeId===f.employeeId;});return n+(p?p.allocationMinutes/60:0);},0)};})};
+    return {version:1,weightSchemaVersion:1,scope:'shift',scheduleSource:scheduleSource,shiftWorkHours:validateShiftWorkHours(rule.shiftWorkHours,rule.distribution),dateKey:dateKey,distribution:rule.distribution,lines:lines,poolAmount:lines.reduce(function(n,l){return n+cents(l.amount);},0)/100,unallocated:lines.reduce(function(n,l){return n+cents(l.unallocated);},0)/100,employeeAmounts:facts.map(function(f){return {employeeId:f.employeeId,name:f.name,role:f.role,amount:(totals[f.employeeId]||0)/100,allocationHours:lines.reduce(function(n,line){var p=line.participants.find(function(p){return p.employeeId===f.employeeId;});return n+(p?p.allocationMinutes/60:0);},0)};})};
   }
   function allocateRule(rule, facts, dateKey) {
     if(rule.allocationScope==='shift')return allocateShifts(rule,facts,dateKey);
@@ -284,5 +295,5 @@
       poolAmount: events.reduce(function(sum, event) { return sum + cents(event.amount); }, 0) / 100,
       unallocated: unallocated / 100, employeeAmounts: facts.map(function(f) { return { employeeId: f.employeeId, name: f.name, role: f.role, amount: (totals[f.employeeId] || 0) / 100 }; }) };
   }
-  root.TipOutTimeWindow = { validateShifts:validateShifts, overlapMinutes:overlapMinutes, shiftWindow:shiftWindow, moment: moment, intervals: intervals, sourceEvents: sourceEvents, ruleEvents: ruleEvents, allocate: allocate, allocateRule: allocateRule, split: split };
+  root.TipOutTimeWindow = { validateShiftWorkHours:validateShiftWorkHours, validateShifts:validateShifts, overlapMinutes:overlapMinutes, shiftWindow:shiftWindow, moment: moment, intervals: intervals, sourceEvents: sourceEvents, ruleEvents: ruleEvents, allocate: allocate, allocateRule: allocateRule, split: split };
 })(typeof window !== 'undefined' ? window : this);

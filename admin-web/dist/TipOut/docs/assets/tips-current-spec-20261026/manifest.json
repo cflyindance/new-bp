@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-RULE-GROUPING-20261026-01",
-  "baseline": "5501da2d",
+  "documentId": "TIPOUT-SHIFT-HOURS-20261026-01",
+  "baseline": "8cd69352",
   "versions": {
-    "PRD_产品需求文档.md": "V4.31",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.31",
-    "小费管理需求文档（个人规范版）.md": "V2.29"
+    "PRD_产品需求文档.md": "V4.33",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.33",
+    "小费管理需求文档（个人规范版）.md": "V2.31"
   },
   "images": [
     {
@@ -286,34 +286,64 @@
       "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
     },
     {
-      "file": "assets/tips-scope-cards-20261026/day.png",
-      "caption": "统计与分配范围卡片",
-      "sha256": "8070c6be73a2360cc4df6393d0e08fc6a65c8961ab73b60fd3c761a130cf6739",
-      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-scope-cards-20261026/hours.png",
-      "caption": "统计与分配范围卡片",
-      "sha256": "507204abbea6840fa9e4a31d66e14bc8af591656e8bbbbd203d77da6c65b4afd",
-      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-scope-cards-20261026/time-window.png",
-      "caption": "统计与分配范围卡片",
-      "sha256": "b293a871f8bb52d8521b2f54e6246472ace1c1ef2f972fbfa30039a6853b23ca",
-      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-scope-cards-20261026/shift.png",
-      "caption": "统计与分配范围卡片",
-      "sha256": "6d2ad65201e12f15341bd788906fbce9da8127813540ec7fe9b91d12e4f55005",
-      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
       "file": "assets/tips-scope-cards-20261026/mobile.png",
       "caption": "统计与分配范围卡片",
       "sha256": "be4a5ea2b72a374f90f51597d723e2c0c79847f73fc070835760660c2106162a",
       "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-clock-cards-20261026/day.png",
+      "caption": "接收员工打卡要求卡片",
+      "sha256": "cfafe9ce2c9c7710b69bfa39db7f871b286ff99571a0a8904db9eca131b84aa9",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-clock-cards-20261026/hours.png",
+      "caption": "接收员工打卡要求卡片",
+      "sha256": "e2436572aafde19eaea4261518f356125a225828da9b9e34a56d1df40e209f90",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-clock-cards-20261026/mobile.png",
+      "caption": "接收员工打卡要求卡片",
+      "sha256": "907b9c9396070d32f96c26c701423715fb52a92a9c25043c96959e9294fa6062",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-clock-cards-20261026/time-window.png",
+      "caption": "时段说明位于问号内",
+      "sha256": "b9039fe19f9c5709a4cc9aa0e243771c934d9bb4ddafff84785548bb401c814d",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-clock-cards-20261026/time-help.png",
+      "caption": "时段说明位于问号内",
+      "sha256": "ec3e49794b0e55cfa757507705cd09a01087d1441f559c15702751ced32d4c9f",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-hours-20261026/hours.png",
+      "caption": "班次工时限制",
+      "sha256": "24bb1ea731c5192d44c5f98f8f3a6b6893eb46183d36298f3053102534717dbf",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-hours-20261026/average.png",
+      "caption": "班次工时限制",
+      "sha256": "50c1483d90b3d82bd87fe24121ec2fea8c82be51b3d97fc789db1788cc463f9b",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-hours-20261026/invalid.png",
+      "caption": "班次工时限制",
+      "sha256": "50907fa63d349275c15706de6da26b94b1b1e4279afd841d6f47de622d139152",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-hours-20261026/invalid-upper.png",
+      "caption": "班次上限小于门槛",
+      "sha256": "d2d9c81569e81da7d4942f419100aca55f89224cf0b26563d440073ea6677ac4",
+      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -348,18 +378,18 @@
     "src/team/tips/legacy/tipout-scenario-source.js.txt": "0729a24e7bc40a2a0dc553877f5c62b5c9700dab23ef1d9b28016bd302993cab",
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
-    "src/team/tips/legacy/tipout-time-window.js.txt": "293c8f014935391b48a71108f3b4d3022b657f35d596eacf59b7fc23571cff2c",
+    "src/team/tips/legacy/tipout-time-window.js.txt": "58a5b3d85a90958d7076972f80830ecc24a9c967e741c7c9534da80d73d5fd60",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
-    "src/team/tips/programs/details.js.txt": "edd2b3de8331a081f20de7d096f9c7cea64e4ce3cbbfa8f48d86bbb80db4b23e",
+    "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "6281685c1196a189567b3fdfb1e97ec43107905d5f528f40e59ffe1ec48494ad",
+    "src/team/tips/programs/rule-editor.js.txt": "cd726160ba7011ef767388cf427c42fa2733d9a758afdd3840b8f14b31287e9b",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "b2bf847bf7d2faeff79dec3508af4b650cc46dac5deee0087cfe645d0e039501",
+    "src/team/tips/templates/rule-editor.html": "b947492e774b2947df138af1ce0232826e9286250c4273393a320eb4f63fa0f8",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",

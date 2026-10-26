@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.31','V3.31','V2.29'];
-const id='TIPOUT-RULE-GROUPING-20261026-01';
+const versions=['V4.33','V3.33','V2.31'];
+const id='TIPOUT-SHIFT-HOURS-20261026-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-spec-20261026/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'5501da2d');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'8cd69352');
 let links=0;
 for(const [i,text]of texts.entries()){
  assert.doesNotMatch(text,/测试场景清单|取消分配|演示重置/,names[i]+' no test-only product operations');

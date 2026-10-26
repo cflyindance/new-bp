@@ -163,6 +163,7 @@
     }
     .participation-option { display: flex; align-items: center; gap: 4px; }
     .distribution-method-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .clock-requirement-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .distribution-method-card { display: flex; align-items: center; gap: 4px; padding: 18px; border: 1px solid var(--border-color); border-radius: 10px; background: #fff; min-width: 0; cursor: pointer; }
     .distribution-method-card:hover { border-color: var(--primary); background: rgba(22,119,255,0.04); }
     .distribution-method-card:has(input:checked) { border-color: var(--primary); background: rgba(22,119,255,0.04); box-shadow: inset 0 0 0 1px var(--primary); }
@@ -530,24 +531,29 @@
               <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"><strong>按班次</strong></label></div>
               <div class="distribution-method-card" id="timeWindowParticipationOption">
                 <label class="distribution-method-choice"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"><strong>按打卡时段</strong></label>
-                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p id="allocationScopeTimeNotice">各时段产生的小费，仅分配给该时段在岗的接收员工。按实际打卡起止时间匹配，且须符合接收方角色条件。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
               </div>
             </div>
-            <p id="allocationScopeTimeNotice" class="field-desc" hidden>各时段产生的小费，仅分配给该时段在岗的接收员工。</p>
+          <div class="form-section tipout-day-requirements" id="shiftWorkHoursPanel" hidden>
+            <div class="form-section-title">班次工时限制</div>
+            <label class="work-hours-cap-row"><span>最低参与工时</span><input id="shiftMinMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次最低参与工时（分钟）"><span>分钟／班次</span></label>
+            <label class="work-hours-cap-row" style="margin-top:12px"><span>班次计入工时上限</span><input id="shiftMaxMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次计入工时上限（分钟）"><span>分钟／班次</span><span id="shiftHoursOnlyHint" class="field-desc">仅按工时分配时可设置</span></label>
+            <p class="field-desc" style="margin:12px 0 0">0 表示不限制。先按班次内实际有效打卡工时判断是否参与，再应用计入上限；不修改打卡记录。</p>
+          </div>
           <div class="form-section tipout-day-requirements" id="dailyParticipationSection">
               <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">接收员工打卡要求</span></div>
-              <div class="radio-group">
-                <div class="participation-option" id="clockinClockOption">
-                  <label class="radio-item">
-                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 需有有效打卡
+              <div class="distribution-method-cards clock-requirement-cards">
+                <div class="distribution-method-card" id="clockinClockOption">
+                  <label class="distribution-method-choice">
+                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"><strong>需有有效打卡</strong>
                   </label>
                   <details class="distribution-method-help"><summary aria-label="查看需有有效打卡说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
-                <div class="participation-option">
-                  <label class="radio-item">
-                    <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"> 不限打卡状态
+                <div class="distribution-method-card">
+                  <label class="distribution-method-choice">
+                    <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"><strong>不限打卡状态</strong>
                   </label>
-                  <details class="distribution-method-help"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
+                  <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
 <input type="radio" name="clockin" value="time_window" hidden aria-hidden="true" tabindex="-1">
                 <label class="radio-item" hidden style="display:none">
