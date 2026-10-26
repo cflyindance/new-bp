@@ -423,42 +423,9 @@
             </div>
           </div>
 
-          <section class="tipout-editor-rule-group" id="allocationRulesGroup" aria-labelledby="allocationRulesTitle">
-            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">分配规则</h2>
-
-          <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
-            <div class="distribution-method-cards">
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合参与资格的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card" id="distributionOrdersRow">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
-                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section tipout-form-card" id="allocationScopeSection">
-            <div class="form-section-title">统计与分配范围</div>
-            <div class="radio-group">
-              <label class="radio-item"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"> 按整日</label>
-              <label class="radio-item"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"> 按班次</label>
-              <div class="participation-option" id="timeWindowParticipationOption">
-                <label class="radio-item"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"> 按打卡时段</label>
-                <details class="distribution-method-help"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
-              </div>
-            </div>
-            <p id="allocationScopeTimeNotice" class="field-desc" hidden>各时段产生的小费，仅分配给该时段在岗的接收员工。</p>
-          </div>
-
-          <!-- 小费池贡献规则：两种计算模式共用 -->
-          <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
+          <section class="tipout-editor-rule-group tipout-settings-group" id="poolSettingsGroup" aria-labelledby="poolSettingsTitle">
+            <h2 class="tipout-rule-group-title" id="poolSettingsTitle" data-pool-label="1. 小费池设置">1. 小费池设置</h2>
+<div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
               <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池金额计算规则">小费池金额计算规则</span>
             </div>
@@ -479,8 +446,7 @@
               </div>
             </div>
           </div>
-
-          <details class="form-section tipout-form-card" id="allocationModeSection">
+<details class="form-section tipout-form-card" id="allocationModeSection">
             <summary class="form-section-title">小费池计算模式</summary>
             <div class="radio-group">
               <label class="radio-item">
@@ -494,8 +460,10 @@
             </div>
             <p id="allocationModeHint" data-pool-label="「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。" style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。</p>
           </details>
-
-          <div id="legacyAllocationSections">
+          </section>
+          <section class="tipout-editor-rule-group tipout-settings-group" id="allocationRulesGroup" aria-labelledby="allocationRulesTitle">
+            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">2. 接收与分配设置</h2>
+<div id="legacyAllocationSections">
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
             <div class="form-section-title">
@@ -517,9 +485,8 @@
               <span style="font-size:14px">+</span> 新增角色
             </button>
           </div>
-          </div><!-- /legacyAllocationSections -->
-
-          <div id="orderTipAllocationSection" style="display:none">
+          </div>
+<div id="orderTipAllocationSection" style="display:none">
             <div class="form-section tipout-form-card" id="orderTipClaimsSection">
               <div class="form-section-title" data-pool-label="计提小费接受方规则">计提小费接受方规则</div>
               <div class="tip-claims-table-wrap">
@@ -556,23 +523,31 @@
               <button type="button" class="btn btn-sm" style="margin-top:8px" data-native-onclick="addOrderResidualReceiverRow()"><span style="font-size:14px">+</span> 新增角色</button>
             </div>
           </div>
-
-          <div id="distributionSection" class="tipout-rule-distribution-section tipout-form-card">
-            <!-- Daily participation -->
-            <div class="form-section" id="dailyParticipationSection">
-              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">参与资格</span></div>
+<div class="form-section tipout-form-card" id="allocationScopeSection">
+            <div class="form-section-title">统计与分配范围</div>
+            <div class="distribution-method-cards allocation-scope-cards">
+              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"><strong>按整日</strong></label></div>
+              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"><strong>按班次</strong></label></div>
+              <div class="distribution-method-card" id="timeWindowParticipationOption">
+                <label class="distribution-method-choice"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"><strong>按打卡时段</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+              </div>
+            </div>
+            <p id="allocationScopeTimeNotice" class="field-desc" hidden>各时段产生的小费，仅分配给该时段在岗的接收员工。</p>
+          <div class="form-section tipout-day-requirements" id="dailyParticipationSection">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">接收员工打卡要求</span></div>
               <div class="radio-group">
                 <div class="participation-option" id="clockinClockOption">
                   <label class="radio-item">
-                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 仅打卡员工
+                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 需有有效打卡
                   </label>
-                  <details class="distribution-method-help"><summary aria-label="查看仅打卡员工说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明参与资格；实际金额仍受接收方规则影响。</p></div></details>
+                  <details class="distribution-method-help"><summary aria-label="查看需有有效打卡说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
                 <div class="participation-option">
                   <label class="radio-item">
                     <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"> 不限打卡状态
                   </label>
-                  <details class="distribution-method-help"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明参与资格；实际金额仍受接收方规则影响。</p></div></details>
+                  <details class="distribution-method-help"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
 <input type="radio" name="clockin" value="time_window" hidden aria-hidden="true" tabindex="-1">
                 <label class="radio-item" hidden style="display:none">
@@ -580,8 +555,24 @@
                 </label>
               </div>
             </div>
-
-                <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+</div>
+<div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
+            <div class="distribution-method-cards">
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合接收条件的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card" id="distributionOrdersRow">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
+              </div>
+            </div>
+          <div id="distributionSection" class="tipout-work-hours-wrap"><div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
                   <div class="form-section-title work-hours-config-heading"><span>分配工时设置</span>
                     <details class="distribution-method-help" id="workHoursSourceHelpToggle"><summary aria-label="查看分配工时设置说明">？</summary><div class="distribution-method-help-content"><p id="workHoursSourceHelp"></p></div></details>
                   </div>
@@ -605,12 +596,11 @@
                   </div>
                   </div>
                   <div class="work-hours-config-error" id="workHoursConfigError"></div>
-                </div>
-          </div>
-
+                </div></div>
+</div>
           </section>
-          <section class="tipout-editor-rule-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
-            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">贡献规则</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工不受接收方参与资格限制。</p></div></details></div>
+          <section class="tipout-editor-rule-group tipout-settings-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
+            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">3. 员工贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>

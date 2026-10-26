@@ -3518,7 +3518,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var sourceHelp = document.getElementById('workHoursSourceHelp');
       if (sourceHelp) sourceHelp.textContent = isUnrestricted || isNoClock
         ? '有打卡记录自动获取有效工时；未打卡员工需手动补录。工时为 0 不获得分配。规则上限用于默认计算，每日明细中的明确手动调整优先。'
-        : '自动获取符合参与资格员工的有效打卡工时。上限只限制默认计入时长，不修改实际打卡记录；每日明细中的明确手动调整优先。';
+        : '自动获取符合接收条件员工的有效打卡工时。上限只限制默认计入时长，不修改实际打卡记录；每日明细中的明确手动调整优先。';
       var capNotice = document.getElementById('workHoursTimeWindowCapNotice');
       var cappedSelected = document.querySelector('input[name="workHoursMode"]:checked');
       if (capNotice) capNotice.hidden = !isTimeWindow || !cappedSelected || cappedSelected.value !== 'capped';
@@ -4864,7 +4864,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     function submitRule() {
       var attendanceChoice = document.querySelector('input[name="clockin"]:checked');
       if (!attendanceChoice || ['clock', 'unrestricted', 'time_window'].indexOf(attendanceChoice.value) < 0) {
-        showNotification('请选择参与资格后保存', 'warning');
+        showNotification('请选择接收员工打卡要求后保存', 'warning');
         return;
       }
       var ruleName = document.getElementById('ruleName').value.trim();
@@ -5281,7 +5281,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     document.addEventListener('click', function(e) {
       var distributionCard = e.target.closest('.distribution-method-card');
       if (distributionCard && !e.target.closest('.distribution-method-help, .distribution-method-choice')) {
-        var distributionInput = distributionCard.querySelector('input[name="distribution"]');
+        var distributionInput = distributionCard.querySelector('input[type="radio"]');
         if (distributionInput) distributionInput.click();
       }
       if (!e.target.closest('.multi-select')) {

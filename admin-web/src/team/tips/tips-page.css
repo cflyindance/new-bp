@@ -2443,11 +2443,11 @@ select.form-control {
 }
 
 .tipout-page-rule-editor #timeWindowParticipationOption {
-  width: fit-content;
+  width: auto;
   max-width: 100%;
   border: 1px solid var(--danger);
-  border-radius: 8px;
-  padding: 6px 8px;
+  border-radius: 10px;
+  padding: 18px;
 }
 
 .tipout-page-rule-editor .tipout-form-grid {
@@ -3400,3 +3400,15 @@ select.form-control {
 .tipout-auto-table { overflow:auto; max-height:40vh; }
 .tipout-auto-table td { white-space:normal; }
 .tipout-auto-modal #summaryAutoRetry[hidden] { display: none !important; }
+
+/* Rule editor: three business groups, with contextual controls kept together. */
+.tipout-page-rule-editor .tipout-settings-group { gap:0; padding:20px; border:1px solid var(--border-light); border-radius:20px; background:#f9f9fa; }
+.tipout-page-rule-editor .tipout-settings-group > .tipout-rule-group-title,
+.tipout-page-rule-editor .tipout-settings-group > .tipout-rule-group-heading { margin:0 0 20px; }
+.tipout-page-rule-editor .tipout-settings-group .tipout-form-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; }
+.tipout-page-rule-editor .tipout-settings-group #allocationModeSection { margin-top:16px; padding:12px 16px; border:1px solid var(--danger); border-radius:10px; }
+.tipout-page-rule-editor .tipout-settings-group #allocationScopeSection,
+.tipout-page-rule-editor .tipout-settings-group #employeeDistributionMethodSection { margin-top:20px; padding-top:20px; border-top:1px solid var(--border-light); }
+.tipout-page-rule-editor .tipout-day-requirements { margin:16px 0 0; padding:16px; border:1px solid var(--border-light); border-radius:10px; background:#fff; }
+.tipout-page-rule-editor .tipout-work-hours-wrap .work-hours-config { margin:16px 0 0; max-width:none; padding:16px; background:#fff; }
+@media(max-width:600px){.tipout-page-rule-editor .tipout-settings-group{padding:16px;}}
