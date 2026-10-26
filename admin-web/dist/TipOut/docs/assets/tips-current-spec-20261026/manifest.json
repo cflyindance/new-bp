@@ -1,508 +1,284 @@
 {
-  "documentId": "TIPOUT-AUTO-CLOSE-STATE-20261026-01",
-  "baseline": "1c51cbf3",
+  "documentId": "TIPOUT-PRODUCT-SCOPE-20261026-01",
+  "baseline": "d8acdfba",
   "versions": {
-    "PRD_产品需求文档.md": "V4.48",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.48",
-    "小费管理需求文档（个人规范版）.md": "V2.46"
+    "PRD_产品需求文档.md": "V4.49",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.49",
+    "小费管理需求文档（个人规范版）.md": "V2.47"
   },
   "images": [
-    {
-      "file": "assets/tips-current-spec-20261026/daily.png",
-      "caption": "日期分配汇总",
-      "sha256": "76c35a57fd9181d5d56c33f73775c502f6f429d45f864c3ee5546ee40fb8df21",
-      "sourceManifest": null,
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
     {
       "file": "assets/tips-detail-gaps-20261023/detail-date-leave.png",
       "caption": "未保存调整保护",
       "sha256": "9acb82fd0fbd65f68ab976789a95f25f6adcb351fcdf37903018733dc56ad4b3",
-      "sourceManifest": "assets/tips-detail-gaps-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/contribution-configured.png",
-      "caption": "贡献规则／小费贡献方规则",
-      "sha256": "9a486b20b5ee97b634811ebdd06a60824448eae78ed3c19d263d61f4b0d9be32",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/contribution-shortage.png",
       "caption": "规则金额与贡献",
       "sha256": "f53669ddab68676eca9213cd5fc8cdb1cbbf8457937cdac4919588334e07794f",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/detail-no-change.png",
       "caption": "无手动调整提示",
       "sha256": "d5ba14d02314c15d472577066af00cb729d0e3f53731d8d414d52fb29ded0d93",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/detail.png",
-      "caption": "当日小费分配明细",
-      "sha256": "82feddc4af690fa75215541ddd2b557dbd3af819aa428ce04242f44e95345320",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/employee-daily.png",
       "caption": "员工每日考勤分配",
       "sha256": "94dca67ddd7594a8cf537e51f908c86d9fb0348e3e81d10a99845d3310afc17d",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/employee-list.png",
-      "caption": "员工列表",
-      "sha256": "78ef4646a1158fe0146e455d4aa6e02c8c51ce6ad8d7683b4aac83f68f199419",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/employees.png",
-      "caption": "员工分配汇总",
-      "sha256": "a9db8f62585b784a460a07ad5bd0f19a9c2946870412f63afe7f79d624f17af3",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/hours-clock.png",
-      "caption": "分配规则／分配方式、参与资格与工时",
-      "sha256": "a810b889787becbc3cb10aa1aa01c8a39b1285eb81a6b7ef7274dfbf4effab13",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/pool-type.png",
       "caption": "选择池类型",
       "sha256": "ab10f1a7d5760c8bb1d2bbaad2f9e4761f16f7610eab71ec85da67440c82d1c1",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-docs-current-20261023/rules.png",
-      "caption": "分配规则列表",
-      "sha256": "a24cc0ce67babb1e1d6fe4670702616e4aec8f1187b35078c10cdc5d6d4f4cf6",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/share-average.png",
       "caption": "平均分担只读比例",
       "sha256": "49f138c8e349257b470a2c7e9cfbfc18325a80397dd4e1c6506a559c6316a4b6",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/share-custom.png",
       "caption": "员工承担比例",
       "sha256": "4ada15d75558c782aca347b36a6f11c2c91f5d9842132f741d1f43e1c3f23fd8",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-docs-current-20261023/share-invalid.png",
       "caption": "自定义合计错误",
       "sha256": "32f4f855d950a62a3692528be66fbc976b235fbb44b3c12fb04d65bfcc2f3015",
-      "sourceManifest": "assets/tips-docs-current-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/batch-manual-warning.png",
       "caption": "覆盖人工结果确认",
       "sha256": "4b7be16eb46023c49dc97c3239e8b44b20f96cc3fbb8a50ccefe9decef276abd",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/batch-selection.png",
       "caption": "主动批量分配范围",
       "sha256": "38f87cb2d02657c6a4d8966961fa323ae41d61688ea30f6fc06b79c97c11de14",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/detail-formula.png",
       "caption": "公式详情",
       "sha256": "2f04d62a6d2ccbb48b161666e8ce1d70396f6ac52011c6e206f6fa299f4b1a66",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/detail-reallocate-confirm.png",
       "caption": "重新确认分配提示",
       "sha256": "892fde689d4c39412b490e6d7b2229280529f7f81b3dd739158e72c9ed55ad11",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/detail-save-confirm.png",
       "caption": "保存人工分配确认",
       "sha256": "c20f650feb9585e27eff4ccbecd5444fbad5b1ee69c20208960603afa6f9e08c",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/detail-update-dialog.png",
       "caption": "更新小费数据",
       "sha256": "ab138f311928013cb634ff1704ad71a4071d4442a9c9297fa66e6b7889f83ad1",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/detail-updated-draft.png",
       "caption": "更新后需要确认的计算",
       "sha256": "d3e03c34f1b90eb9503fcc3c212a4816c7708f08e1bc8e239a43aaa1a3bb7e49",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-operations-20261023/employee-contribution-breakdown.png",
-      "caption": "贡献金额拆分",
-      "sha256": "805eb5eaaaee2befe48bb4ec358689fa1c57e5787139e82520ebc7a818846c9c",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/export-email-invalid.png",
       "caption": "邮箱格式错误",
       "sha256": "07300cadb7e6963e8abf3090bb5bc836146beb1de6a25ae3a1645a6a59e94578",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/export-email.png",
       "caption": "导出与邮件",
       "sha256": "4cf419613909395dd40f55f92d44cdebadab9e1f8eaa24592aaaf4cec7e60490",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/hours-day.png",
       "caption": "单日工时明细",
       "sha256": "9bd0524ba9b3d04c0f5c5e91bb529604e514735bff2a937b598e38bb8412a35c",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/hours-period.png",
       "caption": "分配计入工时明细",
       "sha256": "8e6d554bff8429242bf08674d8f1adfff436c9ea89be1a052e41afd4e70bb0ea",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/manual-source-drawer.png",
       "caption": "手动上报来源条件",
       "sha256": "139251c061745da6198cf3cdd6981c930d7895cc2f1bc2a70ba13b33ff217421",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-operations-20261023/payout-demo-locked-detail.png",
-      "caption": "发放后只读结果",
-      "sha256": "b68335b20e4005d206b4c0a8e352214c938caa17c15a3b94a086cf6367714e24",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-operations-20261023/payout-detail-dialog.png",
-      "caption": "当日明细发放确认",
-      "sha256": "f1717ac5d445665639ff51a61ecdb7c5159ed876dce7ebe16758c24fb0c4cdf3",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-operations-20261023/payout-summary-dialog.png",
-      "caption": "确认已发放",
-      "sha256": "746adf6b8fc85670e95b45dfb533d88225cb4a2d7958a70beeead12990f2fae1",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/rule-source-drawer.png",
       "caption": "来源／贡献取值条件",
       "sha256": "0f6bfba8c61a7e77568b948acb59a546d0c0db54869b7eed1ecc928ecd606a58",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/rule-weight-dialog.png",
       "caption": "员工权重",
       "sha256": "cfc986d1f0aaa5c243078fc923180f80e7c095f99dd317a95236521d43148a43",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/sales-source-drawer.png",
       "caption": "销售额来源条件",
       "sha256": "1f55a6c31b9fef8cddbd4d645063cda465484b6ab6bcb91430e5cb07c43e62d0",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
       "file": "assets/tips-operations-20261023/surcharge-source-drawer.png",
       "caption": "服务费来源条件",
       "sha256": "f99409d2c74fc0116a6546731bd6604afefc0dd3782b965986da0a9699c6b740",
-      "sourceManifest": "assets/tips-operations-20261023/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
-      "file": "assets/tips-retry-visibility-20261026/failed.png",
+      "file": "assets/tips-product-scope-20261026/auto-completed.png",
       "caption": "自动任务有失败时显示重试",
-      "sha256": "bfee3055f4b71f8da993aa5ec3c0827bbb46a18ebb0ecdefe1538d3f8033cba0",
-      "sourceManifest": "assets/tips-retry-visibility-20261026/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "sha256": "5eca44d6d79d3d52d2a8e865a1c081bdd0bf4966ae7b3a7fff5a4479ba9c57d4",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
     },
     {
-      "file": "assets/tips-retry-visibility-20261026/running.png",
+      "file": "assets/tips-product-scope-20261026/auto-running.png",
       "caption": "自动分配状态与结果",
-      "sha256": "184db42558f5c6a830896d06af11e39fe600ad6eeeff864188b13c7d99fef670",
-      "sourceManifest": "assets/tips-retry-visibility-20261026/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
+      "sha256": "a94ed529d831e81742bd66d6fffcafe755382f9f348cf1334d52731ca099e187",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/cancel-rule.png",
+      "caption": "取消编辑确认",
+      "sha256": "ab75938998140beb4083a6594641c7d9a3d608d1084d267f9037a4923311adb4",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/clock.png",
+      "caption": "接收员工打卡要求",
+      "sha256": "c9b55adef1964dd1bdb648b5aa15a81f09e2165d7eb55daeb6f9feb89da7684d",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/contribution-breakdown.png",
+      "caption": "贡献金额拆分",
+      "sha256": "3b2d6d6a4f31d3707ad3a91553a45b3f871ae90113c25bff0f7e14d99b7b0021",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/contribution.png",
+      "caption": "assets/tips-product-scope-20261026/contribution.png",
+      "sha256": "abf83e88cd2bf0d2326cebc9f78ac1ec47f6cfe4f80d22083b4f9424f91f1c61",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/daily.png",
+      "sha256": "724f311d957c10efca24938d207d1776f99916cbedb50e42830731cea69fee53",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26",
+      "caption": "日期分配汇总"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/delete-rule.png",
+      "caption": "删除规则确认",
+      "sha256": "d78a59a9afc817ce2401f8609fe436502e62aa3ac449bae379cf421fb3100d5c",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/detail.png",
+      "caption": "assets/tips-product-scope-20261026/detail.png",
+      "sha256": "f3bc3ef08ebf207fd78ce7db5893eeb8385f55afda8752b07615ecd821715adb",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/employees.png",
+      "sha256": "939dc85e0fc5decf3a482f34d4e4ef44dff9d1b9b4156d6916b001bad0a9df28",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26",
+      "caption": "员工分配汇总"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/hours.png",
+      "caption": "按工时分配及工时设置",
+      "sha256": "084eab3e4b0fbb8f3fdacdd5715b999627b7bd105bb269ade899fba28a5bc9cb",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/method.png",
+      "caption": "小费分配方式",
+      "sha256": "2537bf2a84dc3fe43dfd2bf371a2a2868233c2b4917c75c8a7d1d29b87ed19a6",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/pool.png",
+      "caption": "小费池金额计算规则区域",
+      "sha256": "c380c9884797a2cd8d3877c6e3e98255bca7e2da0fb0cab80f0c47eb65d75d78",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/receivers.png",
+      "caption": "小费接收方规则区域",
+      "sha256": "9233cf30c520efad5a07c5407bbcc972ce7c0d41f1cf0a3e8c0cc50d7ce908db",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/rule-basic.png",
+      "caption": "规则基础信息与顶部操作",
+      "sha256": "ff48a0a9dbdc836eb2b2c59a08bb71ca81acee4252ac4879b72f2085027ba2c1",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-product-scope-20261026/rules.png",
+      "caption": "assets/tips-product-scope-20261026/rules.png",
+      "sha256": "38d1423a28a449dc9e153971ad4a1e71d17aa6a667ca0f1a590ce95015fcd9c1",
+      "source": "d8acdfba实际模板与渲染函数，受控数据；区域截图或隔离组件截图，2026-10-26"
     },
     {
       "file": "assets/tips-retry-visibility-20261026/success.png",
       "caption": "全部成功，仅保留关闭",
       "sha256": "ca45c1383eca4f2742cc951be375ae78849c394c234a2f3d0759adb17f8536bd",
-      "sourceManifest": "assets/tips-retry-visibility-20261026/capture-manifest.json",
-      "source": "项目实页截图；核对页面字段，未重新制作界面"
-    },
-    {
-      "file": "assets/tips-schedule-source-20261026/details.png",
-      "caption": "按排班表班次分配",
-      "sha256": "e3502cd15683521a667ba8ab898dc825b844adb260cf77c99efc643252a48985",
-      "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
-    },
-    {
-      "file": "assets/tips-schedule-source-20261026/no-schedule.png",
-      "caption": "按排班表班次分配",
-      "sha256": "91077cfafd6edc1c081480c13cb1bb12c2353791adb07ae1338b317e87870195",
-      "source": "bfbbd6aa基线功能分支，真实模板与运行时，受控演示排班，2026-10-26"
-    },
-    {
-      "file": "assets/tips-scope-cards-20261026/mobile.png",
-      "caption": "统计与分配范围卡片",
-      "sha256": "be4a5ea2b72a374f90f51597d723e2c0c79847f73fc070835760660c2106162a",
-      "source": "5501da2d基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-clock-cards-20261026/day.png",
-      "caption": "接收员工打卡要求卡片",
-      "sha256": "cfafe9ce2c9c7710b69bfa39db7f871b286ff99571a0a8904db9eca131b84aa9",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-clock-cards-20261026/hours.png",
-      "caption": "接收员工打卡要求卡片",
-      "sha256": "e2436572aafde19eaea4261518f356125a225828da9b9e34a56d1df40e209f90",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-clock-cards-20261026/mobile.png",
-      "caption": "接收员工打卡要求卡片",
-      "sha256": "907b9c9396070d32f96c26c701423715fb52a92a9c25043c96959e9294fa6062",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-clock-cards-20261026/time-window.png",
-      "caption": "时段说明位于问号内",
-      "sha256": "b9039fe19f9c5709a4cc9aa0e243771c934d9bb4ddafff84785548bb401c814d",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-clock-cards-20261026/time-help.png",
-      "caption": "时段说明位于问号内",
-      "sha256": "ec3e49794b0e55cfa757507705cd09a01087d1441f559c15702751ced32d4c9f",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-shift-hours-20261026/hours.png",
-      "caption": "班次工时限制",
-      "sha256": "24bb1ea731c5192d44c5f98f8f3a6b6893eb46183d36298f3053102534717dbf",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-shift-hours-20261026/average.png",
-      "caption": "班次工时限制",
-      "sha256": "50c1483d90b3d82bd87fe24121ec2fea8c82be51b3d97fc789db1788cc463f9b",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-shift-hours-20261026/invalid.png",
-      "caption": "班次工时限制",
-      "sha256": "50907fa63d349275c15706de6da26b94b1b1e4279afd841d6f47de622d139152",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-shift-hours-20261026/invalid-upper.png",
-      "caption": "班次上限小于门槛",
-      "sha256": "d2d9c81569e81da7d4942f419100aca55f89224cf0b26563d440073ea6677ac4",
-      "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/scope-help.png",
-      "caption": "小费分配范围问号说明",
-      "sha256": "e89307ac9e8cbfaf9ce7d9b39097f6fa479c063b79dfd7f8557ca72ee418a4d5",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/allocation-order.png",
-      "caption": "分配与接收设置排序",
-      "sha256": "66914dde01e582c01c1b380ee423c97b5a5c6e05f74dc8afa5cfff4d4d11871a",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/four-groups.png",
-      "caption": "四组设置与班次条件联动",
-      "sha256": "179cb2fe2a39dfc74e66c418784eaf5d96764c80ef1e699dfb1c7ebf858b53d5",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/four-groups-shift.png",
-      "caption": "四组设置与班次条件联动",
-      "sha256": "24328ad8fbfd68aadbd113fc20f251735678737c7069f8c66a48a7faed33df6c",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/four-groups-average.png",
-      "caption": "四组设置与班次条件联动",
-      "sha256": "5ac0f7fa85f2bc4575eed9111dd5d0e197dade2851a1deceb48e27dfd6f5762b",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/range-day.png",
-      "caption": "小费分配范围联动条件",
-      "sha256": "1db9a50ac2f0154b407825c98e54b8d01a4ebb4a719fb5375eef31f3a70921d9",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/range-shift.png",
-      "caption": "小费分配范围联动条件",
-      "sha256": "0e7b22bc672a1dc94d4d99e27434478f00e4ba4f95f163677db8e220f1aeebb5",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/range-average.png",
-      "caption": "小费分配范围联动条件",
-      "sha256": "2bba4b5cf8db831b1c2a9539dca393639998b9cc1d8d3345565bdeb48da99766",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-scope-copy-20261026/range-time.png",
-      "caption": "小费分配范围联动条件",
-      "sha256": "dce8bfd7e7e2b48571a34c032f01de65b1d4d2c49a935d70a144d886538eee26",
-      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-shift-duration-20261026/duration.png",
-      "caption": "班次限制小时分钟输入",
-      "sha256": "aca1874673e9cb6a51fe1c0e8d056cf83f2f7cc7f62b899cb1dccfd0ee3448c2",
-      "source": "9df72cdf基线功能分支真实模板与运行时，受控演示"
-    },
-    {
-      "file": "assets/tips-shift-red-20261026/range.png",
-      "caption": "分配范围红框标记",
-      "sha256": "e5d3b7e643607c2cdc677983e708de6238328eabf1226252170f54b8cd5862c9",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-time-range-copy-20261026/range-help.png",
-      "caption": "分配时间范围说明",
-      "sha256": "2e4fedfacb9973669cd509d8620e2bd6b82ce7ebc7c0161bf07098bc9d827b01",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-time-range-title-20261026/title.png",
-      "caption": "小费分配时间范围标题",
-      "sha256": "671d7b2332a3d5fc90471a2e69e2b5e543d6437e3e91ee95e3a73b6839a34225",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-tooltip-20261026/allocationModeSection.png",
-      "caption": "悬停规划提示",
-      "sha256": "03e2da009f3b3830b53bcd1169922401e2453bcdeae1fffd2a8eae7e7f022525",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-tooltip-20261026/shiftScopeOption.png",
-      "caption": "悬停规划提示",
-      "sha256": "cdb42b0f0436d2d654477dc4f5b57de930172c6835eeb1a22d8970ed76858485",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-tooltip-20261026/timeWindowParticipationOption.png",
-      "caption": "悬停规划提示",
-      "sha256": "0874f26bab0fff600376c005af54946e866eb63a6fa8e87affe0a877010f05f2",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-pool-personal-red-20261026/menu.png",
-      "caption": "按个人销售额红框",
-      "sha256": "e9ec135775e7ab10d1d14d73151975ad4e8a0a03b01a2b37e7bd4104f45948e3",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-condition-red-20261026/menu.png",
-      "caption": "班次与周期红框",
-      "sha256": "05615e5e3460e093e152a2602ceabebc274ca8097f9d97a46e91058b1f32c853",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-copy-20261026/allocationModeSection.png",
-      "caption": "红框用途悬停提示",
-      "sha256": "8d81646411517a9571f4b561b9ebd4eb8fccd77edfc30178c3086bad3df28f06",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-copy-20261026/shiftScopeOption.png",
-      "caption": "红框用途悬停提示",
-      "sha256": "7a1474f08f817f532171b283bef42598194fdc895b1eeeb667e07f2ecc1514a1",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-planning-copy-20261026/timeWindowParticipationOption.png",
-      "caption": "红框用途悬停提示",
-      "sha256": "1fa76ba090a207eeda92e277129578500ac989555f5f1acbe1bcc49273faf444",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-group-titles-20261026/editor.png",
-      "caption": "规则分组标题",
-      "sha256": "3826322cd651ccca1e45a105cb650d67f3f0aa2782134c93963fd7aabf84e321",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-all-planning-hints-20261026/pool-menu.png",
-      "caption": "红框规划标记悬停气泡",
-      "sha256": "700e7131d899d6396f24eb6b912c4fa9ff6fa9853cb6a221949ed58427e737ff",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-all-planning-hints-20261026/condition-menu.png",
-      "caption": "红框规划标记悬停气泡",
-      "sha256": "0ceb054a2a3c817792fc7ff40e031cb7da55ddfd0a8bbd6cd82814f68c6e51e1",
-      "source": "真实模板与运行时受控演示"
-    },
-    {
-      "file": "assets/tips-auto-close-state-20261026/running.png",
-      "caption": "自动分配按钮状态",
-      "sha256": "0f533b3a73780fe10677afe18c86c075a4a64f67596ef22d6798167d5800ea81",
-      "source": "真实模板与进度渲染函数，受控任务状态"
-    },
-    {
-      "file": "assets/tips-auto-close-state-20261026/completed.png",
-      "caption": "自动分配按钮状态",
-      "sha256": "c72d95553c0370809fb62000abe16ed7d6de81a5530c4c2bb11ca3b0c4fb607c",
-      "source": "真实模板与进度渲染函数，受控任务状态"
+      "source": "沿用项目已有截图，仅用于当前相同界面字段定位；来源元数据见原图资产",
+      "capturedSource": "项目实页截图；核对页面字段，未重新制作界面"
     }
   ],
-  "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
   "sourceHashes": {
     "src/team/tips/legacy/attendanceMock.js.txt": "ce2f9a0cfdffc4554c7610dbf5ec160aa4c6c5fcf6a332efa28fe37eff2f63a6",
     "src/team/tips/legacy/common.js.txt": "10624802e7c9fb0b9483a5cf08db02afb307a460e22feb559abc20341c2f2a82",
@@ -530,11 +306,9 @@
     "src/team/tips/legacy/tipout-payroll-bridge.js.txt": "d3f3b1933d95fc1d7a9df16e410b106d92e617e1b84d5bd0cfb1ec4f86366f84",
     "src/team/tips/legacy/tipout-roster-directory.js.txt": "4c374cdcb832682d634009fe46b0cf6ec38e46775ff37b13b3026fd60cb8adb5",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "10cc67564c4197573624b4cc2281dbed711837dea033878cbc9d7c0fc1d27064",
-    "src/team/tips/legacy/tipout-scenario-list.js.txt": "c010525ba3ba0565d8eb1f5e0ae705fd8058ef4c01a359a833ecd7273e357c1c",
     "src/team/tips/legacy/tipout-scenario-source.js.txt": "0729a24e7bc40a2a0dc553877f5c62b5c9700dab23ef1d9b28016bd302993cab",
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
-    "src/team/tips/legacy/tipout-time-window.js.txt": "58a5b3d85a90958d7076972f80830ecc24a9c967e741c7c9534da80d73d5fd60",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
     "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
@@ -553,14 +327,1305 @@
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
     "src/team/tips/tips-page.css": "b299460780a6f26898fc4bfe7b6198cd75d3313ae7333e944c83b6e7b6231fa5",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
-    "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f",
-    "src/config/team-shift-scheduling-ui.ts": "ac8ab6d8cd9dcb5fbf40efbc45a8821a967145fb24506febaea7b20050444b8f",
-    "src/team/tips/tips-schedule-source.ts": "4b900efcad4e43ed8a4b2b403a265a081c88261fb88e8478c0f66d72e9a7b585",
-    "src/team/tips/tips-planning-hints.ts": "4dbd213a27a62fb44fc6b7a1cb130511dbb54d11f17e4f112c0ea91fb6f5e274"
+    "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f"
   },
-  "notes": [
-    "除assets/tips-current-spec-20261026/daily.png外复用既有实页图片，原始来源保留在sourceManifest。",
-    "daily.png为main@88d04c0a页面截图，当前业务源码与该图所示布局一致。",
-    "缺失状态在逐操作清单登记，不声称全操作图像完整。"
+  "operationCoverage": [
+    {
+      "id": "OP-001",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "门店",
+      "definition": "单选；限定规则、员工和来源数据。与员工汇总共用，切换后更新查询，不跨门店合并同名员工。",
+      "line": 25,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-002",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "今天",
+      "definition": "开始=结束=浏览器本地今天。",
+      "line": 26,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-003",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "昨天",
+      "definition": "开始=结束=今天前一日，跨月／跨年按日历处理。",
+      "line": 27,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-004",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "本周",
+      "definition": "默认；周一至今天，包含首尾。",
+      "line": 28,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-005",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "上周",
+      "definition": "上周一至上周日。",
+      "line": 29,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-006",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "本月",
+      "definition": "当月1日至今天，不包含未来日。",
+      "line": 30,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-007",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "上月",
+      "definition": "上月1日至最后一天，闰年按实际月历。",
+      "line": 31,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-008",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "开始日期",
+      "definition": "必填完整日期；不得晚于结束日。无效、空值或倒置时标错，保留上次有效结果，不启动分配。",
+      "line": 32,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-009",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "结束日期",
+      "definition": "必填，默认今天。手动改日期清除快捷项高亮；合法确认后刷新并预检自动任务。",
+      "line": 33,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-010",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "营业状态",
+      "definition": "全部／正常营业／未营业，与其他条件取交集。",
+      "line": 36,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-011",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "分配状态",
+      "definition": "全部／已分配／未分配，筛选日期行及对应概览。",
+      "line": 37,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-012",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "发放状态",
+      "definition": "全部／待发放／已发放／无需发放，不代替分配状态。",
+      "line": 38,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-013",
+      "page": "1. 日期分配汇总",
+      "section": "查询条件",
+      "operation": "日期排序",
+      "definition": "日期倒序或顺序；不改变执行规则和金额。",
+      "line": 39,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-014",
+      "page": "1. 日期分配汇总",
+      "section": "日期行",
+      "operation": "营业状态",
+      "definition": "正常营业或未营业。",
+      "line": 55,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-015",
+      "page": "1. 日期分配汇总",
+      "section": "日期行",
+      "operation": "分配状态",
+      "definition": "已分配、未分配或无需分配。",
+      "line": 56,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-016",
+      "page": "1. 日期分配汇总",
+      "section": "日期行",
+      "operation": "发放状态",
+      "definition": "待发放、已发放或无需发放。",
+      "line": 57,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-017",
+      "page": "1. 日期分配汇总",
+      "section": "日期行",
+      "operation": "确认已发放",
+      "definition": "符合发放条件时显示，打开整日登记确认。",
+      "line": 64,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-018",
+      "page": "1. 日期分配汇总",
+      "section": "底部操作",
+      "operation": "导出结果",
+      "definition": "选择CSV、PDF或邮箱；使用当前视角和有效筛选。",
+      "line": 70,
+      "interfaceImage": "assets/tips-product-scope-20261026/daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-019",
+      "page": "2. 员工分配汇总",
+      "section": "筛选与角色汇总",
+      "operation": "角色",
+      "definition": "默认全部，限定当前门店的角色集合；与日期、员工和状态取交集。",
+      "line": 85,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-020",
+      "page": "2. 员工分配汇总",
+      "section": "筛选与角色汇总",
+      "operation": "员工",
+      "definition": "当前有效员工多选；使用稳定ID，支持全部。",
+      "line": 86,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-021",
+      "page": "2. 员工分配汇总",
+      "section": "筛选与角色汇总",
+      "operation": "分配状态",
+      "definition": "已完成／部分待分配／待分配等周期条件，约束列表和角色汇总。",
+      "line": 87,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-022",
+      "page": "2. 员工分配汇总",
+      "section": "员工列表",
+      "operation": "员工",
+      "definition": "姓名、身份信息；可按姓名排序，同名不同ID不合并。",
+      "line": 99,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-023",
+      "page": "2. 员工分配汇总",
+      "section": "员工列表",
+      "operation": "角色",
+      "definition": "当前参与的角色展示，不作为唯一身份键。",
+      "line": 100,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-024",
+      "page": "2. 员工分配汇总",
+      "section": "员工列表",
+      "operation": "分配状态",
+      "definition": "按员工适用日的确认情况显示已完成／部分待分配／待分配。",
+      "line": 107,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-025",
+      "page": "2. 员工分配汇总",
+      "section": "员工列表",
+      "operation": "员工明细入口",
+      "definition": "携带员工ID、门店、周期和返回上下文，打开每日明细。",
+      "line": 108,
+      "interfaceImage": "assets/tips-product-scope-20261026/employees.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-026",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "员工",
+      "definition": "当前选择员工的身份及姓名。",
+      "line": 122,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-027",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "角色",
+      "definition": "该员工的适用角色，不作为唯一身份键。",
+      "line": 123,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-028",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "开始日期",
+      "definition": "继承查询周期，可调整；必填且起止合法。该页改日期只查询，不触发自动分配。",
+      "line": 124,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-029",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "结束日期",
+      "definition": "继承查询周期，可调整；必填且起止合法。该页改日期只查询，不触发自动分配。",
+      "line": 125,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-030",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "考勤状态",
+      "definition": "全部、已打卡、未打卡、打卡异常、手动工时、混合工时，按记录来源过滤。",
+      "line": 126,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-031",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "分配状态",
+      "definition": "全部／已分配／待分配。",
+      "line": 127,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-032",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "返回员工分配汇总",
+      "definition": "恢复来源查询、排序及位置。",
+      "line": 134,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-033",
+      "page": "3. 员工每日考勤分配",
+      "section": "上下文与统计",
+      "operation": "导出结果",
+      "definition": "按当前员工和过滤周期导出。",
+      "line": 135,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-034",
+      "page": "3. 员工每日考勤分配",
+      "section": "每日行",
+      "operation": "分配状态",
+      "definition": "已分配／待分配，不由是否打卡决定。",
+      "line": 149,
+      "interfaceImage": "assets/tips-docs-current-20261023/employee-daily.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-035",
+      "page": "4. 当日小费分配明细",
+      "section": "上下文与概览",
+      "operation": "门店",
+      "definition": "限定当日规则与人员；切换时有未保存调整先确认是否放弃。",
+      "line": 163,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-036",
+      "page": "4. 当日小费分配明细",
+      "section": "上下文与概览",
+      "operation": "规则名称筛选",
+      "definition": "多选、全选；只改变可见规则，不缩小保存或发放的整日范围。",
+      "line": 165,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-037",
+      "page": "4. 当日小费分配明细",
+      "section": "接收组与员工行",
+      "operation": "新增行",
+      "definition": "加入本次分配草稿，不创建员工目录；参与及依据必须有效。",
+      "line": 211,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-038",
+      "page": "4. 当日小费分配明细",
+      "section": "接收组与员工行",
+      "operation": "删除行",
+      "definition": "移除本次草稿行，重算相关分配，不删除员工。",
+      "line": 212,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-039",
+      "page": "4. 当日小费分配明细",
+      "section": "页面操作",
+      "operation": "返回汇总",
+      "definition": "恢复来源视角、筛选和位置；有未保存调整先保护草稿。",
+      "line": 218,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-040",
+      "page": "4. 当日小费分配明细",
+      "section": "页面操作",
+      "operation": "确认分配",
+      "definition": "首次保存整日所有规则；校验失败留在页面并保留草稿。",
+      "line": 220,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-041",
+      "page": "4. 当日小费分配明细",
+      "section": "页面操作",
+      "operation": "重新确认分配",
+      "definition": "已有分配时按系统规则重新生成；人工结果须确认覆盖。",
+      "line": 221,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-042",
+      "page": "4. 当日小费分配明细",
+      "section": "页面操作",
+      "operation": "保存当前分配",
+      "definition": "已有结果且发生手调时可用；无手调显示“当前系统分配数据未进行手动调整”，不写入。",
+      "line": 222,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-043",
+      "page": "4. 当日小费分配明细",
+      "section": "页面操作",
+      "operation": "确认已发放",
+      "definition": "整日有效快照、无未保存调整且未发放时可登记；发放后锁定编辑。",
+      "line": 223,
+      "interfaceImage": "assets/tips-product-scope-20261026/detail.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-044",
+      "page": "5. 分配规则列表",
+      "section": "筛选与统计",
+      "operation": "门店筛选",
+      "definition": "默认全部门店，可选择指定门店，限制列表及统计。",
+      "line": 237,
+      "interfaceImage": "assets/tips-product-scope-20261026/rules.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-045",
+      "page": "5. 分配规则列表",
+      "section": "列表与操作",
+      "operation": "门店",
+      "definition": "该规则适用的门店。",
+      "line": 247,
+      "interfaceImage": "assets/tips-product-scope-20261026/rules.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-046",
+      "page": "5. 分配规则列表",
+      "section": "列表与操作",
+      "operation": "编辑",
+      "definition": "打开该规则当前配置。",
+      "line": 250,
+      "interfaceImage": "assets/tips-product-scope-20261026/rules.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-047",
+      "page": "5. 分配规则列表",
+      "section": "列表与操作",
+      "operation": "更多操作／删除",
+      "definition": "打开确认框；确认删除规则配置，取消保留。不会清除已保存的日期快照。",
+      "line": 252,
+      "interfaceImage": "assets/tips-product-scope-20261026/rules.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-048",
+      "page": "5. 分配规则列表",
+      "section": "列表与操作",
+      "operation": "新增规则",
+      "definition": "先选择小费池或加收服务费池，再进入编辑页。",
+      "line": 253,
+      "interfaceImage": "assets/tips-product-scope-20261026/rules.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-049",
+      "page": "6. 新增／编辑分配规则",
+      "section": "基础信息与顶部操作",
+      "operation": "门店",
+      "definition": "必选；决定角色、员工和取值条件候选，不能跨门店复用员工引用。",
+      "line": 270,
+      "interfaceImage": "assets/tips-product-scope-20261026/rule-basic.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-050",
+      "page": "6. 新增／编辑分配规则",
+      "section": "基础信息与顶部操作",
+      "operation": "保存规则",
+      "definition": "校验名称、门店、金额来源、接收角色和占比、权重、贡献条件、员工承担及工时配置。成功保存本地规则并返回列表；失败保留输入和页面。",
+      "line": 272,
+      "interfaceImage": "assets/tips-product-scope-20261026/rule-basic.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-051",
+      "page": "6. 新增／编辑分配规则",
+      "section": "基础信息与顶部操作",
+      "operation": "取消",
+      "definition": "打开“取消编辑”确认框；确定离开则丢弃本次输入并返回列表，取消或关闭确认框继续编辑。",
+      "line": 273,
+      "interfaceImage": "assets/tips-product-scope-20261026/rule-basic.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-052",
+      "page": "6. 新增／编辑分配规则",
+      "section": "基础信息与顶部操作",
+      "operation": "返回规则列表",
+      "definition": "返回列表；当前未保存输入不写入正式规则。",
+      "line": 274,
+      "interfaceImage": "assets/tips-product-scope-20261026/rule-basic.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-053",
+      "page": "6. 新增／编辑分配规则",
+      "section": "1. 小费池设置",
+      "operation": "新增选项",
+      "definition": "可添加销售额、小费、手动上报小费、自定义小费；加收服务费池按其池类型提供对应来源。每次添加一项。",
+      "line": 285,
+      "interfaceImage": "assets/tips-product-scope-20261026/pool.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-054",
+      "page": "6. 新增／编辑分配规则",
+      "section": "1. 小费池设置",
+      "operation": "删除计算项",
+      "definition": "只移除本规则草稿中的该项。至少保留一个有效金额来源。",
+      "line": 291,
+      "interfaceImage": "assets/tips-product-scope-20261026/pool.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-055",
+      "page": "6. 新增／编辑分配规则",
+      "section": "2. 小费分配设置",
+      "operation": "分配方式问号",
+      "definition": "点击展开对应说明和算例；不改变选值或保存配置。",
+      "line": 304,
+      "interfaceImage": "assets/tips-product-scope-20261026/method.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-056",
+      "page": "6. 新增／编辑分配规则",
+      "section": "2. 小费分配设置",
+      "operation": "工时说明问号",
+      "definition": "说明采用值与打卡事实的区别及当前条件，不保存数据。",
+      "line": 319,
+      "interfaceImage": "assets/tips-product-scope-20261026/hours.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-057",
+      "page": "6. 新增／编辑分配规则",
+      "section": "2. 小费分配设置",
+      "operation": "资格问号",
+      "definition": "展示当前分配方式下的解释及示例，点击不切换选项。",
+      "line": 334,
+      "interfaceImage": "assets/tips-product-scope-20261026/clock.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-058",
+      "page": "6. 新增／编辑分配规则",
+      "section": "3. 小费接收设置",
+      "operation": "新增角色",
+      "definition": "增加一个接收组，不创建角色目录。",
+      "line": 348,
+      "interfaceImage": "assets/tips-product-scope-20261026/receivers.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-059",
+      "page": "6. 新增／编辑分配规则",
+      "section": "3. 小费接收设置",
+      "operation": "删除",
+      "definition": "删除当前草稿接收组，重新校验角色占比，不删除员工或已确认快照。",
+      "line": 349,
+      "interfaceImage": "assets/tips-product-scope-20261026/receivers.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-060",
+      "page": "6. 新增／编辑分配规则",
+      "section": "4. 小费贡献设置",
+      "operation": "新增选项",
+      "definition": "添加按照销售额占比或按照小费收入占比的贡献项。多项按保存顺序处理。",
+      "line": 359,
+      "interfaceImage": "assets/tips-product-scope-20261026/contribution.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-061",
+      "page": "6. 新增／编辑分配规则",
+      "section": "4. 小费贡献设置",
+      "operation": "修改员工承担比例",
+      "definition": "本项应用角色条件后才显示整行；未选择门店时提示“请先选择门店”。",
+      "line": 363,
+      "interfaceImage": "assets/tips-product-scope-20261026/contribution.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-062",
+      "page": "6. 新增／编辑分配规则",
+      "section": "4. 小费贡献设置",
+      "operation": "删除贡献项",
+      "definition": "移除当前草稿项；整页保存后生效，不改已确认日期结果。",
+      "line": 365,
+      "interfaceImage": "assets/tips-product-scope-20261026/contribution.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-063",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.1 自动分配状态与结果",
+      "operation": "门店",
+      "definition": "任务启动时捕获的门店，执行中不随页面查询变化。",
+      "line": 379,
+      "interfaceImage": "assets/tips-product-scope-20261026/auto-running.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-064",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.1 自动分配状态与结果",
+      "operation": "开始日期",
+      "definition": "任务启动时选中的起始日，包含当天。",
+      "line": 380,
+      "interfaceImage": "assets/tips-product-scope-20261026/auto-running.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-065",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.1 自动分配状态与结果",
+      "operation": "结束日期",
+      "definition": "任务启动时选中的结束日，包含当天。",
+      "line": 381,
+      "interfaceImage": "assets/tips-product-scope-20261026/auto-running.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-066",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.1 自动分配状态与结果",
+      "operation": "重试失败日期",
+      "definition": "全部任务结束且仍有失败时才显示并启用；运行中或失败为0隐藏、不占位、不进入Tab。",
+      "line": 392,
+      "interfaceImage": "assets/tips-product-scope-20261026/auto-running.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-067",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.1 自动分配状态与结果",
+      "operation": "关闭",
+      "definition": "执行和重试期间显示“正在分配”，禁用且降低透明度；全部日期处理结束后显示“关闭”并启用。关闭结果不撤销保存；完成有失败聚焦重试，否则聚焦关闭。",
+      "line": 393,
+      "interfaceImage": "assets/tips-product-scope-20261026/auto-running.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-068",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "门店",
+      "definition": "当前操作门店，不能把多店混入一个范围。",
+      "line": 417,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-069",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "开始日期",
+      "definition": "必填合法日期，包含当天；不得晚于结束日。",
+      "line": 418,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-070",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "结束日期",
+      "definition": "必填合法日期，包含当天；非法或倒置阻止提交，保留输入。",
+      "line": 419,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-071",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "确认分配",
+      "definition": "预检范围、跳过未营业／已发放；有人工结果先二次确认。",
+      "line": 420,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-072",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "取消",
+      "definition": "不写入，恢复来源查询。",
+      "line": 421,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-073",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.2 主动批量分配范围",
+      "operation": "关闭",
+      "definition": "不写入，恢复来源查询。",
+      "line": 421,
+      "interfaceImage": "assets/tips-operations-20261023/batch-selection.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-074",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.3 覆盖人工结果确认",
+      "operation": "确认覆盖并分配",
+      "definition": "再次核对范围与快照未被其他页面更改后执行。",
+      "line": 434,
+      "interfaceImage": "assets/tips-operations-20261023/batch-manual-warning.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-075",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.3 覆盖人工结果确认",
+      "operation": "取消",
+      "definition": "保留人工快照，不执行本轮重分配。",
+      "line": 435,
+      "interfaceImage": "assets/tips-operations-20261023/batch-manual-warning.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-076",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.3 覆盖人工结果确认",
+      "operation": "关闭",
+      "definition": "保留人工快照，不执行本轮重分配。",
+      "line": 435,
+      "interfaceImage": "assets/tips-operations-20261023/batch-manual-warning.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-077",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.4 确认已发放",
+      "operation": "门店",
+      "definition": "本次发放登记的单一门店。",
+      "line": 445,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-078",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.4 确认已发放",
+      "operation": "确认已发放",
+      "definition": "保存对应快照ID、版本和哈希的登记，锁定编辑；重复操作不重复生成有效记录。",
+      "line": 449,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-079",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.4 确认已发放",
+      "operation": "取消",
+      "definition": "不登记，保留待发放；运行中防止重复提交。",
+      "line": 450,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-080",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.4 确认已发放",
+      "operation": "关闭",
+      "definition": "不登记，保留待发放；运行中防止重复提交。",
+      "line": 450,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-081",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.5 分配计入工时明细",
+      "operation": "关闭",
+      "definition": "关闭只读说明，不改筛选、工时或分配结果，并返回触发位置。",
+      "line": 473,
+      "interfaceImage": "assets/tips-operations-20261023/hours-period.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-082",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.5 分配计入工时明细",
+      "operation": "遮罩",
+      "definition": "关闭只读说明，不改筛选、工时或分配结果，并返回触发位置。",
+      "line": 473,
+      "interfaceImage": "assets/tips-operations-20261023/hours-period.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-083",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.5 分配计入工时明细",
+      "operation": "Esc",
+      "definition": "关闭只读说明，不改筛选、工时或分配结果，并返回触发位置。",
+      "line": 473,
+      "interfaceImage": "assets/tips-operations-20261023/hours-period.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-084",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.6 贡献金额拆分",
+      "operation": "关闭说明",
+      "definition": "仅改变展开状态，不执行保存或扣款。",
+      "line": 496,
+      "interfaceImage": "assets/tips-product-scope-20261026/contribution-breakdown.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-085",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.7 公式详情",
+      "operation": "关闭",
+      "definition": "退出只读详情，不修改草稿。",
+      "line": 510,
+      "interfaceImage": "assets/tips-operations-20261023/detail-formula.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-086",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.8 保存当前分配确认",
+      "operation": "确认",
+      "definition": "保存整日人工快照，更新正式汇总；校验失败保留草稿。",
+      "line": 523,
+      "interfaceImage": "assets/tips-operations-20261023/detail-save-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-087",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.8 保存当前分配确认",
+      "operation": "取消",
+      "definition": "返回编辑，人工草稿保留。",
+      "line": 524,
+      "interfaceImage": "assets/tips-operations-20261023/detail-save-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-088",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.8 保存当前分配确认",
+      "operation": "关闭",
+      "definition": "返回编辑，人工草稿保留。",
+      "line": 524,
+      "interfaceImage": "assets/tips-operations-20261023/detail-save-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-089",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.9 重新确认分配提示",
+      "operation": "确认",
+      "definition": "重建系统快照，替换手调结果；不重复叠加扣款。",
+      "line": 537,
+      "interfaceImage": "assets/tips-operations-20261023/detail-reallocate-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-090",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.9 重新确认分配提示",
+      "operation": "取消",
+      "definition": "保留已有正式结果及页面草稿。",
+      "line": 538,
+      "interfaceImage": "assets/tips-operations-20261023/detail-reallocate-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-091",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.9 重新确认分配提示",
+      "operation": "关闭",
+      "definition": "保留已有正式结果及页面草稿。",
+      "line": 538,
+      "interfaceImage": "assets/tips-operations-20261023/detail-reallocate-confirm.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-092",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.10 无手动调整提示",
+      "operation": "关闭",
+      "definition": "仅关闭说明，不写快照。",
+      "line": 551,
+      "interfaceImage": "assets/tips-docs-current-20261023/detail-no-change.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-093",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.10 无手动调整提示",
+      "operation": "确认",
+      "definition": "仅关闭说明，不写快照。",
+      "line": 551,
+      "interfaceImage": "assets/tips-docs-current-20261023/detail-no-change.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-094",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.11 更新小费数据",
+      "operation": "确认更新",
+      "definition": "重新读取当日来源并重建默认计算；需要确认的结果不伪称已完成确认。",
+      "line": 564,
+      "interfaceImage": "assets/tips-operations-20261023/detail-update-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-095",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.11 更新小费数据",
+      "operation": "取消",
+      "definition": "不更新，保留当前内容。",
+      "line": 565,
+      "interfaceImage": "assets/tips-operations-20261023/detail-update-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-096",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.11 更新小费数据",
+      "operation": "关闭",
+      "definition": "不更新，保留当前内容。",
+      "line": 565,
+      "interfaceImage": "assets/tips-operations-20261023/detail-update-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-097",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.12 未保存调整保护",
+      "operation": "继续编辑",
+      "definition": "取消跳转，保留日期、筛选和草稿。",
+      "line": 583,
+      "interfaceImage": "assets/tips-detail-gaps-20261023/detail-date-leave.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-098",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.12 未保存调整保护",
+      "operation": "放弃调整",
+      "definition": "不保存该草稿，继续目标跳转；正式快照不受影响。",
+      "line": 584,
+      "interfaceImage": "assets/tips-detail-gaps-20261023/detail-date-leave.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-099",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.13 选择池类型",
+      "operation": "确认",
+      "definition": "携带选中池类型进入新增页。",
+      "line": 598,
+      "interfaceImage": "assets/tips-docs-current-20261023/pool-type.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-100",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.13 选择池类型",
+      "operation": "取消",
+      "definition": "退出，不创建规则。",
+      "line": 599,
+      "interfaceImage": "assets/tips-docs-current-20261023/pool-type.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-101",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.13 选择池类型",
+      "operation": "关闭",
+      "definition": "退出，不创建规则。",
+      "line": 599,
+      "interfaceImage": "assets/tips-docs-current-20261023/pool-type.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-102",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.14 员工权重",
+      "operation": "角色",
+      "definition": "本接收组选择的角色，限定员工候选。",
+      "line": 611,
+      "interfaceImage": "assets/tips-operations-20261023/rule-weight-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-103",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.14 员工权重",
+      "operation": "确定",
+      "definition": "应用到当前规则草稿；整页保存后持久化。",
+      "line": 615,
+      "interfaceImage": "assets/tips-operations-20261023/rule-weight-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-104",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.14 员工权重",
+      "operation": "取消",
+      "definition": "丢弃本次弹框输入。",
+      "line": 616,
+      "interfaceImage": "assets/tips-operations-20261023/rule-weight-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-105",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.14 员工权重",
+      "operation": "关闭",
+      "definition": "丢弃本次弹框输入。",
+      "line": 616,
+      "interfaceImage": "assets/tips-operations-20261023/rule-weight-dialog.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-106",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.15 员工承担比例",
+      "operation": "角色",
+      "definition": "当前贡献项已应用的角色集合，多角色共同分担同一项金额。",
+      "line": 628,
+      "interfaceImage": "assets/tips-docs-current-20261023/share-custom.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-107",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.15 员工承担比例",
+      "operation": "员工",
+      "definition": "当前门店、选中角色的有效员工，按ID识别；名单为当前配置预览。",
+      "line": 629,
+      "interfaceImage": "assets/tips-docs-current-20261023/share-custom.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-108",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.15 员工承担比例",
+      "operation": "确定",
+      "definition": "校验门店、角色、员工未变化，应用当前规则草稿；失败留框并说明。",
+      "line": 634,
+      "interfaceImage": "assets/tips-docs-current-20261023/share-custom.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-109",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.15 员工承担比例",
+      "operation": "取消",
+      "definition": "丢弃本次输入，回到贡献项，不自动保存规则。",
+      "line": 635,
+      "interfaceImage": "assets/tips-docs-current-20261023/share-custom.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-110",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.15 员工承担比例",
+      "operation": "关闭",
+      "definition": "丢弃本次输入，回到贡献项，不自动保存规则。",
+      "line": 635,
+      "interfaceImage": "assets/tips-docs-current-20261023/share-custom.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-111",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "角色",
+      "definition": "按归属角色过滤；贡献项至少一个角色。多值为同维并集，不决定接收组。",
+      "line": 659,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-112",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "员工",
+      "definition": "按员工引用过滤，候选受门店与角色限制；与角色维度按界面互斥，不能靠同名串账。",
+      "line": 660,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-113",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "新增条件",
+      "definition": "添加当前来源支持的条件维度，候选受当前来源限制。",
+      "line": 670,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-114",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "删除条件",
+      "definition": "解除本项条件，不改变其他计算项或贡献项。",
+      "line": 671,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-115",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "提交",
+      "definition": "校验必填、范围、组合，应用到父规则草稿；整页保存后持久化。",
+      "line": 672,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-116",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "取消",
+      "definition": "退出抽屉，不保存正式规则。",
+      "line": 673,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-117",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.16 来源／贡献取值条件",
+      "operation": "关闭",
+      "definition": "退出抽屉，不保存正式规则。",
+      "line": 673,
+      "interfaceImage": "assets/tips-operations-20261023/rule-source-drawer.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-118",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.17 导出与邮件",
+      "operation": "导出格式",
+      "definition": "PDF或CSV单选，默认PDF。",
+      "line": 706,
+      "interfaceImage": "assets/tips-operations-20261023/export-email.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-119",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.17 导出与邮件",
+      "operation": "发送",
+      "definition": "有可导出数据后关闭弹框并显示模拟发送反馈；没有实际邮件服务调用。",
+      "line": 707,
+      "interfaceImage": "assets/tips-operations-20261023/export-email.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-120",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.17 导出与邮件",
+      "operation": "取消",
+      "definition": "不发送，不修改查询或分配。",
+      "line": 708,
+      "interfaceImage": "assets/tips-operations-20261023/export-email.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-121",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.17 导出与邮件",
+      "operation": "关闭",
+      "definition": "不发送，不修改查询或分配。",
+      "line": 708,
+      "interfaceImage": "assets/tips-operations-20261023/export-email.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-122",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.18 删除规则确认",
+      "operation": "删除",
+      "definition": "删除当前规则配置，不删除已确认的日期快照。",
+      "line": 727,
+      "interfaceImage": "assets/tips-product-scope-20261026/delete-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-123",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.18 删除规则确认",
+      "operation": "取消",
+      "definition": "保留规则，返回列表。",
+      "line": 728,
+      "interfaceImage": "assets/tips-product-scope-20261026/delete-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-124",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.18 删除规则确认",
+      "operation": "关闭",
+      "definition": "保留规则，返回列表。",
+      "line": 728,
+      "interfaceImage": "assets/tips-product-scope-20261026/delete-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-125",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.19 规则编辑取消确认",
+      "operation": "确定离开",
+      "definition": "不保存输入，返回规则列表；已保存规则与日期快照不受影响。",
+      "line": 740,
+      "interfaceImage": "assets/tips-product-scope-20261026/cancel-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-126",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.19 规则编辑取消确认",
+      "operation": "取消",
+      "definition": "关闭确认框，保留编辑内容。",
+      "line": 741,
+      "interfaceImage": "assets/tips-product-scope-20261026/cancel-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-127",
+      "page": "7. 弹框、抽屉及操作结果",
+      "section": "7.19 规则编辑取消确认",
+      "operation": "关闭",
+      "definition": "与取消相同，不离开编辑页。",
+      "line": 742,
+      "interfaceImage": "assets/tips-product-scope-20261026/cancel-rule.png",
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-128",
+      "page": "8. 通用显示与交互",
+      "section": "",
+      "operation": "页面内确认",
+      "definition": "保存、覆盖、取消、发放等弹框显示具体范围；确认前不写数据，运行中防重复。",
+      "line": 752,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    },
+    {
+      "id": "OP-129",
+      "page": "8. 通用显示与交互",
+      "section": "",
+      "operation": "焦点与关闭",
+      "definition": "可关闭的说明／确认框支持返回触发位置；自动分配运行中不能关闭，有失败才显示重试。",
+      "line": 753,
+      "interfaceImage": null,
+      "outcomeCoverage": "独立结果待核对"
+    }
+  ],
+  "coverageStatus": "界面与字段已梳理，独立操作结果图未全量核对",
+  "scope": "三份有效正文及其引用图像",
+  "declaredGaps": [
+    "发放确认与锁定的当前产品区域截图待补",
+    "逐操作独立结果图未全量核对",
+    "异常组合界面未全量采图"
   ]
 }
