@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-SHIFT-RED-20261026-01",
-  "baseline": "628b8c8a",
+  "documentId": "TIPOUT-TIME-RANGE-COPY-20261026-01",
+  "baseline": "f074bd58",
   "versions": {
-    "PRD_产品需求文档.md": "V4.39",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.39",
-    "小费管理需求文档（个人规范版）.md": "V2.37"
+    "PRD_产品需求文档.md": "V4.40",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.40",
+    "小费管理需求文档（个人规范版）.md": "V2.38"
   },
   "images": [
     {
@@ -410,6 +410,12 @@
       "caption": "分配范围红框标记",
       "sha256": "e5d3b7e643607c2cdc677983e708de6238328eabf1226252170f54b8cd5862c9",
       "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-time-range-copy-20261026/range-help.png",
+      "caption": "分配时间范围说明",
+      "sha256": "2e4fedfacb9973669cd509d8620e2bd6b82ce7ebc7c0161bf07098bc9d827b01",
+      "source": "真实模板与运行时受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -455,7 +461,7 @@
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "16d6c1651db54cc0f23bc48ebebbd6432d45dfa4f5e41f5bc8e5f9661f0636a4",
+    "src/team/tips/templates/rule-editor.html": "dfce1a64e0faf0dc81ee9c5d60fbacc7816b031f8ed7a0267060ba8970cf265c",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
