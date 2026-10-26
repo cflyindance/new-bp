@@ -11,6 +11,21 @@
       if(state.snapshot||TipOutAllocationResults.isAllocated(store,date))return {status:'skipped',message:'已分配，保留原结果'};
       return null;
     }
+    function inspectSummaryAutoScope(scope){
+      var result={dates:[],blocked:[]};
+      var rows=readAllocationScopeRows(scope), rules=getRulesForCurrentStore();
+      rows.forEach(function(row){
+        try{
+          if(summaryAutoExisting(scope.store,row.dateKey))return;
+          if(!row.businessStatusResult)throw new Error('无法读取当天营业数据');
+          if(!row.businessStatusResult.allocatable)return;
+          if(!rules.length)throw new Error('当前门店没有可用的小费分配规则');
+          if(rules.some(function(rule){return rule.clockin==='noclock';}))throw new Error('需在当天明细补全手动工时后分配');
+          result.dates.push(row.dateKey);
+        }catch(error){result.blocked.push({date:row.dateKey,message:error.message||'暂不满足自动分配条件'});}
+      });
+      return result;
+    }
     async function executeSummaryAutoDate(date){
       // Yield between dates so progress is painted before preparation starts.
       await new Promise(function(resolve){window.setTimeout(resolve,30);});
@@ -38,7 +53,7 @@
       items.forEach(function(item){if(counts[item.status]!==undefined)counts[item.status]++;if(item.status==='running')current=item.date;});
       var processed=counts.success+counts.failed+counts.skipped;
       document.getElementById('summaryAutoTitle').textContent=queue.running?'正在自动分配小费':'自动分配结果';
-      document.getElementById('summaryAutoScope').textContent=summaryAutoScope.store+' · '+summaryAutoScope.startDate+' 至 '+summaryAutoScope.endDate;
+      document.getElementById('summaryAutoScope').textContent=summaryAutoScope.store+' · '+summaryAutoScope.startDate+' 至 '+summaryAutoScope.endDate+'（本次待分配 '+items.length+' 天）';
       document.getElementById('summaryAutoCounts').textContent='成功 '+counts.success+' 天　失败 '+counts.failed+' 天　跳过 '+counts.skipped+' 天';
       document.getElementById('summaryAutoCurrent').textContent=(current?'正在分配 '+current+' · ':'')+'已处理 '+processed+' / '+items.length+' 天';
       var progress=document.getElementById('summaryAutoProgress');progress.max=items.length||1;progress.value=processed;
@@ -51,8 +66,15 @@
     function startSummaryAutoAllocation(){
       if(summaryAutoDisposed||(summaryAutoQueue&&summaryAutoQueue.running)||!validateSummaryDateRange(false))return;
       var store=document.getElementById('storeSelect').value;if(!store)return;
-      summaryAutoScope={store:store,startDate:document.getElementById('dateStart').value,endDate:document.getElementById('dateEnd').value};
-      summaryAutoQueue=window.TipOutAutoAllocation.create(buildDateRange(summaryAutoScope.startDate,summaryAutoScope.endDate),executeSummaryAutoDate,renderSummaryAutoProgress);
+      var scope={store:store,startDate:document.getElementById('dateStart').value,endDate:document.getElementById('dateEnd').value}, inspection;
+      try{inspection=inspectSummaryAutoScope(scope);}
+      catch(error){showNotification(error.message||'无法读取分配条件，请检查当天明细','error');return;}
+      if(!inspection.dates.length){
+        if(inspection.blocked.length)showNotification(inspection.blocked[0].date+'：'+inspection.blocked[0].message,'info');
+        return;
+      }
+      summaryAutoScope=scope;
+      summaryAutoQueue=window.TipOutAutoAllocation.create(inspection.dates,executeSummaryAutoDate,renderSummaryAutoProgress);
       var modal=document.getElementById('summaryAutoModal');
       if(!modal.classList.contains('show')){
         summaryAutoFocus=document.activeElement;

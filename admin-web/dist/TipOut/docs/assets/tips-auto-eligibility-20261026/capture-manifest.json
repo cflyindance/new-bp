@@ -1,0 +1,50 @@
+{
+  "changeId": "TIPOUT-AUTO-ELIGIBILITY-20261026-01",
+  "baseline": "c0640de2",
+  "branch": "codex/tips-auto-eligible-20261026",
+  "origin": "http://127.0.0.1:65136",
+  "status": "uncommitted feature preview",
+  "capturedAt": "2026-10-26T13:21:56.715192+08:00",
+  "fixture": "专用agent-browser会话。仅重置2026-09-01至09-10测试快照；9/4注入一次写锁异常，第二次构造仅9/4未分配。未操作用户65133会话或生产数据。",
+  "normalizedSourceHashes": {
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "6f507791e19f46d5c576afb0f0c7e5c5ba71f15dce8e9d4372c85835d52963a9",
+    "src/team/tips/legacy/tipout-auto-allocation.js.txt": "3d7ea3cce3fc58cdd78a94c78204d17460db00ffe05742be9ddd7c5020ddabbd",
+    "src/team/tips/programs/distribution.js.txt": "65751e99bb49f1de55f685b2af2e9bdf5f7736652d143b1d8be7c900aa989181",
+    "src/team/tips/legacy/tipout-allocation-results-store.js.txt": "d29c7554e41adb0a0207c5f8ca8769b46fb85d6dbf9248c24d28251037bd4956",
+    "src/team/tips/templates/distribution.html": "cd58a0036778ba28266c89c2be6781137bb617d2f0870d08a889197e291a3932",
+    "src/team/tips/tips-legacy-runtime.ts": "203fc290e204f1e69d52d5cfc563441070102764bbd784e9ca71717a1a08a93a"
+  },
+  "sourceHashPolicy": "UTF-8文本仅将CRLF归一为LF；截图按原始字节校验。",
+  "records": [
+    {
+      "file": "all-allocated.png",
+      "sha256": "f886def91a89c17ede038904de54d66c4d605d7f2b08dc9d7bc35fb70b63c73e"
+    },
+    {
+      "file": "closed-only.png",
+      "sha256": "e7557ea5f736aa510fc4c673b77a7ce57db4003526555c814c42bcdb8fc41dff"
+    },
+    {
+      "file": "one-pending.png",
+      "sha256": "f95ad666e928ee931438ab787415cc39af40c48296b639ea1c4d07a3b449862a"
+    },
+    {
+      "file": "retry-success.png",
+      "sha256": "d721bd00c52672694f1e4831cb32162ebc8a0b5cef8eea0290861cdb7159a8dd"
+    },
+    {
+      "file": "write-failed.png",
+      "sha256": "fc6c742b75f8c653cd7a81181f3ed19336a70ad7b4f993230594b6e50352effa"
+    }
+  ],
+  "validation": [
+    "全已分配/未营业范围1800ms DOM观察无瞬时show，不写账",
+    "混合10日只1个合格未分配日期，队列1项",
+    "8合格日期中7成功1临时失败，重试后8成功，其余快照完全一致"
+  ],
+  "limits": [
+    "规则缺失/手动工时不足及损坏状态用VM验证，独立通知截图待补",
+    "手工和已发放状态保护单元保留，独立实际状态截图仍待补",
+    "生产POS及CI部署未验证"
+  ]
+}
