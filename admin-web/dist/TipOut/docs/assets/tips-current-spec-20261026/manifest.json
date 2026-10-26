@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-CURRENT-SPEC-20261026-01",
+  "documentId": "TIPOUT-PUNCH-WINDOW-20261026-01",
   "baseline": "d6ea9b46",
   "versions": {
-    "PRD_产品需求文档.md": "V4.23",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.23",
-    "小费管理需求文档（个人规范版）.md": "V2.21"
+    "PRD_产品需求文档.md": "V4.24",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.24",
+    "小费管理需求文档（个人规范版）.md": "V2.22"
   },
   "images": [
     {
@@ -315,16 +315,16 @@
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "108d5bc036236062871bbad30c20038ce0e9dc23202049cb7e478e79d2594871",
     "src/team/tips/legacy/tipout-time-window.js.txt": "d9e6446492e393d9f8bd7ef55e0ad65642c8ca03502f1b5c324118476c420d66",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
-    "src/team/tips/programs/details.js.txt": "e852ef5d288b26a327df8d8b4fa8f32e00080c569083436f2da03c7cccf2e559",
+    "src/team/tips/programs/details.js.txt": "a531f197e1d7463e74d016f78dabb8d0ae0fb82a0413c907e79a9de10c4dc45a",
     "src/team/tips/programs/distribution.js.txt": "b4598eba415b8794d84e8e012ada52268a27009f081fb4708d82e22e4996cac2",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "eae20e81b980da1e22f4c5530120c605b1e0969243e4cba7b233b369e3646ce5",
+    "src/team/tips/programs/rule-editor.js.txt": "06465a0e4196843da1dfbd9125c953a1eda115fc8de982831494f57ab253db9a",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "d669647576adade298802b65c348a1466b866c9b4382c5c3359367036ca2724b",
+    "src/team/tips/templates/rule-editor.html": "93327d90dba0b2e54a08ca1219de2b3e2d7d042d1bfe07d8ab3cb29ca342e67c",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",

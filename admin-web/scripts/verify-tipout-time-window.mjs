@@ -81,3 +81,9 @@ assert.equal(reconciled.summary.poolAmount, 30);
 assert.equal(reconciled.summary.allocatedAmount, 30);
 assert.throws(() => funding.reconcileExisting({ ...snapshot, pools: [{ ...snapshot.pools[0], timeWindow: undefined }] }, [legacyRule]), /缺少逐笔/);
 console.log('tipout time-window verification passed');
+
+const staggered=[employee('A','Server',[[at('10:00'),at('14:00')]]),employee('B','Server',[[at('12:00'),at('16:00')]])];
+const staggeredResult=engine.allocate([event('morning','11:00',60),event('overlap','13:00',60),event('afternoon','15:00',60)],staggered);
+assert.deepEqual(JSON.parse(JSON.stringify(staggeredResult.employeeAmounts)),[{employeeId:'A',amount:90},{employeeId:'B',amount:90}]);
+assert.deepEqual(Array.from(engine.allocate([event('clockout','14:00',60)],staggered).lines[0].participants,p=>p.employeeId),['B']);
+assert.equal(engine.allocate([event('before','09:00',60)],staggered).unallocated,60);
