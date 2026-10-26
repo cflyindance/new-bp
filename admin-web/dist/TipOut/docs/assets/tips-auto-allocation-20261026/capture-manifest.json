@@ -56,5 +56,7 @@
     "src/team/tips/tips-page.css": "0e8504a0485ecc15085572bcffd5fefa404b5898d96cd5a75b28f72d469577f3",
     "src/team/tips/tips-legacy-runtime.ts": "203fc290e204f1e69d52d5cfc563441070102764bbd784e9ca71717a1a08a93a"
   },
-  "sourceHashPolicy": "原sourceHashes保留采集时原始字节；跨平台检出校验使用normalizedSourceHashes（仅CRLF转LF），图片仍逐字节校验。"
+  "sourceHashPolicy": "原sourceHashes保留采集时原始字节；跨平台检出校验使用normalizedSourceHashes（仅CRLF转LF），图片仍逐字节校验。",
+  "supersededBy": "TIPOUT-AUTO-ELIGIBILITY-20261026-01",
+  "historicalNote": "原图和源码哈希保留；全部无需处理时的跳过结果已取消，任务范围改为合格未分配日期，当前图见tips-auto-eligibility-20261026。"
 }
