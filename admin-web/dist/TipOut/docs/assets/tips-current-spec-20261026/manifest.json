@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-PUNCH-WINDOW-20261026-01",
+  "documentId": "TIPOUT-ALLOCATION-SCOPE-20261026-01",
   "baseline": "d6ea9b46",
   "versions": {
-    "PRD_产品需求文档.md": "V4.24",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.24",
-    "小费管理需求文档（个人规范版）.md": "V2.22"
+    "PRD_产品需求文档.md": "V4.25",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.25",
+    "小费管理需求文档（个人规范版）.md": "V2.23"
   },
   "images": [
     {
@@ -279,6 +279,18 @@
       "sha256": "ca45c1383eca4f2742cc951be375ae78849c394c234a2f3d0759adb17f8536bd",
       "sourceManifest": "assets/tips-retry-visibility-20261026/capture-manifest.json",
       "source": "项目实页截图；核对页面字段，未重新制作界面"
+    },
+    {
+      "file": "assets/tips-allocation-scope-20261026/day.png",
+      "caption": "规则编辑页统计与分配范围",
+      "sha256": "1dc2ea456e2828d2cbe303313dc1622c825599453a0b1b0eba3f0ba9dab6f20b",
+      "source": "1049eda1 基线功能分支；真实模板与运行时，受控演示截图，2026-10-26"
+    },
+    {
+      "file": "assets/tips-allocation-scope-20261026/time-window.png",
+      "caption": "规则编辑页统计与分配范围",
+      "sha256": "2135bc33f8d887322939c7adcaaa350bb4befb8dbc772fe1470160f000ecffa2",
+      "source": "1049eda1 基线功能分支；真实模板与运行时，受控演示截图，2026-10-26"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -318,13 +330,13 @@
     "src/team/tips/programs/details.js.txt": "a531f197e1d7463e74d016f78dabb8d0ae0fb82a0413c907e79a9de10c4dc45a",
     "src/team/tips/programs/distribution.js.txt": "b4598eba415b8794d84e8e012ada52268a27009f081fb4708d82e22e4996cac2",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "06465a0e4196843da1dfbd9125c953a1eda115fc8de982831494f57ab253db9a",
+    "src/team/tips/programs/rule-editor.js.txt": "b7f6e50090755e00d04084fafd6e81b35b7b8a4cb08ba41ea93ddf735b7d6b7d",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "93327d90dba0b2e54a08ca1219de2b3e2d7d042d1bfe07d8ab3cb29ca342e67c",
+    "src/team/tips/templates/rule-editor.html": "70ecc7754252051fd9741eba6b0fdac9d1d365555630839d8301ee380ba0d5c3",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",

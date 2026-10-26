@@ -525,6 +525,18 @@
             </div>
           </div>
 
+          <div class="form-section tipout-form-card" id="allocationScopeSection">
+            <div class="form-section-title">统计与分配范围</div>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"> 按整日</label>
+              <div class="participation-option" id="timeWindowParticipationOption">
+                <label class="radio-item"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"> 按打卡时段</label>
+                <details class="distribution-method-help"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+              </div>
+            </div>
+            <p id="allocationScopeTimeNotice" class="field-desc" hidden>各时段产生的小费，仅分配给该时段在岗的接收员工。</p>
+          </div>
+
           <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
             <div class="distribution-method-cards">
@@ -544,28 +556,23 @@
           </div>
 
           <div id="distributionSection" class="tipout-rule-distribution-section tipout-form-card">
-            <!-- Clock-in Method -->
-            <div class="form-section">
+            <!-- Daily participation -->
+            <div class="form-section" id="dailyParticipationSection">
               <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">参与资格</span></div>
               <div class="radio-group">
                 <div class="participation-option" id="clockinClockOption">
                   <label class="radio-item">
                     <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 仅打卡员工
                   </label>
-                  <details class="distribution-method-help"><summary aria-label="查看仅打卡员工说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+                  <details class="distribution-method-help"><summary aria-label="查看仅打卡员工说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明参与资格；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
                 <div class="participation-option">
                   <label class="radio-item">
                     <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"> 不限打卡状态
                   </label>
-                  <details class="distribution-method-help"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+                  <details class="distribution-method-help"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明参与资格；实际金额仍受接收方规则影响。</p></div></details>
                 </div>
-                <div class="participation-option" id="timeWindowParticipationOption">
-                  <label class="radio-item">
-                    <input type="radio" name="clockin" value="time_window" data-native-onchange="updateDistributionOptions()"> 按打卡时段统计并分配小费
-                  </label>
-                  <details class="distribution-method-help"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
-                </div>
+<input type="radio" name="clockin" value="time_window" hidden aria-hidden="true" tabindex="-1">
                 <label class="radio-item" hidden style="display:none">
                   <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
                 </label>
