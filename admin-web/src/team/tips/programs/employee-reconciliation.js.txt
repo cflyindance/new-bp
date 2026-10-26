@@ -471,7 +471,7 @@ function detailNumber(value) { return Number(value) || 0; }
       var total=errors.length ? '无法试算' : '-'+detailMoney(confirmed+estimated);
       setDetailText('employeeDetailDeducted',total+' ');
       var contribution=document.getElementById('employeeDetailDeducted');
-      if(contribution) contribution.appendChild(makeEmployeeContributionHelp('已确认：-'+detailMoney(confirmed)+'\n预计：'+(errors.length ? '无法试算' : '-'+detailMoney(estimated))+'\n合计：'+total+(errors.length ? '\n'+errors.join('；') : '')));
+      if(contribution) contribution.appendChild(makeEmployeeContributionHelp('贡献金额明细\n\n已分配日期：-'+detailMoney(confirmed)+'\n待分配日期（预计）：'+(errors.length ? '无法试算' : '-'+detailMoney(estimated))+'\n合计：'+total+'\n\n待分配金额为试算结果，以实际分配结果为准。'+(errors.length ? '\n'+errors.join('；') : '')));
       setDetailText('employeeDetailReceived', summary.allocatedCount ? '+' + detailMoney(summary.received) : '—');
       setDetailText('employeeDetailAfter', summary.allocatedCount ? detailMoney(summary.after) : '—');
     }

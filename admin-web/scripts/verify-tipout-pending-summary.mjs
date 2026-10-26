@@ -10,7 +10,7 @@ c.escapeSummaryHtml=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&qu
 vm.runInContext(program.slice(program.indexOf('    function renderContributionSummary('),program.indexOf('    function openContributionBreakdown(')),c);
 const mixed={hasConfirmedAmount:true,deductedCents:10000,estimatedContributionDays:1,estimatedDeductedCents:5000,contributionPreviewErrors:[]};
 assert.ok(c.renderContributionSummary(mixed).startsWith('$150.00 '));
-assert.match(c.renderContributionSummary(mixed),/已确认：\$100.00\n预计：\$50.00\n合计：\$150.00/);
+assert.match(c.renderContributionSummary(mixed),/贡献金额明细\n\n已分配日期：\$100.00\n待分配日期（预计）：\$50.00\n合计：\$150.00/);
 assert.ok(c.renderContributionSummary({...mixed,contributionPreviewErrors:['入池缺口']}).startsWith('无法试算 '));
 assert.ok(c.renderContributionSummary({...mixed,estimatedContributionDays:0}).startsWith('$100.00 '));
 const rules=[{id:'r',ruleName:'贡献预览',poolKind:'tip',poolRules:[{type:'tips',pct:10}],receivers:[{roles:['Server'],pct:100}]}];
