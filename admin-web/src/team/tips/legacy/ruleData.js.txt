@@ -275,7 +275,7 @@
 
   function buildRuleDescription(rule) {
     var parts = [];
-    if(rule.allocationScope==='shift')parts.push('按班次：'+(rule.shifts||[]).map(function(s){return s.name+' '+s.start+'—'+s.end+'（门槛'+(s.minClockMinutes||0)+'分钟'+(rule.distribution==='hours'?'，上限'+(s.maxClockMinutes||'不限')+'分钟':'')+'）';}).join('、'));
+    if(rule.allocationScope==='shift')parts.push('按排班表班次分配');
     if (rule.allocationMode === 'order_tip_then_residual') {
       if (rule.poolRules && rule.poolRules.length > 0) {
         var poolStrOt = rule.poolRules.map(function(p) {

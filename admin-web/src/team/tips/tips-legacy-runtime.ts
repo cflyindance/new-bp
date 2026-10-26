@@ -1,3 +1,4 @@
+import { readTipOutSchedule } from "./tips-schedule-source";
 import common from "./legacy/common.js.txt?raw";
 import funding from "./legacy/tipout-funding.js.txt?raw";
 import scope from "./legacy/global-scope-filter.js.txt?raw";
@@ -55,6 +56,7 @@ const dependencies: Record<TipsView, string[]> = {
 
 function runtimeSource(view: TipsView): string {
   return [scope, ...dependencies[view], scenarioData, scenarioSource, employeeWeights, timeWindow, scenarioList, payoutRecordUi, funding,
+    "window.TipOutSchedule={read:__scopeAdapter.readTipOutSchedule};",
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",
@@ -77,6 +79,7 @@ function runtimeSource(view: TipsView): string {
 
 function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>) {
   return {
+    readTipOutSchedule,
     readGlobalScopeFilter: () => context.getScope(), readScopeMeta: () => context.getScope(),
     usesInPageStorePicker: () => true,
     listScopedStoreOptions: () => context.getScope().stores.map((s) => ({ value: s.id, labelZh: s.labelZh, labelEn: s.labelEn })),

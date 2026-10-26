@@ -26,6 +26,10 @@ export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
 
 const SHIFT_TYPES_STORAGE_KEY = "bplant-team-shift-types-v1";
 const ASSIGNMENTS_STORAGE_KEY = "bplant-team-shift-assignments-v1";
+const SCHEDULE_DRAFT_BASELINE_KEY = "bplant-team-shift-draft-baseline-v1";
+function captureScheduleBaselineIfNeeded(): void {
+  if (!localStorage.getItem(SCHEDULE_DRAFT_BASELINE_KEY)) localStorage.setItem(SCHEDULE_DRAFT_BASELINE_KEY,JSON.stringify({shifts:readShiftTypes(),assignments:readAssignments()}));
+}
 const EMPLOYEES_STORAGE_KEY = "tipout-employees-roster-v1";
 const BREAKS_OVERTIME_STORAGE_KEY = "bplant-team-breaks-overtime-v1";
 
@@ -422,6 +426,7 @@ function writeShiftTypes(types: ShiftType[]): void {
   const before = readShiftTypes();
   if (JSON.stringify(before) === JSON.stringify(types)) return;
   ensureShiftTypesBaseline(before);
+  captureScheduleBaselineIfNeeded();
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
   shiftSchedulingDirty = true;
   rerecordShiftTypesChange(types);
@@ -431,6 +436,7 @@ function writeAssignments(assignments: ShiftAssignment[]): void {
   const before = readAssignments();
   if (JSON.stringify(before) === JSON.stringify(assignments)) return;
   ensureAssignmentsBaseline(before);
+  captureScheduleBaselineIfNeeded();
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
   shiftSchedulingDirty = true;
   rerecordAssignmentsChange(assignments);
@@ -638,6 +644,7 @@ function ensureShiftSchedulingPageSaveRegistry(): void {
     if (assignmentsBaseline) {
       localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignmentsBaseline));
     }
+    localStorage.removeItem(SCHEDULE_DRAFT_BASELINE_KEY);
     cellEditor = null;
     shiftFormEditor = null;
     shiftDeleteConfirmId = null;
@@ -650,6 +657,7 @@ function ensureShiftSchedulingPageSaveRegistry(): void {
   window.addEventListener("menusifu:page-settings-saved", (event) => {
     const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
     if (pageKey !== TEAM_SHIFT_SCHEDULING_PATH) return;
+    localStorage.removeItem(SCHEDULE_DRAFT_BASELINE_KEY);
     shiftTypesBaseline = cloneJson(readShiftTypes());
     assignmentsBaseline = cloneJson(readAssignments());
     shiftSchedulingDirty = false;
@@ -3282,4 +3290,11 @@ export function bindTeamShiftSchedulingUi(remount: () => void): void {
 
   bindScheduleCellClicks(root, remount);
   bindCellEditDialog(remount);
+}
+
+/** Read the saved schedule for consumers; exclude this page's uncommitted draft. */
+export function readCommittedTeamSchedule() {
+  const raw=localStorage.getItem(SCHEDULE_DRAFT_BASELINE_KEY);
+  if(raw){const saved=JSON.parse(raw) as {shifts:ShiftType[];assignments:ShiftAssignment[]};if(!Array.isArray(saved.shifts)||!Array.isArray(saved.assignments))throw new Error("排班保存基线无效，请先保存或取消排班草稿");return {...cloneJson(saved),employees:readEmployees()};}
+  return { shifts: cloneJson(shiftSchedulingDirty && shiftTypesBaseline ? shiftTypesBaseline : readShiftTypes()), assignments: cloneJson(shiftSchedulingDirty && assignmentsBaseline ? assignmentsBaseline : readAssignments()), employees: readEmployees() };
 }

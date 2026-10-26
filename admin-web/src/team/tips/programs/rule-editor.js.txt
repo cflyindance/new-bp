@@ -576,7 +576,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       if (dist) dist.checked = true;
       var clock = document.querySelector('input[name="clockin"][value="' + (rule.clockin || 'clock') + '"]');
       if (clock) clock.checked = true;
-      shiftScopeDraft=rule.allocationScope==='shift';allocationShiftsDraft=JSON.parse(JSON.stringify(rule.shifts||[]));renderAllocationShifts();
+      shiftScopeDraft=rule.allocationScope==='shift';
       var workHoursConfig = normalizeWorkHoursConfig(rule.workHoursConfig);
       legacyTimeWindowHoursCap = rule.clockin === 'time_window' && rule.distribution === 'hours' && workHoursConfig.mode === 'capped';
       var legacyHoursAck = document.getElementById('legacyTimeWindowHoursAck');
@@ -3440,25 +3440,11 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     // Keep the existing persisted clockin contract; scope is its page-level presentation.
     var dailyParticipationDraft = 'clock';
     var shiftScopeDraft = false;
-    var allocationShiftsDraft = [];
-    function shiftEscape(value){return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
-    function readAllocationShifts(){
-      var rows=document.querySelectorAll('#allocationShiftRows [data-shift-index]');
-      if(rows.length)allocationShiftsDraft=Array.from(rows).map(function(row){var get=function(key){return row.querySelector('[data-shift-field='+key+']').value;};return {name:get('name').trim(),start:get('start'),end:get('end'),minClockMinutes:Number(get('min')),maxClockMinutes:Number(get('max'))};});
-      return allocationShiftsDraft;
-    }
-    function renderAllocationShifts(){
-      var root=document.getElementById('allocationShiftRows');if(!root)return;
-      root.innerHTML=allocationShiftsDraft.map(function(s,i){return '<div class="tipout-shift-row" data-shift-index="'+i+'" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0"><label>班次 <input aria-label="班次名称" data-shift-field="name" value="'+shiftEscape(s.name||'')+'"></label><label>开始 <input aria-label="班次开始时间" type="time" data-shift-field="start" value="'+shiftEscape(s.start||'')+'"></label><label>结束 <input aria-label="班次结束时间" type="time" data-shift-field="end" value="'+shiftEscape(s.end||'')+'"></label><label>最低参与工时 <input aria-label="最低参与工时（分钟）" type="number" min="0" step="1" data-shift-field="min" value="'+Number(s.minClockMinutes||0)+'" style="width:80px"> 分钟</label><label data-shift-cap>班次计入工时上限 <input aria-label="班次计入工时上限（分钟）" type="number" min="0" step="1" data-shift-field="max" value="'+Number(s.maxClockMinutes||0)+'" style="width:80px"> 分钟</label><button type="button" class="btn btn-sm" data-native-onclick="removeAllocationShift('+i+')">删除</button></div>';}).join('');
-    }
-    function addAllocationShift(){readAllocationShifts();var list=getShiftList();var next=list.find(function(s){return !allocationShiftsDraft.some(function(v){return v.name===s.name;});});allocationShiftsDraft.push(Object.assign({name:'班次 '+(allocationShiftsDraft.length+1),start:'',end:'',minClockMinutes:0,maxClockMinutes:0},next||{}));renderAllocationShifts();syncAllocationScopeUi();}
-    function removeAllocationShift(index){readAllocationShifts();allocationShiftsDraft.splice(index,1);renderAllocationShifts();syncAllocationScopeUi();}
     function changeAllocationScope() {
       var scope = document.querySelector('input[name="allocationScope"]:checked');
       var current = document.querySelector('input[name="clockin"]:checked');
       var timed = scope && (scope.value === 'time_window'||scope.value==='shift');
-      readAllocationShifts();shiftScopeDraft=!!(scope&&scope.value==='shift');
-      if(shiftScopeDraft&&!allocationShiftsDraft.length){allocationShiftsDraft=getShiftList().map(function(s){return Object.assign({},s);});renderAllocationShifts();}
+      shiftScopeDraft=!!(scope&&scope.value==='shift');
       if (timed && current && current.value !== 'time_window') dailyParticipationDraft = current.value;
       var target = document.querySelector('input[name="clockin"][value="' + (timed ? 'time_window' : dailyParticipationDraft) + '"]');
       if (target) target.checked = true;
@@ -3473,8 +3459,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       if (eligibility) eligibility.hidden = timed;
       var notice = document.getElementById('allocationScopeTimeNotice');
       if (notice) notice.hidden = !timed || shiftScopeDraft;
-      var shiftPanel=document.getElementById('allocationShiftPanel');if(shiftPanel)shiftPanel.hidden=!timed||!shiftScopeDraft;
-      var hours=document.querySelector('input[name="distribution"]:checked');var section=document.getElementById('distributionSection');if(section)section.style.display=timed&&(shiftScopeDraft||!hours||hours.value!=='hours')?'none':'';document.querySelectorAll('[data-shift-cap]').forEach(function(el){el.hidden=!hours||hours.value!=='hours';});
+      var hours=document.querySelector('input[name="distribution"]:checked');var section=document.getElementById('distributionSection');if(section)section.style.display=timed&&(shiftScopeDraft||!hours||hours.value!=='hours')?'none':'';
     }
 
     var legacyTimeWindowHoursCap = false;
@@ -4854,7 +4839,6 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         distribution: distRadio ? distRadio.value : 'average',
         clockin: clockRadio ? clockRadio.value : 'clock',
         allocationScope: shiftScopeDraft && clockRadio && clockRadio.value==='time_window' ? 'shift' : clockRadio && clockRadio.value==='time_window' ? 'time_window' : 'day',
-        shifts: shiftScopeDraft ? readAllocationShifts().map(function(s){return Object.assign({},s);}) : [],
         salesConditions: salesConditions,
         tipsConditions: tipsConditions,
         surchargeConditions: surchargeConditions,
@@ -5007,7 +4991,6 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         try { window.TipOutEmployeeWeights.groups(data.receivers); }
         catch (error) { showNotification(error.message, 'error'); return; }
       }
-      if(data.allocationScope==='shift'){try{window.TipOutTimeWindow.validateShifts(data.shifts,data.distribution);}catch(error){showNotification(error.message,'error');return;}}
       if (data.clockin === 'time_window') {
         if (data.allocationMode !== 'legacy_pool' || data.poolKind !== 'tip') {
           showNotification('按打卡时段统计并分配小费目前仅支持普通小费池规则', 'error');
@@ -5044,7 +5027,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           rule.store = data.store;
           rule.distribution = data.distribution;
           rule.clockin = data.clockin;
-          rule.allocationScope=data.allocationScope;rule.shifts=data.shifts;
+          rule.allocationScope=data.allocationScope;delete rule.shifts;
           if (data.workHoursConfig) rule.workHoursConfig = data.workHoursConfig;
           else delete rule.workHoursConfig;
           rule.allocationMode = data.allocationMode || 'legacy_pool';
@@ -5084,7 +5067,6 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           distribution: data.distribution,
           clockin: data.clockin,
           allocationScope:data.allocationScope,
-          shifts:data.shifts,
           allocationMode: data.allocationMode || 'legacy_pool',
           poolKind: data.poolKind || 'tip'
         };

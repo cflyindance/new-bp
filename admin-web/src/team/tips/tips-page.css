@@ -3400,7 +3400,3 @@ select.form-control {
 .tipout-auto-table { overflow:auto; max-height:40vh; }
 .tipout-auto-table td { white-space:normal; }
 .tipout-auto-modal #summaryAutoRetry[hidden] { display: none !important; }
-
-.tipout-page-rule-editor .tipout-shift-row input { border:1px solid var(--border-color,#d1d5db); border-radius:8px; padding:6px 8px; background:var(--bg-primary,#fff); color:inherit; font:inherit; }
-.tipout-page-rule-editor .tipout-shift-row label { display:inline-flex; align-items:center; gap:6px; font-size:13px; }
-.tipout-page-rule-editor .tipout-shift-row [data-shift-field=name] { width:140px; }
