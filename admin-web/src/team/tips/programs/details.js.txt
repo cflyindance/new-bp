@@ -378,7 +378,7 @@ var ALLOC_KEY = 'tipout_allocated';
           rows.push('<tr><td>'+escHtml(name)+'</td><td>'+escHtml(role)+'</td><td><input type="number" class="detail-time-weight-input" min="0" max="1000000" step="any" aria-label="员工权重" data-receiver="'+index+'" data-role="'+escHtml(role)+'" data-name="'+escHtml(name)+'" '+(result.weightSchemaVersion===1?'value="'+weight+'"':'value="" placeholder="—" data-weight-unrecorded="1"')+'></td></tr>');
         }); });
       });
-      return '<table class="data-table detail-table"><thead><tr><th>接收员工</th><th>角色</th><th title="默认 1，仅影响当天本规则，在每笔小费的在岗员工中加权计算">员工权重</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+      return '<table class="data-table detail-table"><thead><tr><th>接收员工</th><th>角色</th><th title="默认 1，仅影响当天本规则，按当前统计范围加权计算">员工权重</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
     }
     function timeSavedWeights(rule,result,entry) {
       var weights=[];
@@ -420,17 +420,18 @@ var ALLOC_KEY = 'tipout_allocated';
     function buildTimeWindowDetailCardHtml(rule, rid, result) {
       var rows = result.lines.map(function(line) {
         var people = line.participants.filter(function(person) { return person.amount > 0; }).map(function(person) {
-          return escHtml(person.name) + ' ' + money(person.amount);
+          return escHtml(person.name) + ' ' + money(person.amount)+(line.scope==='shift'?'（有效 '+Number(person.actualMinutes).toFixed(1)+' 分钟'+(rule.distribution==='hours'?'，计入 '+Number(person.allocationMinutes).toFixed(1)+' 分钟':'')+'）':'');
         }).join('、') || '无人符合参与资格';
         var sourceLabel = (line.source === 'manual' ? '手动上报' : '订单') + ' · ' + (line.sourceEmployeeName || line.sourceEmployeeId || '') +
           ' #' + String(line.sourceId || '').split(':').pop();
-        return '<tr><td>' + escHtml(line.occurredAt.replace('T', ' ')) + '</td><td title="' + escHtml(line.sourceId) + '">' + escHtml(sourceLabel) +
+        if(line.scope==='shift') sourceLabel=line.shiftName+' · '+line.sourceEvents.length+' 笔来源；门槛 '+line.minClockMinutes+' 分钟'+(rule.distribution==='hours'?'，上限 '+(line.maxClockMinutes||'不限')+' 分钟':'');
+        return '<tr><td>' + escHtml(line.scope==='shift'?new Date(line.windowStartAt).toLocaleString('zh-CN',{timeZone:line.timeZone,hour12:false})+' — '+new Date(line.windowEndAt).toLocaleString('zh-CN',{timeZone:line.timeZone,hour12:false}):line.occurredAt.replace('T', ' ')) + '</td><td title="' + escHtml(line.sourceId) + '">' + escHtml(sourceLabel) +
           '</td><td>' + money(line.amount) + '</td><td>' + people + '</td><td>' + money(line.unallocated) + '</td></tr>';
       }).join('');
       return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-time-window="1" data-pool="' + result.poolAmount + '">' +
-        '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>按打卡时段统计并分配小费</strong>' +
+        '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>'+(result.scope==='shift'?'按班次统计并分配小费':'按打卡时段统计并分配小费')+'</strong>' +
         buildTimeWeightInputs(rule,result) +
-        '<p class="field-desc">以订单支付完成或手动小费实际发生时间匹配有效打卡区间；区间采用左闭右开。未匹配金额保留为未分配。</p>' +
+        '<p class="field-desc">'+(result.scope==='shift'?'各班次独立分配；达到最低有效打卡工时才参与。班次外小费不计入本规则，无合格员工的金额保留未分配。':'以订单支付完成或手动小费实际发生时间匹配有效打卡区间；区间采用左闭右开。未匹配金额保留为未分配。')+'</p>' +
         '<div class="detail-employee-wrap"><table class="data-table detail-table"><thead><tr><th>发生时间</th><th>来源</th><th>入池金额</th><th>接收员工</th><th>未分配</th></tr></thead><tbody>' +
         (rows || '<tr><td colspan="5">当日没有符合计算条件的小费事件</td></tr>') + '</tbody></table></div></div></div>';
     }
@@ -1987,7 +1988,7 @@ var ALLOC_KEY = 'tipout_allocated';
             poolAmount: result.poolAmount, timeWindow: result,
             employees: result.employeeAmounts.map(function(entry) { var savedWeights=timeSavedWeights(rule,result,entry); return { employeeId: entry.employeeId, name: entry.name, role: entry.role,
               employeeWeight: savedWeights.length===1 ? savedWeights[0] : undefined, employeeWeightDetails:savedWeights,
-              attendanceStatus: entry.amount > 0 ? 'clock' : 'absent', hours: 0, percentage: 0, amount: entry.amount }; }) });
+              attendanceStatus: entry.amount > 0 ? 'clock' : 'absent', hours: result.scope==='shift'&&rule.distribution==='hours'?Number(entry.allocationHours||0):0, hoursSource:result.scope==='shift'?'shift':'time-window', percentage: 0, amount: entry.amount }; }) });
           return;
         }
         if (card.getAttribute('data-hours-based') === '1') {

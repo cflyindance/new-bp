@@ -375,6 +375,10 @@ var ALLOC_KEY = 'tipout_allocated';
           manualHours: manual ? manual.hours : null,
           maxHours: maxHours
         });
+        if(rule.allocationScope==='shift'&&usesHours){
+          try{var scopeStore=(document.getElementById('storeSelect')||{}).value||'';var result=window.TipOutTimeWindow.allocateRule(rule,window.TipOutScenarioSource.day(dateKey,scopeStore),dateKey);var currentId=String(emp.employeeId||'').replace(/^roster:/,'');var person=result.employeeAmounts.find(function(p){return currentId?String(p.employeeId)===currentId:p.name===emp.name;});resolved={hours:person?person.allocationHours:0,hoursValid:true,source:'shift'};}
+          catch(error){resolved={hours:null,hoursValid:false,source:'shift'};}
+        }
         return {
           poolId: poolId,
           poolName: rule.poolName || rule.name || '未命名小费池',
@@ -418,6 +422,7 @@ var ALLOC_KEY = 'tipout_allocated';
           entry.hours = Number(employee.hours);
           entry.hoursValid = isFinite(entry.hours) && entry.hours >= 0;
           if (employee.hoursSource === 'manual') entry.source = 'manual';
+          if (employee.hoursSource === 'shift') entry.source = 'shift';
         });
       }
       return row;

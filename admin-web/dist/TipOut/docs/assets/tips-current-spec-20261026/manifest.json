@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-ALLOCATION-SCOPE-20261026-01",
-  "baseline": "d6ea9b46",
+  "documentId": "TIPOUT-SHIFT-SCOPE-20261026-01",
+  "baseline": "288f9035",
   "versions": {
-    "PRD_产品需求文档.md": "V4.25",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.25",
-    "小费管理需求文档（个人规范版）.md": "V2.23"
+    "PRD_产品需求文档.md": "V4.26",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.26",
+    "小费管理需求文档（个人规范版）.md": "V2.24"
   },
   "images": [
     {
@@ -281,16 +281,46 @@
       "source": "项目实页截图；核对页面字段，未重新制作界面"
     },
     {
-      "file": "assets/tips-allocation-scope-20261026/day.png",
-      "caption": "规则编辑页统计与分配范围",
-      "sha256": "1dc2ea456e2828d2cbe303313dc1622c825599453a0b1b0eba3f0ba9dab6f20b",
-      "source": "1049eda1 基线功能分支；真实模板与运行时，受控演示截图，2026-10-26"
+      "file": "assets/tips-shift-scope-20261026/editor-hours.png",
+      "caption": "按班次统计与分配",
+      "sha256": "bb004b2724384fb27fe0ba7607045f388727c2906d004279dadc8634102c5e17",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
     },
     {
-      "file": "assets/tips-allocation-scope-20261026/time-window.png",
-      "caption": "规则编辑页统计与分配范围",
-      "sha256": "2135bc33f8d887322939c7adcaaa350bb4befb8dbc772fe1470160f000ecffa2",
-      "source": "1049eda1 基线功能分支；真实模板与运行时，受控演示截图，2026-10-26"
+      "file": "assets/tips-shift-scope-20261026/editor-average.png",
+      "caption": "按班次统计与分配",
+      "sha256": "1cd458502572379b7ab8fa712e4a05e5356e7a58f6eca609c298b4fc8d15ace1",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-scope-20261026/details.png",
+      "caption": "按班次统计与分配",
+      "sha256": "e7502aa8a4ca24d2a131b2e36b6a08eb392c01ab56e82dc9f8b169425cbcfa20",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-scope-20261026/day.png",
+      "caption": "班次范围及模式联动",
+      "sha256": "88b77db0f7e2fe2e42557f7e0e8f8e90abbaeec3c671de457ae5b1b7feac77cc",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-scope-20261026/time-window.png",
+      "caption": "班次范围及模式联动",
+      "sha256": "d7eceecbd011668af08e0c5f771a9a287b82aba087824a3fa596d84ec9f7c617",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-scope-20261026/overlap.png",
+      "caption": "班次范围及模式联动",
+      "sha256": "bcd8c5c292a8c0417e55b64916f532b6c6424b130fe8383968dfa60ce93bb90c",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-shift-scope-20261026/invalid-minutes.png",
+      "caption": "非法班次工时拦截",
+      "sha256": "f05f84f7fd096049cf02f1cd963a9483963947387bea4c7cbd64c9f7a0cde2b4",
+      "source": "288f9035基线功能分支，真实模板与运行时，受控演示，2026-10-26"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -302,20 +332,20 @@
     "src/team/tips/legacy/orderTipStatus.js.txt": "55c28d55e85db28de213528f5b14100833f1f8b01135b2509015392580de36af",
     "src/team/tips/legacy/paymentMethodApportion.js.txt": "10d85a31046b6ab9559afba1f5a15bfde7b64d7da1a81579ec0d31f350771261",
     "src/team/tips/legacy/personalSalesDeduct.js.txt": "8eaa8e3336667b63b1075845f3de6a693b8107457a14561f9b0abe9439c35419",
-    "src/team/tips/legacy/ruleData.js.txt": "009a58158b04f47795226e567d5ce7f5a203c15f42d05a6d27e071a8e4ce15a3",
+    "src/team/tips/legacy/ruleData.js.txt": "150d289b65e290fd72a21df5f8cfc748cc94d439307c5909f6e2cf839170b725",
     "src/team/tips/legacy/tipAllocation.js.txt": "a255c7eccbbf35bfa070eb12d37392c843e16957a4d883c2bf5d818d7766ec35",
     "src/team/tips/legacy/tipout-allocation-results-store.js.txt": "d29c7554e41adb0a0207c5f8ca8769b46fb85d6dbf9248c24d28251037bd4956",
     "src/team/tips/legacy/tipout-attendance-label.js.txt": "731aa34c307e84cfe42dc4b794fb06693468d0f5a2d833e74313f45ff4c958ec",
     "src/team/tips/legacy/tipout-auto-allocation.js.txt": "3d7ea3cce3fc58cdd78a94c78204d17460db00ffe05742be9ddd7c5020ddabbd",
     "src/team/tips/legacy/tipout-business-status.js.txt": "f0a8d8b81bdafff427c67b4b33a12728c0e7b30985a90222c184325fd7bd836e",
-    "src/team/tips/legacy/tipout-date-pool-view.js.txt": "64cdf556198f5c1fcb8e71e9281be102212dd429f07fbfa07d8cd78adf7ab6c9",
+    "src/team/tips/legacy/tipout-date-pool-view.js.txt": "c4acb5b0f1715994b5db682eff93ae6a4acd54e9142319a3feca4e600fa1fe91",
     "src/team/tips/legacy/tipout-date-state-store.js.txt": "a1974e59d48fe5a708e899ea299f5df316a4fb6ac7b38ff7cb91af0e10a96ea8",
     "src/team/tips/legacy/tipout-demo-rules.js.txt": "9677b26fb7441fd9f21715bda95c0b7e8ba42b17e814d272d1830bead4ec87b7",
     "src/team/tips/legacy/tipout-detail-manual-allocation.js.txt": "34e752b089eca62e0489b456af450cb398db112c716ed0bfa1080f1c9da1634a",
     "src/team/tips/legacy/tipout-detail-rule-filter.js.txt": "36bd5627ecff093e020e8670774bd0ddee5860f84e7ca3396f980ca5a422465b",
     "src/team/tips/legacy/tipout-detail-snapshot.js.txt": "28cf373063a7330a6cc9fa01f2229304b105bcc804e906753e951dc98099ee78",
     "src/team/tips/legacy/tipout-employee-weights.js.txt": "2701eefec3c7e05be5b92ce138779443e03e5ac21e745917cc1012b721dbc511",
-    "src/team/tips/legacy/tipout-funding.js.txt": "8de1b97b40d5391a572b35ffc3d792182cda9efcecd0279c86313ee23a35a2fa",
+    "src/team/tips/legacy/tipout-funding.js.txt": "56b56192b8038cf7f69cc876fa2f9da156021554f98650f299a9c5825d4cb7da",
     "src/team/tips/legacy/tipout-manual-hours-store.js.txt": "832231d2e16613d1a05c7e0c64f65e848b3865d7dc03e2ddda982c2039d4df21",
     "src/team/tips/legacy/tipout-payout-record-ui.js.txt": "fce7100debdf877f824de831345f0d6b29a5a34ca4bd834c79dbb93358d87c66",
     "src/team/tips/legacy/tipout-payroll-bridge.js.txt": "d3f3b1933d95fc1d7a9df16e410b106d92e617e1b84d5bd0cfb1ec4f86366f84",
@@ -324,25 +354,25 @@
     "src/team/tips/legacy/tipout-scenario-list.js.txt": "53e3d761bb08b086e2f89b315bd2128193a2521abe8b681c7fa1edb1d33a0429",
     "src/team/tips/legacy/tipout-scenario-source.js.txt": "0729a24e7bc40a2a0dc553877f5c62b5c9700dab23ef1d9b28016bd302993cab",
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
-    "src/team/tips/legacy/tipout-summary-ui.js.txt": "108d5bc036236062871bbad30c20038ce0e9dc23202049cb7e478e79d2594871",
-    "src/team/tips/legacy/tipout-time-window.js.txt": "d9e6446492e393d9f8bd7ef55e0ad65642c8ca03502f1b5c324118476c420d66",
+    "src/team/tips/legacy/tipout-summary-ui.js.txt": "20b81c095646839325ccea74e927688a711a0f723ed2e17cbbf7145953c555de",
+    "src/team/tips/legacy/tipout-time-window.js.txt": "6ea09eca6a9b1b693fbefc5d40f1c9e3153861085a2f7a229771c73f292724ca",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
-    "src/team/tips/programs/details.js.txt": "a531f197e1d7463e74d016f78dabb8d0ae0fb82a0413c907e79a9de10c4dc45a",
-    "src/team/tips/programs/distribution.js.txt": "b4598eba415b8794d84e8e012ada52268a27009f081fb4708d82e22e4996cac2",
+    "src/team/tips/programs/details.js.txt": "93de283166e4494fe90384cb4b1b9b14387509d17207421ce23df9a22f2bf7ea",
+    "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "b7f6e50090755e00d04084fafd6e81b35b7b8a4cb08ba41ea93ddf735b7d6b7d",
+    "src/team/tips/programs/rule-editor.js.txt": "0c753628c09dc5204d82ccb6a7f6cf8ec22dbf0e3fcaf164768d2167b00ce29e",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "70ecc7754252051fd9741eba6b0fdac9d1d365555630839d8301ee380ba0d5c3",
+    "src/team/tips/templates/rule-editor.html": "9b28a14039cd348a024e3893c6a0efb312e68da3b69eed03d09fa66b2482dd8f",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
     "src/team/tips/tips-legacy-runtime.ts": "203fc290e204f1e69d52d5cfc563441070102764bbd784e9ca71717a1a08a93a",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "c2516dd5ec4f4e6057d703e94270023c799bbd635732ed395c2a9d427bc51a9f",
+    "src/team/tips/tips-page.css": "c133ff93a89fb93c7f0d909142961218b4841fa23570aee9aa88120cdb70094c",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f"
   },
