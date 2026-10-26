@@ -29,6 +29,8 @@ import orderTipStatus from "./legacy/orderTipStatus.js.txt?raw";
 import paymentMethods from "./legacy/paymentMethodApportion.js.txt?raw";
 import exportCode from "./legacy/export.js.txt?raw";
 import distribution from "./programs/distribution.js.txt?raw";
+import autoAllocation from "./legacy/tipout-auto-allocation.js.txt?raw";
+import summaryAutoAllocation from "./programs/summary-auto-allocation.js.txt?raw";
 import details from "./programs/details.js.txt?raw";
 import rules from "./programs/rules.js.txt?raw";
 import editor from "./programs/rule-editor.js.txt?raw";
@@ -68,7 +70,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
-    programs[view], view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
+    programs[view], view === "distribution" ? autoAllocation + "\n" + summaryAutoAllocation : "", view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
     "return {prepareQuickSnapshot:function(system){return system?prepareSystemAllocationSnapshot():prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
@@ -105,6 +107,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const scopedDocument = new Proxy(docTarget, { get(t, p) { if (p === "activeElement") return shadow.activeElement; if (p in t) return t[p]; const v = Reflect.get(realDocument, p, realDocument); return typeof v === "function" ? v.bind(realDocument) : v; }, set(t,p,v){t[p]=v;return true;} });
   const locationFacade = new Proxy({} as Location, { get(_t,p){ if(p === "search") return route.view === "distribution" ? parseTipsRoute(realWindow.location.hash).query : route.query; if(p === "href") return `${realWindow.location.origin}/#${route.href}`; if(p === "replace") return (value: string) => { const mapped=rewriteLegacyTipsUrl(String(value)); context.replace(mapped ?? String(value)); }; const v=Reflect.get(realWindow.location,p,realWindow.location); return typeof v === "function" ? v.bind(realWindow.location) : v; }, set(_t,p,v){ if(p === "href"){ const mapped=rewriteLegacyTipsUrl(String(v)); context.navigate(mapped ?? String(v)); return true; } return Reflect.set(realWindow.location,p,v); } });
   const winTarget: Bag = {
+    registerTipOutCleanup: (fn: () => void) => cleanups.add(fn),
     BroadcastChannel: realWindow.BroadcastChannel ? class extends BroadcastChannel {
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }
     } : undefined,

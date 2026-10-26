@@ -583,6 +583,7 @@ var ALLOC_KEY = 'tipout_allocated';
       invalidateDayPipelineCache();
       renderSummaryViews();
       captureSummaryUiState('', '');
+      scheduleSummaryAutoAllocation();
       return true;
     }
 
@@ -716,8 +717,8 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function applyDefaultSummaryDateRange() {
-      activeSummaryDatePreset = '';
-      var range = TipOutSummaryDateSort.defaultDateRange();
+      activeSummaryDatePreset = 'this-week';
+      var range = TipOutSummaryDateSort.quickDateRange('this-week');
       document.getElementById('dateStart').value = range.startDate;
       document.getElementById('dateEnd').value = range.endDate;
     }
@@ -1919,6 +1920,7 @@ var ALLOC_KEY = 'tipout_allocated';
       );
       if (queryView && queryView !== 'employee') {
         setSummaryView('date', { historyMode: 'replace' });
+        scheduleSummaryAutoAllocation();
         return;
       }
       syncSummaryViewUi();
@@ -1926,6 +1928,7 @@ var ALLOC_KEY = 'tipout_allocated';
         updateEmployeeFilter(true);
         renderDailySummaryList();
       }
+      scheduleSummaryAutoAllocation();
     }
 
     document.addEventListener('DOMContentLoaded', initializeSummaryPage);
