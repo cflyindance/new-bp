@@ -21,6 +21,7 @@ for(const id of ['dateStart','dateEnd','summaryDateRangeError']){
 els.dateStart.value='2026-10-19';els.dateEnd.value='2026-10-23';
 let renders=0, captures=0, invalidations=0, reads=0;
 const context={window:{},document:{getElementById:id=>els[id]},lastValidSummaryDateRange:null,
+  activeSummaryDatePreset:'',
   renderSummaryViewsFromFacts(){renders++;},
   invalidateDayPipelineCache(){invalidations++;},
   captureSummaryUiState(){captures++;},
@@ -28,7 +29,7 @@ const context={window:{},document:{getElementById:id=>els[id]},lastValidSummaryD
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-summary-date-sort.js.txt','utf8'),context);
 context.TipOutSummaryDateSort=context.window.TipOutSummaryDateSort;
-for(const name of ['validateSummaryDateRange','handleSummaryDateRangeChange','renderSummaryViews'])
+for(const name of ['syncSummaryDatePresetUi','validateSummaryDateRange','handleSummaryDateRangeChange','renderSummaryViews'])
   vm.runInContext(extract(source,name),context);
 context.window.TipOutScenarioSource={withReadCache(fn){reads++;return fn();}};
 context.renderSummaryViews();

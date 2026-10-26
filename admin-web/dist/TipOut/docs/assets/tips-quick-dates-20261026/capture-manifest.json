@@ -1,0 +1,158 @@
+{
+  "baseline": "470da97f81cb69114b234b3758737870abd0d755",
+  "branch": "codex/tips-quick-date-filters-20261026",
+  "status": "uncommitted feature preview",
+  "origin": "http://127.0.0.1:65134",
+  "fixture": "独立演示会话，仅查询；未进行分配、保存或发放",
+  "sourceHashes": {
+    "src/team/tips/programs/distribution.js.txt": "3ce7fa85bbdc929c7fdf60898aff111afcf266508993bf2ef3375f7f43706f4d",
+    "src/team/tips/templates/distribution.html": "157833b59609c3264a52d5a9b0c28ac9f4b903354432fba343a3a2954c320885",
+    "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "e7dd92c3ee46a8d9edcf5d114202d07d95711ebfaf21d57d93e71cd383497efd",
+    "src/team/tips/tips-page.css": "e4a1d5a95f098976ba008256f001f6c01daff14227c92d3a3791568938e9385a"
+  },
+  "records": [
+    {
+      "file": "default.png",
+      "state": "默认最近一个月，无快捷项高亮",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-09-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:39.785Z",
+      "sha256": "e2912a5c33f26e633af25ac819b766ede05de93a103a34b62eccb8f656687829"
+    },
+    {
+      "file": "today.png",
+      "state": "日期汇总点击today；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-10-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:41.952Z",
+      "sha256": "d3be6c3ce9a3b2197b046dfdd58e1ea432ac2ebf035689a5598e21539d32ad2f"
+    },
+    {
+      "file": "yesterday.png",
+      "state": "日期汇总点击yesterday；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-10-25",
+        "2026-10-25"
+      ],
+      "capturedAt": "2026-10-26T02:33:42.988Z",
+      "sha256": "dfeacca3d498e5491d82e3776afe1daaac540b81b2cb175a7b6b06ef34166837"
+    },
+    {
+      "file": "this-week.png",
+      "state": "日期汇总点击this-week；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-10-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:44.150Z",
+      "sha256": "d1e338f23255de72d0ec858c2a8f4c2d134ed06e354ce05f14fd1495bd95ece6"
+    },
+    {
+      "file": "last-week.png",
+      "state": "日期汇总点击last-week；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-10-19",
+        "2026-10-25"
+      ],
+      "capturedAt": "2026-10-26T02:33:45.237Z",
+      "sha256": "3501cebd3eb1fa9e4f83ce29fa2c4852db006c6b9d29186ae1cde0ee36fcd9d8"
+    },
+    {
+      "file": "this-month.png",
+      "state": "日期汇总点击this-month；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-10-01",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:46.436Z",
+      "sha256": "236d60dd78e2abf485618b79a6e2ac2a8fc6955aedb8952ff892d44561d92753"
+    },
+    {
+      "file": "last-month.png",
+      "state": "日期汇总点击last-month；保留正常营业筛选",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution",
+      "range": [
+        "2026-09-01",
+        "2026-09-30"
+      ],
+      "capturedAt": "2026-10-26T02:33:47.673Z",
+      "sha256": "d2351f2f96dbe77c777fb76a800fdc89dce650d491a186a38da5d15c441c5d26"
+    },
+    {
+      "file": "employee.png",
+      "state": "员工视角点击本周，共用日期范围",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "2026-10-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:50.127Z",
+      "sha256": "1340b8155f4c3861fde26dff2ea84c7b0b13c8cc37753241500e38030c5b0b25"
+    },
+    {
+      "file": "manual-invalid.png",
+      "state": "清空日期清高亮，原查询结果保留",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:51.751Z",
+      "sha256": "95b2ff0ecf56c081ae5ffd67fb8783cfb4c14be84b736931157f551c8dc2bc0e"
+    },
+    {
+      "file": "recovered.png",
+      "state": "点击上周修复日期错误",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "2026-10-19",
+        "2026-10-25"
+      ],
+      "capturedAt": "2026-10-26T02:33:53.205Z",
+      "sha256": "4326b148792dbc7ffaef7839061a2d76a9bb1f94fd58c3f143f87c132c8c5def"
+    },
+    {
+      "file": "manual.png",
+      "state": "手动修改日期后无快捷项高亮",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "2026-10-19",
+        "2026-10-25"
+      ],
+      "capturedAt": "2026-10-26T02:33:54.567Z",
+      "sha256": "651c18e99dc554f83dcb02f0355235ba6b478c281628d2a069bfa1ae337314d5"
+    },
+    {
+      "file": "host-390.png",
+      "state": "390px宿主固定侧栏占宽：已知全局布局限制，非移动端通过证据",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "2026-10-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:56.997Z",
+      "sha256": "181cdf0f5547283a382ba5108bfc55b4ffde3a1b6cb7bdea7d8d9c74ece74ad3"
+    },
+    {
+      "file": "narrow.png",
+      "state": "900px窗口：快捷区与日期在可用内容宽度内换行",
+      "url": "http://127.0.0.1:65134/#/team/tips/distribution?view=employee",
+      "range": [
+        "2026-10-26",
+        "2026-10-26"
+      ],
+      "capturedAt": "2026-10-26T02:33:58.131Z",
+      "sha256": "13b1b1444a9291d0a3063fde4fa884c87589739806c96bfcdd5fb9373cc2204a"
+    }
+  ]
+}

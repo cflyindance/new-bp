@@ -2518,8 +2518,54 @@ select.form-control {
 }
 
 .tipout-page-summary .tipout-store-filter-field {
-  flex: 1 1 520px;
+  flex: 1 1 260px;
   min-width: 240px;
+}
+
+.tipout-page-summary .tipout-summary-date-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tipout-page-summary .tipout-summary-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+}
+
+.tipout-page-summary .tipout-summary-date-presets button {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tipout-page-summary .tipout-summary-date-presets button:hover {
+  border-color: var(--text-secondary);
+}
+
+.tipout-page-summary .tipout-summary-date-presets button[aria-pressed="true"] {
+  background: var(--text-primary, #111);
+  border-color: var(--text-primary, #111);
+  color: var(--bg-primary, #fff);
+}
+
+.tipout-page-summary .tipout-summary-date-presets button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
 }
 
 .tipout-page-summary .tipout-store-date-filter-field {
@@ -2731,6 +2777,13 @@ select.form-control {
     max-width: none;
     min-width: 0;
   }
+  .tipout-page-summary .tipout-store-filter-field { flex: 0 1 auto; }
+  .tipout-page-summary .tipout-summary-date-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .tipout-page-summary .tipout-summary-date-presets { width: 100%; }
+  .tipout-page-summary .tipout-summary-date-controls .tipout-store-date-filter-field { flex: 1 1 100%; }
   .tipout-page-summary .tipout-view-filter-group.tipout-compact-toolbar {
     align-items: stretch;
     flex-direction: column;

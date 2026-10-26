@@ -529,6 +529,28 @@ var ALLOC_KEY = 'tipout_allocated';
       return dates;
     }
     var lastValidSummaryDateRange = null;
+    var activeSummaryDatePreset = '';
+
+    function syncSummaryDatePresetUi() {
+      var group = document.getElementById('summaryDatePresets');
+      if (!group) return;
+      var range = activeSummaryDatePreset && TipOutSummaryDateSort.quickDateRange(activeSummaryDatePreset);
+      if (!range || range.startDate !== document.getElementById('dateStart').value || range.endDate !== document.getElementById('dateEnd').value) activeSummaryDatePreset = '';
+      group.querySelectorAll('[data-date-preset]').forEach(function(button) {
+        button.setAttribute('aria-pressed', String(button.dataset.datePreset === activeSummaryDatePreset));
+      });
+    }
+
+    function applySummaryDatePreset(key) {
+      var range = TipOutSummaryDateSort.quickDateRange(key);
+      if (!range) return false;
+      document.getElementById('dateStart').value = range.startDate;
+      document.getElementById('dateEnd').value = range.endDate;
+      if (!handleSummaryDateRangeChange()) return false;
+      activeSummaryDatePreset = key;
+      syncSummaryDatePresetUi();
+      return true;
+    }
 
     function validateSummaryDateRange(focusError) {
       var start = document.getElementById('dateStart');
@@ -555,6 +577,8 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function handleSummaryDateRangeChange() {
+      activeSummaryDatePreset = '';
+      syncSummaryDatePresetUi();
       if (!validateSummaryDateRange(true)) return false;
       invalidateDayPipelineCache();
       renderSummaryViews();
@@ -692,6 +716,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function applyDefaultSummaryDateRange() {
+      activeSummaryDatePreset = '';
       var range = TipOutSummaryDateSort.defaultDateRange();
       document.getElementById('dateStart').value = range.startDate;
       document.getElementById('dateEnd').value = range.endDate;
@@ -1362,6 +1387,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
+      syncSummaryDatePresetUi();
       if (!validateSummaryDateRange(false)) return false;
       lastValidSummaryDateRange = {
         startDate: document.getElementById('dateStart').value,

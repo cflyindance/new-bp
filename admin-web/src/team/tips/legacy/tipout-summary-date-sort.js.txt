@@ -26,6 +26,22 @@
     return { startDate: toLocalDateKey(subtractOneCalendarMonth(end)), endDate: toLocalDateKey(end) };
   }
 
+  function quickDateRange(key, now) {
+    var supplied = now !== undefined;
+    if (supplied && (!now || typeof now.getFullYear !== 'function' || isNaN(now.getTime()))) return null;
+    var today = supplied ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : new Date();
+    var year = today.getFullYear(), month = today.getMonth(), day = today.getDate();
+    var start = new Date(year, month, day), end = new Date(year, month, day);
+    var mondayOffset = (today.getDay() + 6) % 7;
+    if (key === 'yesterday') { start.setDate(day - 1); end.setDate(day - 1); }
+    else if (key === 'this-week') start.setDate(day - mondayOffset);
+    else if (key === 'last-week') { start.setDate(day - mondayOffset - 7); end.setDate(day - mondayOffset - 1); }
+    else if (key === 'this-month') start = new Date(year, month, 1);
+    else if (key === 'last-month') { start = new Date(year, month - 1, 1); end = new Date(year, month, 0); }
+    else if (key !== 'today') return null;
+    return { startDate: toLocalDateKey(start), endDate: toLocalDateKey(end) };
+  }
+
   function isValidDateRange(startDate, endDate) {
     var pattern = /^\d{4}-\d{2}-\d{2}$/;
     if (!pattern.test(String(startDate || '')) || !pattern.test(String(endDate || ''))) return false;
@@ -67,6 +83,7 @@
   global.TipOutSummaryDateSort = {
     STORAGE_KEY: STORAGE_KEY,
     defaultDateRange: defaultDateRange,
+    quickDateRange: quickDateRange,
     isValidDateRange: isValidDateRange,
     normalizeDirection: normalizeDirection,
     readDirection: readDirection,
