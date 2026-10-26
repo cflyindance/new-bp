@@ -1,0 +1,33 @@
+{
+  "changeId": "TIPOUT-RETRY-VISIBILITY-20261026-01",
+  "baseline": "965f8097",
+  "branch": "codex/tips-retry-visibility-20261026",
+  "origin": "http://127.0.0.1:65137",
+  "status": "uncommitted feature preview",
+  "capturedAt": "2026-10-26T13:30:30.126167+08:00",
+  "fixture": "专用演示会话，仅重置9/1、9/2测试记录；9/1一次性锁异常，9/2等待5秒采集运行态。真实单日计算保存，非生产故障。未操作65133用户会话。",
+  "normalizedSourceHashes": {
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
+    "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
+    "src/team/tips/tips-page.css": "c2516dd5ec4f4e6057d703e94270023c799bbd635732ed395c2a9d427bc51a9f"
+  },
+  "sourceHashPolicy": "源码UTF-8、CRLF归一LF；图片原始字节校验。",
+  "records": [
+    {
+      "file": "failed.png",
+      "sha256": "bfee3055f4b71f8da993aa5ec3c0827bbb46a18ebb0ecdefe1538d3f8033cba0"
+    },
+    {
+      "file": "running.png",
+      "sha256": "184db42558f5c6a830896d06af11e39fe600ad6eeeff864188b13c7d99fef670"
+    },
+    {
+      "file": "success.png",
+      "sha256": "ca45c1383eca4f2742cc951be375ae78849c394c234a2f3d0759adb17f8536bd"
+    }
+  ],
+  "limits": [
+    "重试再次失败的专用截图未采；VM覆盖同一最终有失败状态",
+    "既有生产、手工及发放截图缺口保留，不代表CI或生产结算验收"
+  ]
+}
