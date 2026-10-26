@@ -3429,7 +3429,9 @@ select.form-control {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
-  white-space: nowrap;
+  white-space: normal;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 48px));
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -3439,3 +3441,5 @@ select.form-control {
   opacity: 1;
   visibility: visible;
 }
+
+.tipout-page-rule-editor #timeWindowParticipationOption[data-planning-hint]::before { left: auto; right: 12px; }
