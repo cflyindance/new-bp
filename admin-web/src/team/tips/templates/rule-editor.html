@@ -529,11 +529,13 @@
             <div class="form-section-title">统计与分配范围</div>
             <div class="radio-group">
               <label class="radio-item"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"> 按整日</label>
+              <label class="radio-item"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"> 按班次</label>
               <div class="participation-option" id="timeWindowParticipationOption">
                 <label class="radio-item"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"> 按打卡时段</label>
                 <details class="distribution-method-help"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p>仅统计实际打卡起止时间内产生的小费，并按所选分配方式，分给该小费产生时在岗且符合接收方角色条件的员工。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
               </div>
             </div>
+            <div id="allocationShiftPanel" hidden><div class="field-desc">各班次独立统计与分配。最低参与工时按班次内有效打卡工时判断；0 表示不限制。</div><div id="allocationShiftRows"></div><button type="button" class="btn btn-sm" data-native-onclick="addAllocationShift()">+ 添加班次</button><p class="field-desc">班次计入工时上限仅用于按工时分配；0 表示不限制。班次时间不能重叠，跨日班次归属开始日。</p></div>
             <p id="allocationScopeTimeNotice" class="field-desc" hidden>各时段产生的小费，仅分配给该时段在岗的接收员工。</p>
           </div>
 

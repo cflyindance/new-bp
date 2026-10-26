@@ -159,8 +159,11 @@
         p.timeWindow.lines.forEach(function(line){
           if(!line.id||eventIds[line.id])throw new Error('按时段分配事件重复');eventIds[line.id]=true;
           var at=root.TipOutTimeWindow.moment(line.occurredAt),paid=0;
+          if(p.timeWindow.scope==='shift'){if(line.scope!=='shift'||!Array.isArray(line.sourceEvents))throw new Error('班次分配缺少来源依据');var start=root.TipOutTimeWindow.moment(line.windowStartAt),end=root.TipOutTimeWindow.moment(line.windowEndAt);var sourceSum=line.sourceEvents.reduce(function(n,event){var eventAt=root.TipOutTimeWindow.moment(event.occurredAt);if(eventAt<start||eventAt>=end)throw new Error('小费事件不在所属班次内');return n+cents(event.amount);},0);if(sourceSum!==cents(line.amount))throw new Error('班次来源金额与分配池不一致');}
           (line.participants||[]).forEach(function(person){
-            var valid=(person.punchIntervals||[]).some(function(interval){return root.TipOutTimeWindow.moment(interval.clockInAt)<=at&&at<root.TipOutTimeWindow.moment(interval.clockOutAt);});
+            var valid;
+            if(line.scope==='shift'){var w={start:root.TipOutTimeWindow.moment(line.windowStartAt),end:root.TipOutTimeWindow.moment(line.windowEndAt)};var minutes=root.TipOutTimeWindow.overlapMinutes({attendance:{punchSessions:(person.punchIntervals||[]).map(function(p){return Object.assign({status:'complete'},p);})}},w);valid=minutes>0&&minutes>=Number(line.minClockMinutes||0)&&Math.abs(minutes-Number(person.actualMinutes))<0.00001;}
+            else valid=(person.punchIntervals||[]).some(function(interval){return root.TipOutTimeWindow.moment(interval.clockInAt)<=at&&at<root.TipOutTimeWindow.moment(interval.clockOutAt);});
             if(cents(person.amount)>0&&!valid)throw new Error('员工不在小费发生时段，不能参与分配');
             paid+=cents(person.amount);
           });
@@ -272,7 +275,8 @@
     snapshot.pools.forEach(function(pool,index){
       var rule=ruleById[String(pool.ruleId)];if(!rule)throw new Error('分配快照规则与页面不一致，请刷新');
       if(rule.clockin==='time_window'&&(!pool.timeWindow||pool.timeWindow.version!==1))throw new Error('按时段参与规则缺少逐笔分配结果，不能退回整日计算');
-      var sourceBases=(rule.poolRules||[]).map(function(p){return sourceBase(p,facts,snapshot.dateKey);});
+      var shiftEvents=rule.allocationScope==='shift'?root.TipOutTimeWindow.ruleEvents(rule,facts,snapshot.dateKey):null;
+      var sourceBases=(rule.poolRules||[]).map(function(p,i){return shiftEvents?shiftEvents.filter(function(e){return e.formulaId===String(p.id||i);}).reduce(function(n,e){return n+e.baseAmount;},0):sourceBase(p,facts,snapshot.dateKey);});
       var formulaState=snapshot.editorState&&Array.isArray(snapshot.editorState.formulas)&&snapshot.editorState.formulas.find(function(item){return String(item.id)===String(pool.ruleId);});
       var sourceInputs=formulaState&&formulaState.values||[];
       if(sourceInputs.length&&sourceInputs.length!==(rule.poolRules||[]).length*2)throw new Error('公式输入不完整，请刷新后重试');
@@ -302,7 +306,7 @@
       if(sourceInputs.length&&sourceInputs.length!==(rule.poolRules||[]).length*2)throw new Error((rule.ruleName||pool.ruleName)+'：公式输入不完整，请刷新后重试');
       var configured=(rule.poolRules||[]).map(function(p,i){var base=sourceInputs.length?Number(sourceInputs[i*2]):sourceBases[i],rate=sourceInputs.length?Number(sourceInputs[i*2+1]):Number(p.pct)||0;
         if(!Number.isFinite(base)||base<0||!Number.isFinite(rate)||rate<0||rate>100)throw new Error((rule.ruleName||pool.ruleName)+'：公式基数或比例无效');
-        return {label:p.name||'公式 '+(i+1),base:round(base),rate:rate,amount:round(base*rate/100),overlaps:0};});
+        return {label:p.name||'公式 '+(i+1),base:round(base),rate:rate,amount:shiftEvents?shiftEvents.filter(function(e){return e.formulaId===String(p.id||i);}).reduce(function(n,e){return n+cents(e.amount);},0)/100:round(base*rate/100),overlaps:0};});
       if(sourceInputs.length&&(rule.allocationMode||'legacy_pool')==='legacy_pool'&&configured.reduce(function(n,item){return n+cents(item.amount);},0)!==target)throw new Error((rule.ruleName||pool.ruleName)+'：公式合计与小费池金额不一致，请重新计算');
       pool.funding={version:1,priority:index+1,target:target/100,actual:actual/100,gap:gap/100,unallocated:Math.max(0,actual-paid)/100,formulas:configured,contributions:contributions};
     });

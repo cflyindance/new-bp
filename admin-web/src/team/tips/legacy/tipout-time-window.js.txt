@@ -103,7 +103,7 @@
           var amount = Math.round(cents(base) * rate / 100);
           if (!amount) return;
           events.push({ id: String(formula.id || formulaIndex) + ':' + String(item.id), source: formula.type,
-            employeeId: fact.employeeId, sourceEmployeeName: fact.name, occurredAt: occurredAt, timeZone: item.timeZone, amount: amount / 100,
+            employeeId: fact.employeeId, sourceEmployeeName: fact.name, occurredAt: occurredAt, timeZone: item.timeZone, amount: amount / 100, baseAmount:cents(base)/100,
             formulaId: String(formula.id || formulaIndex), sourceId: String(item.id) });
         });
       });
@@ -113,6 +113,7 @@
       if (seen[event.id]) throw new Error('小费来源事件重复，不能再次分配');
       seen[event.id] = true;
     });
+    if(rule.allocationScope==='shift'){validateShifts(rule.shifts,rule.distribution);events=events.filter(function(e){return rule.shifts.some(function(shift){var w=shiftWindow(shift,dateKey,e.timeZone),at=moment(e.occurredAt);return w.start<=at&&at<w.end;});});}
     return events.sort(function(a, b) { return moment(a.occurredAt) - moment(b.occurredAt) || a.id.localeCompare(b.id); });
   }
   function allocate(events, facts, options) {
@@ -180,7 +181,63 @@
     });
     return { version: 1, distribution: mode, lines: lines, employeeAmounts: Object.keys(totals).map(function(id) { return { employeeId: id, amount: totals[id] / 100 }; }), unallocated: unallocated / 100 };
   }
+  function validateShifts(shifts,distribution) {
+    if (!Array.isArray(shifts) || !shifts.length) throw new Error('请至少选择一个参与分配的班次');
+    var ranges=[], names={};
+    shifts.forEach(function(shift){
+      if(!shift.name || names[shift.name]) throw new Error('班次名称缺失或重复'); names[shift.name]=true;
+      if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(shift.start||'') || !/^([01]\d|2[0-3]):[0-5]\d$/.test(shift.end||'') || shift.start===shift.end) throw new Error('请设置有效的班次开始及结束时间');
+      var min=shift.minClockMinutes==null?0:Number(shift.minClockMinutes),max=shift.maxClockMinutes==null?0:Number(shift.maxClockMinutes);
+      if(!Number.isInteger(min)||min<0||!Number.isInteger(max)||max<0||(max>0&&max<min&&distribution!=='average'&&distribution!=='orders'))throw new Error('班次工时须为非负整数分钟，上限不能小于最低参与工时');
+      var start=Number(shift.start.slice(0,2))*60+Number(shift.start.slice(3)),end=Number(shift.end.slice(0,2))*60+Number(shift.end.slice(3));
+      if(end<=start)end+=1440;
+      for(var day=-1;day<=1;day++)ranges.forEach(function(other){if(Math.max(start+day*1440,other.start)<Math.min(end+day*1440,other.end))throw new Error('所选班次时间不能重叠');});
+      ranges.push({start:start,end:end});
+    }); return shifts;
+  }
+  function localInstant(date,time,zone) {
+    var wanted=Date.parse(date+'T'+time+':00Z'), value=wanted;
+    var formatter=new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+    for(var i=0;i<4;i++){var parts={};formatter.formatToParts(new Date(value)).forEach(function(p){parts[p.type]=p.value;});var shown=Date.parse(parts.year+'-'+parts.month+'-'+parts.day+'T'+parts.hour+':'+parts.minute+':'+parts.second+'Z');if(shown===wanted)return value;value+=wanted-shown;}
+    throw new Error('班次时间处于无效的时区切换区间，请调整班次');
+  }
+  function shiftWindow(shift,date,zone) {
+    var endDate=shift.end<=shift.start ? new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10) : date;
+    return {start:localInstant(date,shift.start,zone),end:localInstant(endDate,shift.end,zone)};
+  }
+  function overlapMinutes(employee,window) {
+    var pieces=intervals(employee).map(function(p){return {start:Math.max(p.start,window.start),end:Math.min(p.end,window.end)};}).filter(function(p){return p.end>p.start;}).sort(function(a,b){return a.start-b.start;});
+    var merged=[];pieces.forEach(function(p){var last=merged[merged.length-1];if(last&&p.start<=last.end)last.end=Math.max(last.end,p.end);else merged.push(p);});
+    return merged.reduce(function(n,p){return n+(p.end-p.start)/60000;},0);
+  }
+  function allocateShifts(rule,facts,dateKey) {
+    var shifts=validateShifts(rule.shifts,rule.distribution),events=ruleEvents(rule,facts,dateKey),groups=root.TipOutEmployeeWeights.groups(rule.receivers),totals={},lines=[];
+    var zones=Array.from(new Set(events.map(function(e){return e.timeZone;})));if(zones.length>1)throw new Error('同一班次的小费必须使用同一门店时区');
+    if(!zones.length)zones=Array.from(new Set(facts.reduce(function(out,f){return out.concat(f.orders||[],f.reportedTipEvents||[]);},[]).map(function(e){return e.timeZone;}).filter(Boolean)));
+    if(zones.length!==1)throw new Error('缺少或存在不一致的门店时区，无法统计班次');
+    var zone=zones[0];
+    shifts.forEach(function(shift,index){
+      var window=shiftWindow(shift,dateKey,zone),selected=events.filter(function(e){var at=moment(e.occurredAt);return window.start<=at&&at<window.end;}),amount=selected.reduce(function(n,e){return n+cents(e.amount);},0);
+      var participants=[],budgets=split(amount,groups.map(function(g){return g.pct;})),paid=0;
+      groups.forEach(function(group,groupIndex){
+        var members=facts.filter(function(f){return group.roles.indexOf(f.role)>=0&&(!group.employeeRefs.length||group.employeeRefs.some(function(ref){return String(ref.employeeId)===String(f.employeeId);}));}).map(function(f){
+          (f.attendance&&f.attendance.punchSessions||[]).forEach(function(p){if(p.status!=='complete'){var a=p.clockInAt?moment(p.clockInAt):-Infinity,b=p.clockOutAt?moment(p.clockOutAt):Infinity;if(a<window.end&&b>window.start)throw new Error((f.name||'员工')+'班次打卡区间不完整');}});
+          return {fact:f,minutes:overlapMinutes(f,window)};
+        }).filter(function(m){return m.minutes>0&&m.minutes>=Number(shift.minClockMinutes||0);});
+        var bases=members.map(function(m){var f=m.fact,base=1;
+          if(rule.distribution==='hours')base=Math.min(m.minutes,Number(shift.maxClockMinutes||0)||Infinity)/60;
+          if(rule.distribution==='orders')base=(f.orders||[]).filter(function(o){var at=moment(o.completedPaymentAt);return window.start<=at&&at<window.end;}).length;
+          return base*root.TipOutEmployeeWeights.read(group,f.role,f.name);
+        });
+        var pieces=split(budgets[groupIndex],bases);
+        members.forEach(function(m,i){var f=m.fact;paid+=pieces[i];totals[f.employeeId]=(totals[f.employeeId]||0)+pieces[i];participants.push({employeeId:f.employeeId,name:f.name,role:f.role,employeeWeight:root.TipOutEmployeeWeights.read(group,f.role,f.name),weight:bases[i],amount:pieces[i]/100,actualMinutes:m.minutes,allocationMinutes:Math.min(m.minutes,Number(shift.maxClockMinutes||0)||Infinity),punchIntervals:intervals(f).map(function(p){return {clockInAt:p.clockInAt,clockOutAt:p.clockOutAt};})});});
+      });
+      lines.push({id:'shift:'+index,scope:'shift',shiftName:shift.name,minClockMinutes:Number(shift.minClockMinutes||0),maxClockMinutes:rule.distribution==='hours'?Number(shift.maxClockMinutes||0):0,occurredAt:new Date(window.start).toISOString(),windowStartAt:new Date(window.start).toISOString(),windowEndAt:new Date(window.end).toISOString(),timeZone:zone,source:'shift',sourceId:shift.name,sourceEvents:selected,amount:amount/100,unallocated:(amount-paid)/100,participants:participants,status:paid===amount?'allocated':paid?'partial':'unallocated'});
+    });
+    return {version:1,weightSchemaVersion:1,scope:'shift',dateKey:dateKey,distribution:rule.distribution,lines:lines,poolAmount:lines.reduce(function(n,l){return n+cents(l.amount);},0)/100,unallocated:lines.reduce(function(n,l){return n+cents(l.unallocated);},0)/100,employeeAmounts:facts.map(function(f){return {employeeId:f.employeeId,name:f.name,role:f.role,amount:(totals[f.employeeId]||0)/100,allocationHours:lines.reduce(function(n,line){var p=line.participants.find(function(p){return p.employeeId===f.employeeId;});return n+(p?p.allocationMinutes/60:0);},0)};})};
+  }
   function allocateRule(rule, facts, dateKey) {
+    if(rule.allocationScope==='shift')return allocateShifts(rule,facts,dateKey);
     var events = ruleEvents(rule, facts, dateKey), receivers = rule.receivers || [];
     if (!receivers.length) throw new Error('按时段参与需要配置接收方');
     var distributionFacts = facts;
@@ -220,5 +277,5 @@
       poolAmount: events.reduce(function(sum, event) { return sum + cents(event.amount); }, 0) / 100,
       unallocated: unallocated / 100, employeeAmounts: facts.map(function(f) { return { employeeId: f.employeeId, name: f.name, role: f.role, amount: (totals[f.employeeId] || 0) / 100 }; }) };
   }
-  root.TipOutTimeWindow = { moment: moment, intervals: intervals, sourceEvents: sourceEvents, ruleEvents: ruleEvents, allocate: allocate, allocateRule: allocateRule, split: split };
+  root.TipOutTimeWindow = { validateShifts:validateShifts, overlapMinutes:overlapMinutes, shiftWindow:shiftWindow, moment: moment, intervals: intervals, sourceEvents: sourceEvents, ruleEvents: ruleEvents, allocate: allocate, allocateRule: allocateRule, split: split };
 })(typeof window !== 'undefined' ? window : this);
