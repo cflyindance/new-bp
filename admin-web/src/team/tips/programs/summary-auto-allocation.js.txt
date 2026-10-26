@@ -60,6 +60,7 @@
       var labels={pending:'等待分配',running:'分配中',success:'分配成功',failed:'分配失败',skipped:'已跳过'};
       document.getElementById('summaryAutoRows').innerHTML=items.map(function(item){return '<tr><td>'+escapeSummaryHtml(item.date)+'</td><td>'+labels[item.status]+'</td><td>'+escapeSummaryHtml(item.message||'—')+'</td></tr>';}).join('');
       document.getElementById('summaryAutoRetry').disabled=queue.running||!counts.failed;
+      document.getElementById('summaryAutoRetry').hidden=queue.running||!counts.failed;
       document.getElementById('summaryAutoClose').disabled=queue.running;
       if(!queue.running){invalidateDayPipelineCache();renderSummaryViews();document.getElementById(counts.failed?'summaryAutoRetry':'summaryAutoClose').focus();}
     }

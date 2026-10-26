@@ -46,5 +46,7 @@
     "规则缺失/手动工时不足及损坏状态用VM验证，独立通知截图待补",
     "手工和已发放状态保护单元保留，独立实际状态截图仍待补",
     "生产POS及CI部署未验证"
-  ]
+  ],
+  "supersededBy": "TIPOUT-RETRY-VISIBILITY-20261026-01",
+  "historicalNote": "保留原图和哈希；按钮0失败仍置灰的旧展示已替代。任务预检规则不变，当前按钮三态见tips-retry-visibility-20261026。"
 }

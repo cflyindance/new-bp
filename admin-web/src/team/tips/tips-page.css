@@ -3399,3 +3399,4 @@ select.form-control {
 .tipout-auto-modal progress { width:100%; height:10px; margin:8px 0 18px; accent-color:#111; }
 .tipout-auto-table { overflow:auto; max-height:40vh; }
 .tipout-auto-table td { white-space:normal; }
+.tipout-auto-modal #summaryAutoRetry[hidden] { display: none !important; }
