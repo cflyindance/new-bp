@@ -3416,3 +3416,5 @@ select.form-control {
 
 .tipout-planning-tooltip { position:fixed; inset:auto; margin:0; padding:8px 12px; width:max-content; max-width:min(360px,calc(100vw - 32px)); box-sizing:border-box; border:0; border-radius:6px; background:#222; color:#fff; font:400 12px/1.5 sans-serif; white-space:normal; pointer-events:none; z-index:10000; }
 .tipout-planning-tooltip[hidden] { display:none; }
+
+.tipout-page-summary #summaryAutoClose:disabled { opacity: .45; cursor: not-allowed; }

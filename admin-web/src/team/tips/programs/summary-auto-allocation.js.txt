@@ -61,7 +61,9 @@
       document.getElementById('summaryAutoRows').innerHTML=items.map(function(item){return '<tr><td>'+escapeSummaryHtml(item.date)+'</td><td>'+labels[item.status]+'</td><td>'+escapeSummaryHtml(item.message||'—')+'</td></tr>';}).join('');
       document.getElementById('summaryAutoRetry').disabled=queue.running||!counts.failed;
       document.getElementById('summaryAutoRetry').hidden=queue.running||!counts.failed;
-      document.getElementById('summaryAutoClose').disabled=queue.running;
+      var closeButton=document.getElementById('summaryAutoClose');
+      closeButton.disabled=queue.running;
+      closeButton.textContent=queue.running?'正在分配':'关闭';
       if(!queue.running){invalidateDayPipelineCache();renderSummaryViews();document.getElementById(counts.failed?'summaryAutoRetry':'summaryAutoClose').focus();}
     }
     function startSummaryAutoAllocation(){
