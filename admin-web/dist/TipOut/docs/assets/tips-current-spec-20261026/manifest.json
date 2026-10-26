@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-SHIFT-HOURS-20261026-01",
-  "baseline": "8cd69352",
+  "documentId": "TIPOUT-RANGE-CONDITIONS-20261026-01",
+  "baseline": "edd906b6",
   "versions": {
-    "PRD_产品需求文档.md": "V4.33",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.33",
-    "小费管理需求文档（个人规范版）.md": "V2.31"
+    "PRD_产品需求文档.md": "V4.37",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.37",
+    "小费管理需求文档（个人规范版）.md": "V2.35"
   },
   "images": [
     {
@@ -344,6 +344,60 @@
       "caption": "班次上限小于门槛",
       "sha256": "d2d9c81569e81da7d4942f419100aca55f89224cf0b26563d440073ea6677ac4",
       "source": "8cd69352基线功能分支，实际模板与运行时，受控演示，2026-10-26"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/scope-help.png",
+      "caption": "小费分配范围问号说明",
+      "sha256": "e89307ac9e8cbfaf9ce7d9b39097f6fa479c063b79dfd7f8557ca72ee418a4d5",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/allocation-order.png",
+      "caption": "分配与接收设置排序",
+      "sha256": "66914dde01e582c01c1b380ee423c97b5a5c6e05f74dc8afa5cfff4d4d11871a",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/four-groups.png",
+      "caption": "四组设置与班次条件联动",
+      "sha256": "179cb2fe2a39dfc74e66c418784eaf5d96764c80ef1e699dfb1c7ebf858b53d5",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/four-groups-shift.png",
+      "caption": "四组设置与班次条件联动",
+      "sha256": "24328ad8fbfd68aadbd113fc20f251735678737c7069f8c66a48a7faed33df6c",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/four-groups-average.png",
+      "caption": "四组设置与班次条件联动",
+      "sha256": "5ac0f7fa85f2bc4575eed9111dd5d0e197dade2851a1deceb48e27dfd6f5762b",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/range-day.png",
+      "caption": "小费分配范围联动条件",
+      "sha256": "1db9a50ac2f0154b407825c98e54b8d01a4ebb4a719fb5375eef31f3a70921d9",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/range-shift.png",
+      "caption": "小费分配范围联动条件",
+      "sha256": "0e7b22bc672a1dc94d4d99e27434478f00e4ba4f95f163677db8e220f1aeebb5",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/range-average.png",
+      "caption": "小费分配范围联动条件",
+      "sha256": "2bba4b5cf8db831b1c2a9539dca393639998b9cc1d8d3345565bdeb48da99766",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-scope-copy-20261026/range-time.png",
+      "caption": "小费分配范围联动条件",
+      "sha256": "dce8bfd7e7e2b48571a34c032f01de65b1d4d2c49a935d70a144d886538eee26",
+      "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -383,13 +437,13 @@
     "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "cd726160ba7011ef767388cf427c42fa2733d9a758afdd3840b8f14b31287e9b",
+    "src/team/tips/programs/rule-editor.js.txt": "36b4ac98a994926cd987aa3c8cbf5dcff2de94f1aef7f5d3170d5091de3e4709",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "b947492e774b2947df138af1ce0232826e9286250c4273393a320eb4f63fa0f8",
+    "src/team/tips/templates/rule-editor.html": "b2df3110810a29008147f67665c4fc004127dd366edd3815ba87f3bae2e0c922",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",

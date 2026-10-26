@@ -463,7 +463,87 @@
           </details>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="allocationRulesGroup" aria-labelledby="allocationRulesTitle">
-            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">2. 接收与分配设置</h2>
+            <h2 class="tipout-rule-group-title" id="allocationRulesTitle">2. 分配设置</h2>
+<div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
+            <div class="distribution-method-cards">
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合接收条件的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card" id="distributionOrdersRow">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
+              </div>
+            </div>
+          <div id="distributionSection" class="tipout-work-hours-wrap"><div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+                  <div class="form-section-title work-hours-config-heading"><span>分配工时设置</span>
+                    <details class="distribution-method-help" id="workHoursSourceHelpToggle"><summary aria-label="查看分配工时设置说明">？</summary><div class="distribution-method-help-content"><p id="workHoursSourceHelp"></p></div></details>
+                  </div>
+                  <div id="workHoursTimeWindowInfo" hidden>
+                    <div>按小费产生时段内的有效在岗工时 <details class="distribution-method-help"><summary aria-label="查看时段工时说明">？</summary><div class="distribution-method-help-content"><p>按小费发生时段分别计算，不用全天工时跨时段分摊。</p><p>例如员工 18:00—22:00 在岗，21:00 产生的小费仍可参与。此模式不设置每日工时上限；补录需要具体上下班时间，仅填写总小时数不能改变在岗资格。</p></div></details></div>
+                    <p id="workHoursTimeWindowCapNotice" class="field-desc" hidden>当前模式不使用每日工时上限，保存后按实际在岗时段计算。</p>
+                    <label id="legacyTimeWindowHoursNotice" hidden><input id="legacyTimeWindowHoursAck" type="checkbox"> 确认取消旧规则的每日工时上限。此前超出上限的时段不参与；保存后按实际在岗时段参与，历史分配结果不变。</label>
+                  </div>
+                  <div id="workHoursEditableOptions">
+                  <label class="radio-item">
+                    <input type="radio" name="workHoursMode" value="actual" checked data-native-onchange="updateWorkHoursConfigUi()">
+                    <span id="workHoursActualLabel">按有效打卡工时</span>
+                  </label>
+                  <div class="work-hours-cap-row">
+                    <label class="radio-item">
+                      <input type="radio" name="workHoursMode" value="capped" data-native-onchange="updateWorkHoursConfigUi()">
+                      <span id="workHoursCappedLabel">每日计入工时上限</span>
+                    </label>
+                    <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled data-native-oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
+                    <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+                  </div>
+                  </div>
+                  <div class="work-hours-config-error" id="workHoursConfigError"></div>
+                </div></div>
+</div>
+<div class="form-section tipout-form-card" id="allocationScopeSection">
+            <div class="form-section-title" style="display:flex;align-items:center;gap:6px">小费分配范围<details class="distribution-method-help"><summary aria-label="查看小费分配范围说明">？</summary><div class="distribution-method-help-content">确定小费按什么时间范围统计，并在该范围内分配给符合条件的员工。</div></details></div>
+            <div class="distribution-method-cards allocation-scope-cards">
+              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"><strong>按整日分配</strong></label></div>
+              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"><strong>按班次分配</strong></label></div>
+              <div class="distribution-method-card" id="timeWindowParticipationOption">
+                <label class="distribution-method-choice"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"><strong>按打卡时段分配</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p id="allocationScopeTimeNotice">各时段产生的小费，仅分配给该时段在岗的接收员工。按实际打卡起止时间匹配，且须符合接收方角色条件。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
+              </div>
+            </div>
+<div id="allocationScopeConditions" style="margin-top:16px">          <div class="form-section tipout-day-requirements" id="dailyParticipationSection">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">接收员工打卡要求</span></div>
+              <div class="distribution-method-cards clock-requirement-cards">
+                <div class="distribution-method-card" id="clockinClockOption">
+                  <label class="distribution-method-choice">
+                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"><strong>需有有效打卡</strong>
+                  </label>
+                  <details class="distribution-method-help"><summary aria-label="查看需有有效打卡说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
+                </div>
+                <div class="distribution-method-card">
+                  <label class="distribution-method-choice">
+                    <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"><strong>不限打卡状态</strong>
+                  </label>
+                  <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
+                </div>
+<input type="radio" name="clockin" value="time_window" hidden aria-hidden="true" tabindex="-1">
+                <label class="radio-item" hidden style="display:none">
+                  <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
+                </label>
+              </div>
+            </div>
+<div class="form-section tipout-day-requirements" id="shiftWorkHoursPanel" hidden><div class="form-section-title">班次最低参与工时</div><label class="work-hours-cap-row"><span>最低参与工时</span><input id="shiftMinMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次最低参与工时（分钟）"><span>分钟／班次</span></label><p class="field-desc">0 表示不限制。按班次内实际有效打卡工时判断是否参与。</p></div>
+<div class="form-section tipout-day-requirements" id="shiftAllocationHoursPanel" hidden><div class="form-section-title">班次计入工时上限</div><label class="work-hours-cap-row"><input id="shiftMaxMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次计入工时上限（分钟）"><span>分钟／班次</span></label><p class="field-desc">0 表示不限制。仅限制用于分配的工时，不修改打卡记录。</p><span id="shiftHoursOnlyHint" hidden></span></div>
+<div class="form-section tipout-form-card" id="timeWindowReceiverRequirement" hidden style="display:none"><div class="form-section-title">接收员工在岗要求</div><p>仅该时段在岗且符合接收方规则的员工参与分配。</p></div>
+</div>
+</div>
+          </section>
+<section class="tipout-editor-rule-group tipout-settings-group" id="receiverRulesGroup" aria-labelledby="receiverRulesTitle"><h2 class="tipout-rule-group-title" id="receiverRulesTitle">3. 接收设置</h2>
 <div id="legacyAllocationSections">
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
@@ -524,89 +604,9 @@
               <button type="button" class="btn btn-sm" style="margin-top:8px" data-native-onclick="addOrderResidualReceiverRow()"><span style="font-size:14px">+</span> 新增角色</button>
             </div>
           </div>
-<div class="form-section tipout-form-card" id="allocationScopeSection">
-            <div class="form-section-title">统计与分配范围</div>
-            <div class="distribution-method-cards allocation-scope-cards">
-              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="day" checked data-native-onchange="changeAllocationScope()"><strong>按整日</strong></label></div>
-              <div class="distribution-method-card"><label class="distribution-method-choice"><input type="radio" name="allocationScope" value="shift" data-native-onchange="changeAllocationScope()"><strong>按班次</strong></label></div>
-              <div class="distribution-method-card" id="timeWindowParticipationOption">
-                <label class="distribution-method-choice"><input type="radio" name="allocationScope" value="time_window" data-native-onchange="changeAllocationScope()"><strong>按打卡时段</strong></label>
-                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按打卡时段统计并分配小费说明示例">？</summary><div class="distribution-method-help-content"><p id="allocationScopeTimeNotice">各时段产生的小费，仅分配给该时段在岗的接收员工。按实际打卡起止时间匹配，且须符合接收方角色条件。缺少发生时间或关键打卡记录时暂不能确认分配。</p><p><strong>示例：</strong><span id="timeWindowParticipationExample"></span></p><p>打卡区间包含开始时间，不包含结束时间；实际金额仍受接收方规则影响。</p></div></details>
-              </div>
-            </div>
-          <div class="form-section tipout-day-requirements" id="shiftWorkHoursPanel" hidden>
-            <div class="form-section-title">班次工时限制</div>
-            <label class="work-hours-cap-row"><span>最低参与工时</span><input id="shiftMinMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次最低参与工时（分钟）"><span>分钟／班次</span></label>
-            <label class="work-hours-cap-row" style="margin-top:12px"><span>班次计入工时上限</span><input id="shiftMaxMinutes" class="form-control" type="number" min="0" step="1" value="0" style="width:120px" aria-label="班次计入工时上限（分钟）"><span>分钟／班次</span><span id="shiftHoursOnlyHint" class="field-desc">仅按工时分配时可设置</span></label>
-            <p class="field-desc" style="margin:12px 0 0">0 表示不限制。先按班次内实际有效打卡工时判断是否参与，再应用计入上限；不修改打卡记录。</p>
-          </div>
-          <div class="form-section tipout-day-requirements" id="dailyParticipationSection">
-              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">接收员工打卡要求</span></div>
-              <div class="distribution-method-cards clock-requirement-cards">
-                <div class="distribution-method-card" id="clockinClockOption">
-                  <label class="distribution-method-choice">
-                    <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"><strong>需有有效打卡</strong>
-                  </label>
-                  <details class="distribution-method-help"><summary aria-label="查看需有有效打卡说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>只有当天有有效打卡记录的员工参与；未打卡员工不自动纳入。</p><p><strong>示例：</strong><span id="clockParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
-                </div>
-                <div class="distribution-method-card">
-                  <label class="distribution-method-choice">
-                    <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"><strong>不限打卡状态</strong>
-                  </label>
-                  <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看不限打卡状态说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong><span id="unrestrictedParticipationHelp"></span></p><p><strong>示例：</strong><span id="unrestrictedParticipationExample"></span></p><p>示例仅说明接收员工的打卡要求；实际金额仍受接收方规则影响。</p></div></details>
-                </div>
-<input type="radio" name="clockin" value="time_window" hidden aria-hidden="true" tabindex="-1">
-                <label class="radio-item" hidden style="display:none">
-                  <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
-                </label>
-              </div>
-            </div>
-</div>
-<div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式</span></div>
-            <div class="distribution-method-cards">
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合接收条件的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
-                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
-              </div>
-              <div class="distribution-method-card" id="distributionOrdersRow">
-                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
-                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
-              </div>
-            </div>
-          <div id="distributionSection" class="tipout-work-hours-wrap"><div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
-                  <div class="form-section-title work-hours-config-heading"><span>分配工时设置</span>
-                    <details class="distribution-method-help" id="workHoursSourceHelpToggle"><summary aria-label="查看分配工时设置说明">？</summary><div class="distribution-method-help-content"><p id="workHoursSourceHelp"></p></div></details>
-                  </div>
-                  <div id="workHoursTimeWindowInfo" hidden>
-                    <div>按小费产生时段内的有效在岗工时 <details class="distribution-method-help"><summary aria-label="查看时段工时说明">？</summary><div class="distribution-method-help-content"><p>按小费发生时段分别计算，不用全天工时跨时段分摊。</p><p>例如员工 18:00—22:00 在岗，21:00 产生的小费仍可参与。此模式不设置每日工时上限；补录需要具体上下班时间，仅填写总小时数不能改变在岗资格。</p></div></details></div>
-                    <p id="workHoursTimeWindowCapNotice" class="field-desc" hidden>当前模式不使用每日工时上限，保存后按实际在岗时段计算。</p>
-                    <label id="legacyTimeWindowHoursNotice" hidden><input id="legacyTimeWindowHoursAck" type="checkbox"> 确认取消旧规则的每日工时上限。此前超出上限的时段不参与；保存后按实际在岗时段参与，历史分配结果不变。</label>
-                  </div>
-                  <div id="workHoursEditableOptions">
-                  <label class="radio-item">
-                    <input type="radio" name="workHoursMode" value="actual" checked data-native-onchange="updateWorkHoursConfigUi()">
-                    <span id="workHoursActualLabel">按有效打卡工时</span>
-                  </label>
-                  <div class="work-hours-cap-row">
-                    <label class="radio-item">
-                      <input type="radio" name="workHoursMode" value="capped" data-native-onchange="updateWorkHoursConfigUi()">
-                      <span id="workHoursCappedLabel">每日计入工时上限</span>
-                    </label>
-                    <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled data-native-oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
-                    <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
-                  </div>
-                  </div>
-                  <div class="work-hours-config-error" id="workHoursConfigError"></div>
-                </div></div>
-</div>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
-            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">3. 员工贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
+            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
