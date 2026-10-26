@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-SHIFT-DURATION-20261026-01",
-  "baseline": "9df72cdf",
+  "documentId": "TIPOUT-SHIFT-RED-20261026-01",
+  "baseline": "628b8c8a",
   "versions": {
-    "PRD_产品需求文档.md": "V4.38",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.38",
-    "小费管理需求文档（个人规范版）.md": "V2.36"
+    "PRD_产品需求文档.md": "V4.39",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.39",
+    "小费管理需求文档（个人规范版）.md": "V2.37"
   },
   "images": [
     {
@@ -404,6 +404,12 @@
       "caption": "班次限制小时分钟输入",
       "sha256": "aca1874673e9cb6a51fe1c0e8d056cf83f2f7cc7f62b899cb1dccfd0ee3448c2",
       "source": "9df72cdf基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-shift-red-20261026/range.png",
+      "caption": "分配范围红框标记",
+      "sha256": "e5d3b7e643607c2cdc677983e708de6238328eabf1226252170f54b8cd5862c9",
+      "source": "真实模板与运行时受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -449,13 +455,13 @@
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "2f90810f77cb83ca6bbdb80adfb46b43c613c8e24bb36191b88d806e5903c9a7",
+    "src/team/tips/templates/rule-editor.html": "16d6c1651db54cc0f23bc48ebebbd6432d45dfa4f5e41f5bc8e5f9661f0636a4",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
     "src/team/tips/tips-legacy-runtime.ts": "5881e0b4c5f257ce4831cde270f50cc17bf1ed007c2d0914ac4cd179b68a9e94",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "c151f0a78ca8a9efb9311cb8e5ec4f1de32eb6f1078a9743fdefb1438ac1a905",
+    "src/team/tips/tips-page.css": "92e01b226e1dc31f23767c0a6a8525e3e6a76a00266cb9a1d4fbaeb74d081bc8",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f",
     "src/config/team-shift-scheduling-ui.ts": "ac8ab6d8cd9dcb5fbf40efbc45a8821a967145fb24506febaea7b20050444b8f",
