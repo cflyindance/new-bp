@@ -64,6 +64,7 @@
     return commitPrepared(snapshot);
   }
   function commitPrepared(snapshot) {
+    (snapshot.pools||[]).forEach(function(pool){var result=pool.timeWindow;if(result&&result.scope==='shift'){if(!root.TipOutSchedule||JSON.stringify(root.TipOutSchedule.read(snapshot.store,snapshot.dateKey))!==JSON.stringify(result.scheduleSource))throw new Error('排班表已变化，请重新计算分配');}});
     var oldResultsRaw = localStorage.getItem(RESULT_KEY);
     var oldAllocatedRaw = localStorage.getItem(ALLOC_KEY);
     var results = resultDocument();

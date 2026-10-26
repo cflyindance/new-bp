@@ -164,6 +164,7 @@
             var valid;
             if(line.scope==='shift'){var w={start:root.TipOutTimeWindow.moment(line.windowStartAt),end:root.TipOutTimeWindow.moment(line.windowEndAt)};var minutes=root.TipOutTimeWindow.overlapMinutes({attendance:{punchSessions:(person.punchIntervals||[]).map(function(p){return Object.assign({status:'complete'},p);})}},w);valid=minutes>0&&minutes>=Number(line.minClockMinutes||0)&&Math.abs(minutes-Number(person.actualMinutes))<0.00001;}
             else valid=(person.punchIntervals||[]).some(function(interval){return root.TipOutTimeWindow.moment(interval.clockInAt)<=at&&at<root.TipOutTimeWindow.moment(interval.clockOutAt);});
+            if(line.scheduledEmployeeIds&&line.scheduledEmployeeIds.indexOf(String(person.employeeId).replace(/^roster:/,''))<0)throw new Error('员工不在该班次排班名单中');
             if(cents(person.amount)>0&&!valid)throw new Error('员工不在小费发生时段，不能参与分配');
             paid+=cents(person.amount);
           });
