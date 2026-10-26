@@ -129,6 +129,15 @@
                 <option value="">请选择门店</option>
               </select>
             </div>
+            <div class="tipout-summary-date-controls">
+              <div class="tipout-summary-date-presets" id="summaryDatePresets" role="group" aria-label="快捷日期筛选">
+                <button type="button" data-date-preset="today" aria-pressed="false" data-native-onclick="applySummaryDatePreset('today')">今天</button>
+                <button type="button" data-date-preset="yesterday" aria-pressed="false" data-native-onclick="applySummaryDatePreset('yesterday')">昨天</button>
+                <button type="button" data-date-preset="this-week" aria-pressed="false" data-native-onclick="applySummaryDatePreset('this-week')">本周</button>
+                <button type="button" data-date-preset="last-week" aria-pressed="false" data-native-onclick="applySummaryDatePreset('last-week')">上周</button>
+                <button type="button" data-date-preset="this-month" aria-pressed="false" data-native-onclick="applySummaryDatePreset('this-month')">本月</button>
+                <button type="button" data-date-preset="last-month" aria-pressed="false" data-native-onclick="applySummaryDatePreset('last-month')">上月</button>
+              </div>
             <div class="filter-field filter-field--daterange tipout-store-date-filter-field" id="dateRangeFilterField">
               <span class="filter-field-label">日期范围</span>
               <div class="date-range-group">
@@ -136,6 +145,7 @@
                 <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
                 <input type="date" id="dateEnd" class="form-control form-control-lg" aria-label="结束日期" aria-describedby="summaryDateRangeError" data-native-onchange="handleSummaryDateRangeChange()">
               </div>
+            </div>
             </div>
           </div>
 
