@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-RANGE-CONDITIONS-20261026-01",
-  "baseline": "edd906b6",
+  "documentId": "TIPOUT-SHIFT-DURATION-20261026-01",
+  "baseline": "9df72cdf",
   "versions": {
-    "PRD_产品需求文档.md": "V4.37",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.37",
-    "小费管理需求文档（个人规范版）.md": "V2.35"
+    "PRD_产品需求文档.md": "V4.38",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.38",
+    "小费管理需求文档（个人规范版）.md": "V2.36"
   },
   "images": [
     {
@@ -398,6 +398,12 @@
       "caption": "小费分配范围联动条件",
       "sha256": "dce8bfd7e7e2b48571a34c032f01de65b1d4d2c49a935d70a144d886538eee26",
       "source": "edd906b6基线功能分支真实模板与运行时，受控演示"
+    },
+    {
+      "file": "assets/tips-shift-duration-20261026/duration.png",
+      "caption": "班次限制小时分钟输入",
+      "sha256": "aca1874673e9cb6a51fe1c0e8d056cf83f2f7cc7f62b899cb1dccfd0ee3448c2",
+      "source": "9df72cdf基线功能分支真实模板与运行时，受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -437,13 +443,13 @@
     "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "36b4ac98a994926cd987aa3c8cbf5dcff2de94f1aef7f5d3170d5091de3e4709",
+    "src/team/tips/programs/rule-editor.js.txt": "a89c0a53b5195f89e428276d1d6a0ddab46e6799304430f95183c65fcbeb28f3",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "b2df3110810a29008147f67665c4fc004127dd366edd3815ba87f3bae2e0c922",
+    "src/team/tips/templates/rule-editor.html": "2f90810f77cb83ca6bbdb80adfb46b43c613c8e24bb36191b88d806e5903c9a7",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",

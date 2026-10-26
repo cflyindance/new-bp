@@ -577,7 +577,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var clock = document.querySelector('input[name="clockin"][value="' + (rule.clockin || 'clock') + '"]');
       if (clock) clock.checked = true;
       shiftScopeDraft=rule.allocationScope==='shift';
-      var shiftLimits=rule.shiftWorkHours||{};var shiftMin=document.getElementById('shiftMinMinutes'),shiftMax=document.getElementById('shiftMaxMinutes');if(shiftMin)shiftMin.value=shiftLimits.minMinutes==null?0:shiftLimits.minMinutes;if(shiftMax)shiftMax.value=shiftLimits.maxMinutes==null?0:shiftLimits.maxMinutes;
+      var shiftLimits=rule.shiftWorkHours||{};setShiftDuration('shiftMin',shiftLimits.minMinutes);setShiftDuration('shiftMax',shiftLimits.maxMinutes);
       var workHoursConfig = normalizeWorkHoursConfig(rule.workHoursConfig);
       legacyTimeWindowHoursCap = rule.clockin === 'time_window' && rule.distribution === 'hours' && workHoursConfig.mode === 'capped';
       var legacyHoursAck = document.getElementById('legacyTimeWindowHoursAck');
@@ -3441,7 +3441,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     // Keep the existing persisted clockin contract; scope is its page-level presentation.
     var dailyParticipationDraft = 'clock';
     var shiftScopeDraft = false;
-    function collectShiftWorkHours(){var min=document.getElementById('shiftMinMinutes'),max=document.getElementById('shiftMaxMinutes');return {minMinutes:Number(min&&min.value!==''?min.value:0),maxMinutes:Number(max&&max.value!==''?max.value:0)};}
+    function setShiftDuration(prefix,total){total=Number(total||0);var h=document.getElementById(prefix+'Hours'),m=document.getElementById(prefix+'Minutes');if(h)h.value=Math.floor(total/60);if(m)m.value=total%60;}
+    function readShiftDuration(prefix){var h=document.getElementById(prefix+'Hours'),m=document.getElementById(prefix+'Minutes');var hours=Number(h&&h.value!==''?h.value:0),minutes=Number(m&&m.value!==''?m.value:0);return Number.isSafeInteger(hours)&&hours>=0&&Number.isSafeInteger(minutes)&&minutes>=0&&minutes<60?hours*60+minutes:NaN;}
+    function collectShiftWorkHours(){return {minMinutes:readShiftDuration('shiftMin'),maxMinutes:readShiftDuration('shiftMax')};}
     function changeAllocationScope() {
       var scope = document.querySelector('input[name="allocationScope"]:checked');
       var current = document.querySelector('input[name="clockin"]:checked');
@@ -3459,7 +3461,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       document.querySelectorAll('input[name="allocationScope"]').forEach(function(input) { input.checked = input.value === (timed ? (shiftScopeDraft?'shift':'time_window') : 'day'); });
       var eligibility = document.getElementById('dailyParticipationSection');
       if (eligibility) eligibility.hidden = timed;
-      var hours=document.querySelector('input[name="distribution"]:checked');var shiftPanel=document.getElementById('shiftWorkHoursPanel');if(shiftPanel)shiftPanel.hidden=!timed||!shiftScopeDraft;var shiftAllocationPanel=document.getElementById('shiftAllocationHoursPanel');if(shiftAllocationPanel)shiftAllocationPanel.hidden=!timed||!shiftScopeDraft||!hours||hours.value!=='hours';var timeRequirement=document.getElementById('timeWindowReceiverRequirement');if(timeRequirement)timeRequirement.hidden=true;var shiftMax=document.getElementById('shiftMaxMinutes');if(shiftMax)shiftMax.disabled=!shiftScopeDraft||!hours||hours.value!=='hours';var shiftHint=document.getElementById('shiftHoursOnlyHint');if(shiftHint)shiftHint.hidden=!!(hours&&hours.value==='hours');var section=document.getElementById('distributionSection');if(section)section.style.display=timed&&(shiftScopeDraft||!hours||hours.value!=='hours')?'none':'';
+      var hours=document.querySelector('input[name="distribution"]:checked');var shiftPanel=document.getElementById('shiftWorkHoursPanel');if(shiftPanel)shiftPanel.hidden=!timed||!shiftScopeDraft;var shiftAllocationPanel=document.getElementById('shiftAllocationHoursPanel');if(shiftAllocationPanel)shiftAllocationPanel.hidden=!timed||!shiftScopeDraft||!hours||hours.value!=='hours';var timeRequirement=document.getElementById('timeWindowReceiverRequirement');if(timeRequirement)timeRequirement.hidden=true;var shiftMax=document.getElementById('shiftMaxMinutes');if(shiftMax)shiftMax.disabled=!shiftScopeDraft||!hours||hours.value!=='hours';var shiftMaxHours=document.getElementById('shiftMaxHours');if(shiftMaxHours)shiftMaxHours.disabled=!shiftScopeDraft||!hours||hours.value!=='hours';var shiftHint=document.getElementById('shiftHoursOnlyHint');if(shiftHint)shiftHint.hidden=!!(hours&&hours.value==='hours');var section=document.getElementById('distributionSection');if(section)section.style.display=timed&&(shiftScopeDraft||!hours||hours.value!=='hours')?'none':'';
     }
 
     var legacyTimeWindowHoursCap = false;
