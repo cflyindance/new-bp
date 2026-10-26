@@ -1272,7 +1272,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var estimated=item.estimatedContributionDays ? item.estimatedDeductedCents : 0;
       var invalid=confirmed==null || errors.length>0;
       var total=invalid ? '无法试算' : formatEmployeeSummaryMoney(confirmed+estimated,true);
-      var detail='已确认：'+formatEmployeeSummaryMoney(confirmed,true)+'\n预计：'+(errors.length ? '无法试算' : formatEmployeeSummaryMoney(estimated,true))+'\n合计：'+total;
+      var detail='贡献金额明细\n\n已分配日期：'+formatEmployeeSummaryMoney(confirmed,true)+'\n待分配日期（预计）：'+(errors.length ? '无法试算' : formatEmployeeSummaryMoney(estimated,true))+'\n合计：'+total+'\n\n待分配金额为试算结果，以实际分配结果为准。';
       if(errors.length) detail+='\n'+errors.join('；');
       return total+' <span class="tipout-contribution-help" role="button" tabindex="0" aria-label="查看贡献入池金额明细" aria-haspopup="dialog" data-detail="'+escapeSummaryHtml(detail)+'" onclick="openContributionBreakdown(this,event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){openContributionBreakdown(this,event);}">?</span>';
     }
