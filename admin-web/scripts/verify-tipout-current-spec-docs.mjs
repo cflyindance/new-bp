@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.23','V3.23','V2.21'];
-const id='TIPOUT-CURRENT-SPEC-20261026-01';
+const versions=['V4.24','V3.24','V2.22'];
+const id='TIPOUT-PUNCH-WINDOW-20261026-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-spec-20261026/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
