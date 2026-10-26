@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-PLANNING-COPY-20261026-01",
-  "baseline": "a016be92",
+  "documentId": "TIPOUT-ALL-PLANNING-HINTS-20261026-01",
+  "baseline": "21fedbce",
   "versions": {
-    "PRD_产品需求文档.md": "V4.45",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.45",
-    "小费管理需求文档（个人规范版）.md": "V2.43"
+    "PRD_产品需求文档.md": "V4.47",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.47",
+    "小费管理需求文档（个人规范版）.md": "V2.45"
   },
   "images": [
     {
@@ -470,6 +470,24 @@
       "caption": "红框用途悬停提示",
       "sha256": "1fa76ba090a207eeda92e277129578500ac989555f5f1acbe1bcc49273faf444",
       "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-group-titles-20261026/editor.png",
+      "caption": "规则分组标题",
+      "sha256": "3826322cd651ccca1e45a105cb650d67f3f0aa2782134c93963fd7aabf84e321",
+      "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-all-planning-hints-20261026/pool-menu.png",
+      "caption": "红框规划标记悬停气泡",
+      "sha256": "700e7131d899d6396f24eb6b912c4fa9ff6fa9853cb6a221949ed58427e737ff",
+      "source": "真实模板与运行时受控演示"
+    },
+    {
+      "file": "assets/tips-all-planning-hints-20261026/condition-menu.png",
+      "caption": "红框规划标记悬停气泡",
+      "sha256": "0ceb054a2a3c817792fc7ff40e031cb7da55ddfd0a8bbd6cd82814f68c6e51e1",
+      "source": "真实模板与运行时受控演示"
     }
   ],
   "scope": "页面图按现行字段和布局核对；实页演示，不作为生产营业数据。",
@@ -500,7 +518,7 @@
     "src/team/tips/legacy/tipout-payroll-bridge.js.txt": "d3f3b1933d95fc1d7a9df16e410b106d92e617e1b84d5bd0cfb1ec4f86366f84",
     "src/team/tips/legacy/tipout-roster-directory.js.txt": "4c374cdcb832682d634009fe46b0cf6ec38e46775ff37b13b3026fd60cb8adb5",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "10cc67564c4197573624b4cc2281dbed711837dea033878cbc9d7c0fc1d27064",
-    "src/team/tips/legacy/tipout-scenario-list.js.txt": "53e3d761bb08b086e2f89b315bd2128193a2521abe8b681c7fa1edb1d33a0429",
+    "src/team/tips/legacy/tipout-scenario-list.js.txt": "c010525ba3ba0565d8eb1f5e0ae705fd8058ef4c01a359a833ecd7273e357c1c",
     "src/team/tips/legacy/tipout-scenario-source.js.txt": "0729a24e7bc40a2a0dc553877f5c62b5c9700dab23ef1d9b28016bd302993cab",
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
@@ -509,23 +527,24 @@
     "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "a89c0a53b5195f89e428276d1d6a0ddab46e6799304430f95183c65fcbeb28f3",
+    "src/team/tips/programs/rule-editor.js.txt": "ac4872f29d7950375ee8ba0be30b38d276cdac1885d221175334a8faeb7bceab",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "f66decf3de4638188c44961f51023b03d406699dcaf092a5f62e6c6b21a5ce9d",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
-    "src/team/tips/templates/distribution.html": "570c3329480b1dc88854ff43d6829e301ec4e3d45d9ea52d14a0e3d085bdd54f",
+    "src/team/tips/templates/distribution.html": "f9aa0e41fbec35af2003c4337333e7c397670a8899641f8b84fa3d676da3d89e",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "cd4c6301238bf7a9b97558bc9b5e2e09359ed6dcae4def7c2b168207c4c66229",
+    "src/team/tips/templates/rule-editor.html": "3105f5715c6e7aa28e23e9493e52ce083e8ed9447824e3f97a822d680ff4989f",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
-    "src/team/tips/tips-legacy-runtime.ts": "5881e0b4c5f257ce4831cde270f50cc17bf1ed007c2d0914ac4cd179b68a9e94",
+    "src/team/tips/tips-legacy-runtime.ts": "35176442082513790bc9dd1cd4f64484dcf068ea2f75ff33c52461bb12684a39",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "3c14fa208eedb28fff0852d1090d0cd1f6c4361ea93edd7dcbdb63bb5f9b6d89",
+    "src/team/tips/tips-page.css": "baa06f74d162ba799a0c45554863a6a1ebb543fbfeb990e01621aabdfb6be103",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f",
     "src/config/team-shift-scheduling-ui.ts": "ac8ab6d8cd9dcb5fbf40efbc45a8821a967145fb24506febaea7b20050444b8f",
-    "src/team/tips/tips-schedule-source.ts": "4b900efcad4e43ed8a4b2b403a265a081c88261fb88e8478c0f66d72e9a7b585"
+    "src/team/tips/tips-schedule-source.ts": "4b900efcad4e43ed8a4b2b403a265a081c88261fb88e8478c0f66d72e9a7b585",
+    "src/team/tips/tips-planning-hints.ts": "4dbd213a27a62fb44fc6b7a1cb130511dbb54d11f17e4f112c0ea91fb6f5e274"
   },
   "notes": [
     "除assets/tips-current-spec-20261026/daily.png外复用既有实页图片，原始来源保留在sourceManifest。",

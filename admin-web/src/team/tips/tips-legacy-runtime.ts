@@ -1,3 +1,4 @@
+import { bindTipsPlanningHints } from "./tips-planning-hints";
 import { readTipOutSchedule } from "./tips-schedule-source";
 import common from "./legacy/common.js.txt?raw";
 import funding from "./legacy/tipout-funding.js.txt?raw";
@@ -100,6 +101,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const mountedUrl = realWindow.location.href, mountedHistoryState = realWindow.history.state;
   const on = (target: EventTarget, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) =>
     target.addEventListener(type, listener, { ...(typeof options === "boolean" ? { capture: options } : options), signal: controller.signal });
+  if (!quickPreparation) cleanups.add(bindTipsPlanningHints(shadow, root));
   const docTarget: Bag = {
     body: root, head: realDocument.head, documentElement: root, readyState: "complete", defaultView: realWindow,
     createElement: realDocument.createElement.bind(realDocument), createTextNode: realDocument.createTextNode.bind(realDocument),

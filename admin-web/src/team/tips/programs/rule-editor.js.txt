@@ -3841,7 +3841,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         '<td><input type="number" value="' + (opt.pct || 0) + '" oninput="calcTotal()"> %</td>' +
         '<td>' +
           employeeWeightLinkHtml('13px') +
-          '<a href="javascript:void(0)" class="btn-link" style="font-size:13px;margin-left:8px;border:1px solid #ff4d4f;border-radius:6px;padding:2px 6px;display:inline-block" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
+          '<a href="javascript:void(0)" class="btn-link" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用" style="font-size:13px;margin-left:8px;border:1px solid #ff4d4f;border-radius:6px;padding:2px 6px;display:inline-block" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
           '<a href="javascript:void(0)" class="btn-link" style="color:var(--danger);font-size:13px;margin-left:8px" onclick="removeReceiverPrimaryRow(this)">删除</a>' +
         '</td>';
       const secondaryRow = document.createElement('tr');
@@ -3933,7 +3933,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         '<td><input type="number" value="' + (opt.pct != null ? opt.pct : 0) + '" oninput="calcOrderResidualTotal()"> %</td>' +
         '<td>' +
           employeeWeightLinkHtml('13px') +
-          '<a href="javascript:void(0)" class="btn-link" style="font-size:13px;margin-left:8px;border:1px solid #ff4d4f;border-radius:6px;padding:2px 6px;display:inline-block" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
+          '<a href="javascript:void(0)" class="btn-link" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用" style="font-size:13px;margin-left:8px;border:1px solid #ff4d4f;border-radius:6px;padding:2px 6px;display:inline-block" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
           '<a href="javascript:void(0)" class="btn-link" style="color:var(--danger);font-size:13px;margin-left:8px" onclick="removeReceiverPrimaryRow(this)">删除</a>' +
         '</td>';
       var secondaryRow = document.createElement('tr');
