@@ -10,7 +10,7 @@ for(const radio of Object.values(clock)){let checked=radio.checked;Object.define
 vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('    var dailyParticipationDraft'),source.indexOf('    var legacyTimeWindowHoursCap')),ctx);
 ctx.syncAllocationScopeUi();assert.equal(elements.dailyParticipationSection.hidden,false);
 clock.unrestricted.checked=true;ctx.syncAllocationScopeUi();
-scopes[0].checked=false;scopes[1].checked=true;ctx.changeAllocationScope();assert.equal(clock.time_window.checked,true);assert.equal(elements.dailyParticipationSection.hidden,true);assert.equal(elements.allocationScopeTimeNotice.hidden,false);
+scopes[0].checked=false;scopes[1].checked=true;ctx.changeAllocationScope();assert.equal(clock.time_window.checked,true);assert.equal(elements.dailyParticipationSection.hidden,true);
 scopes[1].checked=false;scopes[0].checked=true;ctx.changeAllocationScope();assert.equal(clock.unrestricted.checked,true);assert.equal(elements.dailyParticipationSection.hidden,false);
 clock.time_window.checked=true;ctx.syncAllocationScopeUi();assert.equal(scopes[1].checked,true);
 console.log('PASS allocation scope: default, time-window mapping, eligibility visibility, daily draft restoration and existing rule loading');

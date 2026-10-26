@@ -424,7 +424,7 @@ var ALLOC_KEY = 'tipout_allocated';
         }).join('、') || '无人符合参与资格';
         var sourceLabel = (line.source === 'manual' ? '手动上报' : '订单') + ' · ' + (line.sourceEmployeeName || line.sourceEmployeeId || '') +
           ' #' + String(line.sourceId || '').split(':').pop();
-        if(line.scope==='shift') sourceLabel=line.shiftName+' · 排班表 · '+line.sourceEvents.length+' 笔来源';
+        if(line.scope==='shift') sourceLabel=line.shiftName+' · 排班表 · '+line.sourceEvents.length+' 笔来源；最低 '+line.minClockMinutes+' 分钟'+(rule.distribution==='hours'?'，计入上限 '+(line.maxClockMinutes||'不限')+' 分钟':'');
         return '<tr><td>' + escHtml(line.scope==='shift'?new Date(line.windowStartAt).toLocaleString('zh-CN',{timeZone:line.timeZone,hour12:false})+' — '+new Date(line.windowEndAt).toLocaleString('zh-CN',{timeZone:line.timeZone,hour12:false}):line.occurredAt.replace('T', ' ')) + '</td><td title="' + escHtml(line.sourceId) + '">' + escHtml(sourceLabel) +
           '</td><td>' + money(line.amount) + '</td><td>' + people + '</td><td>' + money(line.unallocated) + '</td></tr>';
       }).join('');
