@@ -171,7 +171,7 @@ export function renderActivityPage(path: string): string {
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + href() + '">返回全部门店</a></section>';
   const store = scope && data.stores.find(s => s.id === scope.storeId);
   const issue = store && store.quality === "error";
-  return '<div class="ma-page" data-ma-page>' + (scope ? '<div class="ma-heading"><div><div class="ma-kicker">MERCHANT ACTIVITY <span>演示数据</span></div><h2>' +
+  return '<div class="ma-page" data-ma-page>' + (scope?.deviceId ? '<div class="ma-heading"><div><div class="ma-kicker">MERCHANT ACTIVITY <span>演示数据</span></div><h2>' +
     (scope ? esc(store!.name) + (scope.line ? ' · ' + esc(scope.line) : '') : "门店活跃分析") +
     '</h2><p>' + (store ? esc(store.merchantName) + ' · ' + esc(store.scenario) : "从门店到产线、设备，查看系统使用情况。") +
     '</p></div><div class="ma-asof"><span>统计截至日期</span><strong>' + data.asOf + '</strong><small>门店时区：Asia/Shanghai</small></div></div>' +
