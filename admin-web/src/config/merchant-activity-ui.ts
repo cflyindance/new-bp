@@ -1,15 +1,13 @@
 import "./merchant-activity.css";
 import {
   PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope, periodOrders,
-  scopeOrders, shiftDate, summarizeActivity, resolveOrders, validatePeriod,
+  scopeOrders, shiftDate, summarizeActivity, validatePeriod,
   type ActivityMetrics, type ActivityPeriod, type ActivityScope, type ActivityStatus, type ProductLine,
 } from "./merchant-activity-domain";
-import { createActivityDemo } from "./merchant-activity-demo";
+import { activityDemoData as data, activityDemoOrders as resolved } from "./merchant-activity-data";
 
 export const ACTIVITY_PATH = "/m-platform/merchants/activity";
 export function isActivityPath(path: string): boolean { return path === ACTIVITY_PATH || path.startsWith(ACTIVITY_PATH + "/"); }
-const data = createActivityDemo();
-const resolved = resolveOrders(data);
 const state = {
   period: { start: shiftDate(data.asOf, -6), end: data.asOf } as ActivityPeriod,
   quick: "7", merchant: "", query: "", status: "",

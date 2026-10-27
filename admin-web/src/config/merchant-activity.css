@@ -348,3 +348,12 @@
 .ma-period .ma-field-caption {
   width:100%}
 }
+
+[data-device-activity-page] button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+[data-device-activity-page] .ma-primary:hover {
+  background: var(--ma-accent);
+  color: white;
+}
