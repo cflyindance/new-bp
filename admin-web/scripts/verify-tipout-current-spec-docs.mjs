@@ -41,8 +41,9 @@ const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf
 const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8'))];
 for(const img of manifest.images){
  const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
- assert.equal(capture.baseline,'64ddec8f');assert.equal(img.baseline,'64ddec8f');
- assert.ok(img.route.startsWith('http://127.0.0.1:65200/#/team/tips/'),'actual target route '+img.file);
+ const shares=/\/share-(average|custom|invalid)\.png$/.test(img.file);
+ assert.equal(capture.baseline,shares?'5b57958c':'64ddec8f');assert.equal(img.baseline,capture.baseline);
+ assert.ok(img.route.startsWith('http://127.0.0.1:'+(shares?'65210':'65200')+'/#/team/tips/'),'actual target route '+img.file);
  assert.ok(img.width>250&&img.height>80,'usable region '+img.file);
  assert.notEqual(capture.planning,true,'no planning image '+img.file);
 }
@@ -62,3 +63,9 @@ for(const name of ['sales-source','tips-source','manual-source','surcharge-sourc
  const cap=captures.find(x=>x.file===img.file);assert.equal(cap.framing,'viewport-drawer');
 }
 console.log('PASS source drawers: full viewport, backdrop and editor context retained for all four source types');
+
+for (const stem of ['share-average','share-custom','share-invalid']) {
+ const image=manifest.images.find(x=>x.file.endsWith('/'+stem+'.png'));
+ assert.ok(image && image.framing==='viewport-drawer' && image.width>image.height,'employee share drawer includes background: '+stem);
+}
+console.log('PASS employee share drawers: average, custom and validation screenshots retain full viewport and background');
