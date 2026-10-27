@@ -44,7 +44,7 @@ function parsedScope(path: string): ActivityScope | null | undefined {
   } catch { return undefined; }
 }
 export function activityPageTitle(path: string): { title: string; module: string } | null {
-  return isActivityPath(path) ? { title: "商户使用活跃分析", module: "品牌管理中心" } : null;
+  return isActivityPath(path) ? { title: "商户使用活跃分析", module: "使用活跃分析" } : null;
 }
 function metrics(scope: ActivityScope): ActivityMetrics { return summarizeActivity(data, resolved, scope, state.period); }
 function summaryCards(items: { label: string; value: string; note: string }[]): string {

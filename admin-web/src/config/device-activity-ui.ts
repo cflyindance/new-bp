@@ -8,7 +8,7 @@ import { deviceLifetimeOrders, filterDeviceRows, globalDeviceRows, type DeviceAc
 
 export const DEVICE_ACTIVITY_PATH = "/m-platform/merchants/device-activity";
 export const isDeviceActivityPath = (path: string) => path === DEVICE_ACTIVITY_PATH || path.startsWith(DEVICE_ACTIVITY_PATH + "/");
-export const deviceActivityPageTitle = (path: string) => isDeviceActivityPath(path) ? { title: "设备活跃分析", module: "品牌管理中心" } : null;
+export const deviceActivityPageTitle = (path: string) => isDeviceActivityPath(path) ? { title: "设备活跃分析", module: "使用活跃分析" } : null;
 const state = { period: { start: shiftDate(data.asOf, -6), end: data.asOf } as ActivityPeriod,
   quick: "7", brand: "", store: "", line: "", status: "", query: "", page: 1 };
 const PAGE_SIZE = 20;
