@@ -1,0 +1,62 @@
+import assert from "node:assert/strict";
+import { createActivityDemo } from "../src/config/merchant-activity-demo";
+import { resolveOrders, shiftDate, summarizeActivity } from "../src/config/merchant-activity-domain";
+import { filterDeviceRows, globalDeviceRows } from "../src/config/device-activity-domain";
+import { mPageForPath, M_RESOURCES, mPageKey } from "../src/permissions/m-platform-catalog";
+import { mResolve, type MState } from "../src/permissions/m-platform-domain";
+const data=createActivityDemo("2026-10-27"), orders=resolveOrders(data);
+const week={start:shiftDate(data.asOf,-6),end:data.asOf}, month={start:shiftDate(data.asOf,-29),end:data.asOf};
+const rows=globalDeviceRows(data,orders,week);
+assert.equal(rows.length,new Set(data.devices.map(d=>d.id)).size,"all assets, one row per physical device");
+assert.ok(rows.some(r=>r.device.id==="demo-unbound" && r.metrics.status==="unconfigured"));
+assert.ok(rows.some(r=>r.device.id==="demo-uneven-Kiosk-4" && r.metrics.count===0));
+assert.equal(rows.find(r=>r.device.id==="demo-uneven-Kiosk-4")!.metrics.status,"recent");
+assert.equal(rows.find(r=>r.device.id==="demo-new-POS-1")!.metrics.status,"never");
+assert.equal(rows.find(r=>r.device.id==="demo-error-POS-1")!.metrics.count,null);
+const filters={brand:"",store:"",line:"",status:"",query:""};
+assert.equal(filterDeviceRows(rows,{...filters,store:"demo-uneven",line:"Kiosk"}).length,5);
+assert.equal(filterDeviceRows(rows,{...filters,store:"demo-uneven",line:"Kiosk",status:"active"}).length,3);
+assert.equal(filterDeviceRows(rows,{...filters,brand:"demo-a"}).every(r=>r.store?.merchantId==="demo-a"),true);
+assert.equal(filterDeviceRows(rows,{...filters,brand:"demo-a",store:"demo-new"}).length,0,"filters are AND");
+assert.equal(filterDeviceRows(rows,{...filters,line:"__unbound"}).length,1);
+assert.equal(filterDeviceRows(rows,{...filters,query:"DEMO-ALL-SWITCHED"}).length,1);
+assert.equal(filterDeviceRows(rows,{...filters,query:"  LIC-SWITCH-GO  "}).length,1);
+const switched=globalDeviceRows(data,orders,month).find(r=>r.device.id==="demo-all-switched")!;
+assert.equal(switched.binding?.line,"POS GO");
+const eMenu=summarizeActivity(data,orders,{storeId:"demo-all",line:"eMenu",deviceId:switched.device.id},month).count!;
+const go=summarizeActivity(data,orders,{storeId:"demo-all",line:"POS GO",deviceId:switched.device.id},month).count!;
+assert.equal(eMenu,5);
+assert.equal(go,7);
+assert.equal(switched.metrics.count,eMenu+go,"physical-device count includes all historical product lines");
+assert.equal(filterDeviceRows(globalDeviceRows(data,orders,month),{...filters,line:"eMenu"}).some(r=>r.device.id===switched.device.id),false,"filters use current owner");
+
+const transfer=structuredClone(data);
+transfer.devices.push({id:"transfer",name:"迁店设备"});
+transfer.bindings.push(
+ {licenseId:"old",deviceId:"transfer",storeId:"demo-uneven",line:"Kiosk",from:"2026-09-01T00:00:00+08:00",to:"2026-10-22T00:00:00+08:00"},
+ {licenseId:"new",deviceId:"transfer",storeId:"demo-all",line:"POS",from:"2026-10-22T00:00:00+08:00",to:null});
+transfer.orders.push(
+ {id:"transfer-old",storeId:"demo-uneven",deviceId:"transfer",submittedAt:"2026-10-20T12:00:00+08:00",status:"paid"},
+ {id:"transfer-new",storeId:"demo-all",deviceId:"transfer",submittedAt:"2026-10-25T12:00:00+08:00",status:"paid"});
+const tr=globalDeviceRows(transfer,resolveOrders(transfer),month).find(r=>r.device.id==="transfer")!;
+assert.equal(tr.metrics.count,2);
+assert.equal(tr.store?.id,"demo-all");
+assert.equal(tr.store?.merchantId,"demo-a");
+assert.equal(tr.metrics.activeDays,2);
+const ambiguous=structuredClone(data);
+ambiguous.bindings.push({...ambiguous.bindings[0]!,licenseId:"conflict"});
+const bad=globalDeviceRows(ambiguous,resolveOrders(ambiguous),week).find(r=>r.device.id===ambiguous.bindings[0]!.deviceId)!;
+assert.equal(bad.issue,"binding");
+assert.equal(bad.binding,null);
+assert.equal(bad.metrics.count,null);
+assert.equal(bad.metrics.status,"error");
+const duplicate=structuredClone(data); duplicate.devices.push({...duplicate.devices[0]!});
+assert.equal(globalDeviceRows(duplicate,resolveOrders(duplicate),week).length,rows.length);
+assert.equal(mPageForPath("/m-platform/merchants/device-activity/demo-all-switched")?.id,"device-activity");
+assert.equal(M_RESOURCES.get(mPageKey("device-activity"))?.editable,false);
+const state:MState={schema:1,revision:0,logs:[],roles:[{id:"read",name:"read",description:"",grants:{"m:module:merchants":"read","m:page:device-activity":"read"}}],employees:[{id:"a",roleIds:["read"]}]};
+assert.equal(mResolve(state,"a",mPageKey("device-activity")),"read");
+assert.equal(mResolve(state,"a",mPageKey("merchant-activity")),"hidden","independent visibility");
+delete state.roles[0]!.grants["m:page:device-activity"];
+assert.equal(mResolve(state,"a",mPageKey("device-activity")),"hidden");
+console.log("PASS global device activity:",rows.length,"unique assets, all filters, zero/unbound/error, physical-device historical totals, transfer ownership, binding conflict, permissions");

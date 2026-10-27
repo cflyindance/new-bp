@@ -60,5 +60,6 @@ export function createActivityDemo(asOf = demoAsOf()): ActivityDataset {
   const original = data.orders[0]!;
   data.orders.push({ ...original }); // repeated delivery: one business order
   data.orders.push({ ...original, id: "DEMO-DRAFT", status: "draft" });
+  data.devices.push({ id: "demo-unbound", name: "备用点单终端（未绑定演示）" });
   return data;
 }

@@ -2863,6 +2863,7 @@ export function getMerchantReportSummary(): MerchantReportSummary {
 }
 
 export const MERCHANT_RESERVED_PATH_SEGMENTS = new Set([
+  "device-activity",
   "activity",
   "overview",
   "groups",
