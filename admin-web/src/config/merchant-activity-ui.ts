@@ -171,12 +171,12 @@ export function renderActivityPage(path: string): string {
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + href() + '">返回全部门店</a></section>';
   const store = scope && data.stores.find(s => s.id === scope.storeId);
   const issue = store && store.quality === "error";
-  return '<div class="ma-page" data-ma-page><div class="ma-heading"><div><div class="ma-kicker">MERCHANT ACTIVITY <span>演示数据</span></div><h2>' +
+  return '<div class="ma-page" data-ma-page>' + (scope ? '<div class="ma-heading"><div><div class="ma-kicker">MERCHANT ACTIVITY <span>演示数据</span></div><h2>' +
     (scope ? esc(store!.name) + (scope.line ? ' · ' + esc(scope.line) : '') : "商户使用活跃分析") +
     '</h2><p>' + (store ? esc(store.merchantName) + ' · ' + esc(store.scenario) : "从门店到产线、设备，查看系统使用情况。") +
     '</p></div><div class="ma-asof"><span>统计截至日期</span><strong>' + data.asOf + '</strong><small>门店时区：Asia/Shanghai</small></div></div>' +
     '<nav class="ma-crumbs" aria-label="活跃分析位置">' + crumbs(scope) + '</nav>' +
-    '<p class="ma-demo-note">预设演示数据 · 刷新保持稳定 · 仅支持最近 90 天查询</p>' +
+    '<p class="ma-demo-note">预设演示数据 · 刷新保持稳定 · 仅支持最近 90 天查询</p>' : '') +
     dateControls() + (issue ? '<p class="ma-error-note" role="alert">受控异常演示：该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : "") +
     (scope ? (scope.deviceId ? devicePage(scope) : scope.line ? devicesPage(scope) : storePage(scope)) : rootPage()) +
     '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +

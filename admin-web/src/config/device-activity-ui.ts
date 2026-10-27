@@ -129,10 +129,10 @@ export function renderDeviceActivityPage(path: string): string {
     try { const id = decodeURIComponent(path.slice(DEVICE_ACTIVITY_PATH.length + 1)); row = rows.find(r => r.device.id === id); } catch { /* invalid path */ }
     if (!row) return '<section class="ma-page"><h2>未找到演示设备</h2><a class="ma-link" href="' + rootHref + '">返回全部设备</a></section>';
   }
-  return '<div class="ma-page" data-device-activity-page>' + heading(row?.device.name ?? "设备活跃分析", row ?
+  return '<div class="ma-page" data-device-activity-page>' + (row ? heading(row?.device.name ?? "设备活跃分析", row ?
     "设备 ID：" + row.device.id : "直接查看全部设备的活跃状态、使用产线及所属品牌和门店。") +
     '<nav class="ma-crumbs" aria-label="设备活跃分析位置">' + (row ? '<a href="' + rootHref + '">返回全部设备</a><span>／</span><span>设备明细</span>' : "<span>全部设备</span>") +
-    '</nav><p class="ma-demo-note">预设演示数据 · 按设备 ID 去重 · 归属与活跃状态按截至日期判断</p>' + dates() + (row ? detailPage(row) : rootPage()) +
+    '</nav><p class="ma-demo-note">预设演示数据 · 按设备 ID 去重 · 归属与活跃状态按截至日期判断</p>' : '') + dates() + (row ? detailPage(row) : rootPage()) +
     '<section class="ma-rules"><strong>统计口径</strong><p>品牌、门店和产线筛选按当前唯一有效 License 绑定关系；未绑定设备独立保留，多个有效绑定显示归属待核对。</p>' +
     '<p>设备点单量按设备 ID 汇总查询期间所有历史产线与门店，来源无法识别的订单不分摊到设备。设备状态按全历史最近点单判定，修改期间不改变当前活跃状态。</p>' +
     '<p>0～6 天活跃；7～13 天近期未使用；14～29 天疑似停用；≥30 天长期未使用。已绑定从未点单为尚未使用；无绑定且无历史点单为未绑定。异常数据以 — 展示。</p></section></div>';
