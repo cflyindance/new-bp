@@ -15,4 +15,4 @@ for (const suffix of [
   '/store/demo-all/device/demo-all-POS-1/line/POS', '/store/demo-all/line/POS/unknown/x', '/store/%zz',
 ]) assert.equal(parseActivityScope(ACTIVITY_PATH + suffix, data), undefined, suffix);
 assert.equal(parseActivityScope('/m-platform/other/store/demo-all', data), undefined);
-console.log('PASS activity drawer scopes: legacy deep links, all-line device expansion, encoded lines and invalid/cross-scope denial');
+console.log('PASS activity drawer scopes: legacy store/line/device addresses, encoded lines and invalid/cross-scope denial');
