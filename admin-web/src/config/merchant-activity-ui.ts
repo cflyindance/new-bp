@@ -96,7 +96,7 @@ function rootPage(): string {
     { label: "活跃门店", value: String(active), note: "最近点单距今 0～6 天" },
     { label: "需关注门店", value: String(follow), note: "最近点单距今 ≥7 天" },
     { label: "期间点单数", value: n(count), note: errors ? "已知合计 · " + errors + " 家数据异常未计入" : "按业务订单去重" },
-  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>门店使用情况</h3><p>点击门店，查看六条产线和点单设备的使用情况。</p></div><span>' + rows.length +
+  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>门店使用情况</h3></div><span>' + rows.length +
     ' 家门店</span></div><div class="ma-table-wrap"><table><thead><tr><th>门店／商户</th><th>当前活跃状态</th>' + metricHeaders +
     '<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead><tbody>' +
     (table || '<tr><td colspan="12" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>') +
