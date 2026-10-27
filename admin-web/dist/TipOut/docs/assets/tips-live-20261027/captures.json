@@ -1,0 +1,65 @@
+[
+  {
+    "name": "save-adjusted",
+    "file": "assets/tips-live-20261027/save-adjusted.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:29:11",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history"
+  },
+  {
+    "name": "reallocate-warning",
+    "file": "assets/tips-live-20261027/reallocate-warning.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:29:21",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history"
+  },
+  {
+    "name": "detail-leave",
+    "file": "assets/tips-live-20261027/detail-leave.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:29:33",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history"
+  },
+  {
+    "name": "detail-updated-draft",
+    "file": "assets/tips-live-20261027/detail-updated-draft.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:32:10",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary"
+  },
+  {
+    "name": "funding-shortfall",
+    "file": "assets/tips-live-20261027/funding-shortfall.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:35:09",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary"
+  },
+  {
+    "name": "funding-excess",
+    "file": "assets/tips-live-20261027/funding-excess.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:35:10",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary"
+  },
+  {
+    "name": "detail-page",
+    "file": "assets/tips-live-20261027/detail-page.png",
+    "source": "完整应用登录后实际路由操作",
+    "baseline": "64ddec8f",
+    "capturedAt": "2026-10-27T09:37:28",
+    "note": "",
+    "route": "http://127.0.0.1:65200/#/team/tips/details?date=2026-10-27&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&from=summary&return=history"
+  }
+]

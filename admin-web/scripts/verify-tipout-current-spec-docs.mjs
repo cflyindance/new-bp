@@ -5,16 +5,15 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.49','V3.49','V2.47'];
-const id='TIPOUT-PRODUCT-SCOPE-20261026-01';
+const versions=['V4.52','V3.52','V2.50'];
+const id='TIPOUT-DOC-COMPLETION-20261027-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
-const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-spec-20261026/manifest.json','utf8'));
+const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'d8acdfba');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'64ddec8f');
 let links=0;
 for(const [i,text]of texts.entries()){
- assert.doesNotMatch(text,/测试场景清单|取消分配|演示重置/,names[i]+' no test-only product operations');
- assert.doesNotMatch(text,/小费池计算模式|高级模式|计提|tipClaims|order_tip_then_residual|residual\.receivers|按班次|按打卡时段|班次工时|班次设置|个人销售额|personal_sales|personalSalesPct|再分配|子组|time_window|shiftWorkHours|ruleAddShiftList|周期／星期|规划场景|红色边框/,names[i]+' excludes planning and test feature definitions');
+ assert.doesNotMatch(text,/【未来规划】|测试场景清单|取消分配|小费池计算模式|计提|按班次|按打卡时段|个人销售额|再分配|conditions\.weekdays|shiftWorkHours|tipClaims|order_tip_then_residual|time_window/,names[i]+' current delivery scope only');
  assert.ok(text.startsWith('# '));assert.ok(text.includes('**'+versions[i]+'**'));assert.ok(text.includes(id));
  for(let j=0;j<3;j++)if(i!==j)assert.ok(text.includes(']('+names[j]+')'),names[i]+' paired link '+names[j]);
  const actualVersions=[...new Set(text.match(/\bV\d+\.\d+\b/g))].sort();assert.deepEqual(actualVersions,[...versions].sort(),names[i]+' only current versions');
@@ -37,6 +36,29 @@ for(const token of ['snapshotId','snapshotVersion','snapshotHash','allocationSou
 for(const token of ['max(P,C)','C+E=D=ΣA+U','B−员工贡献+A','150/300/150','240/240/120','不实际投递','逐日','失败'])assert.ok(product.includes(token),'product '+token);
 assert.ok(personal.includes('已完成／部分待分配／待分配'));assert.ok(product.includes('已完成／部分待分配／待分配'));
 assert.ok(product.includes('成功后失败0、重试按钮隐藏'));assert.ok(personal.includes('全部任务结束且仍有失败时才显示'));
-assert.ok(personal.includes('assets/tips-product-scope-20261026/delete-rule.png'));assert.ok(personal.includes('assets/tips-product-scope-20261026/contribution-breakdown.png'));
-const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf8');assert.ok(coverage.includes(id));assert.ok(coverage.includes('未覆盖的图像'));assert.doesNotMatch(coverage,/测试场景清单|取消分配|演示重置|计提|tipClaims|order_tip_then_residual|residual\.receivers|按班次|按打卡时段|个人销售额|再分配|规划场景/);
-console.log('PASS current TipOut documents: current-only structure, paired versions, page fields, status/calculation contract, '+links+' valid references, '+manifest.images.length+' image hashes, source evidence and declared image gaps');
+assert.ok(personal.includes('assets/tips-current-scope-20261027/delete-rule.png'));assert.ok(personal.includes('assets/tips-current-scope-20261027/contribution-help.png'));
+const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf8');assert.ok(coverage.includes(id));assert.ok(coverage.includes('未覆盖的图像'));assert.doesNotMatch(coverage,/【未来规划】|测试场景清单|取消分配|计提|按班次|按打卡时段|个人销售额|再分配/);
+const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8'))];
+for(const img of manifest.images){
+ const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
+ assert.equal(capture.baseline,'64ddec8f');assert.equal(img.baseline,'64ddec8f');
+ assert.ok(img.route.startsWith('http://127.0.0.1:65200/#/team/tips/'),'actual target route '+img.file);
+ assert.ok(img.width>250&&img.height>80,'usable region '+img.file);
+ assert.notEqual(capture.planning,true,'no planning image '+img.file);
+}
+for(const token of ['allocationScope','legacy_pool','需有有效打卡','不转嫁','员工承担'])assert.ok(engineer.includes(token),'current contract '+token);
+assert.ok(manifest.declaredGaps.length>0,'explicit evidence limitations');
+console.log('PASS current-scope TipOut documents: paired versions, scope exclusions, preserved fields and calculations, '+links+' valid links, '+manifest.images.length+' actual image hashes, '+manifest.operationCoverage.length+' operation entries and explicit image gaps');
+
+for(const token of ['不得超出来源开始、结束日期','全部取消均表示全部员工','规则名称 |','有记录／适用天数 |','Payment Method','条件可为空','请先创建小费分配规则','打印窗口','auto-failed.png','auto-retry-success.png','contribution-shortage.png','payout-summary.png','payout-detail.png','hours-summary.png','hours-period.png','hours-day.png'])assert.ok(personal.includes(token),'completed contract '+token);
+assert.doesNotMatch(personal,/待补页面图片：任务结束|待补页面图片：.*工时|待补页面图片：.*发放/);
+for(const item of manifest.operationCoverage){assert.ok(personal.split(/\r?\n/)[item.line-1].includes('| '+item.operation+' |'),'operation line '+item.id);}
+console.log('PASS completed gaps: date limits, filter scope, actual labels, PDF paths, source capability matrix and new actual UI states');
+
+for(const name of ['sales-source','tips-source','manual-source','surcharge-source']){
+ const img=manifest.images.find(x=>x.file.endsWith('/'+name+'.png'));
+ assert.ok(img,'source drawer '+name);assert.equal(img.framing,'viewport-drawer');
+ assert.equal(img.width,1600);assert.equal(img.height,1000);
+ const cap=captures.find(x=>x.file===img.file);assert.equal(cap.framing,'viewport-drawer');
+}
+console.log('PASS source drawers: full viewport, backdrop and editor context retained for all four source types');
