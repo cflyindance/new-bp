@@ -79,7 +79,7 @@ function rootPage(): string {
     { title: "活跃设备", value: String(filtered.filter(r => r.metrics.status === "active").length), note: "最近点单距今 0～6 天" },
     { title: "期间有订单设备", value: String(filtered.filter(r => (r.metrics.count ?? 0) > 0).length), note: errorCount ? errorCount + " 台数据异常未计入" : "统计期间至少有 1 笔点单" },
     { title: "需关注设备", value: String(filtered.filter(r => ["recent", "suspected", "long"].includes(r.metrics.status)).length), note: "最近点单距今 ≥7 天" },
-  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>全部设备活跃情况</h3><p>一台设备一行；归属展示当前绑定，点单量覆盖设备历史产线与门店。</p></div><span>' +
+  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>全部设备活跃情况</h3></div><span>' +
     filtered.length + ' 台设备' + (errorCount ? ' · ' + errorCount + ' 台异常' : "") + '</span></div><div class="ma-table-wrap"><table><thead><tr>' +
     '<th>设备／设备 ID</th><th>当前活跃状态</th><th>当前产线</th><th>所属品牌</th><th>所属门店</th><th class="ma-number">点单数</th>' +
     '<th class="ma-number">有订单天数</th><th class="ma-number">日均点单</th><th>最近点单时间</th><th class="ma-number">连续无订单天数</th><th>操作</th>' +
