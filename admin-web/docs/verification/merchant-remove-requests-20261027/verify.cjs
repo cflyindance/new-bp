@@ -19,4 +19,3 @@ await nav('/m-platform/merchants/merchant-zhangji');assert((await p.locator('bod
 await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('hq.admin@menusifu.cn');});await nav('/m-platform/merchants/requests');assert((await p.locator('body').innerText()).includes('暂无 M 平台访问权限'));await p.screenshot({path:path.join(assets,'legacy-denied.png')});checks.push('old route does not grant M access to B-only account');
 assert.deepEqual(errors,[]);const result={baseline:'64ddec8f',branch:'codex/merchant-remove-requests-20261027',url:base,checks,presets,state,errors};fs.writeFileSync('docs/verification/merchant-remove-requests-20261027/result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1);});
-
