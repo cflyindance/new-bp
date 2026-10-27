@@ -44,7 +44,7 @@ function parsedScope(path: string): ActivityScope | null | undefined {
   } catch { return undefined; }
 }
 export function activityPageTitle(path: string): { title: string; module: string } | null {
-  return isActivityPath(path) ? { title: "商户使用活跃分析", module: "使用活跃分析" } : null;
+  return isActivityPath(path) ? { title: "门店活跃分析", module: "系统使用分析" } : null;
 }
 function metrics(scope: ActivityScope): ActivityMetrics { return summarizeActivity(data, resolved, scope, state.period); }
 function summaryCards(items: { label: string; value: string; note: string }[]): string {
@@ -172,7 +172,7 @@ export function renderActivityPage(path: string): string {
   const store = scope && data.stores.find(s => s.id === scope.storeId);
   const issue = store && store.quality === "error";
   return '<div class="ma-page" data-ma-page>' + (scope ? '<div class="ma-heading"><div><div class="ma-kicker">MERCHANT ACTIVITY <span>演示数据</span></div><h2>' +
-    (scope ? esc(store!.name) + (scope.line ? ' · ' + esc(scope.line) : '') : "商户使用活跃分析") +
+    (scope ? esc(store!.name) + (scope.line ? ' · ' + esc(scope.line) : '') : "门店活跃分析") +
     '</h2><p>' + (store ? esc(store.merchantName) + ' · ' + esc(store.scenario) : "从门店到产线、设备，查看系统使用情况。") +
     '</p></div><div class="ma-asof"><span>统计截至日期</span><strong>' + data.asOf + '</strong><small>门店时区：Asia/Shanghai</small></div></div>' +
     '<nav class="ma-crumbs" aria-label="活跃分析位置">' + crumbs(scope) + '</nav>' +
