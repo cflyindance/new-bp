@@ -7,7 +7,7 @@ import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,f
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
 import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail } from './brand-access-store';
-import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
+import { renderBrandWorkspace, bindBrandWorkspaces, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
  */
@@ -36,8 +36,6 @@ import {
 } from "./enterprise-merchant-api";
 import {
   businessTypeLabel,
-  approvePosStoreRequest,
-  approveProvisioningRequest,
   countStoresForMerchant,
   createGroup,
   createMerchant,
@@ -59,16 +57,13 @@ import {
   getMerchantStores,
   getMerchantSlaMetrics,
   getMerchantReportSummary,
-  getMerchantTodos,
   getMerchants,
   getGroups,
   getGroupById,
   getGroupName,
   getEnterpriseStoreList,
   getGroupsForSelect,
-  getPosStoreRequests,
   getProductLineOptions,
-  getProvisioningRequests,
   getContractStatusLabel,
   getLicenseStatusLabel,
   getStoreStatusLabel,
@@ -77,13 +72,9 @@ import {
   mountMerchantToOrg,
   productLineLabel,
   recordMerchantPresetSyncOnly,
-  rejectPosStoreRequest,
-  rejectProvisioningRequest,
   renewMerchantContract,
   saveMerchantCapability,
   statusBadgeClass,
-  submitPosStoreRequest,
-  submitProvisioningRequest,
   syncMerchantFromCrm,
   syncMerchantCapabilityPresets,
   updateMerchantStoreStatus,
@@ -123,7 +114,6 @@ import type {
   MerchantFilter,
   MerchantOrgStoreStatus,
   MerchantStatus,
-  SubmitProvisioningRequestInput,
   UpdateGroupInput,
 } from "./enterprise-merchant-types";
 import { hardwareHref } from "./enterprise-hardware-scope";
@@ -195,7 +185,6 @@ function formatDate(iso?: string): string {
 function renderOverviewPage(): string {
   const stats = getMerchantOverviewStats();
   const recent = getMerchants().slice(0, 5);
-  const todos = getMerchantTodos().slice(0, 8);
   const kpi = (label: string, value: number | string, sub?: string) => `
     <div class="rounded-xl border border-border bg-card p-4">
       <p class="text-xs text-muted-foreground">${escapeHtml(label)}</p>
@@ -215,34 +204,10 @@ function renderOverviewPage(): string {
         ${kpi("合同即将到期", stats.expiringSoon, "30 天内")}
       </div>
       <div class="flex flex-wrap gap-2">
-        <a href="${merchantHref("/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建品牌</a>
-        <a href="${merchantHref("/requests")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">开通申请 / 待办</a>
         <a href="${merchantHref("/reports")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">报表 / SLA</a>
         <a href="${merchantHref("")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">品牌管理</a>
         <a href="${merchantHref("/stores")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">门店管理</a>
       </div>
-      ${
-        todos.length
-          ? card(`
-        <h2 class="text-sm font-semibold text-card-foreground">待办队列</h2>
-        <ul class="mt-3 space-y-2">
-          ${todos
-            .map(
-              (todo) =>
-                `<li class="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2">
-              <div class="min-w-0">
-                <a href="${merchantHref(todo.href.startsWith(ENTERPRISE_MERCHANT_ROUTE_PREFIX) ? todo.href.slice(ENTERPRISE_MERCHANT_ROUTE_PREFIX.length) : todo.href)}" class="text-sm font-medium text-primary hover:underline">${escapeHtml(todo.title)}</a>
-                <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(todo.detail)}</p>
-              </div>
-              <span class="shrink-0 text-[10px] uppercase tracking-wide ${todo.priority === "high" ? "text-destructive" : "text-muted-foreground"}">${todo.priority === "high" ? "紧急" : "普通"}</span>
-            </li>`,
-            )
-            .join("")}
-        </ul>
-        <a href="${merchantHref("/requests")}" class="mt-3 inline-block text-xs text-primary hover:underline">查看全部待办 →</a>
-      `)
-          : ""
-      }
       ${card(`
         <h2 class="text-sm font-semibold text-card-foreground">最近品牌</h2>
         <ul class="mt-3 space-y-2">
@@ -576,113 +541,6 @@ function renderListPage(): string {
     </div>`;
 }
 
-function renderNewMerchantPage(): string {
-  const bizOptions = getBusinessTypeOptions();
-  const plOptions = getProductLineOptions();
-  const groupOptions = getGroupsForSelect();
-  const groupField =
-    groupOptions.length > 0
-      ? `<label class="flex flex-col gap-1 sm:col-span-2">
-              <span class="text-xs text-muted-foreground">所属集团 *</span>
-              <select name="groupId" required class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                <option value="">请选择集团</option>
-                ${groupOptions.map((g) => `<option value="${escapeHtml(g.groupId)}">${escapeHtml(g.name)}</option>`).join("")}
-              </select>
-            </label>`
-      : `<div class="sm:col-span-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-            当前企业下尚无集团，请先 <a href="${merchantHref("/groups/new")}" class="font-medium text-primary hover:underline">新建集团</a> 后再创建品牌。
-          </div>`;
-  return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-enterprise-merchant-page="new">
-      <a href="${merchantHref("")}" class="text-sm text-primary hover:underline">← 返回品牌管理</a>
-      ${card(`
-        <h2 class="text-sm font-semibold text-card-foreground">M 平台代开通品牌</h2>
-        <p class="mt-1 text-sm text-muted-foreground">填写基本信息、能力与首店信息；保存后写入本地演示数据。</p>
-        <form class="mt-4 space-y-4" data-enterprise-merchant-create-form>
-          <div class="grid gap-4 sm:grid-cols-2">
-            ${groupField}
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">品牌名称 *</span>
-              <input name="name" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">品牌编码</span>
-              <input name="code" class="h-9 rounded-md border border-input bg-background px-3 text-sm" placeholder="留空自动生成" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">组织类型 *</span>
-              <select name="orgType" required class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                <option value="chain">连锁</option>
-                <option value="single-store">单店（特殊场景）</option>
-              </select>
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">时区 *</span>
-              <select name="timezone" required class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                <option value="Asia/Shanghai">Asia/Shanghai</option>
-                <option value="America/New_York">America/New_York</option>
-                <option value="America/Los_Angeles">America/Los_Angeles</option>
-              </select>
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">联系人 *</span>
-              <input name="contactName" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">联系电话</span>
-              <input name="contactPhone" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-            <label class="flex flex-col gap-1 sm:col-span-2">
-              <span class="text-xs text-muted-foreground">初始管理员邮箱 *</span>
-              <input name="primaryAdminEmail" type="email" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" placeholder="name@menusifu.cn" />
-            </label>
-          </div>
-          <fieldset>
-            <legend class="text-xs font-medium text-muted-foreground">经营业态 *</legend>
-            <div class="mt-2 flex flex-wrap gap-2">
-              ${bizOptions
-                .slice(0, 8)
-                .map(
-                  (b) =>
-                    `<label class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs"><input type="checkbox" name="businessTypeIds" value="${escapeHtml(b.id)}" class="accent-primary" />${escapeHtml(b.label)}</label>`,
-                )
-                .join("")}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend class="text-xs font-medium text-muted-foreground">产线 *</legend>
-            <div class="mt-2 flex flex-wrap gap-2">
-              ${plOptions
-                .map(
-                  (p) =>
-                    `<label class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs"><input type="checkbox" name="productLineIds" value="${escapeHtml(p.id)}" class="accent-primary" ${p.id === "pos" ? "checked" : ""} />${escapeHtml(p.label)}</label>`,
-                )
-                .join("")}
-            </div>
-          </fieldset>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">首店名称</span>
-              <input name="firstStoreName" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">首店地址</span>
-              <input name="firstStoreAddress" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-          </div>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" name="sendInviteEmail" class="accent-primary" checked />
-            创建后发送 onboarding 邀请邮件（演示）
-          </label>
-          <div class="flex gap-2 pt-2">
-            <button type="submit" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90" ${groupOptions.length === 0 ? "disabled" : ""}>创建品牌</button>
-            <a href="${merchantHref("")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">取消</a>
-          </div>
-        </form>
-      `)}
-    </div>`;
-}
-
 function renderOrgTreeStoreItem(store: ReturnType<typeof getMerchantStores>[number]): string {
   const addressPart = store.address
     ? `<span class="text-xs text-muted-foreground"> · ${escapeHtml(store.address)}</span>`
@@ -788,170 +646,6 @@ function renderOrgTreePage(): string {
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <p class="text-sm text-muted-foreground">跨品牌查看品牌 → 区域 → 门店组织树（只读；同一挂载品牌 / 同名同址门店已自动去重）。</p>
       <div class="grid gap-4 lg:grid-cols-2">${blocks}</div>
-    </div>`;
-}
-
-function renderRequestsPage(): string {
-  const pending = getProvisioningRequests("pending");
-  const resolved = getProvisioningRequests().filter((r) => r.status !== "pending").slice(0, 10);
-  const posPending = getPosStoreRequests("pending");
-  const posResolved = getPosStoreRequests().filter((r) => r.status !== "pending").slice(0, 8);
-  const todos = getMerchantTodos();
-
-  const posRequestRow = (r: (typeof posPending)[number], showActions: boolean) => `
-    <div class="rounded-xl border border-border bg-card p-4" data-pos-store-request-id="${escapeHtml(r.requestId)}">
-      <div class="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 class="text-sm font-semibold">${escapeHtml(r.storeName)}</h3>
-          <p class="mt-1 text-xs text-muted-foreground">${escapeHtml(r.posDeviceId ?? "本地 POS")} · ${escapeHtml(r.contactName ?? "—")} · ${escapeHtml(r.address ?? "—")}</p>
-        </div>
-        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${r.status === "pending" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : r.status === "approved" ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground"}">${r.status === "pending" ? "待审核" : r.status === "approved" ? "已通过" : "已驳回"}</span>
-      </div>
-      <p class="mt-2 text-sm text-muted-foreground">${escapeHtml(r.applicantNote ?? r.posLocation ?? "—")}</p>
-      <p class="mt-2 text-xs text-muted-foreground">${formatDate(r.createdAt)}${r.createdBid ? ` · BID ${escapeHtml(r.createdBid)}` : ""}</p>
-      ${
-        showActions
-          ? `<div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" data-pos-store-request-approve="${escapeHtml(r.requestId)}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">通过并分配 BID</button>
-          <button type="button" data-pos-store-request-reject="${escapeHtml(r.requestId)}" class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted">驳回</button>
-        </div>`
-          : r.createdMerchantId
-            ? `<a href="${merchantDetailHref(r.createdMerchantId)}" class="mt-3 inline-block text-xs text-primary hover:underline">查看入驻品牌 →</a>`
-            : r.rejectReason
-              ? `<p class="mt-2 text-xs text-destructive">驳回原因：${escapeHtml(r.rejectReason)}</p>`
-              : ""
-      }
-    </div>`;
-
-  const requestRow = (r: (typeof pending)[number], showActions: boolean) => `
-    <div class="rounded-xl border border-border bg-card p-4" data-merchant-request-id="${escapeHtml(r.requestId)}">
-      <div class="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 class="text-sm font-semibold">${escapeHtml(r.merchantName)}</h3>
-          <p class="mt-1 text-xs text-muted-foreground">${escapeHtml(getMerchantOrgTypeLabel(r.orgType))} · ${escapeHtml(r.contactName)} · ${escapeHtml(r.primaryAdminEmail)}</p>
-        </div>
-        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${r.status === "pending" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : r.status === "approved" ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground"}">${r.status === "pending" ? "待审核" : r.status === "approved" ? "已通过" : "已驳回"}</span>
-      </div>
-      <p class="mt-2 text-sm text-muted-foreground">${escapeHtml(r.notes ?? "—")}</p>
-      <p class="mt-2 text-xs text-muted-foreground">申请人 ${escapeHtml(r.applicantOrg ?? r.applicantEmail)} · ${formatDate(r.createdAt)}</p>
-      ${
-        showActions
-          ? `<div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" data-merchant-request-approve="${escapeHtml(r.requestId)}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">通过并开通</button>
-          <button type="button" data-merchant-request-reject="${escapeHtml(r.requestId)}" class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted">驳回</button>
-        </div>`
-          : r.createdMerchantId
-            ? `<a href="${merchantDetailHref(r.createdMerchantId)}" class="mt-3 inline-block text-xs text-primary hover:underline">查看已创建品牌 →</a>`
-            : r.rejectReason
-              ? `<p class="mt-2 text-xs text-destructive">驳回原因：${escapeHtml(r.rejectReason)}</p>`
-              : ""
-      }
-    </div>`;
-
-  return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-enterprise-merchant-page="requests">
-      <p class="text-sm text-muted-foreground">审核渠道开通申请，并汇总 onboarding、合同到期、关闭冷静期等待办。</p>
-      <div class="grid gap-4 xl:grid-cols-2">
-        ${card(`
-          <h2 class="text-sm font-semibold">模拟本地 POS 门店申请</h2>
-          <form class="mt-3 space-y-3" data-pos-store-request-form>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="flex flex-col gap-1 sm:col-span-2">
-                <span class="text-xs text-muted-foreground">门店名称 *</span>
-                <input name="storeName" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-              <label class="flex flex-col gap-1 sm:col-span-2">
-                <span class="text-xs text-muted-foreground">地址</span>
-                <input name="address" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">POS 设备 ID</span>
-                <input name="posDeviceId" class="h-9 rounded-md border border-input bg-background px-3 text-sm" placeholder="POS-001" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">联系人</span>
-                <input name="contactName" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-            </div>
-            <button type="submit" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">提交 POS 申请</button>
-          </form>
-        `)}
-        ${card(`
-          <h2 class="text-sm font-semibold">提交开通申请（演示）</h2>
-          <form class="mt-3 space-y-3" data-merchant-request-form>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="flex flex-col gap-1 sm:col-span-2">
-                <span class="text-xs text-muted-foreground">品牌名称 *</span>
-                <input name="merchantName" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">组织类型</span>
-                <select name="orgType" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                  <option value="chain">连锁</option>
-                  <option value="single-store">单店（特殊场景）</option>
-                </select>
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">联系人 *</span>
-                <input name="contactName" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">初始管理员邮箱 *</span>
-                <input name="primaryAdminEmail" type="email" required class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted-foreground">申请人邮箱</span>
-                <input name="applicantEmail" type="email" class="h-9 rounded-md border border-input bg-background px-3 text-sm" placeholder="channel@partner.cn" />
-              </label>
-              <label class="flex flex-col gap-1 sm:col-span-2">
-                <span class="text-xs text-muted-foreground">备注</span>
-                <textarea name="notes" rows="2" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"></textarea>
-              </label>
-            </div>
-            <button type="submit" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">提交申请</button>
-          </form>
-        `)}
-        ${card(`
-          <h2 class="text-sm font-semibold">综合待办 (${todos.length})</h2>
-          <ul class="mt-3 space-y-2">
-            ${
-              todos.length
-                ? todos
-                    .slice(0, 6)
-                    .map(
-                      (todo) =>
-                        `<li class="text-sm"><a href="${merchantHref(todo.href.startsWith(ENTERPRISE_MERCHANT_ROUTE_PREFIX) ? todo.href.slice(ENTERPRISE_MERCHANT_ROUTE_PREFIX.length) : todo.href)}" class="text-primary hover:underline">${escapeHtml(todo.title)}</a><span class="text-xs text-muted-foreground"> — ${escapeHtml(todo.detail)}</span></li>`,
-                    )
-                    .join("")
-                : '<li class="text-sm text-muted-foreground">暂无待办</li>'
-            }
-          </ul>
-        `)}
-      </div>
-      <section class="space-y-3">
-        <h2 class="text-sm font-semibold">待审核 POS 门店申请 (${posPending.length})</h2>
-        ${posPending.length ? posPending.map((r) => posRequestRow(r, true)).join("") : card('<p class="text-sm text-muted-foreground">暂无待审核 POS 门店申请</p>')}
-      </section>
-      <section class="space-y-3">
-        <h2 class="text-sm font-semibold">待审核品牌开通 (${pending.length})</h2>
-        ${pending.length ? pending.map((r) => requestRow(r, true)).join("") : card('<p class="text-sm text-muted-foreground">暂无待审核申请</p>')}
-      </section>
-      ${
-        posResolved.length
-          ? `<section class="space-y-3">
-        <h2 class="text-sm font-semibold">最近 POS 门店处理记录</h2>
-        ${posResolved.map((r) => posRequestRow(r, false)).join("")}
-      </section>`
-          : ""
-      }
-      ${
-        resolved.length
-          ? `<section class="space-y-3">
-        <h2 class="text-sm font-semibold">最近品牌开通处理记录</h2>
-        ${resolved.map((r) => requestRow(r, false)).join("")}
-      </section>`
-          : ""
-      }
     </div>`;
 }
 
@@ -1519,9 +1213,9 @@ export function renderEnterpriseMerchantPage(path: string): string {
     else {
       const storeDetail = parseStoreDetailPath(path);
       if (storeDetail) body = renderStoreDetailPage(storeDetail.storeId, storeDetail.tab);
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderBrandCreateWizard();
+      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderOverviewPage();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) body = renderOrgTreePage();
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/requests`) body = renderRequestsPage();
+      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/requests`) body = renderOverviewPage();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/reports`) body = renderReportsPage();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/change-log`) body = renderChangeLogPage();
       else {
@@ -1566,7 +1260,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces();
-  bindBrandCreateWizard();
   document.querySelectorAll<HTMLButtonElement>("[data-brand-single-store]").forEach(button => button.onclick = () => { const store=getStoreById(button.dataset.brandSingleStore!); if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],"m-platform",onMount); });
   bindMerchantBrandStoresDialog();
 
@@ -1677,71 +1370,8 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     });
   });
 
-  document.querySelector<HTMLFormElement>("[data-enterprise-merchant-create-form]")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const fd = new FormData(form);
-    const businessTypeIds = fd.getAll("businessTypeIds").map(String);
-    const productLineIds = fd.getAll("productLineIds").map(String);
-    if (businessTypeIds.length === 0 || productLineIds.length === 0) {
-      window.alert("请至少选择一个业态和一个产线");
-      return;
-    }
-    const groupId = String(fd.get("groupId") ?? "");
-    if (!groupId) {
-      window.alert("请选择所属集团");
-      return;
-    }
-    const input: CreateMerchantInput = {
-      name: String(fd.get("name") ?? ""),
-      code: String(fd.get("code") ?? ""),
-      groupId,
-      orgType: String(fd.get("orgType") ?? "chain") as CreateMerchantInput["orgType"],
-      timezone: String(fd.get("timezone") ?? "Asia/Shanghai"),
-      contactName: String(fd.get("contactName") ?? ""),
-      contactPhone: String(fd.get("contactPhone") ?? "") || undefined,
-      primaryAdminEmail: String(fd.get("primaryAdminEmail") ?? ""),
-      businessTypeIds,
-      productLineIds,
-      firstStoreName: String(fd.get("firstStoreName") ?? "") || undefined,
-      firstStoreAddress: String(fd.get("firstStoreAddress") ?? "") || undefined,
-      activateImmediately: false,
-      sendInviteEmail: fd.get("sendInviteEmail") === "on",
-    };
-    const merchant = createMerchant(input);
-    location.hash = merchantDetailHref(merchant.merchantId);
-    onMount();
-  });
-
   document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
   document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;void runImpersonationWithLoading(button,()=>enterMerchantBackendAsImpersonator(id,merchantDetailHref(id)),'当前品牌服务状态不支持代登录。');});
-
-  document.querySelector<HTMLFormElement>("[data-merchant-request-form]")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
-    const input: SubmitProvisioningRequestInput = {
-      merchantName: String(fd.get("merchantName") ?? ""),
-      orgType: String(fd.get("orgType") ?? "chain") as SubmitProvisioningRequestInput["orgType"],
-      contactName: String(fd.get("contactName") ?? ""),
-      primaryAdminEmail: String(fd.get("primaryAdminEmail") ?? ""),
-      applicantEmail: String(fd.get("applicantEmail") ?? "") || "channel@partner.cn",
-      notes: String(fd.get("notes") ?? "") || undefined,
-    };
-    submitProvisioningRequest(input);
-    onMount();
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-request-approve]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const requestId = btn.dataset.merchantRequestApprove;
-      if (!requestId) return;
-      const merchant = approveProvisioningRequest(requestId);
-      if (merchant) {
-        window.alert(`已通过申请并创建品牌「${merchant.name}」，onboarding 邀请已发送。`);
-        onMount();
-      }
-    });
-  });
 
   document.querySelectorAll<HTMLButtonElement>("[data-merchant-crm-sync]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -1774,17 +1404,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       } catch {
         window.alert("API 调用失败");
       }
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-request-reject]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const requestId = btn.dataset.merchantRequestReject;
-      if (!requestId) return;
-      const reason = window.prompt("请输入驳回原因：");
-      if (reason === null) return;
-      rejectProvisioningRequest(requestId, reason);
       onMount();
     });
   });
@@ -1823,43 +1442,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         window.alert("挂载失败：该品牌可能已挂载到其他组织，或不可选");
         return;
       }
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLFormElement>("[data-pos-store-request-form]").forEach((form) => {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      submitPosStoreRequest({
-        storeName: String(fd.get("storeName") ?? ""),
-        address: String(fd.get("address") ?? "") || undefined,
-        contactName: String(fd.get("contactName") ?? "") || undefined,
-        posDeviceId: String(fd.get("posDeviceId") ?? "") || undefined,
-      });
-      form.reset();
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-pos-store-request-approve]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const requestId = btn.dataset.posStoreRequestApprove;
-      if (!requestId) return;
-      const merchant = approvePosStoreRequest(requestId);
-      if (!merchant) return;
-      window.alert(`已通过，分配 BID ${merchant.bid ?? "—"}，可在组织页挂载到连锁品牌。`);
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-pos-store-request-reject]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const requestId = btn.dataset.posStoreRequestReject;
-      if (!requestId) return;
-      const reason = window.prompt("请输入驳回原因：");
-      if (reason === null) return;
-      rejectPosStoreRequest(requestId, reason);
       onMount();
     });
   });

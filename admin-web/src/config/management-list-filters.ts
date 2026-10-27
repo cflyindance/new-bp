@@ -34,7 +34,7 @@ export function renderManagementFilters(kind:Kind){
   ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+menu
   :input('from','创建时间起','date',f)+input('to','创建时间止','date',f);
  return '<form data-management-filters="'+kind+'" class="management-filters"><div class="management-filter-primary">'+primary+
-  '</div><div class="management-filter-secondary">'+secondary+search+'<div class="management-filter-actions">'+actions+(!store?'<a href="#/m-platform/merchants/new" class="ba-btn ba-primary management-filter-create">新建品牌</a>':'')+'</div></div>'+
+  '</div><div class="management-filter-secondary">'+secondary+search+'<div class="management-filter-actions">'+actions+'</div></div>'+
   '<p data-filter-error role="alert" class="text-sm text-destructive" hidden></p></form>';
 }
 export function bindManagementFilters(kind:Kind,render:(f:ManagementFilter)=>void){

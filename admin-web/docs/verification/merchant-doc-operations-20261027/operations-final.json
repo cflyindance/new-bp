@@ -1,0 +1,4942 @@
+{
+  "baseline": "64ddec8f484b2aed463dd63fcf7f111d6df4fb4b",
+  "branch": "codex/merchant-doc-operations-20261027",
+  "url": "http://127.0.0.1:5250",
+  "source": "隔离Edge上下文，本地演示；成功保存仅写该上下文",
+  "items": [
+    {
+      "id": "batch-diff-added",
+      "page": "批量继承预览",
+      "title": "不同差异预览",
+      "entry": "按页面当前可见操作进入",
+      "expect": "第一店从空集继承，第二店已继承，新增集合不同",
+      "before": "batch-diff-added-before.png",
+      "after": "batch-diff-added-after.png",
+      "status": "captured",
+      "body": "门店菜单配置预览\n×\n继承品牌菜单\n2 家门店\n查看涉及门店（2 家）\n\n各门店菜单存在差异，请按门店查看\n\n预览门店\n米聚集团 · 演示门店 -bfvqj · M00000010\n米聚集团 · 演示门店 -e059p · M00000008\n新增 0 项\n关闭 0 项\n本次新增\n本次关闭\n本次没有新增菜单。\n保存后随品牌菜单自动同步\n返回修改\n确认保存",
+      "fields": [
+        {
+          "name": "mode",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "继承品牌菜单",
+            "独立配置：替换所选门店菜单",
+            "独立配置：增量开通"
+          ]
+        },
+        {
+          "name": "",
+          "type": "search",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "米聚集团 · 演示门店 -bfvqj · M00000010",
+            "米聚集团 · 演示门店 -e059p · M00000008"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "batch-switch-resolved",
+      "page": "批量预览",
+      "title": "切换预览门店",
+      "entry": "按页面当前可见操作进入",
+      "expect": "查看第二店不同新增集合，不改变保存目标",
+      "before": "batch-switch-resolved-before.png",
+      "after": "batch-switch-resolved-after.png",
+      "status": "captured",
+      "body": "门店菜单配置预览\n×\n继承品牌菜单\n2 家门店\n查看涉及门店（2 家）\n\n各门店菜单存在差异，请按门店查看\n\n预览门店\n米聚集团 · 演示门店 -bfvqj · M00000010\n米聚集团 · 演示门店 -e059p · M00000008\n新增 796 项\n关闭 0 项\n本次新增\n本次关闭\n门店信息\n3 个页面\n主页\n3 个页面\n团队管理\n26 个页面\n商品中心\n19 个页面\n订单中心\n4 个页面\n支付中心\n2 个页面\n外卖/来取\n2 个页面\n营销中心\n5 个页面\n促销中心\n3 个页面\n会员中心\n18 个页面\n礼品卡中心\n2 个页面\n评价中心\n4 个页面\n前厅管理中心\n15 个页面\n后厨管理中心\n3 个页面\n预约等位中心\n5 个页面\n报表中心\n13 个页面\n财务中心\n3 个页面\n打印中心\n2 个页面\n消息中心\n7 个页面\n库存管理中心\n5 个页面\n硬件管理中心\n15 个页面\n信贷中心\n1 个页面\n素材中心\n2 个页面\n日志管理\n1 个页面\n权限管理中心\n3 个页面\n系统设置\n6 个页面\n门店信息\n展开全部\n收起全部\n门店档案页面\n营业时间页面\n设置页面\n保存后随品牌菜单自动同步\n返回修改\n确认保存",
+      "fields": [
+        {
+          "name": "mode",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "继承品牌菜单",
+            "独立配置：替换所选门店菜单",
+            "独立配置：增量开通"
+          ]
+        },
+        {
+          "name": "",
+          "type": "search",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "米聚集团 · 演示门店 -bfvqj · M00000010",
+            "米聚集团 · 演示门店 -e059p · M00000008"
+          ]
+        },
+        {
+          "name": "",
+          "type": "search",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "batch-removed-tab",
+      "page": "批量预览",
+      "title": "本次关闭",
+      "entry": "按页面当前可见操作进入",
+      "expect": "关闭集合相同时隐藏切换",
+      "before": "batch-removed-tab-before.png",
+      "after": "batch-removed-tab-after.png",
+      "status": "captured",
+      "body": "门店菜单配置预览\n×\n继承品牌菜单\n2 家门店\n查看涉及门店（2 家）\n\n本页菜单适用于全部 2 家门店\n\n新增 各店不同\n关闭 0 项\n本次新增\n本次关闭\n本次没有关闭菜单。\n保存后随品牌菜单自动同步\n返回修改\n确认保存",
+      "fields": [
+        {
+          "name": "mode",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "继承品牌菜单",
+            "独立配置：替换所选门店菜单",
+            "独立配置：增量开通"
+          ]
+        },
+        {
+          "name": "",
+          "type": "search",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "select-one",
+          "required": false,
+          "disabled": false,
+          "options": [
+            "米聚集团 · 演示门店 -bfvqj · M00000010",
+            "米聚集团 · 演示门店 -e059p · M00000008"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "batch-save-success",
+      "page": "批量预览",
+      "title": "确认保存",
+      "entry": "按页面当前可见操作进入",
+      "expect": "统一改为继承且逐店记录审计",
+      "before": "batch-save-success-before.png",
+      "after": "batch-save-success-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq082jw-thodo · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌门店\n关联已有门店\n批量配置菜单\n品牌开通页面\n179 个\n品牌门店\n2 家\n已配置门店菜单\n2 家\n新关联门店默认继承品牌菜单，可切换独立配置\n\t门店名称 / MID\t营业状态\t菜单配置\t最近配置\t操作\n\t米聚集团 · 演示门店 -bfvqj\nM00000010 · 暂无地址\t筹备中\t继承品牌 · 172 个页面\t2026/10/27 09:25:59\nhq.admin@menusifu.cn\t\n查看生效菜单\n配置菜单\n\n\t米聚集团 · 演示门店 -e059p\nM00000008 · 暂无地址\t筹备中\t继承品牌 · 172 个页面\t2026/10/27 09:26:02\ndemo.menusifu.cn\t\n查看生效菜单\n配置菜单",
+      "fields": []
+    },
+    {
+      "id": "menu-category",
+      "page": "菜单选择",
+      "title": "切换一级分类",
+      "entry": "按页面当前可见操作进入",
+      "expect": "右侧更新对应分类，保留选择",
+      "before": "menu-category-before.png",
+      "after": "menu-category-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 179 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n3/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n团队管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n▾\n角色与员工\n分组\n\t\n\n\n员工管理\n页面\n\t\n\n\n岗位管理\n页面\n\t\n\n\n▾\n休息与加班\n分组\n\t\n\n\n自定义休息\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n设置\n页面\n\t\n\n\n▾\n员工打卡\n分组\n\t\n\n\n打卡管理\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n规则设置\n页面\n\t\n\n\n▾\n排班\n分组\n\t\n\n\n排班表\n页面\n\t\n\n\n班次\n页面\n\t\n\n\n▾\n规则设置\n页面\n\t\n\n\n是否启用打卡依赖排班\n设置项\n\t\n\n\n▾\n小费管理\n分组\n\t\n\n\n小费分配\n页面\n\t\n\n\n分配规则\n页面\n\t\n\n\n▾\n薪资管理\n分组\n\t\n\n\n薪资报表\n页面\n\t\n\n\n发薪周期设置\n页面\n\t\n\n\n员工声明设置\n页面\n\t\n\n\n▾\n员工报表\n分组\n\t\n\n\n汇总\n页面\n\t\n\n\n小费汇总表\n页面\n\t\n\n\n小费明细表\n页面\n\t\n\n\n绩效\n页面\n\t\n\n\n薪资\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n评价统计\n页面\n\t\n\n\n绩效与培训\n页面\n\t\n\n\n▾\n设置\n页面\n\t\n\n\n▾\n考勤与工时\n分组\n\t\n\n\n员工强制休息时长(分钟)\n设置项\n\t\n\n\n员工持续工作时长上限\n设置项\n\t\n\n\n下班打卡打印确认小票\n设置项\n\t\n\n\n员工最长工作时间(小时)\n设置项\n\t\n\n\n重置开工(每日,HH:mm)\n设置项\n\t\n\n\n自动收工打卡\n设置项\n\t\n\n\n员工报表:带薪休息时长(分钟)\n设置项\n\t\n\n\nBatch 前检查未打下班卡\n设置项\n\t\n\n\n▾\n角色与员工权限\n分组\n\t\n\n\n在单子还没全部关闭的情况下,允许经理强制登出\n设置项\n\t\n\n\n在单子全部付完款的情况下,才允许企台登出\n设置项\n\t\n\n\n▾\n薪酬与小费\n分组\n\t\n\n\n分享小费金额计算:按照\n设置项\n\t\n\n\n分摊小费比例(%)\n设置项\n\t\n\n\n小费计算标准\n设置项\n\t\n\n\n工资计算标准\n设置项\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "menu-row-collapse",
+      "page": "菜单选择",
+      "title": "折叠父菜单",
+      "entry": "按页面当前可见操作进入",
+      "expect": "收起下级但不取消选择",
+      "before": "menu-row-collapse-before.png",
+      "after": "menu-row-collapse-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 179 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n3/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n团队管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n▸\n角色与员工\n分组\n\t\n\n\n▾\n休息与加班\n分组\n\t\n\n\n自定义休息\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n设置\n页面\n\t\n\n\n▾\n员工打卡\n分组\n\t\n\n\n打卡管理\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n规则设置\n页面\n\t\n\n\n▾\n排班\n分组\n\t\n\n\n排班表\n页面\n\t\n\n\n班次\n页面\n\t\n\n\n▾\n规则设置\n页面\n\t\n\n\n是否启用打卡依赖排班\n设置项\n\t\n\n\n▾\n小费管理\n分组\n\t\n\n\n小费分配\n页面\n\t\n\n\n分配规则\n页面\n\t\n\n\n▾\n薪资管理\n分组\n\t\n\n\n薪资报表\n页面\n\t\n\n\n发薪周期设置\n页面\n\t\n\n\n员工声明设置\n页面\n\t\n\n\n▾\n员工报表\n分组\n\t\n\n\n汇总\n页面\n\t\n\n\n小费汇总表\n页面\n\t\n\n\n小费明细表\n页面\n\t\n\n\n绩效\n页面\n\t\n\n\n薪资\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n评价统计\n页面\n\t\n\n\n绩效与培训\n页面\n\t\n\n\n▾\n设置\n页面\n\t\n\n\n▾\n考勤与工时\n分组\n\t\n\n\n员工强制休息时长(分钟)\n设置项\n\t\n\n\n员工持续工作时长上限\n设置项\n\t\n\n\n下班打卡打印确认小票\n设置项\n\t\n\n\n员工最长工作时间(小时)\n设置项\n\t\n\n\n重置开工(每日,HH:mm)\n设置项\n\t\n\n\n自动收工打卡\n设置项\n\t\n\n\n员工报表:带薪休息时长(分钟)\n设置项\n\t\n\n\nBatch 前检查未打下班卡\n设置项\n\t\n\n\n▾\n角色与员工权限\n分组\n\t\n\n\n在单子还没全部关闭的情况下,允许经理强制登出\n设置项\n\t\n\n\n在单子全部付完款的情况下,才允许企台登出\n设置项\n\t\n\n\n▾\n薪酬与小费\n分组\n\t\n\n\n分享小费金额计算:按照\n设置项\n\t\n\n\n分摊小费比例(%)\n设置项\n\t\n\n\n小费计算标准\n设置项\n\t\n\n\n工资计算标准\n设置项\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "menu-row-expand",
+      "page": "菜单选择",
+      "title": "展开父菜单",
+      "entry": "按页面当前可见操作进入",
+      "expect": "下级恢复显示",
+      "before": "menu-row-expand-before.png",
+      "after": "menu-row-expand-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 179 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n3/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n团队管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n▾\n角色与员工\n分组\n\t\n\n\n员工管理\n页面\n\t\n\n\n岗位管理\n页面\n\t\n\n\n▾\n休息与加班\n分组\n\t\n\n\n自定义休息\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n设置\n页面\n\t\n\n\n▾\n员工打卡\n分组\n\t\n\n\n打卡管理\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n规则设置\n页面\n\t\n\n\n▾\n排班\n分组\n\t\n\n\n排班表\n页面\n\t\n\n\n班次\n页面\n\t\n\n\n▾\n规则设置\n页面\n\t\n\n\n是否启用打卡依赖排班\n设置项\n\t\n\n\n▾\n小费管理\n分组\n\t\n\n\n小费分配\n页面\n\t\n\n\n分配规则\n页面\n\t\n\n\n▾\n薪资管理\n分组\n\t\n\n\n薪资报表\n页面\n\t\n\n\n发薪周期设置\n页面\n\t\n\n\n员工声明设置\n页面\n\t\n\n\n▾\n员工报表\n分组\n\t\n\n\n汇总\n页面\n\t\n\n\n小费汇总表\n页面\n\t\n\n\n小费明细表\n页面\n\t\n\n\n绩效\n页面\n\t\n\n\n薪资\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n评价统计\n页面\n\t\n\n\n绩效与培训\n页面\n\t\n\n\n▾\n设置\n页面\n\t\n\n\n▾\n考勤与工时\n分组\n\t\n\n\n员工强制休息时长(分钟)\n设置项\n\t\n\n\n员工持续工作时长上限\n设置项\n\t\n\n\n下班打卡打印确认小票\n设置项\n\t\n\n\n员工最长工作时间(小时)\n设置项\n\t\n\n\n重置开工(每日,HH:mm)\n设置项\n\t\n\n\n自动收工打卡\n设置项\n\t\n\n\n员工报表:带薪休息时长(分钟)\n设置项\n\t\n\n\nBatch 前检查未打下班卡\n设置项\n\t\n\n\n▾\n角色与员工权限\n分组\n\t\n\n\n在单子还没全部关闭的情况下,允许经理强制登出\n设置项\n\t\n\n\n在单子全部付完款的情况下,才允许企台登出\n设置项\n\t\n\n\n▾\n薪酬与小费\n分组\n\t\n\n\n分享小费金额计算:按照\n设置项\n\t\n\n\n分摊小费比例(%)\n设置项\n\t\n\n\n小费计算标准\n设置项\n\t\n\n\n工资计算标准\n设置项\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "menu-category-clear",
+      "page": "菜单选择",
+      "title": "清空当前分类",
+      "entry": "按页面当前可见操作进入",
+      "expect": "仅移除当前分类选择",
+      "before": "menu-category-clear-before.png",
+      "after": "menu-category-clear-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 28 个分类 · 153 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n3/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n0/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n团队管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n▾\n角色与员工\n分组\n\t\n\n\n员工管理\n页面\n\t\n\n\n岗位管理\n页面\n\t\n\n\n▾\n休息与加班\n分组\n\t\n\n\n自定义休息\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n设置\n页面\n\t\n\n\n▾\n员工打卡\n分组\n\t\n\n\n打卡管理\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n规则设置\n页面\n\t\n\n\n▾\n排班\n分组\n\t\n\n\n排班表\n页面\n\t\n\n\n班次\n页面\n\t\n\n\n▾\n规则设置\n页面\n\t\n\n\n是否启用打卡依赖排班\n设置项\n\t\n\n\n▾\n小费管理\n分组\n\t\n\n\n小费分配\n页面\n\t\n\n\n分配规则\n页面\n\t\n\n\n▾\n薪资管理\n分组\n\t\n\n\n薪资报表\n页面\n\t\n\n\n发薪周期设置\n页面\n\t\n\n\n员工声明设置\n页面\n\t\n\n\n▾\n员工报表\n分组\n\t\n\n\n汇总\n页面\n\t\n\n\n小费汇总表\n页面\n\t\n\n\n小费明细表\n页面\n\t\n\n\n绩效\n页面\n\t\n\n\n薪资\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n评价统计\n页面\n\t\n\n\n绩效与培训\n页面\n\t\n\n\n▾\n设置\n页面\n\t\n\n\n▾\n考勤与工时\n分组\n\t\n\n\n员工强制休息时长(分钟)\n设置项\n\t\n\n\n员工持续工作时长上限\n设置项\n\t\n\n\n下班打卡打印确认小票\n设置项\n\t\n\n\n员工最长工作时间(小时)\n设置项\n\t\n\n\n重置开工(每日,HH:mm)\n设置项\n\t\n\n\n自动收工打卡\n设置项\n\t\n\n\n员工报表:带薪休息时长(分钟)\n设置项\n\t\n\n\nBatch 前检查未打下班卡\n设置项\n\t\n\n\n▾\n角色与员工权限\n分组\n\t\n\n\n在单子还没全部关闭的情况下,允许经理强制登出\n设置项\n\t\n\n\n在单子全部付完款的情况下,才允许企台登出\n设置项\n\t\n\n\n▾\n薪酬与小费\n分组\n\t\n\n\n分享小费金额计算:按照\n设置项\n\t\n\n\n分摊小费比例(%)\n设置项\n\t\n\n\n小费计算标准\n设置项\n\t\n\n\n工资计算标准\n设置项\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "menu-category-all",
+      "page": "菜单选择",
+      "title": "全选当前分类",
+      "entry": "按页面当前可见操作进入",
+      "expect": "只勾选当前已有下级",
+      "before": "menu-category-all-before.png",
+      "after": "menu-category-all-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 179 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n3/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n团队管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n▾\n角色与员工\n分组\n\t\n\n\n员工管理\n页面\n\t\n\n\n岗位管理\n页面\n\t\n\n\n▾\n休息与加班\n分组\n\t\n\n\n自定义休息\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n设置\n页面\n\t\n\n\n▾\n员工打卡\n分组\n\t\n\n\n打卡管理\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n规则设置\n页面\n\t\n\n\n▾\n排班\n分组\n\t\n\n\n排班表\n页面\n\t\n\n\n班次\n页面\n\t\n\n\n▾\n规则设置\n页面\n\t\n\n\n是否启用打卡依赖排班\n设置项\n\t\n\n\n▾\n小费管理\n分组\n\t\n\n\n小费分配\n页面\n\t\n\n\n分配规则\n页面\n\t\n\n\n▾\n薪资管理\n分组\n\t\n\n\n薪资报表\n页面\n\t\n\n\n发薪周期设置\n页面\n\t\n\n\n员工声明设置\n页面\n\t\n\n\n▾\n员工报表\n分组\n\t\n\n\n汇总\n页面\n\t\n\n\n小费汇总表\n页面\n\t\n\n\n小费明细表\n页面\n\t\n\n\n绩效\n页面\n\t\n\n\n薪资\n页面\n\t\n\n\n考勤记录\n页面\n\t\n\n\n加班规则\n页面\n\t\n\n\n评价统计\n页面\n\t\n\n\n绩效与培训\n页面\n\t\n\n\n▾\n设置\n页面\n\t\n\n\n▾\n考勤与工时\n分组\n\t\n\n\n员工强制休息时长(分钟)\n设置项\n\t\n\n\n员工持续工作时长上限\n设置项\n\t\n\n\n下班打卡打印确认小票\n设置项\n\t\n\n\n员工最长工作时间(小时)\n设置项\n\t\n\n\n重置开工(每日,HH:mm)\n设置项\n\t\n\n\n自动收工打卡\n设置项\n\t\n\n\n员工报表:带薪休息时长(分钟)\n设置项\n\t\n\n\nBatch 前检查未打下班卡\n设置项\n\t\n\n\n▾\n角色与员工权限\n分组\n\t\n\n\n在单子还没全部关闭的情况下,允许经理强制登出\n设置项\n\t\n\n\n在单子全部付完款的情况下,才允许企台登出\n设置项\n\t\n\n\n▾\n薪酬与小费\n分组\n\t\n\n\n分享小费金额计算:按照\n设置项\n\t\n\n\n分摊小费比例(%)\n设置项\n\t\n\n\n小费计算标准\n设置项\n\t\n\n\n工资计算标准\n设置项\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "admin-duplicate",
+      "page": "开通Admin",
+      "title": "重复账号错误",
+      "entry": "按页面当前可见操作进入",
+      "expect": "拒绝重复邮箱，原账号保留",
+      "before": "admin-duplicate-before.png",
+      "after": "admin-duplicate-after.png",
+      "status": "captured",
+      "body": "开通品牌 Admin\n×\n姓名 *\n登录账号 *\n登录密码 *\n\n品牌账号邮箱重复。\n\n取消\n开通并启用",
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "minLength": -1,
+          "maxLength": 30,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": true,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "minLength": 6,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "admin-storage-failed",
+      "page": "开通Admin",
+      "title": "保存失败",
+      "entry": "按页面当前可见操作进入",
+      "expect": "受控存储异常显示错误且保留输入，不发布账号",
+      "before": "admin-storage-failed-before.png",
+      "after": "admin-storage-failed-after.png",
+      "status": "captured",
+      "body": "开通品牌 Admin\n×\n姓名 *\n登录账号 *\n登录密码 *\n\n受控演示：存储写入失败\n\n取消\n开通并启用",
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "minLength": -1,
+          "maxLength": 30,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": true,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "minLength": 6,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "admin-close-x",
+      "page": "开通Admin",
+      "title": "右上角关闭",
+      "entry": "按页面当前可见操作进入",
+      "expect": "未编辑直接关闭",
+      "before": "admin-close-x-before.png",
+      "after": "admin-close-x-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq082jw-thodo · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "admin-close-esc",
+      "page": "开通Admin",
+      "title": "Esc关闭",
+      "entry": "按页面当前可见操作进入",
+      "expect": "未编辑直接关闭",
+      "before": "admin-close-esc-before.png",
+      "after": "admin-close-esc-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq082jw-thodo · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "m-readonly",
+      "page": "品牌管理",
+      "title": "只读运营访问",
+      "entry": "按页面当前可见操作进入",
+      "expect": "只读提示与写操作受限；实际查询/重置也被禁用，记录为实现偏差，不宣称只读筛选可用。",
+      "before": "m-readonly-before.png",
+      "after": "m-readonly-verified.png",
+      "status": "captured",
+      "body": "当前页面为只读，暂无修改权限。来源readonly-state.json验证currentMAccess=read，查询和重置disabled=true。",
+      "fields": []
+    },
+    {
+      "id": "login-loading",
+      "page": "品牌管理",
+      "title": "代登录等待提示",
+      "entry": "按页面当前可见操作进入",
+      "expect": "受控延长绘制等待以采集正在登录，请稍后；不修改业务实现",
+      "before": "login-loading-before.png",
+      "after": "login-loading-after.png",
+      "status": "captured",
+      "body": "所属集团\n全部\n茶语集团\n米聚集团\n张记餐饮集团\nBurger Co. Holdings\nMenuSifu 中国演示集团\nSakura Holdings\n服务状态\n全部\n待启用\n已启用\n已暂停\n已关闭\n开通进度\n全部\n待开通管理员\n待配置品牌菜单\n待首次登录\n已首次登录\n初始化已完成\n品牌菜单\n全部\n未配置\n已配置\n品牌门店\n全部\n无门店\n有门店\n创建时间起\n创建时间止\n搜索\n查询\n重置\n新建品牌\n品牌名称 / BID\t服务状态\t开通进度\t所属集团\t品牌菜单\t品牌门店\t主管理员\t开通时间\t操作\n张记火锅\nB00000001\t已启用\t待首次登录\t张记餐饮集团\t179 个页面\t管理门店 · 2\tzhangji.admin@menusifu.cn\t2025/9/1\t\n详情\n代登录\n\n茶语一家\nB00000002\t已启用\t待首次登录\t茶语集团\t179 个页面\t管理门店 · 1\ttea.one@menusifu.cn\t2026/1/20\t\n详情\n代登录\n\nMenuSifu NA Demo\nB00000003\t待启用\t待首次登录\tMenuSifu 中国演示集团\t179 个页面\t管理门店 · 1\tna.demo@menusifu.cn\t2026/3/1\t\n详情\n\n湘味小厨（到期演示）\nB00000004\t已暂停\t待首次登录\tMenuSifu 中国演示集团\t131 个页面\t管理门店 · 1\txiangwei.admin@menusifu.cn\t2024/7/1\t\n详情\n\nSakura Sushi Group\nB00000005\t已暂停\t待首次登录\tSakura Holdings\t146 个页面\t管理门店 · 1\tsakura.admin@menusifu.com\t2024/4/1\t\n详情\n\nBurger Co. West\nB00000006\t已启用\t待首次登录\tBurger Co. Holdings\t151 个页面\t管理门店 · 1\tburger.admin@menusifu.com\t2025/2/1\t\n详情\n代登录\n\n杭城小笼\nB00000011\t已启用\t待首次登录\t张记餐饮集团\t149 个页面\t管理门店 · 0\thz.bj@partner.cn\t2026/6/19\t\n详情\n代登录\n\n米聚甄选\nB00000012\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-select@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚小馆\nB00000013\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bistro@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚茶语\nB00000014\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-tea@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚快餐\nB00000015\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-express@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚烘焙\nB00000016\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bakery@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n张记串串\nB00000017\t已启用\t待首次登录\t张记餐饮集团\t164 个页面\t管理门店 · 1\tzhangji-skewers@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语鲜果\nB00000018\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-fresh@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语轻食\nB00000019\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-light@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语咖啡\nB00000020\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-coffee@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语工坊\nB00000021\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-lab@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚智餐\nB00000022\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tmenusifu-cn-2@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n智餐云厨\nB00000023\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tsmart-kitchen@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\nSakura Ramen\nB00000024\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-ramen@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Bento\nB00000025\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-bento@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Izakaya\nB00000026\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-izakaya@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Express\nB00000027\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-express@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. East\nB00000028\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-east@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. South\nB00000029\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-south@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Downtown\nB00000030\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-downtown@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Airport\nB00000031\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-airport@menusifu.com\t2025/8/1\t\n详情\n代登录\n\n米聚集团 · 演示门店 -fv803\nB00000034\t已启用\t待开通管理员\t米聚集团\t未配置\t管理门店 · 1\t待开通\t2026/10/27\t\n详情\n\n差异与异常演示品牌\nB00000035\t已启用\t待首次登录\t米聚集团\t179 个页面\t管理门店 · 2\tdoc-flow@menusifu.cn\t2026/10/27\t\n详情\n代登录",
+      "fields": []
+    }
+  ],
+  "errors": []
+}

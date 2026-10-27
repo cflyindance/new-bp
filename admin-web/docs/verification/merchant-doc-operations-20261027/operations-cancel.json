@@ -1,0 +1,755 @@
+{
+  "baseline": "64ddec8f484b2aed463dd63fcf7f111d6df4fb4b",
+  "branch": "codex/merchant-doc-operations-20261027",
+  "url": "http://127.0.0.1:5250",
+  "source": "隔离Edge上下文，本地演示；成功保存仅写该上下文",
+  "items": [
+    {
+      "id": "cancel-admin-new-admin",
+      "page": "品牌管理员弹框",
+      "title": "开通取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "点击底部取消，不保存任何更改",
+      "before": "cancel-admin-new-admin-before.png",
+      "after": "cancel-admin-new-admin-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "cancel-admin-admin",
+      "page": "品牌管理员弹框",
+      "title": "管理取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "点击底部取消，不保存任何更改",
+      "before": "cancel-admin-admin-before.png",
+      "after": "cancel-admin-admin-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "cancel-admin-admin-password",
+      "page": "品牌管理员弹框",
+      "title": "重设密码取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "点击底部取消，不保存任何更改",
+      "before": "cancel-admin-admin-password-before.png",
+      "after": "cancel-admin-admin-password-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "cancel-admin-admin-status",
+      "page": "品牌管理员弹框",
+      "title": "最后Admin停用取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "点击底部取消，不保存任何更改",
+      "before": "cancel-admin-admin-status-before.png",
+      "after": "cancel-admin-admin-status-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌管理员\n开通品牌 Admin\n品牌 Admin 1\n姓名\t登录账号\t状态\t开通时间\t最近登录时间\t操作\n演示管理员\tdoc-flow@menusifu.cn\t已启用\t—\t—\t\n管理\n重设密码\n停用",
+      "fields": []
+    },
+    {
+      "id": "cancel-menu-editor",
+      "page": "品牌菜单编辑",
+      "title": "取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "底部取消关闭，无修改不提示",
+      "before": "cancel-menu-editor-before.png",
+      "after": "cancel-menu-editor-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌菜单\n编辑品牌菜单\n品牌开通页面\n179 个\n品牌门店\n2 家\n已配置门店菜单\n2 家\n品牌管理\n3 个页面\n门店管理 · 集团视角\n2 个页面\n门店管理 · 品牌视角\n2 个页面\n门店信息\n3 个页面\n主页\n3 个页面\n团队管理\n26 个页面\n商品中心\n19 个页面\n订单中心\n4 个页面\n支付中心\n2 个页面\n外卖/来取\n2 个页面\n营销中心\n5 个页面\n促销中心\n3 个页面\n会员中心\n18 个页面\n礼品卡中心\n2 个页面\n评价中心\n4 个页面\n前厅管理中心\n15 个页面\n后厨管理中心\n3 个页面\n预约等位中心\n5 个页面\n报表中心\n13 个页面\n财务中心\n3 个页面\n打印中心\n2 个页面\n消息中心\n7 个页面\n库存管理中心\n5 个页面\n硬件管理中心\n15 个页面\n信贷中心\n1 个页面\n素材中心\n2 个页面\n日志管理\n1 个页面\n权限管理中心\n3 个页面\n系统设置\n6 个页面\n品牌管理\n展开全部\n收起全部\n品牌总览页面\n品牌列表页面\n品牌设置页面",
+      "fields": []
+    },
+    {
+      "id": "close-menu-preview-x",
+      "page": "品牌菜单预览",
+      "title": "右上角关闭",
+      "entry": "按页面当前可见操作进入",
+      "expect": "仅关闭预览，保留编辑草稿",
+      "before": "close-menu-preview-x-before.png",
+      "after": "close-menu-preview-x-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 178 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n2/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n品牌管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n品牌总览\n页面\n\t\n\n\n品牌列表\n页面\n\t\n\n\n品牌设置\n页面\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "cancel-menu-discard",
+      "page": "品牌菜单放弃确认",
+      "title": "继续编辑",
+      "entry": "按页面当前可见操作进入",
+      "expect": "从取消触发的确认返回，保留草稿",
+      "before": "cancel-menu-discard-before.png",
+      "after": "cancel-menu-discard-after.png",
+      "status": "captured",
+      "body": "编辑品牌菜单\n\n继承模式的门店自动同步；独立配置的门店按本店设置生效。\n\n×\n取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。\n已选 29 个分类 · 178 个页面\n全选全部菜单\n仅看已选\n查看已选\n品牌管理\n2/3\n门店管理 · 集团视角\n2/2\n门店管理 · 品牌视角\n2/2\n门店信息\n3/3\n主页\n3/3\n团队管理\n26/26\n商品中心\n19/19\n订单中心\n4/4\n支付中心\n2/2\n外卖/来取\n2/2\n营销中心\n5/5\n促销中心\n3/3\n会员中心\n18/18\n礼品卡中心\n2/2\n评价中心\n4/4\n前厅管理中心\n15/15\n后厨管理中心\n3/3\n预约等位中心\n5/5\n报表中心\n13/13\n财务中心\n3/3\n打印中心\n2/2\n消息中心\n7/7\n库存管理中心\n5/5\n硬件管理中心\n15/15\n信贷中心\n1/1\n素材中心\n2/2\n日志管理\n1/1\n权限管理中心\n3/3\n系统设置\n6/6\n品牌管理\n展开全部\n收起全部\n全选当前分类\n清空当前分类\n菜单名称\t状态\n\n品牌总览\n页面\n\t\n\n\n品牌列表\n页面\n\t\n\n\n品牌设置\n页面\n\t\n取消\n预览配置",
+      "fields": [
+        {
+          "name": "",
+          "type": "text",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "name": "",
+          "type": "checkbox",
+          "required": false,
+          "minLength": -1,
+          "maxLength": -1,
+          "readOnly": false,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "cancel-associate",
+      "page": "品牌门店",
+      "title": "关联门店取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "底部取消退出，不保存",
+      "before": "cancel-associate-before.png",
+      "after": "cancel-associate-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌门店\n关联已有门店\n批量配置菜单\n品牌开通页面\n179 个\n品牌门店\n2 家\n已配置门店菜单\n2 家\n新关联门店默认继承品牌菜单，可切换独立配置\n\t门店名称 / MID\t营业状态\t菜单配置\t最近配置\t操作\n\t米聚集团 · 演示门店 -rrioz\nM00000008 · 暂无地址\t筹备中\t独立配置 · 0 个页面\t2026/10/27 09:29:28\n受控演示\t\n查看生效菜单\n配置菜单\n\n\t米聚集团 · 演示门店 -wek3q\nM00000010 · 暂无地址\t筹备中\t继承品牌 · 172 个页面\t2026/10/27 09:29:28\nhq.admin@menusifu.cn\t\n查看生效菜单\n配置菜单",
+      "fields": []
+    },
+    {
+      "id": "cancel-store",
+      "page": "品牌门店",
+      "title": "门店配置取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "底部取消退出，不保存",
+      "before": "cancel-store-before.png",
+      "after": "cancel-store-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌门店\n关联已有门店\n批量配置菜单\n品牌开通页面\n179 个\n品牌门店\n2 家\n已配置门店菜单\n2 家\n新关联门店默认继承品牌菜单，可切换独立配置\n\t门店名称 / MID\t营业状态\t菜单配置\t最近配置\t操作\n\t米聚集团 · 演示门店 -rrioz\nM00000008 · 暂无地址\t筹备中\t独立配置 · 0 个页面\t2026/10/27 09:29:28\n受控演示\t\n查看生效菜单\n配置菜单\n\n\t米聚集团 · 演示门店 -wek3q\nM00000010 · 暂无地址\t筹备中\t继承品牌 · 172 个页面\t2026/10/27 09:29:28\nhq.admin@menusifu.cn\t\n查看生效菜单\n配置菜单",
+      "fields": []
+    },
+    {
+      "id": "cancel-batch",
+      "page": "批量配置",
+      "title": "取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "取消整批编辑，门店模式不变",
+      "before": "cancel-batch-before.png",
+      "after": "cancel-batch-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n品牌门店\n关联已有门店\n批量配置菜单\n品牌开通页面\n179 个\n品牌门店\n2 家\n已配置门店菜单\n2 家\n新关联门店默认继承品牌菜单，可切换独立配置\n\t门店名称 / MID\t营业状态\t菜单配置\t最近配置\t操作\n\t米聚集团 · 演示门店 -rrioz\nM00000008 · 暂无地址\t筹备中\t独立配置 · 0 个页面\t2026/10/27 09:29:28\n受控演示\t\n查看生效菜单\n配置菜单\n\n\t米聚集团 · 演示门店 -wek3q\nM00000010 · 暂无地址\t筹备中\t继承品牌 · 172 个页面\t2026/10/27 09:29:28\nhq.admin@menusifu.cn\t\n查看生效菜单\n配置菜单",
+      "fields": []
+    },
+    {
+      "id": "cancel-service-close",
+      "page": "关闭品牌",
+      "title": "取消",
+      "entry": "按页面当前可见操作进入",
+      "expect": "底部取消，不关闭品牌",
+      "before": "cancel-service-close-before.png",
+      "after": "cancel-service-close-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n差异与异常演示品牌\n\nmerchant-mvq0cjf2-w80xc · B00000035 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n服务状态 · 已启用\n暂停服务\n关闭品牌\n\n开通进度：待首次登录\n\n品牌正常使用服务；门店营业状态由各门店单独管理。\n\n基本信息\n品牌 ID\nmerchant-mvq0cjf2-w80xc\nBID\nB00000035\n所属集团\n米聚集团\n编码\nmerchant-mvq0cjf2-w80xc\n组织类型\n连锁\n状态\n已启用\n联系人\n演示联系人\n电话\n—\n主管理员\ndoc-flow@menusifu.cn\n合同到期\n—\nLicense\n有效\n邀请邮件\n—\n初始化完成时间\n—\n时区\nAsia/Shanghai\n经营摘要\n门店数\n2\n业态\n快餐\n产线\nPOS\n开通时间\n2026/10/27\n预设同步\n2026/10/27\n查看硬件资产\n进入商家后台\nCRM / 合同（Salesforce 演示）\nCRM 合同 ID\n—\nCRM 账户 ID\n—\n合同状态\n—\n上次同步\n—\n到期自动暂停\n是\n从 CRM 同步\n续期至\n合同续期",
+      "fields": []
+    }
+  ],
+  "errors": []
+}

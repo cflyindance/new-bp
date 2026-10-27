@@ -1,0 +1,84 @@
+const fs=require('fs'),path=require('path');const {chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=process.cwd(),out=path.join(root,'docs/项目文档/assets/merchant-operations-20261027'),log=path.join(root,'docs/verification/merchant-doc-operations-20261027/operations.json');fs.mkdirSync(out,{recursive:true});fs.mkdirSync(path.dirname(log),{recursive:true});
+const base='http://127.0.0.1:5250',items=[],errors=[];let p,browser,fixture;
+const save=()=>fs.writeFileSync(log,JSON.stringify({baseline:'64ddec8f484b2aed463dd63fcf7f111d6df4fb4b',branch:'codex/merchant-doc-operations-20261027',url:base,source:'隔离Edge上下文，本地演示；成功保存仅写该上下文',items,errors},null,2));
+const plan=(id,page,title,expect)=>{const item={id,page,title,entry:'按页面当前可见操作进入',expect,before:null,after:null,status:'planned',body:[],fields:[]};items.push(item);save();return item;};
+async function shot(name){await p.screenshot({path:path.join(out,name+'.png'),fullPage:false});return name+'.png';}
+async function op(id,page,title,expect,fn){const item=plan(id,page,title,expect);try{item.before=await shot(id+'-before');await fn();await p.waitForTimeout(180);item.after=await shot(id+'-after');item.body=(await p.locator('dialog:visible').last().count()?await p.locator('dialog:visible').last().innerText():await p.locator('main').count()?await p.locator('main').innerText():await p.locator('body').innerText()).slice(0,8000);item.fields=await p.locator('dialog:visible input,dialog:visible select,dialog:visible textarea').evaluateAll(els=>els.map(e=>({name:e.name,type:e.type,required:e.required,minLength:e.minLength,maxLength:e.maxLength,readOnly:e.readOnly,disabled:e.disabled,options:e.tagName==='SELECT'?[...e.options].map(o=>o.text):undefined})));item.status='captured';console.log(id,title);}catch(e){item.status='gap';item.reason=e.message.slice(0,350);try{item.after=await shot(id+'-failed');}catch{}console.log('GAP',id,item.reason);}save();}
+async function nav(url){await p.goto(base+'/#'+url);await p.waitForTimeout(450);}
+async function close(){let d=p.locator('dialog:visible').last();if(!await d.count())return;const c=d.locator('[data-close],[data-store-preview-close],[data-brand-preview-close],[data-log-close],[data-review-close]');if(await c.count())await c.first().click();else await p.keyboard.press('Escape');if(await p.locator('[data-ba=discard]').isVisible().catch(()=>false))await p.locator('[data-ba=discard]').click();}
+const d=()=>p.locator('dialog:visible').last();
+(async()=>{browser=await chromium.launch({channel:'msedge',headless:true});p=await browser.newPage({viewport:{width:1600,height:1050}});p.setDefaultTimeout(5000);p.on('dialog',async dialog=>{errors.push({type:dialog.type(),message:dialog.message(),nativeScreenshot:'原生层不可由页面截图捕获；测试选择确认'});await dialog.accept();});p.on('pageerror',e=>errors.push({pageerror:e.message}));
+try{await p.goto(base);await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated((await import('/src/auth/login.ts')).DEMO_LOGIN_ACCOUNT);(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('hq.admin@menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+fixture=await p.evaluate(async()=>{const s=await import('/src/config/enterprise-merchant-store.ts'),b=await import('/src/config/brand-access-store.ts');const group=s.getGroupsForSelect({allEnterprises:false})[0].groupId;s.ensureBrandCreationDemoStores(group);const stores=s.listBrandAssociationCandidates(group).slice(0,2).map(x=>x.storeId),keys=b.brandMenuChoices(['pos']).map(c=>c.key),m=s.createMerchant({name:'文档受控演示品牌',code:'',groupId:group,orgType:'chain',timezone:'Asia/Shanghai',contactName:'演示联系人',primaryAdminEmail:'',businessTypeIds:[s.getBusinessTypeOptions()[0].id],productLineIds:['pos'],initialMenuKeys:keys,initialStoreIds:stores,accountProvisioningRequired:true,activateImmediately:false});return{id:m.merchantId,group,stores,keys};});
+await nav('/m-platform/merchants');
+for(const [name,value,title] of [['groupId',fixture.group,'所属集团'],['status','onboarding','服务状态'],['progress','待开通管理员','开通进度'],['menu','yes','品牌菜单'],['stores','yes','品牌门店']])await op('filter-'+name,'品牌管理',title+'筛选','下拉即时应用，列表条件不写授权',async()=>p.locator('[data-management-filters=brand] [name='+name+']').selectOption(value));
+await op('filter-search','品牌管理','搜索查询','仅显示匹配品牌',async()=>{await p.locator('[name=query]').fill('文档受控演示品牌');await p.getByRole('button',{name:'查询',exact:true}).click();});
+await op('filter-empty','品牌管理','搜索无匹配','显示暂无匹配品牌',async()=>{await p.locator('[name=query]').fill('不存在的受控关键词');await p.getByRole('button',{name:'查询',exact:true}).click();});
+await op('filter-reset','品牌管理','重置','清空条件，恢复列表',async()=>p.locator('[data-filter-reset]').click());
+for(const [name,v] of [['from','2026-10-01'],['to','2026-10-31']])await op('filter-'+name,'品牌管理',name==='from'?'创建时间起查询':'创建时间止查询','闭区间日期查询',async()=>{await p.locator('[name='+name+']').fill(v);await p.getByRole('button',{name:'查询',exact:true}).click();});
+await op('filter-date-invalid','品牌管理','日期范围错误','起日大于止日报错，不应用',async()=>{await p.locator('[name=from]').fill('2026-11-30');await p.getByRole('button',{name:'查询',exact:true}).click();});await p.locator('[data-filter-reset]').click();
+await op('list-detail','品牌管理','详情','独立详情默认概览',async()=>p.locator(`[data-enterprise-merchant-row="${fixture.id}"] a`).first().click());
+await op('service-blocked','品牌概览','启用品牌受限','无Admin时阻止确认',async()=>p.locator('[data-brand-service=activate]').click());await close();
+for(const [tab,title] of [['org','品牌门店'],['capabilities','品牌菜单'],['accounts','品牌管理员'],['changelog','变更记录']])await op('tab-'+tab,'品牌详情',title+'页签','保持品牌上下文，切到对应页',async()=>p.locator(`a[href="#/m-platform/merchants/${fixture.id}/${tab}"]`).first().click());
+await nav('/m-platform/merchants/'+fixture.id+'/accounts');
+await op('admin-open','品牌管理员','开通Admin','显示姓名账号密码及开通并启用',async()=>p.locator('[data-ba=new-admin]').click());
+await op('admin-cancel-empty','Admin开通','未修改取消','关闭且无账号写入',close);
+await p.locator('[data-ba=new-admin]').click();await d().locator('[name=name]').fill('演示管理员一');await d().locator('[name=email]').fill('doc-owner@menusifu.cn');await d().locator('[name=password]').fill('doc-local-pass');
+await op('admin-invalid-email','Admin开通','账号域名错误','拒绝保存且保留输入',async()=>{await d().locator('[name=email]').fill('doc@example.invalid');await d().locator('[type=submit]').click();});await d().locator('[name=email]').fill('doc-owner@menusifu.cn');
+await op('admin-create-success','Admin开通','开通并启用','一次提交新增已启用Admin，品牌仍待启用',async()=>d().locator('[type=submit]').click());
+let admin=await p.locator('[data-brand-admin]').first().getAttribute('data-brand-admin');
+await op('admin-last-block','品牌管理员','停用最后Admin','显示保护提示且确认禁用',async()=>p.locator(`[data-ba="admin-status:${admin}"]`).click());await close();
+await op('admin-manage','品牌管理员','管理','姓名可改，账号只读，无密码角色混入',async()=>p.locator(`[data-ba="admin:${admin}"]`).click());await d().locator('[name=name]').fill('演示管理员修改');
+await op('discard-open','管理员资料','取消有修改','独立放弃修改确认',close);
+// close() deliberately resolves discard; recapture the actual confirmation through explicit controls.
+await p.locator(`[data-ba="admin:${admin}"]`).click();await d().locator('[name=name]').fill('演示管理员修改');
+await op('discard-confirm','管理员资料','关闭有修改','显示有未保存的修改，是否放弃',async()=>d().locator('[data-close]').first().click());
+await op('discard-keep','放弃确认','继续编辑','返回编辑且保留姓名',async()=>p.locator('[data-ba=keep]').click());
+await op('admin-save','管理员资料','保存修改','返回列表且姓名变更',async()=>d().locator('[type=submit]').click());
+await p.locator(`[data-ba="admin:${admin}"]`).click();await d().locator('[name=name]').fill('应放弃');await d().locator('[data-close]').first().click();await op('discard-abandon','放弃确认','放弃修改','关闭两层弹框，不保存姓名',async()=>p.locator('[data-ba=discard]').click());
+await op('admin-password','品牌管理员','重设密码','独立重设密码弹框',async()=>p.locator(`[data-ba="admin-password:${admin}"]`).click());await d().locator('[name=password]').fill('doc-new-local-pass');await op('admin-password-save','重设密码','确认重设密码','保存后旧密码失效，审计不含密码',async()=>d().locator('[type=submit]').click());
+await p.locator('[data-ba=new-admin]').click();await d().locator('[name=name]').fill('演示管理员二');await d().locator('[name=email]').fill('doc-owner2@menusifu.cn');await d().locator('[name=password]').fill('doc-local-pass');await d().locator('[type=submit]').click();
+await op('admin-disable-open','品牌管理员','停用账号','非最后Admin可确认停用',async()=>p.locator(`[data-ba="admin-status:${admin}"]`).click());await op('admin-disable-save','停用Admin','确认停用','账号显示已停用',async()=>d().locator('[type=submit]').click());
+await op('admin-enable-open','品牌管理员','启用账号','显示启用确认',async()=>p.locator(`[data-ba="admin-status:${admin}"]`).click());await op('admin-enable-save','启用Admin','确认启用','账号恢复启用',async()=>d().locator('[type=submit]').click());
+await nav('/m-platform/merchants/'+fixture.id);
+await op('service-activate-open','品牌概览','启用品牌','具备Admin与菜单时允许填写原因确认',async()=>p.locator('[data-brand-service=activate]').click());await d().locator('[name=reason]').fill('受控演示启用');await op('service-activate-save','启用品牌','确认启用','服务状态变已启用',async()=>d().locator('[type=submit]').click());
+for(const [action,title] of [['suspend','暂停服务'],['resume','恢复服务']]){await op('service-'+action+'-open','品牌概览',title,'显示影响范围与操作原因',async()=>p.locator('[data-brand-service='+action+']').click());await op('service-'+action+'-cancel',title,'取消','无更改关闭',close);await p.locator('[data-brand-service='+action+']').click();await d().locator('[name=reason]').fill('受控演示'+title);await op('service-'+action+'-save',title,'确认'+title,'服务状态更新并记录原因',async()=>d().locator('[type=submit]').click());}
+await nav('/m-platform/merchants/'+fixture.id+'/capabilities');
+await op('menu-edit-open','品牌菜单','编辑品牌菜单','显示当前选择及品牌影响说明',async()=>p.locator('[data-ba=edit-menu]').click());
+await op('menu-search','品牌菜单编辑','菜单搜索','仅过滤展示，不改授权',async()=>d().locator('[data-menu-search]').fill('订单'));await d().locator('[data-menu-search]').fill('');
+const cb=d().locator('input[type=checkbox]').last();await cb.uncheck();
+await op('menu-preview-open','品牌菜单编辑','预览配置','独立预览弹框，只新增关闭两页签',async()=>d().locator('[type=submit]').click());
+await op('menu-preview-removed','品牌菜单预览','本次关闭','展示关闭树与空/有变化结果',async()=>p.locator('[data-brand-preview-filter=removed]').click());
+await op('menu-preview-added','品牌菜单预览','本次新增','展示新增树',async()=>p.locator('[data-brand-preview-filter=added]').click());
+await op('menu-preview-back','品牌菜单预览','返回修改','关闭预览保留选择',async()=>p.locator('[data-brand-preview-close]').last().click());await d().locator('[type=submit]').click();
+await op('menu-save-success','品牌菜单预览','确认保存','菜单生效并刷新树',async()=>p.locator('[data-brand-preview-save]').click());
+await nav('/m-platform/merchants/'+fixture.id+'/org');
+await op('store-search','品牌门店','搜索门店','显示匹配门店',async()=>p.locator('[data-store-query]').fill('不存在的门店'));await p.locator('[data-store-query]').fill('');
+await op('store-effective','品牌门店','查看生效菜单','独立弹框展示该店已保存完整树',async()=>p.locator('[data-ba^="effective:"]').first().click());await op('store-effective-close','生效菜单','关闭','回到门店列表，无写入',close);
+await op('store-edit-open','品牌门店','配置菜单','继承/独立配置方式',async()=>p.locator('[data-ba^="store:"]').first().click());
+await op('store-independent','门店菜单编辑','切换独立配置','出现可编辑菜单树',async()=>d().locator('[name=mode]').selectOption('replace'));
+await op('store-preview','门店菜单编辑','预览配置','显示本次新增/关闭',async()=>d().locator('[type=submit]').click());
+await op('store-preview-removed','门店菜单预览','本次关闭','查看该门店关闭节点',async()=>p.locator('[data-preview-filter=removed]').click());
+await op('store-preview-back','门店菜单预览','返回修改','保留原编辑',async()=>p.locator('[data-store-preview-close]').last().click());await d().locator('[type=submit]').click();
+await op('store-save','门店菜单预览','确认保存','独立模式保存',async()=>p.locator('[data-store-preview-save]').click());
+await p.locator('[data-ba^="store:"]').first().click();await op('store-inherit','门店编辑','切换继承','只读品牌门店视角树',async()=>d().locator('[name=mode]').selectOption('inherit'));await d().locator('[type=submit]').click();await op('store-inherit-save','继承预览','确认保存','保存继承模式',async()=>p.locator('[data-store-preview-save]').click());
+await op('batch-no-selection','品牌门店','未选门店批量配置','错误提示先选择门店',async()=>p.locator('[data-ba=batch]').click());
+await op('store-select-all','品牌门店','全选门店','选中当前可见门店',async()=>p.locator('[data-select-all]').check());await op('batch-open','品牌门店','批量配置菜单','显示批量模式',async()=>p.locator('[data-ba=batch]').click());await op('batch-preview','批量编辑','预览配置','同集合可统一展示，不重复求和',async()=>d().locator('[type=submit]').click());await op('batch-preview-added','批量预览','本次新增','同集合不显示门店切换',async()=>p.locator('[data-preview-filter=added]').click());await op('batch-preview-close','批量预览','关闭预览','回到编辑保留草稿',async()=>p.locator('[data-store-preview-close]').first().click());await close();
+await op('association-open','品牌门店','关联已有门店','同集团候选，只关联不重建MID',async()=>p.locator('[data-ba=associate]').click());await op('association-cancel','关联已有门店','取消','保持原归属',close);
+await nav('/m-platform/merchants/'+fixture.id+'/changelog');await op('log-filter','变更记录','类型筛选','按品牌菜单类型筛选',async()=>{const sel=p.locator('[data-log-category]');const v=await sel.locator('option').nth(1).getAttribute('value');await sel.selectOption(v);});await p.locator('[data-log-category]').selectOption('');
+await op('log-detail','变更记录','查看详情','来源对象字段前后与菜单变化',async()=>p.locator('[data-change-detail]').first().click());await op('log-close','变更详情','关闭','返回日志列表',close);
+// Creation wizard screenshots use real controls and a zero-store creation branch.
+await nav('/m-platform/merchants');await op('create-open','品牌管理','新建品牌','三步独立页面',async()=>p.locator('a[href="#/m-platform/merchants/new"]').first().click());
+await op('create-invalid','创建品牌','信息不完整下一步','原生必填校验或页面错误，不创建',async()=>p.locator('[data-next]').click());
+await p.locator('[name=name]').fill('流程文档新建演示');await p.locator('[name=groupId]').selectOption(fixture.group);await p.locator('[name=contactName]').fill('受控联系人');await p.locator('[name=businessTypeIds]').first().check();
+await op('create-next-stores','品牌信息','下一步','选择品牌门店',async()=>p.locator('[data-next]').click());
+await op('create-store-search','选择品牌门店','搜索候选','名称MID地址邮编过滤',async()=>p.locator('[data-create-store-search]').fill('不存在'));await p.locator('[data-create-store-search]').fill('');
+await op('create-prev','选择品牌门店','上一步','字段保留回基本信息',async()=>p.locator('[data-ba=prev]').click());await p.locator('[data-next]').click();
+await op('create-next-menus','选择品牌门店','下一步开通菜单','零店允许继续',async()=>p.locator('[data-next]').click());
+await op('create-menu-select','开通品牌菜单','勾选菜单','当前节点级联选择',async()=>p.locator('[data-create-picker] input[type=checkbox]').first().check());
+await op('create-review','开通品牌菜单','核对创建信息','独立弹框含品牌门店菜单树',async()=>p.locator('[data-next]').click());
+await op('create-review-back','核对创建信息','返回修改','不创建保留向导',async()=>p.locator('[data-review-close]').last().click());await p.locator('[data-next]').click();
+await op('create-confirm','核对创建信息','确认创建品牌','创建待启用品牌进入管理员',async()=>p.locator('[data-confirm-create]').click());
+await nav('/m-platform/merchants/'+fixture.id);await op('service-close-open','品牌概览','关闭品牌','提示无法从本页恢复',async()=>p.locator('[data-brand-service=close]').click());await d().locator('[name=reason]').fill('文档受控关闭');await op('service-close-save','关闭品牌','确认关闭','已关闭，不能代登录',async()=>d().locator('[type=submit]').click());
+}finally{save();await browser.close();console.log('DONE',items.length,'gaps',items.filter(x=>x.status!=='captured').length);}})().catch(e=>{errors.push({fatal:e.stack});save();console.error(e);process.exitCode=1;});
