@@ -377,9 +377,5 @@
 .ma-line-card > strong { grid-column:1/-1; font-size:21px; }
 .ma-line-card small { color:var(--color-muted-foreground); font-size:11px; font-weight:400; }
 .ma-line-card > small { grid-column:1/-1; }
-.ma-expanded-row { background:var(--ma-light); }
-.ma-device-expansion > td { padding:18px!important; background:var(--color-muted); white-space:normal!important; }
-.ma-device-expansion .ma-panel { margin-top:14px; background:var(--color-background); }
-.ma-device-expansion .ma-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .ma-store-drawer .ma-panel-title { align-items:center; }
 @media(max-width:700px) { .ma-store-drawer {width:100vw} .ma-drawer-heading {padding:16px} .ma-drawer-body {padding:16px} .ma-drawer-tabs {padding:0 10px} .ma-line-overview {grid-template-columns:repeat(2,minmax(0,1fr))} }

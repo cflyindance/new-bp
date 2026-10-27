@@ -1,7 +1,7 @@
 import "./merchant-activity.css";
 import {
-  PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope, periodOrders,
-  scopeOrders, shiftDate, summarizeActivity, validatePeriod,
+  PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope,
+  shiftDate, summarizeActivity, validatePeriod,
   type ActivityMetrics, type ActivityPeriod, type ActivityScope, type ActivityStatus,
 } from "./merchant-activity-domain";
 import { activityDemoData as data, activityDemoOrders as resolved } from "./merchant-activity-data";
@@ -105,43 +105,16 @@ function lineOverview(scope: ActivityScope): string {
 function devicesPage(scope: ActivityScope): string {
   const selected = { storeId: scope.storeId, line: scope.line };
   const devices = devicesForScope(data, resolved, selected, state.period);
-  // An explicit historical deep link must still expose its selected device when the period has no orders.
-  if (scope.deviceId && !devices.some(device => device.id === scope.deviceId)) {
-    const selectedDevice = data.devices.find(device => device.id === scope.deviceId);
-    if (selectedDevice) devices.push(selectedDevice);
-  }
   const rows = devices.map(device => {
     const deviceScope = { ...selected, deviceId: device.id };
     const m = metrics(deviceScope), bindings = currentBindings(data, deviceScope);
-    const expanded = scope.deviceId === device.id;
-    const toggle = href(expanded ? selected : deviceScope);
-    const detailId = 'ma-device-detail-' + device.id;
-    const linkAttrs = ' data-ma-device-toggle="' + esc(device.id) + '" aria-expanded="' + expanded + '" aria-controls="' + esc(detailId) + '"';
-    return '<tr class="' + (expanded ? 'ma-expanded-row' : '') + '"><td><a class="ma-link"' + linkAttrs + ' href="' + toggle + '">' + esc(device.name) +
-      '</a><small>' + esc(device.id) + '</small></td><td>' + (bindings.length ? bindings.map(b => esc(b.licenseId)).join('<br>') : '历史绑定') +
-      '</td><td>' + (bindings.length ? [...new Set(bindings.map(b => b.line))].map(esc).join(' / ') : '历史绑定') + '</td><td>' + badge(m.status) + '</td>' + metricCells(m) +
-      '<td><a class="ma-link ma-nowrap"' + linkAttrs + ' href="' + toggle + '">' + (expanded ? '收起明细 ↑' : '展开明细 ↓') + '</a></td></tr>' +
-      (expanded ? '<tr class="ma-device-expansion"><td colspan="12"><div id="' + esc(detailId) + '" role="region" aria-label="' + esc(device.name) + '明细">' + devicePage(deviceScope) + '</div></td></tr>' : '');
+    return '<tr><td>' + esc(device.name) + '<small>' + esc(device.id) + '</small></td><td>' +
+      (bindings.length ? bindings.map(b => esc(b.licenseId)).join('<br>') : '历史绑定') + '</td><td>' +
+      (bindings.length ? [...new Set(bindings.map(b => b.line))].map(esc).join(' / ') : '历史绑定') + '</td><td>' + badge(m.status) + '</td>' + metricCells(m) + '</tr>';
   }).join('');
   return '<section class="ma-panel"><div class="ma-panel-title"><h3>' + (scope.line ? esc(scope.line) + ' · 设备' : '全部产线 · 设备') + '</h3><span>' + devices.length +
     ' 台设备</span></div><div class="ma-table-wrap"><table><thead><tr><th>点单设备／设备 ID</th><th>当前 License</th><th>当前产线</th><th>当前活跃状态</th>' + metricHeaders +
-    '<th>操作</th></tr></thead><tbody>' + (rows || '<tr><td colspan="12" class="ma-empty">当前范围暂无绑定设备，期间也没有可识别的设备订单。</td></tr>') + '</tbody></table></div></section>';
-}
-function devicePage(scope: ActivityScope): string {
-  const device = data.devices.find(d => d.id === scope.deviceId)!;
-  const unavailable = data.stores.find(s => s.id === scope.storeId)!.quality === "error";
-  const orders = periodOrders(scopeOrders(resolved, scope), state.period).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-  const bindings = data.bindings.filter(b => b.deviceId === device.id).sort((a, b) => b.from.localeCompare(a.from));
-  const rows = orders.slice(0, 20).map(o => '<tr><td>' + esc(o.id) + '</td><td>' + time(o.submittedAt) + '</td><td>' +
-    ({ paid: "支付完成", cancelled: "已取消", submitted: "已提交", draft: "草稿" }[o.status]) + '</td><td>' + esc(o.binding!.line) +
-    '</td><td>' + esc(o.binding!.licenseId) + '</td></tr>').join("");
-  return scopeSummary(scope) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>' + esc(device.name) +
-    '</h3><p>设备 ID：' + esc(device.id) + ' · 当前查看产线：' + esc(scope.line ?? "全部产线") + '</p></div></div><div class="ma-binding-list">' +
-    bindings.map(b => '<p><strong>' + esc(b.line) + '</strong><span>' + esc(b.licenseId) + '</span><span>' + b.from.slice(0, 10) +
-      (b.to ? ' 至 ' + b.to.slice(0, 10) + '（不含）' : ' 起至今') + '</span></p>').join("") + '</div></section>' +
-    '<section class="ma-panel"><div class="ma-panel-title"><div><h3>点单记录</h3><p>' + (unavailable ? '数据异常，点单记录暂不可用。' : '查询期间共 ' + orders.length +
-    ' 单，展示最近 20 单；统计指标包含全部符合条件的订单。') + '</p></div></div><div class="ma-table-wrap"><table><thead><tr><th>业务订单号</th><th>提交时间</th><th>订单状态</th><th>点单产线</th><th>下单时 License</th></tr></thead><tbody>' +
-    (unavailable ? '<tr><td colspan="5" class="ma-empty">订单数据不可用，请勿按零订单判断设备使用情况。</td></tr>' : rows || '<tr><td colspan="5" class="ma-empty">统计期间无点单记录。</td></tr>') + '</tbody></table></div></section>';
+    '</tr></thead><tbody>' + (rows || '<tr><td colspan="11" class="ma-empty">当前范围暂无绑定设备，期间也没有可识别的设备订单。</td></tr>') + '</tbody></table></div></section>';
 }
 function storeDrawer(scope: ActivityScope): string {
   const store = data.stores.find(s => s.id === scope.storeId)!, m = metrics({ storeId: scope.storeId });
@@ -222,9 +195,6 @@ export function bindActivityPage(onMount: () => void): void {
       state.drawerScroll = 0;
       const next = parsedScope(anchor.hash.slice(1));
       state.focusAfter = '[data-ma-line-tab="' + CSS.escape(next?.line ?? '') + '"]';
-    } else if (anchor.matches('[data-ma-device-toggle]')) {
-      state.drawerScroll = body?.scrollTop ?? 0;
-      state.focusAfter = '[data-ma-device-toggle="' + CSS.escape(anchor.dataset.maDeviceToggle!) + '"]';
     }
   });
   const closeDrawer = () => { state.focusAfter = ''; location.hash = ACTIVITY_PATH; };
