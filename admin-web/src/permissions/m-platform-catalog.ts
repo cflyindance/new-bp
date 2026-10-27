@@ -26,6 +26,7 @@ export const M_MODULES: MModule[] = [
   ])] },
   { id: 'merchants', title: '品牌管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
+    page('merchant-activity', '商户使用活跃分析', `${merchants}/activity`, false),
     page('groups', '集团管理', `${merchants}/groups`, true, [action('delete', '删除集团', '[data-group-delete]')]),
     page('brands', '品牌列表', merchants, true, [
       action('impersonate', '进入商家后台', '[data-merchant-impersonate]'),
@@ -84,6 +85,7 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
   if (path === `${permissions}/staff-accounts`) return M_PAGES.find(p => p.id === 'staff');
   if (path === '/m-platform/hardware') return M_PAGES.find(p => p.id === 'hardware-overview');
   const prefixes: [string, string][] = [
+    [`${merchants}/activity/`, 'merchant-activity'],
     [`${permissions}/subscription-services/`, 'services'], [`${permissions}/merchant-subscriptions/`, 'subscriptions'],
     [`${permissions}/roles/`, 'roles'], [`${permissions}/staff/`, 'staff'],
     [`${merchants}/groups/`, 'groups'], [`${merchants}/stores/`, 'stores'],

@@ -22,6 +22,7 @@ import {
   NAV_BLUEPRINT_ROUTE_PREFIX,
 } from "../config/nav-blueprint-ui";
 import { mPageForPath } from '../permissions/m-platform-catalog';
+import { activityPageTitle, bindActivityPage, isActivityPath, renderActivityPage } from '../config/merchant-activity-ui';
 import {
   findSubscriptionAdminPageTitle,
   isAnySubscriptionAdminPath,
@@ -76,6 +77,7 @@ function resolveMPlatformPageTitle(path: string): { title: string; module: strin
   if (!mCanVisit(path)) return { title: "访问受限", module: "M 平台" };
   return (
     findNavBlueprintPageTitle(path) ??
+    activityPageTitle(path) ??
     findSubscriptionAdminPageTitle(path) ??
     (isMPlatformPermissionsPath(path) ? { title: mPageForPath(path)?.title ?? "权限管理中心", module: "M 平台" } : null) ??
     findHardwarePageTitle(path) ??
@@ -109,6 +111,7 @@ function renderMPlatformHeader(path: string): string {
 
 function renderMPlatformContent(path: string): string {
   if (!mCanVisit(path)) return mDenied();
+  if (isActivityPath(path)) return renderActivityPage(path);
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
   if (isAnySubscriptionAdminPath(path)) return renderSubscriptionServicePage(path);
   if (isMPlatformPermissionsPath(path)) return renderMCenter(path);
@@ -184,6 +187,8 @@ export function bindMPlatformShell(onMount: () => void): void {
   bindNavBlueprint(onMount);
   if (isAnySubscriptionAdminPath(path)) {
     bindSubscriptionServicePage(onMount);
+  } else if (isActivityPath(path)) {
+    bindActivityPage(onMount);
   } else if (isMPlatformPermissionsPath(path)) {
     bindMCenter(onMount);
   } else if (isMPlatformHardwarePath(path)) {
