@@ -9,7 +9,7 @@ export function groupMNavigation(authorized: MModule[]): MModule[] {
     const activities = activityIds.flatMap(id => module.pages.filter(page => page.id === id));
     return [
       ...(pages.length ? [{ ...module, pages }] : []),
-      ...(activities.length ? [{ id: 'activity-analysis', title: '使用活跃分析', pages: activities }] : []),
+      ...(activities.length ? [{ id: 'activity-analysis', title: '系统使用分析', pages: activities }] : []),
     ];
   });
 }

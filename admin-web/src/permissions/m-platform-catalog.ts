@@ -26,7 +26,7 @@ export const M_MODULES: MModule[] = [
   ])] },
   { id: 'merchants', title: '品牌管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
-    page('merchant-activity', '商户使用活跃分析', `${merchants}/activity`, false),
+    page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
     page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
     page('groups', '集团管理', `${merchants}/groups`, true, [action('delete', '删除集团', '[data-group-delete]')]),
     page('brands', '品牌列表', merchants, true, [
