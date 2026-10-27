@@ -928,71 +928,9 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
     },
   ];
 
-  const posStoreRequests: PosStoreProvisioningRequest[] = [
-    {
-      requestId: "pos-req-001",
-      enterpriseId: miju,
-      storeName: "深圳南山科技园店",
-      address: "深圳市南山区科技园南路",
-      contactName: "赵店长",
-      contactPhone: "13700005555",
-      posDeviceId: "POS-SZ-NS-001",
-      posLocation: "深圳南山 · 1号收银台",
-      applicantNote: "本地 POS 首次联网申请开通",
-      status: "pending",
-      createdAt: "2026-06-24T09:00:00.000Z",
-      updatedAt: "2026-06-24T09:00:00.000Z",
-    },
-    {
-      requestId: "pos-req-002",
-      enterpriseId: miju,
-      brandName: "杭城小笼",
-      storeName: "杭州滨江店",
-      address: "杭州市滨江区网商路",
-      contactName: "孙经理",
-      posDeviceId: "POS-HZ-BJ-002",
-      status: "approved",
-      createdBid: "B00000011",
-      createdMerchantId: "merchant-store-hz-bj",
-      createdAt: "2026-06-18T10:00:00.000Z",
-      updatedAt: "2026-06-19T08:00:00.000Z",
-      resolvedAt: "2026-06-19T08:00:00.000Z",
-      resolvedBy: DEMO_OPERATOR,
-    },
-  ];
-
-  const requests: MerchantProvisioningRequest[] = [
-    {
-      requestId: "mreq-001",
-      enterpriseId: miju,
-      merchantName: "杭城小笼",
-      orgType: "single-store",
-      contactName: "王老板",
-      contactPhone: "13700003333",
-      primaryAdminEmail: "hangcheng.admin@menusifu.cn",
-      applicantEmail: "sales.wang@partner.cn",
-      applicantOrg: "华东渠道部",
-      notes: "意向开通 POS + 会员，首店杭州滨江",
-      status: "pending",
-      createdAt: "2026-06-20T08:00:00.000Z",
-      updatedAt: "2026-06-20T08:00:00.000Z",
-    },
-    {
-      requestId: "mreq-002",
-      enterpriseId: miju,
-      merchantName: "蜀味烧烤",
-      orgType: "chain",
-      contactName: "刘总",
-      contactPhone: "13600004444",
-      primaryAdminEmail: "shuwwei.admin@menusifu.cn",
-      applicantEmail: "channel.liu@partner.cn",
-      applicantOrg: "西南大区",
-      notes: "计划 8 店连锁，需 Kiosk 产线",
-      status: "pending",
-      createdAt: "2026-06-22T11:30:00.000Z",
-      updatedAt: "2026-06-22T11:30:00.000Z",
-    },
-  ];
+  // 仅预设已存在的品牌和门店，不再模拟外部开通审批队列。
+  const posStoreRequests: PosStoreProvisioningRequest[] = [];
+  const requests: MerchantProvisioningRequest[] = [];
 
   const slaMetrics = merchants.map((m) => buildDefaultSlaMetrics(m.merchantId));
   enrichLicenseFields({ enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics });
@@ -2624,65 +2562,11 @@ export function submitProvisioningRequest(
   input: SubmitProvisioningRequestInput,
   applicantEmail = DEMO_OPERATOR,
 ): MerchantProvisioningRequest {
-  const snap = readSnapshot();
-  const request: MerchantProvisioningRequest = {
-    requestId: genId("mreq"),
-    enterpriseId: activeEnterpriseId(),
-    merchantName: input.merchantName.trim(),
-    orgType: input.orgType,
-    contactName: input.contactName.trim(),
-    contactPhone: input.contactPhone?.trim(),
-    primaryAdminEmail: input.primaryAdminEmail.trim(),
-    applicantEmail: input.applicantEmail.trim() || applicantEmail,
-    applicantOrg: input.applicantOrg?.trim(),
-    notes: input.notes?.trim(),
-    status: "pending",
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
-  snap.requests.unshift(request);
-  appendChangelog(snap, {
-    merchantId: "enterprise",
-    action: "request.submit",
-    operatorEmail: request.applicantEmail,
-    detail: `提交开通申请：${request.merchantName}`,
-  });
-  writeSnapshot(snap);
-  return request;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function approveProvisioningRequest(requestId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const request = snap.requests.find((r) => r.requestId === requestId);
-  if (!request || request.status !== "pending") return null;
-  const merchant = createMerchant(
-    {
-      name: request.merchantName,
-      code: slugCode(request.merchantName),
-      groupId: ensureDefaultGroupForEnterprise(snap, request.enterpriseId).groupId,
-      orgType: request.orgType,
-      timezone: "Asia/Shanghai",
-      contactName: request.contactName,
-      contactPhone: request.contactPhone,
-      primaryAdminEmail: request.primaryAdminEmail,
-      businessTypeIds: ["hotpot"],
-      productLineIds: ["pos"],
-      firstStoreName: request.orgType === "single-store" ? `${request.merchantName} · 总店` : undefined,
-      sendInviteEmail: true,
-    },
-    operatorEmail,
-  );
-  const refreshed = readSnapshot();
-  const req = refreshed.requests.find((r) => r.requestId === requestId);
-  if (req) {
-    req.status = "approved";
-    req.updatedAt = nowIso();
-    req.resolvedAt = nowIso();
-    req.resolvedBy = operatorEmail;
-    req.createdMerchantId = merchant.merchantId;
-    writeSnapshot(refreshed);
-  }
-  return merchant;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function rejectProvisioningRequest(
@@ -2690,22 +2574,7 @@ export function rejectProvisioningRequest(
   reason: string,
   operatorEmail = DEMO_OPERATOR,
 ): MerchantProvisioningRequest | null {
-  const snap = readSnapshot();
-  const request = snap.requests.find((r) => r.requestId === requestId);
-  if (!request || request.status !== "pending") return null;
-  request.status = "rejected";
-  request.rejectReason = reason.trim() || "未说明原因";
-  request.updatedAt = nowIso();
-  request.resolvedAt = nowIso();
-  request.resolvedBy = operatorEmail;
-  appendChangelog(snap, {
-    merchantId: "enterprise",
-    action: "request.reject",
-    operatorEmail,
-    detail: `驳回开通申请「${request.merchantName}」：${request.rejectReason}`,
-  });
-  writeSnapshot(snap);
-  return request;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function getPosStoreRequests(status?: PosStoreProvisioningRequest["status"]): PosStoreProvisioningRequest[] {
@@ -2719,78 +2588,11 @@ export function submitPosStoreRequest(
   input: SubmitPosStoreRequestInput,
   operatorEmail = DEMO_OPERATOR,
 ): PosStoreProvisioningRequest {
-  const snap = readSnapshot();
-  const request: PosStoreProvisioningRequest = {
-    requestId: genId("pos-req"),
-    enterpriseId: activeEnterpriseId(),
-    brandName: input.brandName?.trim(),
-    storeName: input.storeName.trim(),
-    address: input.address?.trim(),
-    contactName: input.contactName?.trim(),
-    contactPhone: input.contactPhone?.trim(),
-    posDeviceId: input.posDeviceId?.trim(),
-    posLocation: input.posLocation?.trim(),
-    applicantNote: input.applicantNote?.trim(),
-    status: "pending",
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
-  snap.posStoreRequests.unshift(request);
-  appendChangelog(snap, {
-    merchantId: "enterprise",
-    action: "pos-store.submit",
-    operatorEmail,
-    detail: `本地 POS 提交门店申请：${request.storeName}`,
-  });
-  writeSnapshot(snap);
-  return request;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function approvePosStoreRequest(requestId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const request = snap.posStoreRequests.find((r) => r.requestId === requestId);
-  if (!request || request.status !== "pending") return null;
-  const bid = generateNextBid(snap);
-  writeSnapshot(snap);
-  const merchant = createMerchant(
-    {
-      name: request.brandName?.trim() || request.storeName,
-      code: slugCode(request.brandName?.trim() || request.storeName),
-      groupId: ensureDefaultGroupForEnterprise(snap, request.enterpriseId).groupId,
-      orgType: "single-store",
-      timezone: "Asia/Shanghai",
-      contactName: request.contactName ?? "门店管理员",
-      contactPhone: request.contactPhone,
-      primaryAdminEmail: `${slugCode(request.storeName)}.admin@pos.menusifu.cn`,
-      businessTypeIds: ["full-service"],
-      productLineIds: ["pos"],
-      bid,
-      firstStoreAddress: request.address,
-      activateImmediately: true,
-      sendInviteEmail: false,
-    },
-    operatorEmail,
-  );
-  const refreshed = readSnapshot();
-  const linked = refreshed.merchants.find((m) => m.merchantId === merchant.merchantId);
-  if (linked) linked.address = request.address;
-  const req = refreshed.posStoreRequests.find((r) => r.requestId === requestId);
-  if (req) {
-    req.status = "approved";
-    req.updatedAt = nowIso();
-    req.resolvedAt = nowIso();
-    req.resolvedBy = operatorEmail;
-    req.createdBid = bid;
-    req.createdMerchantId = merchant.merchantId;
-  }
-  appendChangelog(refreshed, {
-    merchantId: merchant.merchantId,
-    action: "pos-store.approve",
-    operatorEmail,
-    detail: `POS 门店申请通过，分配 BID ${bid}`,
-  });
-  writeSnapshot(refreshed);
-  return merchant;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function rejectPosStoreRequest(
@@ -2798,22 +2600,7 @@ export function rejectPosStoreRequest(
   reason: string,
   operatorEmail = DEMO_OPERATOR,
 ): PosStoreProvisioningRequest | null {
-  const snap = readSnapshot();
-  const request = snap.posStoreRequests.find((r) => r.requestId === requestId);
-  if (!request || request.status !== "pending") return null;
-  request.status = "rejected";
-  request.rejectReason = reason.trim() || "未说明原因";
-  request.updatedAt = nowIso();
-  request.resolvedAt = nowIso();
-  request.resolvedBy = operatorEmail;
-  appendChangelog(snap, {
-    merchantId: "enterprise",
-    action: "pos-store.reject",
-    operatorEmail,
-    detail: `驳回 POS 门店申请「${request.storeName}」：${request.rejectReason}`,
-  });
-  writeSnapshot(snap);
-  return request;
+  throw new Error("商户开通由外部平台完成，M 平台不再支持开通申请或审批。");
 }
 
 export function getMerchantByBid(bid: string): EnterpriseMerchant | undefined {
@@ -2829,30 +2616,6 @@ export function getMerchantTodos(): MerchantTodoItem[] {
   const eid = activeEnterpriseId();
   const merchants = snap.merchants.filter((m) => m.enterpriseId === eid);
   const todos: MerchantTodoItem[] = [];
-  for (const request of snap.requests.filter((r) => r.status === "pending" && r.enterpriseId === eid)) {
-    todos.push({
-      id: `todo-req-${request.requestId}`,
-      kind: "request",
-      title: `待审核开通申请：${request.merchantName}`,
-      detail: `${request.applicantOrg ?? request.applicantEmail} · ${request.orgType === "chain" ? "连锁" : "单店"}`,
-      href: "/m-platform/merchants/requests",
-      requestId: request.requestId,
-      priority: "high",
-      at: request.createdAt,
-    });
-  }
-  for (const request of snap.posStoreRequests.filter((r) => r.status === "pending" && r.enterpriseId === eid)) {
-    todos.push({
-      id: `todo-pos-${request.requestId}`,
-      kind: "request",
-      title: `待审核 POS 门店：${request.storeName}`,
-      detail: `${request.posDeviceId ?? "本地 POS"} · ${request.address ?? "—"}`,
-      href: "/m-platform/merchants/requests",
-      requestId: request.requestId,
-      priority: "high",
-      at: request.createdAt,
-    });
-  }
   for (const merchant of merchants) {
     if (merchant.status === "onboarding" || merchant.status === "draft") {
       todos.push({

@@ -1,0 +1,14 @@
+{
+  "access": "read",
+  "note": "当前页面为只读，暂无修改权限。",
+  "buttons": [
+    {
+      "text": "查询",
+      "disabled": true
+    },
+    {
+      "text": "重置",
+      "disabled": true
+    }
+  ]
+}

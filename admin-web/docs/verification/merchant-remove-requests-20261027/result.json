@@ -1,0 +1,45 @@
+{
+  "baseline": "64ddec8f",
+  "branch": "codex/merchant-remove-requests-20261027",
+  "url": "http://127.0.0.1:5251",
+  "checks": [
+    "overview available, no request/create entries",
+    "brands available, no request/create entries",
+    "stores available, no request/create entries",
+    "existing default demo brands, admins, menus and stores retained",
+    "legacy request writes rejected without state changes; no seeded requests or permission resources",
+    "old request retained for history without actionable todos",
+    "requests redirected to permission-checked overview",
+    "new redirected to permission-checked overview",
+    "requests/archive redirected to permission-checked overview",
+    "old route does not grant M access to B-only account"
+  ],
+  "presets": [
+    {
+      "id": "merchant-zhangji",
+      "admins": 1,
+      "menus": 806,
+      "stores": 2
+    },
+    {
+      "id": "merchant-tea-one",
+      "admins": 1,
+      "menus": 806,
+      "stores": 1
+    },
+    {
+      "id": "merchant-menusifu-na",
+      "admins": 1,
+      "menus": 806,
+      "stores": 1
+    }
+  ],
+  "state": {
+    "blocked": 6,
+    "unchanged": true,
+    "requestCount": 0,
+    "posCount": 0,
+    "resource": false
+  },
+  "errors": []
+}

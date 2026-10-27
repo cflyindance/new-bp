@@ -35,10 +35,6 @@ export const M_MODULES: MModule[] = [
     ]),
     page('stores', '门店列表', `${merchants}/stores`, true, [action('status', '变更门店状态', '[data-merchant-store-status]')]),
     page('org-tree', '组织树', `${merchants}/org-tree`, false),
-    page('requests', '开通申请 / 待办', `${merchants}/requests`, true, [
-      action('approve', '批准申请', '[data-merchant-request-approve],[data-pos-store-request-approve]'),
-      action('reject', '驳回申请', '[data-merchant-request-reject],[data-pos-store-request-reject]'),
-    ]),
     page('reports', '报表 / SLA', `${merchants}/reports`, false),
     page('merchant-log', '变更记录', `${merchants}/change-log`, false),
   ] },

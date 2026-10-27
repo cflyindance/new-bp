@@ -136,11 +136,13 @@ function renderMPlatformMain(path: string): string {
 }
 
 export function mountMPlatformShell(_onMount: () => void, path: string): string {
+  // 开通在外部平台完成；兼容旧书签但不重新开放申请或创建页面。
+  if (/^\/m-platform\/merchants\/(requests|new)(\/|$|\?)/.test(path)) {
+    path = `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`;
+    history.replaceState(history.state, "", `${location.pathname}${location.search}#${path}`);
+  }
   if (parseStoreDetailPath(path) && mCanVisit(path)) {
     return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
-  }
-  if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new` && mCanVisit(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
   if (parseMerchantDetailPath(path) && mCanVisit(path)) {
     return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;

@@ -123,7 +123,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     return { title: `${name} · ${tabTitle}`, module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
-    return { title: "新建品牌", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+    return { title: "品牌总览", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) {
     return { title: "组织树", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
@@ -132,7 +132,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     return { title: "变更记录", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/requests`) {
-    return { title: "开通申请 / 待办", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+    return { title: "品牌总览", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/reports`) {
     return { title: "报表 / SLA", module: ENTERPRISE_MERCHANT_MODULE_LABEL };

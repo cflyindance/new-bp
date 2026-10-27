@@ -1,0 +1,87 @@
+{
+  "baseline": "64ddec8f484b2aed463dd63fcf7f111d6df4fb4b",
+  "branch": "codex/merchant-doc-operations-20261027",
+  "url": "http://127.0.0.1:5250",
+  "source": "隔离Edge上下文，本地演示；成功保存仅写该上下文",
+  "items": [
+    {
+      "id": "crm-sync",
+      "page": "品牌概览CRM",
+      "title": "从CRM同步",
+      "entry": "按页面当前可见操作进入",
+      "expect": "本地演示同步与提示，不代表Salesforce实连",
+      "before": "crm-sync-before.png",
+      "after": "crm-sync-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n关联操作演示品牌\n\nmerchant-mvq0a151-rf871 · B00000032 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n服务状态 · 已启用\n暂停服务\n关闭品牌\n\n开通进度：待首次登录\n\n品牌正常使用服务；门店营业状态由各门店单独管理。\n\n基本信息\n品牌 ID\nmerchant-mvq0a151-rf871\nBID\nB00000032\n所属集团\n米聚集团\n编码\nmerchant-mvq0a151-rf871\n组织类型\n连锁\n状态\n已启用\n联系人\n演示联系人\n电话\n—\n主管理员\nlegacy-doc@menusifu.cn\n合同到期\n2027/10/27\nLicense\n有效\n邀请邮件\n—\n初始化完成时间\n—\n时区\nAsia/Shanghai\n经营摘要\n门店数\n0\n业态\n火锅\n产线\nPOS\n开通时间\n2026/10/27\n预设同步\n2026/10/27\n查看硬件资产\n进入商家后台\nCRM / 合同（Salesforce 演示）\nCRM 合同 ID\nCRM-MERCHANT-MVQ0A151-RF871\nCRM 账户 ID\nACC-MERCHANT-MVQ0A151-RF871\n合同状态\n执行中\n上次同步\n2026/10/27\n到期自动暂停\n是\n从 CRM 同步\n续期至\n合同续期",
+      "fields": []
+    },
+    {
+      "id": "contract-renew",
+      "page": "品牌概览合同",
+      "title": "合同续期",
+      "entry": "按页面当前可见操作进入",
+      "expect": "当前实现更新到期日并尝试恢复有效服务状态；不是付款或真实合同签约",
+      "before": "contract-renew-before.png",
+      "after": "contract-renew-after.png",
+      "status": "captured",
+      "body": "← 返回品牌管理\n关联操作演示品牌\n\nmerchant-mvq0a151-rf871 · B00000032 · 连锁\n\n概览\n品牌门店\n品牌菜单\n品牌管理员\n变更记录\n服务状态 · 已启用\n暂停服务\n关闭品牌\n\n开通进度：待首次登录\n\n品牌正常使用服务；门店营业状态由各门店单独管理。\n\n基本信息\n品牌 ID\nmerchant-mvq0a151-rf871\nBID\nB00000032\n所属集团\n米聚集团\n编码\nmerchant-mvq0a151-rf871\n组织类型\n连锁\n状态\n已启用\n联系人\n演示联系人\n电话\n—\n主管理员\nlegacy-doc@menusifu.cn\n合同到期\n2027/10/27\nLicense\n有效\n邀请邮件\n—\n初始化完成时间\n—\n时区\nAsia/Shanghai\n经营摘要\n门店数\n0\n业态\n火锅\n产线\nPOS\n开通时间\n2026/10/27\n预设同步\n2026/10/27\n查看硬件资产\n进入商家后台\nCRM / 合同（Salesforce 演示）\nCRM 合同 ID\nCRM-MERCHANT-MVQ0A151-RF871\nCRM 账户 ID\nACC-MERCHANT-MVQ0A151-RF871\n合同状态\n执行中\n上次同步\n2026/10/27\n到期自动暂停\n是\n从 CRM 同步\n续期至\n合同续期",
+      "fields": []
+    },
+    {
+      "id": "overview-login",
+      "page": "品牌概览",
+      "title": "进入商家后台",
+      "entry": "按页面当前可见操作进入",
+      "expect": "复用品牌代登录入口",
+      "before": "overview-login-before.png",
+      "after": "overview-login-after.png",
+      "status": "captured",
+      "body": "请从左侧主导航选择要使用的功能模块。带箭头的模块将展开二级导航；其余模块可直接进入对应页面。\n\n当前可用 27 个一级模块",
+      "fields": []
+    },
+    {
+      "id": "hardware-link",
+      "page": "品牌概览",
+      "title": "查看硬件资产",
+      "entry": "按页面当前可见操作进入",
+      "expect": "携带品牌筛选上下文进入硬件资产页",
+      "before": "hardware-link-before.png",
+      "after": "hardware-link-after.png",
+      "status": "captured",
+      "body": "全量设备\n设备类型\n\n一张表检索全企业设备；支持品牌 / 区域 / 门店 / 状态筛选与 CSV 导出。\n\n入驻品牌\n全部品牌\n张记火锅\n茶语一家\nMenuSifu NA Demo\n湘味小厨（到期演示）\n张记火锅\n张记火锅\nMenuSifu NA Demo\n杭城小笼\n米聚甄选\n米聚小馆\n米聚茶语\n米聚快餐\n米聚烘焙\n张记串串\n茶语鲜果\n茶语轻食\n茶语咖啡\n茶语工坊\n米聚智餐\n智餐云厨\n关联操作演示品牌\n品牌\n全部品牌\n张记火锅\n茶语一家\nMenuSifu NA Demo\n湘味小厨（到期演示）\n张记火锅\n张记火锅\nMenuSifu NA Demo\n杭城小笼\n米聚甄选\n米聚小馆\n米聚茶语\n米聚快餐\n米聚烘焙\n张记串串\n茶语鲜果\n茶语轻食\n茶语咖啡\n茶语工坊\n米聚智餐\n智餐云厨\n关联操作演示品牌\n区域\n全部区域\n默认区域\n华南大区\n华东大区\n西南大区\nMidwest\n美国东海岸\nUS West\n门店\n全部门店\n茶语一家\n广州天河店\n上海陆家嘴店\n湘味小厨（到期演示）\n张记串串\nBurger Co. West\nFlagship · NYC\nSakura Sushi Group\n连接状态\n全部状态\n在线\n离线\n未知\n搜索\n导出 CSV\n\n暂无匹配设备",
+      "fields": []
+    },
+    {
+      "id": "detail-return-list",
+      "page": "品牌详情",
+      "title": "返回品牌管理",
+      "entry": "按页面当前可见操作进入",
+      "expect": "返回品牌管理并恢复平台导航",
+      "before": "detail-return-list-before.png",
+      "after": "detail-return-list-after.png",
+      "status": "captured",
+      "body": "所属集团\n全部\n茶语集团\n米聚集团\n张记餐饮集团\nBurger Co. Holdings\nMenuSifu 中国演示集团\nSakura Holdings\n服务状态\n全部\n待启用\n已启用\n已暂停\n已关闭\n开通进度\n全部\n待开通管理员\n待配置品牌菜单\n待首次登录\n已首次登录\n初始化已完成\n品牌菜单\n全部\n未配置\n已配置\n品牌门店\n全部\n无门店\n有门店\n创建时间起\n创建时间止\n搜索\n查询\n重置\n新建品牌\n品牌名称 / BID\t服务状态\t开通进度\t所属集团\t品牌菜单\t品牌门店\t主管理员\t开通时间\t操作\n张记火锅\nB00000001\t已启用\t待首次登录\t张记餐饮集团\t179 个页面\t管理门店 · 2\tzhangji.admin@menusifu.cn\t2025/9/1\t\n详情\n代登录\n\n茶语一家\nB00000002\t已启用\t待首次登录\t茶语集团\t179 个页面\t管理门店 · 1\ttea.one@menusifu.cn\t2026/1/20\t\n详情\n代登录\n\nMenuSifu NA Demo\nB00000003\t待启用\t待首次登录\tMenuSifu 中国演示集团\t179 个页面\t管理门店 · 1\tna.demo@menusifu.cn\t2026/3/1\t\n详情\n\n湘味小厨（到期演示）\nB00000004\t已暂停\t待首次登录\tMenuSifu 中国演示集团\t131 个页面\t管理门店 · 1\txiangwei.admin@menusifu.cn\t2024/7/1\t\n详情\n\nSakura Sushi Group\nB00000005\t已暂停\t待首次登录\tSakura Holdings\t146 个页面\t管理门店 · 1\tsakura.admin@menusifu.com\t2024/4/1\t\n详情\n\nBurger Co. West\nB00000006\t已启用\t待首次登录\tBurger Co. Holdings\t151 个页面\t管理门店 · 1\tburger.admin@menusifu.com\t2025/2/1\t\n详情\n代登录\n\n杭城小笼\nB00000011\t已启用\t待首次登录\t张记餐饮集团\t149 个页面\t管理门店 · 0\thz.bj@partner.cn\t2026/6/19\t\n详情\n代登录\n\n米聚甄选\nB00000012\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-select@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚小馆\nB00000013\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bistro@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚茶语\nB00000014\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-tea@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚快餐\nB00000015\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-express@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚烘焙\nB00000016\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bakery@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n张记串串\nB00000017\t已启用\t待首次登录\t张记餐饮集团\t164 个页面\t管理门店 · 1\tzhangji-skewers@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语鲜果\nB00000018\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-fresh@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语轻食\nB00000019\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-light@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语咖啡\nB00000020\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-coffee@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语工坊\nB00000021\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-lab@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚智餐\nB00000022\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tmenusifu-cn-2@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n智餐云厨\nB00000023\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tsmart-kitchen@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\nSakura Ramen\nB00000024\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-ramen@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Bento\nB00000025\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-bento@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Izakaya\nB00000026\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-izakaya@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Express\nB00000027\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-express@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. East\nB00000028\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-east@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. South\nB00000029\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-south@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Downtown\nB00000030\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-downtown@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Airport\nB00000031\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-airport@menusifu.com\t2025/8/1\t\n详情\n代登录\n\n关联操作演示品牌\nB00000032\t已启用\t待首次登录\t米聚集团\t179 个页面\t管理门店 · 0\tlegacy-doc@menusifu.cn\t2026/10/27\t\n详情\n代登录",
+      "fields": []
+    },
+    {
+      "id": "create-leave-native",
+      "page": "创建品牌",
+      "title": "返回品牌管理且确认离开",
+      "entry": "按页面当前可见操作进入",
+      "expect": "原生确认文案有未保存的品牌配置，是否放弃并离开；截图原生层受限",
+      "before": "create-leave-native-before.png",
+      "after": "create-leave-native-after.png",
+      "status": "captured",
+      "body": "所属集团\n全部\n茶语集团\n米聚集团\n张记餐饮集团\nBurger Co. Holdings\nMenuSifu 中国演示集团\nSakura Holdings\n服务状态\n全部\n待启用\n已启用\n已暂停\n已关闭\n开通进度\n全部\n待开通管理员\n待配置品牌菜单\n待首次登录\n已首次登录\n初始化已完成\n品牌菜单\n全部\n未配置\n已配置\n品牌门店\n全部\n无门店\n有门店\n创建时间起\n创建时间止\n搜索\n查询\n重置\n新建品牌\n品牌名称 / BID\t服务状态\t开通进度\t所属集团\t品牌菜单\t品牌门店\t主管理员\t开通时间\t操作\n张记火锅\nB00000001\t已启用\t待首次登录\t张记餐饮集团\t179 个页面\t管理门店 · 2\tzhangji.admin@menusifu.cn\t2025/9/1\t\n详情\n代登录\n\n茶语一家\nB00000002\t已启用\t待首次登录\t茶语集团\t179 个页面\t管理门店 · 1\ttea.one@menusifu.cn\t2026/1/20\t\n详情\n代登录\n\nMenuSifu NA Demo\nB00000003\t待启用\t待首次登录\tMenuSifu 中国演示集团\t179 个页面\t管理门店 · 1\tna.demo@menusifu.cn\t2026/3/1\t\n详情\n\n湘味小厨（到期演示）\nB00000004\t已暂停\t待首次登录\tMenuSifu 中国演示集团\t131 个页面\t管理门店 · 1\txiangwei.admin@menusifu.cn\t2024/7/1\t\n详情\n\nSakura Sushi Group\nB00000005\t已暂停\t待首次登录\tSakura Holdings\t146 个页面\t管理门店 · 1\tsakura.admin@menusifu.com\t2024/4/1\t\n详情\n\nBurger Co. West\nB00000006\t已启用\t待首次登录\tBurger Co. Holdings\t151 个页面\t管理门店 · 1\tburger.admin@menusifu.com\t2025/2/1\t\n详情\n代登录\n\n杭城小笼\nB00000011\t已启用\t待首次登录\t张记餐饮集团\t149 个页面\t管理门店 · 0\thz.bj@partner.cn\t2026/6/19\t\n详情\n代登录\n\n米聚甄选\nB00000012\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-select@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚小馆\nB00000013\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bistro@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚茶语\nB00000014\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-tea@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚快餐\nB00000015\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-express@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚烘焙\nB00000016\t已启用\t待配置品牌菜单\t米聚集团\t未配置\t管理门店 · 0\tmiju-bakery@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n张记串串\nB00000017\t已启用\t待首次登录\t张记餐饮集团\t164 个页面\t管理门店 · 1\tzhangji-skewers@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语鲜果\nB00000018\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-fresh@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语轻食\nB00000019\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-light@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语咖啡\nB00000020\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-coffee@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n茶语工坊\nB00000021\t已启用\t待配置品牌菜单\t茶语集团\t未配置\t管理门店 · 0\ttea-lab@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n米聚智餐\nB00000022\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tmenusifu-cn-2@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\n智餐云厨\nB00000023\t已启用\t待配置品牌菜单\tMenuSifu 中国演示集团\t未配置\t管理门店 · 0\tsmart-kitchen@menusifu.cn\t2025/8/1\t\n详情\n代登录\n\nSakura Ramen\nB00000024\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-ramen@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Bento\nB00000025\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-bento@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Izakaya\nB00000026\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-izakaya@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nSakura Express\nB00000027\t已启用\t待配置品牌菜单\tSakura Holdings\t未配置\t管理门店 · 0\tsakura-express@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. East\nB00000028\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-east@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. South\nB00000029\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-south@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Downtown\nB00000030\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-downtown@menusifu.com\t2025/8/1\t\n详情\n代登录\n\nBurger Co. Airport\nB00000031\t已启用\t待配置品牌菜单\tBurger Co. Holdings\t未配置\t管理门店 · 0\tburger-airport@menusifu.com\t2025/8/1\t\n详情\n代登录\n\n关联操作演示品牌\nB00000032\t已启用\t待首次登录\t米聚集团\t179 个页面\t管理门店 · 0\tlegacy-doc@menusifu.cn\t2026/10/27\t\n详情\n代登录",
+      "fields": []
+    }
+  ],
+  "errors": [
+    {
+      "type": "alert",
+      "message": "CRM 合同已同步。",
+      "nativeScreenshot": "原生层截图受限"
+    }
+  ]
+}
