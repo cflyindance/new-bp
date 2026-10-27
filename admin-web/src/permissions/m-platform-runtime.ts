@@ -56,7 +56,7 @@ function deniedControl(target: Element, type: string): boolean {
   if (currentMAccess(mPageKey(page.id)) === 'edit') return false;
   if (keys.length && keys.every(a => !a.write)) return false;
   if (target.closest('[data-pp-enable],[data-rbac-l4-editable],[data-nb-edit-l1],[data-nb-drag-handle],[data-nb-draggable-row]')) return true;
-  if (target.closest(readonlyBrowse)) return false;
+  if (target.closest(readonlyBrowse) || page.id === 'merchant-activity' && target.closest('[data-activity-browse]')) return false;
   if (anchor) return false;
   if (control instanceof HTMLButtonElement && control.type === 'button' && /关闭|取消|返回/.test(control.textContent ?? '')) return false;
   // Read-only pages permit browsing links, filtering and scrolling; reject remaining writes.
