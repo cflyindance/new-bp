@@ -383,3 +383,5 @@
 .ma-device-drawer .ma-drawer-heading > div { min-width:0; }
 .ma-device-drawer .ma-drawer-heading p { overflow-wrap:anywhere; }
 .ma-device-drawer .ma-drawer-context { margin-top:10px; }
+
+@media(min-width:1001px) { .ma-device-drawer .ma-cards { grid-template-columns:repeat(3,minmax(0,1fr)); } }
