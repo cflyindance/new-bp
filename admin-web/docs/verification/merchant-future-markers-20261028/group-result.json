@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "brand group red outline",
+    "group select filters normally",
+    "reset clears value",
+    "store group unmarked"
+  ],
+  "errors": []
+}

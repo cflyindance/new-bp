@@ -29,7 +29,7 @@ export function renderManagementFilters(kind:Kind){
  const menu=field('menu',store?'生效菜单':'品牌菜单',store?[['no','无生效菜单'],['yes','有生效菜单']]:[['no','未配置'],['yes','已配置']],f);
  const primary=store
   ?group+brand+status+field('brandStatus','所属品牌服务状态',states,f)
-  :group+status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
+  :group.replace('<select ', '<select data-m-merchant-future ')+status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
  const secondary=store
   ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+menu
   :input('from','创建时间起','date',f)+input('to','创建时间止','date',f);

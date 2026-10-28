@@ -1,0 +1,38 @@
+{
+  "baseline": "be733ef0",
+  "url": "http://127.0.0.1:5253",
+  "links": [
+    {
+      "text": "集团管理",
+      "href": "#/m-platform/merchants/groups",
+      "outline": "rgb(239, 68, 68)",
+      "width": "2px"
+    },
+    {
+      "text": "门店管理",
+      "href": "#/m-platform/merchants/stores",
+      "outline": "rgb(239, 68, 68)",
+      "width": "2px"
+    },
+    {
+      "text": "组织树",
+      "href": "#/m-platform/merchants/org-tree",
+      "outline": "rgb(239, 68, 68)",
+      "width": "2px"
+    },
+    {
+      "text": "报表 / SLA",
+      "href": "#/m-platform/merchants/reports",
+      "outline": "rgb(239, 68, 68)",
+      "width": "2px"
+    }
+  ],
+  "checks": [
+    "exactly four red markers; full-width top banner identical to B text",
+    "four marked links still navigate normally",
+    "create/detail below banner and within viewport",
+    "M markers stay visible; B MVP banner remains hidden",
+    "non-merchant M page unaffected"
+  ],
+  "errors": []
+}

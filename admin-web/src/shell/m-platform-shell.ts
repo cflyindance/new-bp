@@ -1,3 +1,4 @@
+import { renderFutureVersionDiffBanner } from "./future-version-banner";
 import { renderMCenter, bindMCenter } from '../permissions/m-platform-ui';
 import { mCanVisit, mDenied, renderMNavigation, bindMNavigation, installMRuntimeGuards, applyMControlStates } from '../permissions/m-platform-runtime';
 /**
@@ -141,34 +142,41 @@ function renderMPlatformMain(path: string): string {
     </div>`;
 }
 
-export function mountMPlatformShell(_onMount: () => void, path: string): string {
+function renderMPlatformShell(_onMount: () => void, path: string): string {
   // 开通在外部平台完成；兼容旧申请书签，不开放申请审批页面。
   if (/^\/m-platform\/merchants\/requests(\/|$|\?)/.test(path)) {
     path = `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`;
     history.replaceState(history.state, "", `${location.pathname}${location.search}#${path}`);
   }
   if (parseStoreDetailPath(path) && mCanVisit(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
+    return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-store-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new` && mCanVisit(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
+    return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
   if (parseMerchantDetailPath(path) && mCanVisit(path)) {
-    return `<main class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
+    return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
   if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
-    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
+    return `<div class="relative h-full min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
   }
   if (isSubscriptionServiceCreatePath(path) && mCanVisit(path)) {
-    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden" data-m-platform-content>${renderSubscriptionServicePage(path)}</div>`;
+    return `<div class="relative h-full min-h-0 w-full overflow-hidden" data-m-platform-content>${renderSubscriptionServicePage(path)}</div>`;
   }
   return `
-    <div class="relative h-dvh min-h-0 w-full overflow-hidden">
+    <div class="relative h-full min-h-0 w-full overflow-hidden">
       <div class="flex h-full min-h-0 w-full">
         ${renderMPlatformSidebar(path)}
         ${renderMPlatformMain(path)}
       </div>
     </div>`;
+}
+
+export function mountMPlatformShell(onMount: () => void, path: string): string {
+  return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell>
+    ${isMPlatformMerchantPath(path) ? renderFutureVersionDiffBanner(true) : ""}
+    <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">${renderMPlatformShell(onMount, path)}</div>
+  </div>`;
 }
 
 export function bindMPlatformShell(onMount: () => void): void {
