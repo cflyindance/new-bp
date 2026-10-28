@@ -21,7 +21,7 @@ function field(name:string,title:string,options:[string,string][],f:ManagementFi
 const input=(name:string,title:string,type:string,f:ManagementFilter,placeholder='')=>`<label data-filter-field="${name}" class="flex flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><input name="${name}" type="${type}" value="${esc(f[name]??'')}" placeholder="${placeholder}" class="h-9 rounded-md border border-input bg-background px-3 text-sm"></label>`;
 export function renderManagementFilters(kind:Kind){
  const f=savedManagementFilter(kind),store=kind==='store';
- const group=field('groupId','所属集团',getGroupsForSelect({allEnterprises:true}).map(g=>[g.groupId,g.name]),f);
+ const group=field('groupId','所属集团',getGroupsForSelect({allEnterprises:true}).map(g=>[g.groupId,g.name]),f).replace('<select ', '<select data-m-merchant-future data-m-group-future ');
  const brand=store?field('merchantId','所属品牌',brands().filter(m=>!f.groupId||m.groupId===f.groupId).map(m=>[m.merchantId,m.name]),f):'';
  const status=field('status',store?'门店状态':'服务状态',store?[['open','营业中'],['preparing','筹备中'],['closed','停业'],['archived','已归档']]:states,f);
  const search=input('query','搜索','search',f,store?'门店 / MID / 地址 / 邮编 / 品牌 / BID / 集团':'品牌名称 / BID / 编码 / 管理员账号');
@@ -29,7 +29,7 @@ export function renderManagementFilters(kind:Kind){
  const menu=field('menu',store?'生效菜单':'品牌菜单',store?[['no','无生效菜单'],['yes','有生效菜单']]:[['no','未配置'],['yes','已配置']],f);
  const primary=store
   ?group+brand+status+field('brandStatus','所属品牌服务状态',states,f)
-  :group.replace('<select ', '<select data-m-merchant-future ')+status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
+  :group+status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
  const secondary=store
   ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+menu
   :input('from','创建时间起','date',f)+input('to','创建时间止','date',f);

@@ -231,7 +231,7 @@ function renderGroupsTable(groups: ReturnType<typeof getGroups>): string {
   }
   return `
     <div class="overflow-x-auto rounded-xl border border-border">
-      <table class="w-full min-w-[40rem] text-sm">
+      <table data-m-merchant-future data-m-group-future class="w-full min-w-[40rem] text-sm">
         <thead class="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
           <tr>
             <th class="px-3 py-2.5 font-medium">集团名称</th>
@@ -272,9 +272,9 @@ function renderGroupsListPage(): string {
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="groups">
       <div class="flex shrink-0 flex-wrap items-center justify-end gap-3">
-        <a href="${merchantHref("/groups/new")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建集团</a>
+        <a href="${merchantHref("/groups/new")}" data-m-merchant-future data-m-group-future class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建集团</a>
       </div>
-      <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-group-filter-form>
+      <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-group-filter-form data-m-merchant-future data-m-group-future>
         <label class="flex min-w-[12rem] flex-1 flex-col gap-1">
           <span class="text-xs text-muted-foreground">搜索</span>
           <input type="search" name="query" data-group-filter="query" placeholder="名称 / 编码" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
@@ -318,7 +318,7 @@ function renderGroupFormPage(group?: EnterpriseGroup): string {
       ${card(`
         <h2 class="text-sm font-semibold text-card-foreground">${title}</h2>
         <p class="mt-1 text-sm text-muted-foreground">${subtitle}</p>
-        <form class="mt-4 space-y-4" data-enterprise-group-form${group ? ` data-group-id="${escapeHtml(group.groupId)}"` : ""}>
+        <form class="mt-4 space-y-4" data-enterprise-group-form data-m-merchant-future data-m-group-future${group ? ` data-group-id="${escapeHtml(group.groupId)}"` : ""}>
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="flex flex-col gap-1 sm:col-span-2">
               <span class="text-xs text-muted-foreground">集团名称 *</span>
@@ -436,7 +436,7 @@ function renderMerchantBrandStoresDialog(merchant: NonNullable<ReturnType<typeof
         <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div class="min-w-0">
             <h2 id="enterprise-merchant-stores-dialog-title" class="truncate text-base font-semibold text-card-foreground">${escapeHtml(merchant.name)} · 门店列表</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
+            <p data-m-merchant-future data-m-group-future class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
           </div>
           <button
             type="button"
@@ -493,9 +493,9 @@ function bindMerchantBrandStoresDialog(): void {
 function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string {
   if(!merchants.length)return '<p class="ba ba-empty">暂无匹配品牌</p>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
+  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th data-m-merchant-future data-m-group-future>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.isPage&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
-    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
+    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td data-m-merchant-future data-m-group-future>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -513,9 +513,9 @@ function renderStoreStatusBadge(status: MerchantOrgStoreStatus): string {
 function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
   if(!rows.length)return '<div class="ba ba-empty">暂无匹配门店</div>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th>所属集团</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
+  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th data-m-merchant-future data-m-group-future>所属集团</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
     const capability=getStoreCapability(row.store.storeId),keys=new Set(capability?.enabledKeys??[]),count=choices.filter(c=>c.isPage&&keys.has(c.key)).length;
-    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td>${escapeHtml(row.groupName)}</td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="所属品牌服务未启用或暂无可用管理员"'}>代登录</button></div></td></tr>`;
+    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td data-m-merchant-future data-m-group-future>${escapeHtml(row.groupName)}</td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="所属品牌服务未启用或暂无可用管理员"'}>代登录</button></div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -792,7 +792,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
   const cap = getMerchantCapability(merchant.merchantId);
   const storeCount = countStoresForMerchant(merchant.merchantId);
   const row = (label: string, value: string) =>
-    `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
+    `<div${label === "所属集团" ? ' data-m-merchant-future data-m-group-future' : ''} class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
   return `
     ${renderServicePanel(merchant)}
@@ -1129,7 +1129,7 @@ function renderStoreDetailOverview(storeId: string): string {
   const storeCap = getStoreCapability(storeId);
   const brandCap = getMerchantCapability(store.merchantId);
   const row = (label: string, value: string) =>
-    `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
+    `<div${label === "所属集团" ? ' data-m-merchant-future data-m-group-future' : ''} class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
   return `
     <div class="grid gap-4 lg:grid-cols-2">

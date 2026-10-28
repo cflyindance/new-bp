@@ -1,0 +1,13 @@
+{
+  "baseline": "29ec7278",
+  "url": "http://127.0.0.1:5254",
+  "rows": 27,
+  "checks": [
+    "brand group header and every row red; filter/reset retains markers",
+    "store group filter/header/cells red",
+    "brand overview group and same-group association note red",
+    "brand creation group input and review summary red",
+    "group list/search/new/edit all marked and navigation works"
+  ],
+  "errors": []
+}
