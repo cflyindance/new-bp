@@ -10,7 +10,9 @@ export const DEVICE_ACTIVITY_PATH = "/m-platform/merchants/device-activity";
 export const isDeviceActivityPath = (path: string) => path === DEVICE_ACTIVITY_PATH || path.startsWith(DEVICE_ACTIVITY_PATH + "/");
 export const deviceActivityPageTitle = (path: string) => isDeviceActivityPath(path) ? { title: "设备活跃分析", module: "系统使用分析" } : null;
 const state = { period: { start: shiftDate(data.asOf, -6), end: data.asOf } as ActivityPeriod,
-  quick: "7", brand: "", store: "", line: "", status: "", query: "", page: 1 };
+  quick: "7", brand: "", store: "", line: "", status: "", query: "", page: 1,
+  rootScroll: 0, wasOpen: false, returnDeviceId: "", returnEntry: "name", dateError: "",
+  filterDraft: null as Record<string, string> | null, periodDraft: null as Record<string, string> | null };
 const PAGE_SIZE = 20;
 const esc = (value: string) => value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const num = (value: number | null) => value === null ? "—" : value.toLocaleString("zh-CN");
@@ -27,11 +29,6 @@ function owner(row: DeviceActivityRow, field: "line" | "brand" | "store"): strin
   if (row.issue === "binding") return "归属待核对";
   if (!row.binding) return "未绑定";
   return field === "line" ? row.binding.line : field === "brand" ? row.store!.merchantName : row.store!.name;
-}
-function heading(title: string, subtitle: string): string {
-  return '<div class="ma-heading"><div><div class="ma-kicker">DEVICE ACTIVITY <span>演示数据</span></div><h2>' + esc(title) +
-    '</h2><p>' + esc(subtitle) + '</p></div><div class="ma-asof"><span>统计截至日期</span><strong>' + data.asOf +
-    '</strong><small>门店时区：Asia/Shanghai</small></div></div>';
 }
 function dates(): string {
   return '<form class="ma-period" data-device-period data-device-activity-browse><span class="ma-field-caption">统计期间</span><div class="ma-segment">' +
@@ -65,21 +62,21 @@ function rootPage(): string {
   const errorCount = filtered.filter(r => r.issue).length;
   const body = rows.map(row => {
     const m = row.metrics;
-    return '<tr data-global-device="' + esc(row.device.id) + '"><td><a class="ma-link" href="' + detailHref(row.device.id) + '">' +
+    return '<tr data-global-device="' + esc(row.device.id) + '"><td><a data-device-open="' + esc(row.device.id) + '" data-device-entry="name" class="ma-link" href="' + detailHref(row.device.id) + '">' +
       esc(row.device.name) + '</a><small>' + esc(row.device.id) + '</small></td><td>' + badge(row) +
       (m.status === "never" && row.binding ? '<small>已绑定 ' + (dateNumber(data.asOf) - dateNumber(row.binding.from.slice(0, 10))) + ' 天</small>' : "") +
       '</td><td>' + esc(owner(row, "line")) + '</td><td>' + esc(owner(row, "brand")) + '</td><td>' + esc(owner(row, "store")) +
       '</td><td class="ma-number">' + num(m.count) + '</td><td class="ma-number">' + num(m.activeDays) +
       '</td><td class="ma-number">' + (m.dailyAverage === null ? "—" : m.dailyAverage.toFixed(1)) +
       '</td><td>' + time(m.latest) + '</td><td class="ma-number">' + num(m.daysSince) +
-      '</td><td><a class="ma-link" href="' + detailHref(row.device.id) + '">查看明细 →</a></td></tr>';
+      '</td><td><a data-device-open="' + esc(row.device.id) + '" data-device-entry="action" class="ma-link" href="' + detailHref(row.device.id) + '">查看明细 →</a></td></tr>';
   }).join("");
   return filters() + cards([
     { title: "设备总数", value: String(filtered.length), note: "当前筛选范围 · 按设备 ID 去重" },
     { title: "活跃设备", value: String(filtered.filter(r => r.metrics.status === "active").length), note: "最近点单距今 0～6 天" },
     { title: "期间有订单设备", value: String(filtered.filter(r => (r.metrics.count ?? 0) > 0).length), note: errorCount ? errorCount + " 台数据异常未计入" : "统计期间至少有 1 笔点单" },
     { title: "需关注设备", value: String(filtered.filter(r => ["recent", "suspected", "long"].includes(r.metrics.status)).length), note: "最近点单距今 ≥7 天" },
-  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>全部设备活跃情况</h3></div><span>' +
+  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3 data-device-list-title tabindex="-1">全部设备活跃情况</h3></div><span>' +
     filtered.length + ' 台设备' + (errorCount ? ' · ' + errorCount + ' 台异常' : "") + '</span></div><div class="ma-table-wrap"><table><thead><tr>' +
     '<th>设备／设备 ID</th><th>当前活跃状态</th><th>当前产线</th><th>所属品牌</th><th>所属门店</th><th class="ma-number">点单数</th>' +
     '<th class="ma-number">有订单天数</th><th class="ma-number">日均点单</th><th>最近点单时间</th><th class="ma-number">连续无订单天数</th><th>操作</th>' +
@@ -122,6 +119,14 @@ function detailPage(row: DeviceActivityRow): string {
     (row.issue ? '<tr><td colspan="7" class="ma-empty">订单数据不可用，请勿按零订单判断设备使用情况。</td></tr>' : deviceOrders ||
       '<tr><td colspan="7" class="ma-empty">统计期间无点单记录。</td></tr>') + '</tbody></table></div></section>';
 }
+function deviceDrawer(row: DeviceActivityRow): string {
+  return '<div class="ma-drawer-backdrop" data-device-activity-browse><section class="ma-store-drawer ma-device-drawer" role="dialog" aria-modal="true" aria-labelledby="device-drawer-title" data-drawer-device="' + esc(row.device.id) + '" tabindex="-1">' +
+    '<header class="ma-drawer-heading"><div><p>设备明细</p><h2 id="device-drawer-title">' + esc(row.device.name) + '</h2><p>设备 ID：' + esc(row.device.id) + '</p>' +
+    '<div class="ma-drawer-context">' + badge(row) + '<span>当前产线：' + esc(owner(row, "line")) + '</span><span>所属品牌：' + esc(owner(row, "brand")) +
+    '</span><span>所属门店：' + esc(owner(row, "store")) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
+    '<button type="button" data-device-drawer-close aria-label="关闭设备明细">关闭 ×</button></header>' +
+    '<div class="ma-drawer-body">' + detailPage(row) + '</div></section></div>';
+}
 export function renderDeviceActivityPage(path: string): string {
   const rows = globalDeviceRows(data, orders, state.period);
   let row: DeviceActivityRow | undefined;
@@ -129,26 +134,24 @@ export function renderDeviceActivityPage(path: string): string {
     try { const id = decodeURIComponent(path.slice(DEVICE_ACTIVITY_PATH.length + 1)); row = rows.find(r => r.device.id === id); } catch { /* invalid path */ }
     if (!row) return '<section class="ma-page"><h2>未找到演示设备</h2><a class="ma-link" href="' + rootHref + '">返回全部设备</a></section>';
   }
-  return '<div class="ma-page" data-device-activity-page>' + (row ? heading(row?.device.name ?? "设备活跃分析", row ?
-    "设备 ID：" + row.device.id : "直接查看全部设备的活跃状态、使用产线及所属品牌和门店。") +
-    '<nav class="ma-crumbs" aria-label="设备活跃分析位置">' + (row ? '<a href="' + rootHref + '">返回全部设备</a><span>／</span><span>设备明细</span>' : "<span>全部设备</span>") +
-    '</nav><p class="ma-demo-note">预设演示数据 · 按设备 ID 去重 · 归属与活跃状态按截至日期判断</p>' : '') + dates() + (row ? detailPage(row) : rootPage()) +
+  return '<div class="ma-page" data-device-activity-page><div data-device-background' + (row ? ' inert' : '') + '>' + dates() + rootPage() +
     '<section class="ma-rules"><strong>统计口径</strong><p>品牌、门店和产线筛选按当前唯一有效 License 绑定关系；未绑定设备独立保留，多个有效绑定显示归属待核对。</p>' +
     '<p>设备点单量按设备 ID 汇总查询期间所有历史产线与门店，来源无法识别的订单不分摊到设备。设备状态按全历史最近点单判定，修改期间不改变当前活跃状态。</p>' +
-    '<p>0～6 天活跃；7～13 天近期未使用；14～29 天疑似停用；≥30 天长期未使用。已绑定从未点单为尚未使用；无绑定且无历史点单为未绑定。异常数据以 — 展示。</p></section></div>';
+    '<p>0～6 天活跃；7～13 天近期未使用；14～29 天疑似停用；≥30 天长期未使用。已绑定从未点单为尚未使用；无绑定且无历史点单为未绑定。异常数据以 — 展示。</p></section></div>' +
+    (row ? deviceDrawer(row) : '') + '</div>';
 }
 export function bindDeviceActivityPage(onMount: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-device-activity-page]");
   if (!root) return;
   root.querySelectorAll<HTMLButtonElement>("[data-device-quick]").forEach(button => button.addEventListener("click", () => {
-    state.quick = button.dataset.deviceQuick!; state.period = { start: shiftDate(data.asOf, 1 - Number(state.quick)), end: data.asOf }; state.page = 1; onMount();
+    state.periodDraft = null; state.dateError = ""; state.quick = button.dataset.deviceQuick!; state.period = { start: shiftDate(data.asOf, 1 - Number(state.quick)), end: data.asOf }; state.page = 1; onMount();
   }));
   root.querySelector<HTMLFormElement>("[data-device-period]")?.addEventListener("submit", event => {
     event.preventDefault(); const form = new FormData(event.currentTarget as HTMLFormElement);
     const period = { start: String(form.get("start") ?? ""), end: String(form.get("end") ?? "") };
     const error = validatePeriod(period, data.asOf), note = root.querySelector<HTMLElement>("[data-device-date-error]")!;
-    if (error) { note.hidden = false; note.textContent = error; return; }
-    state.period = period; state.quick = ""; state.page = 1; onMount();
+    if (error) { state.dateError = error; note.hidden = false; note.textContent = error; return; }
+    state.periodDraft = null; state.dateError = ""; state.period = period; state.quick = ""; state.page = 1; onMount();
   });
   root.querySelector<HTMLSelectElement>("[name=brand]")?.addEventListener("change", event => {
     const store = root.querySelector<HTMLSelectElement>("[name=store]")!;
@@ -156,13 +159,69 @@ export function bindDeviceActivityPage(onMount: () => void): void {
   });
   root.querySelector<HTMLFormElement>("[data-device-filters]")?.addEventListener("submit", event => {
     event.preventDefault(); const form = new FormData(event.currentTarget as HTMLFormElement);
+    state.filterDraft = null;
     for (const key of ["brand", "store", "line", "status", "query"] as const) state[key] = String(form.get(key) ?? "").trim();
     state.page = 1; onMount();
   });
   root.querySelector("[data-device-reset]")?.addEventListener("click", () => {
-    state.brand = ""; state.store = ""; state.line = ""; state.status = ""; state.query = ""; state.page = 1; onMount();
+    state.filterDraft = null; state.brand = ""; state.store = ""; state.line = ""; state.status = ""; state.query = ""; state.page = 1; onMount();
   });
   root.querySelectorAll<HTMLButtonElement>("[data-device-page]").forEach(button => button.addEventListener("click", () => {
     state.page += Number(button.dataset.devicePage); onMount();
   }));
+  const dialog = root.querySelector<HTMLElement>('.ma-device-drawer');
+  const restoreDraft = (selector: string, draft: Record<string, string> | null) => {
+    if (!draft) return;
+    const form = root.querySelector<HTMLFormElement>(selector);
+    if (selector === '[data-device-filters]') {
+      const store = form?.elements.namedItem('store');
+      if (store instanceof HTMLSelectElement) store.innerHTML = storeOptions(draft.brand ?? '', draft.store ?? '');
+    }
+    for (const [name, value] of Object.entries(draft)) {
+      const control = form?.elements.namedItem(name);
+      if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) control.value = value;
+    }
+  };
+  restoreDraft('[data-device-filters]', state.filterDraft);
+  restoreDraft('[data-device-period]', state.periodDraft);
+  if (state.dateError) {
+    const note = root.querySelector<HTMLElement>('[data-device-date-error]')!;
+    note.hidden = false; note.textContent = state.dateError;
+  }
+  root.scrollTop = state.rootScroll;
+  if (dialog) root.style.overflow = 'hidden';
+  root.addEventListener('scroll', () => { if (!dialog) state.rootScroll = root.scrollTop; });
+  root.addEventListener('click', event => {
+    const anchor = (event.target as Element).closest<HTMLAnchorElement>('[data-device-open]');
+    if (dialog || !anchor) return;
+    const saveDraft = (selector: string) => Object.fromEntries([...new FormData(root.querySelector<HTMLFormElement>(selector)!)].map(([key, value]) => [key, String(value)]));
+    state.rootScroll = root.scrollTop;
+    state.filterDraft = saveDraft('[data-device-filters]'); state.periodDraft = saveDraft('[data-device-period]');
+    state.returnDeviceId = anchor.dataset.deviceOpen!; state.returnEntry = anchor.dataset.deviceEntry!;
+  });
+  const closeDrawer = () => { location.hash = DEVICE_ACTIVITY_PATH; };
+  root.querySelector('[data-device-drawer-close]')?.addEventListener('click', closeDrawer);
+  root.querySelector('.ma-drawer-backdrop')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeDrawer();
+  });
+  if (dialog) {
+    state.wasOpen = true;
+    if (!state.returnDeviceId) state.returnDeviceId = dialog.dataset.drawerDevice!;
+    dialog.querySelector<HTMLElement>('[data-device-drawer-close]')?.focus({ preventScroll: true });
+    dialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDrawer(); return; }
+      if (event.key !== 'Tab') return;
+      const controls = [...dialog.querySelectorAll<HTMLElement>('a[href],button,input,select,textarea,[tabindex]')]
+        .filter(control => control.tabIndex >= 0 && !control.hasAttribute('disabled') && control.getClientRects().length > 0);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
+  } else if (state.wasOpen) {
+    state.wasOpen = false;
+    const entry = root.querySelector<HTMLElement>('[data-device-open="' + CSS.escape(state.returnDeviceId) + '"][data-device-entry="' + CSS.escape(state.returnEntry) + '"]');
+    (entry ?? root.querySelector<HTMLElement>('[data-device-list-title]'))?.focus({ preventScroll: true });
+    state.returnDeviceId = ''; state.returnEntry = 'name';
+  }
+
 }
