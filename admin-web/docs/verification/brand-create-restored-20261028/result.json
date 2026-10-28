@@ -1,0 +1,24 @@
+{
+  "before": {
+    "brands": 33,
+    "requests": 0,
+    "pos": 0
+  },
+  "after": {
+    "brands": 34,
+    "requests": 0,
+    "pos": 0,
+    "id": "merchant-mvrfzjgq-7cdw0",
+    "status": "onboarding",
+    "accountRequired": true
+  },
+  "errors": [],
+  "checks": [
+    "create entry and full-page wizard",
+    "three steps",
+    "review return preserves form",
+    "confirm creates brand and goes to admins",
+    "cancel dirty creation does not save",
+    "requests still closed"
+  ]
+}

@@ -7,7 +7,7 @@ import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,f
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
 import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail } from './brand-access-store';
-import { renderBrandWorkspace, bindBrandWorkspaces, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
+import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
  */
@@ -1213,7 +1213,7 @@ export function renderEnterpriseMerchantPage(path: string): string {
     else {
       const storeDetail = parseStoreDetailPath(path);
       if (storeDetail) body = renderStoreDetailPage(storeDetail.storeId, storeDetail.tab);
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderOverviewPage();
+      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderBrandCreateWizard();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) body = renderOrgTreePage();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/requests`) body = renderOverviewPage();
       else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/reports`) body = renderReportsPage();
@@ -1260,6 +1260,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces();
+  bindBrandCreateWizard();
   document.querySelectorAll<HTMLButtonElement>("[data-brand-single-store]").forEach(button => button.onclick = () => { const store=getStoreById(button.dataset.brandSingleStore!); if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],"m-platform",onMount); });
   bindMerchantBrandStoresDialog();
 
