@@ -111,7 +111,8 @@ iframe.tipout-rules-flow-fullscreen {
 
 [data-team-tips-scroll].team-tips-scroll-locked { overflow: hidden !important; }
 
-html[data-product-version="future"] [data-future-version-diff] {
+html[data-product-version="future"] [data-future-version-diff],
+[data-m-merchant-future] {
   outline: 2px solid #ef4444;
   outline-offset: -2px;
 }

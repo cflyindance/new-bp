@@ -1,3 +1,4 @@
+import { renderFutureVersionDiffBanner } from "./shell/future-version-banner";
 import { bindNavigationSubmenuActions } from './shell/navigation-submenu-actions';
 import { currentMAccount } from './permissions/m-platform-store';
 import { mCanVisit } from './permissions/m-platform-runtime';
@@ -11515,18 +11516,6 @@ function renderNavHomePanel(): string {
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
       <p class="text-sm leading-relaxed text-muted-foreground">${escapeHtml(t("shell.navHomeIntro"))}</p>
       <p class="mt-3 text-xs text-muted-foreground">${escapeHtml(tf("shell.navHomeModuleCount", { count: String(moduleCount) }))}</p>
-    </div>`;
-}
-
-function renderFutureVersionDiffBanner(): string {
-  if (isMvpProductVersion()) return "";
-  return `
-    <div
-      class="z-50 flex shrink-0 items-center justify-center bg-[#ef4444] px-4 py-2.5 text-center text-sm font-medium leading-snug text-white"
-      data-future-version-diff-banner
-      role="status"
-    >
-      ${escapeHtml(t("shell.futureVersionDiffBanner"))}
     </div>`;
 }
 
