@@ -24,18 +24,18 @@ export const M_MODULES: MModule[] = [
     action('extend', '延长订阅', '[data-sub-extend],[data-sub-extend-form]'),
     action('disable', '停用订阅', '[data-sub-disable],[data-sub-disable-form][data-kind="subscription"]'),
   ])] },
-  { id: 'merchants', title: '品牌管理中心', pages: [
+  { id: 'merchants', title: '商户管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
     page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
     page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
     page('groups', '集团管理', `${merchants}/groups`, true, [action('delete', '删除集团', '[data-group-delete]')]),
-    page('brands', '品牌列表', merchants, true, [
+    page('brands', '品牌管理', merchants, true, [
       action('impersonate', '进入商家后台', '[data-merchant-impersonate]'),
       action('lifecycle', '变更品牌状态', '[data-merchant-lifecycle]'),
       action('sync', '同步 CRM', '[data-merchant-crm-sync]'),
       action('capability-sync', '同步品牌能力', '[data-merchant-capability-sync]'),
     ]),
-    page('stores', '门店列表', `${merchants}/stores`, true, [action('status', '变更门店状态', '[data-merchant-store-status]')]),
+    page('stores', '门店管理', `${merchants}/stores`, true, [action('status', '变更门店状态', '[data-merchant-store-status]')]),
     page('org-tree', '组织树', `${merchants}/org-tree`, false),
     page('reports', '报表 / SLA', `${merchants}/reports`, false),
     page('merchant-log', '变更记录', `${merchants}/change-log`, false),

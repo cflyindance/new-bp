@@ -1,0 +1,17 @@
+{
+  "baseline": "e24e492f",
+  "url": "http://127.0.0.1:5252",
+  "labels": {
+    "module": "商户管理中心",
+    "brand": "品牌管理",
+    "store": "门店管理",
+    "kicker": "商户管理中心"
+  },
+  "errors": [],
+  "checks": [
+    "sidebar headings and both links",
+    "store navigation and page title",
+    "brand navigation and page title",
+    "permission catalog stable resource IDs"
+  ]
+}

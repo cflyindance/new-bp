@@ -1,10 +1,10 @@
 /**
- * M 平台 · 品牌管理中心 · 路由
+ * M 平台 · 商户管理中心 · 路由
  */
 import { getMerchantById, getGroupById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "./enterprise-merchant-store";
 
 export const ENTERPRISE_MERCHANT_ROUTE_PREFIX = "/m-platform/merchants";
-export const ENTERPRISE_MERCHANT_MODULE_LABEL = "品牌管理中心";
+export const ENTERPRISE_MERCHANT_MODULE_LABEL = "商户管理中心";
 
 export type MerchantDetailTab = "overview" | "org" | "capabilities" | "accounts" | "changelog";
 export type StoreDetailTab = "overview" | "capabilities" | "changelog";
@@ -123,7 +123,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     return { title: `${name} · ${tabTitle}`, module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
-    return { title: "品牌总览", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+    return { title: "创建品牌", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) {
     return { title: "组织树", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
