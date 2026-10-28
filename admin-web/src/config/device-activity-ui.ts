@@ -99,29 +99,26 @@ function detailPage(row: DeviceActivityRow): string {
   return (row.issue ? '<p class="ma-error-note" role="alert">' + (row.issue === "binding" ? '存在多个有效 License 或归属缺失，请核对设备绑定；订单指标暂不可用。' :
     '受控异常演示：该设备涉及的数据不可用，不能按零订单判断使用情况。') + '</p>' : "") +
     cards([
-      { title: "当前活跃状态", value: badge(row), note: "按设备全部历史点单及截至日期判断" },
       { title: "期间点单数", value: num(m.count), note: "支付完成 " + num(m.paid) + " · 取消 " + num(m.cancelled) },
       { title: "有订单天数", value: num(m.activeDays), note: "日均 " + (m.dailyAverage === null ? "—" : m.dailyAverage.toFixed(1)) + " 单" },
       { title: "最近点单时间", value: m.latest ? m.latest.slice(5, 16).replace("T", " ") : "—", note: "连续无订单 " + num(m.daysSince) + " 天" },
-    ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>设备当前归属</h3><p>设备 ID：' + esc(row.device.id) +
-    '</p></div></div><div class="ma-binding-list"><p><strong>当前产线</strong><span>' + esc(owner(row, "line")) +
-    '</span><strong>所属品牌</strong><span>' + esc(owner(row, "brand")) + '</span><strong>所属门店</strong><span>' + esc(owner(row, "store")) +
-    '</span></p><p><strong>当前 License</strong><span>' + (row.issue === "binding" ? "归属待核对" : row.binding ? esc(row.binding.licenseId) : "未绑定") + '</span></p></div></section>' +
-    '<section class="ma-panel"><div class="ma-panel-title"><div><h3>License 绑定历史</h3><p>历史订单按以下有效时间区间归属。</p></div></div><div class="ma-table-wrap"><table><thead><tr>' +
+    ]) +
+    '<section class="ma-panel"><div class="ma-panel-title"><div><h3>License 绑定历史</h3></div></div><div class="ma-table-wrap"><table><thead><tr>' +
     '<th>License</th><th>产线</th><th>品牌</th><th>门店</th><th>生效时间</th><th>失效时间（不含）</th></tr></thead><tbody>' +
     (history.map(b => { const s = data.stores.find(store => store.id === b.storeId); return '<tr><td>' + esc(b.licenseId) +
       '</td><td>' + esc(b.line) + '</td><td>' + esc(s?.merchantName ?? "归属待核对") + '</td><td>' + esc(s?.name ?? "归属待核对") +
       '</td><td>' + time(b.from) + '</td><td>' + (b.to ? time(b.to) : "至今") + '</td></tr>'; }).join("") ||
       '<tr><td colspan="6" class="ma-empty">该设备尚未绑定 License。</td></tr>') +
     '</tbody></table></div></section><section class="ma-panel"><div class="ma-panel-title"><div><h3>设备点单记录</h3><p>' +
-    (row.issue ? "数据异常，点单记录暂不可用。" : "期间共 " + selected.length + " 单，展示最近 20 单；含该设备所有历史产线与门店的可识别点单。") +
+    (row.issue ? "数据异常，点单记录暂不可用。" : "最近 20 单 · 含历史产线与门店") +
     '</p></div></div><div class="ma-table-wrap"><table><thead><tr><th>业务订单号</th><th>提交时间</th><th>订单状态</th><th>下单产线</th><th>下单品牌</th><th>下单门店</th><th>下单时 License</th></tr></thead><tbody>' +
     (row.issue ? '<tr><td colspan="7" class="ma-empty">订单数据不可用，请勿按零订单判断设备使用情况。</td></tr>' : deviceOrders ||
       '<tr><td colspan="7" class="ma-empty">统计期间无点单记录。</td></tr>') + '</tbody></table></div></section>';
 }
 function deviceDrawer(row: DeviceActivityRow): string {
   return '<div class="ma-drawer-backdrop" data-device-activity-browse><section class="ma-store-drawer ma-device-drawer" role="dialog" aria-modal="true" aria-labelledby="device-drawer-title" data-drawer-device="' + esc(row.device.id) + '" tabindex="-1">' +
-    '<header class="ma-drawer-heading"><div><p>设备明细</p><h2 id="device-drawer-title">' + esc(row.device.name) + '</h2><p>设备 ID：' + esc(row.device.id) + '</p>' +
+    '<header class="ma-drawer-heading"><div><h2 id="device-drawer-title">' + esc(row.device.name) + '</h2><p>设备 ID：' + esc(row.device.id) + ' · 当前 License：' +
+    (row.issue === 'binding' ? '归属待核对' : row.binding ? esc(row.binding.licenseId) : '未绑定') + '</p>' +
     '<div class="ma-drawer-context">' + badge(row) + '<span>当前产线：' + esc(owner(row, "line")) + '</span><span>所属品牌：' + esc(owner(row, "brand")) +
     '</span><span>所属门店：' + esc(owner(row, "store")) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-device-drawer-close aria-label="关闭设备明细">关闭 ×</button></header>' +
