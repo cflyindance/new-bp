@@ -1,3 +1,4 @@
+import { resolveActivityStoreId } from './merchant-activity-managed-demo';
 import { PRODUCT_LINES, type ActivityDataset, type ActivityScope, type ProductLine } from './merchant-activity-domain';
 
 import { ACTIVITY_PATH, activityContextPath, splitActivityContext, scopedActivityStores, type ActivityContext } from './merchant-activity-context';
@@ -19,7 +20,7 @@ export function parseActivityScope(path: string, data: ActivityDataset): Activit
   try {
     const parts = path.slice(ACTIVITY_PATH.length).split('/').filter(Boolean).map(decodeURIComponent);
     if (parts[0] !== 'store' || !parts[1] || ![2, 4, 6].includes(parts.length)) return undefined;
-    const scope: ActivityScope = { storeId: parts[1] };
+    const scope: ActivityScope = { storeId: resolveActivityStoreId(data, parts[1]) ?? parts[1] };
     if (!scopedActivityStores(data, route.context).some(store => store.id === scope.storeId)) return undefined;
     if (parts.length >= 4 && parts[2] === 'line') {
       if (!PRODUCT_LINES.includes(parts[3] as ProductLine)) return undefined;
