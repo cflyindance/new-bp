@@ -1,0 +1,16 @@
+{
+  "baseline": "aaa2a4e0",
+  "url": "http://127.0.0.1:5255",
+  "checks": [
+    "集团管理 unmarked and navigation works",
+    "门店管理 unmarked and navigation works",
+    "组织树 unmarked and navigation works",
+    "报表 / SLA unmarked and navigation works"
+  ],
+  "retained": [
+    "top banner",
+    "group filter outline",
+    "group column outlines"
+  ],
+  "errors": []
+}
