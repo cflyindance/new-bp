@@ -1,4 +1,5 @@
 import {fillBrandStoreDemoPresets} from './brand-store-demo-presets';
+import {listCustomBusinessTypes} from './enterprise-platform-preset-store';
 import { serviceStatus,serviceLabel } from './brand-service-policy';
 import { brandMenuChoices } from './brand-menu-choices';
 import { brandMenuRouteVersion } from './enterprise-merchant-services';
@@ -1962,7 +1963,7 @@ export function statusBadgeClass(status: MerchantStatus): string {
 }
 
 export function businessTypeLabel(id: string): string {
-  return PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.find((b) => b.id === id)?.label ?? id;
+  return getBusinessTypeOptions().find(b=>b.id===id)?.label??id;
 }
 
 export function productLineLabel(id: string): string {
@@ -1970,7 +1971,7 @@ export function productLineLabel(id: string): string {
 }
 
 export function getBusinessTypeOptions(): { id: string; label: string }[] {
-  return PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.map((b) => ({ id: b.id, label: b.label }));
+  return [...PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES,...listCustomBusinessTypes()].map(b=>({id:b.id,label:b.label}));
 }
 
 export function getProductLineOptions(): { id: string; label: string }[] {

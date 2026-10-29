@@ -1,5 +1,6 @@
 import {brandServiceVersion,brandServiceReadiness,brandServiceImpact,transitionBrandService,type BrandServiceAction} from './brand-service-lifecycle';
 import {bindBusinessTemplateToolbar,templateSourceFor} from './business-menu-template-ui';
+import {resolveBrandMenuScene,type BrandMenuSceneOptions} from './brand-menu-scene';
 import { historicalAdminFacts } from './brand-audit-history';
 import { bindBrandChangeLog } from './brand-change-log';
 import { bindOpenedBrandMenuTree } from './brand-menu-read-tree';
@@ -61,7 +62,7 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   dialog(title,'',`<div class="ba-admin-target"><strong>${esc(merchant.name)}</strong><span>${esc(merchant.bid??id)}</span></div><p class="ba-admin-hint">${hint}</p><p class="ba-muted">影响范围：${esc(brandServiceImpact(id))}</p>${issues.length?`<ul class="ba-admin-warning" role="alert">${issues.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:''}<label class="ba-field">操作原因 *<textarea name="reason" required minlength="2" maxlength="200" rows="3" placeholder="请填写2至200字的原因"></textarea></label>`,form=>{transitionBrandService(id,action,String(new FormData(form).get('reason')??''),expected);showAppToast(title+'成功',{variant:'success'});onSaved();return true;},{compact:true,action:'确认'+title,destructive:action==='suspend'||action==='close',blocked:issues.length>0});
 }
 
-export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean}={}):()=>string[] {
+export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
   const roots=available.filter(c=>c.level===1),byKey=new Map(available.map(c=>[c.key,c]));
@@ -102,7 +103,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
   };render();
-  if(!options.roles&&options.templates!==false)bindBusinessTemplateToolbar(host,choices,()=>[...selected],keys=>{selected.clear();keys.forEach(k=>selected.add(k));render();},options.allowed);
+  if(!options.roles&&options.templates!==false)bindBusinessTemplateToolbar(host,choices,()=>[...selected],keys=>{selected.clear();keys.forEach(k=>selected.add(k));render();},options.allowed,options.scene);
   return()=>[...selected];
 }
 
@@ -354,7 +355,8 @@ export function bindBrandCreateWizard():void {
   };
   root.querySelector<HTMLInputElement>('[data-create-store-search]')!.addEventListener('input',filterStores);
 
-  const refreshPicker=()=>{menuKeys=read();read=bindMenuPicker(root.querySelector('[data-create-picker]')!,brandMenuChoices(selections().getAll('productLineIds').map(String)),menuKeys);};
+  const refreshPicker=()=>{menuKeys=read();read=bindMenuPicker(root.querySelector('[data-create-picker]')!,brandMenuChoices(selections().getAll('productLineIds').map(String)),menuKeys,{scene:{read:()=>resolveBrandMenuScene(selections().getAll('businessTypeIds').map(String),business),edit:()=>setStep(0)}});};
+  root.querySelectorAll('[name=businessTypeIds]').forEach(el=>el.addEventListener('change',()=>root.querySelector('[data-create-picker]')!.dispatchEvent(new Event('business-template-context-change'))));
   root.querySelectorAll('[name=productLineIds]').forEach(el=>el.addEventListener('change',refreshPicker));refreshPicker();refreshStores();setStep(0);
   form.addEventListener('change',e=>{if((e.target as HTMLElement).matches('[data-create-store-search]'))return;dirty=true;setStep(step);});
   form.addEventListener('input',e=>{if(!(e.target as HTMLElement).matches('[data-menu-search],[data-create-store-search]'))dirty=true;});
