@@ -1,3 +1,4 @@
+import {bindFlatBusinessPresets} from './flat-business-presets';
 import {brandServiceVersion,brandServiceReadiness,brandServiceImpact,transitionBrandService,type BrandServiceAction} from './brand-service-lifecycle';
 import {bindBusinessTemplateToolbar,templateSourceFor} from './business-menu-template-ui';
 import {resolveBrandMenuScene,type BrandMenuSceneOptions} from './brand-menu-scene';
@@ -103,7 +104,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
   };render();
-  if(!options.roles&&options.templates!==false)bindBusinessTemplateToolbar(host,choices,()=>[...selected],keys=>{selected.clear();keys.forEach(k=>selected.add(k));render();},options.allowed,options.scene);
+  if(!options.roles&&options.templates!==false){const apply=(keys:string[])=>{selected.clear();keys.forEach(k=>selected.add(k));render();};if(options.scene)bindFlatBusinessPresets(host,choices,()=>[...selected],apply,options.scene,options.allowed);else bindBusinessTemplateToolbar(host,choices,()=>[...selected],apply,options.allowed);}
   return()=>[...selected];
 }
 
