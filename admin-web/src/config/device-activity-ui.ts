@@ -4,7 +4,7 @@ import {
   PRODUCT_LINES, STATUS_LABELS, dateNumber, periodOrders, shiftDate, validatePeriod,
   type ActivityPeriod, type ActivityStatus,
 } from "./merchant-activity-domain";
-import { activityDemoData as data, activityDemoOrders as orders } from "./merchant-activity-data";
+import { activityDemoData as data, activityDemoOrders as orders, refreshActivityDemoData, renderActivityDemoNotice } from "./merchant-activity-data";
 import { deviceLifetimeOrders, filterDeviceRows, globalDeviceRows, type DeviceActivityRow } from "./device-activity-domain";
 
 export const DEVICE_ACTIVITY_PATH = "/m-platform/merchants/device-activity";
@@ -65,7 +65,7 @@ function rootPage(): string {
     const m = row.metrics;
     return '<tr data-global-device="' + esc(row.device.id) + '"><td><a data-device-open="' + esc(row.device.id) + '" data-device-entry="name" class="ma-link" href="' + detailHref(row.device.id) + '">' +
       esc(row.device.name) + '</a><small>' + esc(row.device.id) + '</small></td><td>' + badge(row) +
-      (m.status === "never" && row.binding ? '<small>已绑定 ' + (dateNumber(data.asOf) - dateNumber(row.binding.from.slice(0, 10))) + ' 天</small>' : "") +
+      (m.status === "never" && row.binding ? '<small>演示绑定 ' + (dateNumber(data.asOf) - dateNumber(row.binding.from.slice(0, 10))) + ' 天</small>' : "") +
       '</td><td>' + esc(owner(row, "line")) + '</td><td>' + esc(owner(row, "brand")) + '</td><td>' + esc(owner(row, "store")) +
       '</td><td class="ma-number">' + num(m.count) + '</td><td class="ma-number">' + num(m.activeDays) +
       '</td><td class="ma-number">' + (m.dailyAverage === null ? "—" : m.dailyAverage.toFixed(1)) +
@@ -123,16 +123,22 @@ function deviceDrawer(row: DeviceActivityRow): string {
     '<div class="ma-drawer-context">' + badge(row) + '<span>当前产线：' + esc(owner(row, "line")) + '</span><span>所属品牌：' + esc(owner(row, "brand")) +
     '</span><span>所属门店：' + esc(owner(row, "store")) + '</span></div>' + (row.store && !row.issue ? activityManagementLinks(row.store) : '') + '<p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-device-drawer-close aria-label="关闭设备明细">关闭 ×</button></header>' +
-    '<div class="ma-drawer-body">' + detailPage(row) + '</div></section></div>';
+    '<div class="ma-drawer-body">' + renderActivityDemoNotice() + detailPage(row) + '</div></section></div>';
 }
 export function renderDeviceActivityPage(path: string): string {
+  const previousAsOf = data.asOf;
+  refreshActivityDemoData();
+  if (data.asOf !== previousAsOf && state.quick) {
+    state.period = { start: shiftDate(data.asOf, 1 - Number(state.quick)), end: data.asOf };
+    state.periodDraft = null;
+  }
   const rows = globalDeviceRows(data, orders, state.period);
   let row: DeviceActivityRow | undefined;
   if (path !== DEVICE_ACTIVITY_PATH) {
     try { const id = decodeURIComponent(path.slice(DEVICE_ACTIVITY_PATH.length + 1)); row = rows.find(r => r.device.id === id); } catch { /* invalid path */ }
     if (!row) return '<section class="ma-page"><h2>未找到演示设备</h2><a class="ma-link" href="' + rootHref + '">返回全部设备</a></section>';
   }
-  return '<div class="ma-page" data-device-activity-page><div data-device-background' + (row ? ' inert' : '') + '>' + dates() + rootPage() +
+  return '<div class="ma-page" data-device-activity-page><div data-device-background' + (row ? ' inert' : '') + '>' + renderActivityDemoNotice() + dates() + rootPage() +
     '<section class="ma-rules"><strong>统计口径</strong><p>品牌、门店和产线筛选按当前唯一有效 License 绑定关系；未绑定设备独立保留，多个有效绑定显示归属待核对。</p>' +
     '<p>设备点单量按设备 ID 汇总查询期间所有历史产线与门店，来源无法识别的订单不分摊到设备。设备状态按全历史最近点单判定，修改期间不改变当前活跃状态。</p>' +
     '<p>0～6 天活跃；7～13 天近期未使用；14～29 天疑似停用；≥30 天长期未使用。已绑定从未点单为尚未使用；无绑定且无历史点单为未绑定。异常数据以 — 展示。</p></section></div>' +

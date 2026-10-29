@@ -1,3 +1,4 @@
+import { resolveActivityStoreId } from './merchant-activity-managed-demo';
 import type { ActivityDataset, ActivityStore } from './merchant-activity-domain';
 export const ACTIVITY_PATH = '/m-platform/merchants/activity';
 export interface ActivityContext { kind: 'brand' | 'store'; id: string }
@@ -16,6 +17,10 @@ export function splitActivityContext(path: string): { context: ActivityContext |
     return { context: { kind: parts[0] as ActivityContext['kind'], id }, path: ACTIVITY_PATH + (parts.length > 2 ? '/' + parts.slice(2).join('/') : '') };
   } catch { return undefined; }
 }
+export function canonicalActivityContext(data: ActivityDataset, context: ActivityContext | null): ActivityContext | null {
+  return context?.kind === 'store' ? { ...context, id: resolveActivityStoreId(data, context.id) ?? context.id } : context;
+}
 export function scopedActivityStores(data: ActivityDataset, context: ActivityContext | null): ActivityStore[] {
+  context = canonicalActivityContext(data, context);
   return data.stores.filter(store => !context || (context.kind === 'brand' ? store.merchantId === context.id : store.id === context.id));
 }

@@ -391,3 +391,5 @@
 .ma-context-links{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 .ma-empty h3{font-weight:600;margin-bottom:10px}
 .ma-empty p{color:var(--color-muted-foreground);line-height:1.7}
+
+.ma-demo-note{padding:10px 14px;margin-bottom:14px;border:1px solid var(--color-border);border-left:3px solid var(--ma-accent);border-radius:6px;background:var(--color-card);color:var(--color-muted-foreground);line-height:1.6}
