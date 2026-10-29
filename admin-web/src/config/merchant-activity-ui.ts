@@ -125,7 +125,7 @@ function rootPage(): string {
   const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
     href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + esc(store.merchantName) + ' · ' + esc(store.id) + '</small></td><td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + metricCells(m) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store) + '</td></tr>').join("");
+    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind : undefined) + '</td></tr>').join("");
   return filterControls() + summaryCards([
     { label: "门店", value: String(rows.length), note: "当前筛选范围" },
     { label: "活跃门店", value: String(active), note: "最近点单距今 0～6 天" },
@@ -174,7 +174,7 @@ function storeDrawer(scope: ActivityScope): string {
     '" aria-controls="ma-drawer-content" href="' + href({ storeId: scope.storeId, line }) + '">' + (line ?? '全部产线') + '</a>').join('');
   return '<div class="ma-drawer-backdrop" data-activity-browse><section class="ma-store-drawer" role="dialog" aria-modal="true" aria-labelledby="ma-drawer-title" tabindex="-1">' +
     '<header class="ma-drawer-heading"><div><p>门店详情</p><h2 id="ma-drawer-title">' + esc(store.name) + '</h2><div class="ma-drawer-context"><span>' + esc(store.merchantName) + '</span>' + badge(m.status) +
-    activityManagementLinks(store) + '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
+    activityManagementLinks(store, activeEmbedded ? activeContext?.kind : undefined) + '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-ma-drawer-close aria-label="关闭门店详情">关闭 ×</button></header>' +
     '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' + renderActivityDemoNotice() +
     (store.quality === 'error' ? '<p class="ma-error-note" role="alert">该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : '') + scopeSummary(selected) +
