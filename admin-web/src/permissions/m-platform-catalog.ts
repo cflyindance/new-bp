@@ -77,6 +77,8 @@ export const M_RESOURCES = new Map<string, { kind: 'module' | 'page' | 'action';
   ]),
 ]));
 export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
+  // Independent navigation entry, reusing the existing preset permission resource.
+  if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
   const exact = M_PAGES.find(p => p.path === path);
   if (exact) return exact;
   if (path === permissions) return M_PAGES.find(p => p.id === 'permission-overview');

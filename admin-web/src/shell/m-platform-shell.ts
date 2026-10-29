@@ -1,4 +1,6 @@
 import { renderFutureVersionDiffBanner } from "./future-version-banner";
+import {isBusinessMenuTemplatePath} from '../config/business-menu-template-scope';
+import {renderBusinessMenuTemplatePage,bindBusinessMenuTemplatePage} from '../config/business-menu-template-manager';
 import { renderMCenter, bindMCenter } from '../permissions/m-platform-ui';
 import { mCanVisit, mDenied, renderMNavigation, bindMNavigation, installMRuntimeGuards, applyMControlStates } from '../permissions/m-platform-runtime';
 /**
@@ -56,6 +58,7 @@ export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 export function isMPlatformContentPath(path: string): boolean {
   return (
     isMPlatformPresetPath(path) ||
+    isBusinessMenuTemplatePath(path) ||
     isNavBlueprintPath(path) ||
     isMPlatformPermissionsPath(path) ||
     isMPlatformHardwarePath(path) ||
@@ -77,6 +80,7 @@ export function renderMPlatformSidebar(path: string): string {
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
   if (!mCanVisit(path)) return { title: "访问受限", module: "M 平台" };
+  if(isBusinessMenuTemplatePath(path))return {title:'业态与菜单模板',module:'M 平台'};
   return (
     findNavBlueprintPageTitle(path) ??
     activityPageTitle(path) ??
@@ -125,6 +129,7 @@ function renderMPlatformContent(path: string): string {
   if (isMPlatformMerchantPath(path)) {
     return renderEnterpriseMerchantPage(path);
   }
+  if(isBusinessMenuTemplatePath(path))return renderBusinessMenuTemplatePage();
   return renderPlatformPresetPage(path, ENTERPRISE_PLATFORM_PRESET_SCOPE);
 }
 
@@ -204,6 +209,7 @@ export function bindMPlatformShell(onMount: () => void): void {
 
   const path = currentPath;
   if (!mCanVisit(path)) return;
+  if(isBusinessMenuTemplatePath(path)){bindBusinessMenuTemplatePage();applyMControlStates();return;}
   bindNavBlueprint(onMount);
   if (isAnySubscriptionAdminPath(path)) {
     bindSubscriptionServicePage(onMount);

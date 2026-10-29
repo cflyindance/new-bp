@@ -2,8 +2,11 @@ import {brandMenuChoices,type MenuChoice} from './brand-menu-choices';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mActionKey,mPageKey} from '../permissions/m-platform-catalog';
 import {mCanVisit} from '../permissions/m-platform-runtime';
+import {listCustomBusinessTypes} from './enterprise-platform-preset-store';
+import {BUSINESS_MENU_TEMPLATE_PATH} from './business-menu-template-scope';
 export const TEMPLATE_PATH='/m-platform/platform-preset',TEMPLATE_STORAGE='menusifu:business-menu-templates-v1';
 export const DIMENSIONS={category:{general:'通用',tea:'茶饮',chinese:'中餐',hotpot:'火锅',western:'西餐'},mode:{dining:'正餐',fast:'快餐',delivery:'外卖专营'},org:{single:'单店',chain:'连锁'}} as const;
+export function businessTemplateDimensions(){return {...DIMENSIONS,category:{...DIMENSIONS.category,...Object.fromEntries(listCustomBusinessTypes().map(t=>[t.id,t.label]))} as Record<string,string>};}
 export interface TemplateDraft {name:string;category:string;mode:string;org:string;keys:string[]}
 export interface TemplateRelease extends TemplateDraft {version:number;at:string}
 export interface BusinessMenuTemplate {id:string;revision:number;enabled:boolean;draft:TemplateDraft;releases:TemplateRelease[]}
@@ -31,12 +34,12 @@ export function readBusinessMenuTemplates(choices:MenuChoice[]):BusinessMenuTemp
  const raw=localStorage.getItem(TEMPLATE_STORAGE);if(raw){const value=JSON.parse(raw);if(!Array.isArray(value))throw Error('业态模板数据异常，请联系管理员处理。');return value;}
  const rows=defaults(choices);if(rows.some(r=>r.draft.keys.length))localStorage.setItem(TEMPLATE_STORAGE,JSON.stringify(rows));return rows;
 }
-export function canManageBusinessTemplates(publish=false):boolean{return location.hash.startsWith('#'+TEMPLATE_PATH)&&mCanVisit(TEMPLATE_PATH)&&currentMAccess(mPageKey('presets'))==='edit'&&(!publish||currentMAccess(mActionKey('presets','publish'))==='edit');}
+export function canManageBusinessTemplates(publish=false):boolean{return (location.hash.startsWith('#'+TEMPLATE_PATH)||location.hash==='#'+BUSINESS_MENU_TEMPLATE_PATH)&&mCanVisit(TEMPLATE_PATH)&&currentMAccess(mPageKey('presets'))==='edit'&&(!publish||currentMAccess(mActionKey('presets','publish'))==='edit');}
 export function saveBusinessMenuTemplate(id:string|undefined,draft:TemplateDraft,choices:MenuChoice[],expected?:number,publish=false):BusinessMenuTemplate {
  if(!canManageBusinessTemplates(publish))throw Error('暂无业态菜单模板编辑或发布权限。');
   choices=brandMenuChoices();
  if(!draft.name.trim()||draft.name.trim().length>60)throw Error('模板名称须为1至60字。');
- if(!Object.hasOwn(DIMENSIONS.category,draft.category)||!Object.hasOwn(DIMENSIONS.mode,draft.mode)||!Object.hasOwn(DIMENSIONS.org,draft.org))throw Error('请选择有效的品类、服务方式和组织模式。');
+ if(!Object.hasOwn(businessTemplateDimensions().category,draft.category)||!Object.hasOwn(DIMENSIONS.mode,draft.mode)||!Object.hasOwn(DIMENSIONS.org,draft.org))throw Error('请选择有效的品类、服务方式和组织模式。');
  const known=new Set(choices.map(c=>c.key));if(draft.keys.some(k=>!known.has(k)))throw Error('菜单目录已变化，包含失效节点，请重新核对。');
  const keys=templateKeysWithParents(draft.keys,choices);if(publish&&!choices.some(c=>c.isPage&&keys.includes(c.key)))throw Error('发布模板至少需要一个页面。');
  const rows=readBusinessMenuTemplates(choices),old=id?rows.find(t=>t.id===id):undefined;
