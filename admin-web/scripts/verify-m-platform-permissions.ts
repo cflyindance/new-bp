@@ -28,7 +28,7 @@ assert.throws(() => validateMState(invalid), /名称已存在/);
 const invalidBinding = structuredClone(state); invalidBinding.employees[0].roleIds = ['missing'];
 assert.throws(() => validateMState(invalidBinding), /失效角色/);
 assert.equal(mIsAdministrator(state, 'a'), false);
-assert.equal(M_MODULES.length, 6);
+assert.equal(M_MODULES.length, 7);
 assert.equal(new Set(M_PAGES.map(p => p.path)).size, M_PAGES.length);
 assert.ok([...M_RESOURCES.keys()].every(key => key.startsWith('m:')));
 assert.equal(mPageForPath('/m-platform/permissions/subscription-services/create')?.id, 'services', 'service route under permissions is not an access-admin resource');

@@ -2,7 +2,18 @@ import { M_RESOURCES, mPageKey, mActionKey, type MAccess } from './m-platform-ca
 export interface MRole { id: string; name: string; description: string; grants: Record<string, MAccess>; system?: boolean }
 export interface MEmployee { id: string; roleIds: string[] }
 export interface MLog { id: string; at: string; actor: string; action: string; object: string; before: string; after: string }
-export interface MState { schema: 1; revision: number; roles: MRole[]; employees: MEmployee[]; logs: MLog[] }
+export interface MState { schema: 1; catalogVersion?: 2; revision: number; roles: MRole[]; employees: MEmployee[]; logs: MLog[] }
+/** Preserve former effective ancestor gates without adding any page grants. */
+export function migrateMActivityModule(state: MState): MState {
+  if (state.catalogVersion === 2) return state;
+  const next = structuredClone(state);
+  next.catalogVersion = 2;
+  for (const role of next.roles) {
+    const key = 'm:module:activity-analysis';
+    if (!Object.hasOwn(role.grants, key)) role.grants[key] = role.grants['m:module:merchants'] === 'read' ? 'read' : 'hidden';
+  }
+  return next;
+}
 export const mRank: Record<MAccess, number> = { hidden: 0, read: 1, edit: 2 };
 /** Union raw role grants first, then apply the effective ancestor gates. */
 export function mResolve(state: MState, employeeId: string, key: string, enabled = true, seen = new Set<string>()): MAccess {
@@ -27,6 +38,7 @@ export function mRoleState(role: MRole): MState {
   return { schema: 1, revision: 0, roles: [role], employees: [{ id: 'preview', roleIds: [role.id] }], logs: [] };
 }
 export function validateMState(state: MState): void {
+  if (state.catalogVersion !== undefined && state.catalogVersion !== 2) throw Error('M 平台权限目录版本异常');
   if (state.schema !== 1 || !Number.isInteger(state.revision) || state.revision < 0 || !Array.isArray(state.roles) || !Array.isArray(state.employees) || !Array.isArray(state.logs)) throw Error('M 平台权限数据格式异常，未覆盖原数据');
   const ids = new Set<string>(), names = new Set<string>();
   for (const role of state.roles) {

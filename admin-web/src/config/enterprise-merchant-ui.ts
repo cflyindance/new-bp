@@ -1,3 +1,6 @@
+import { renderActivityPage, bindActivityPage } from './merchant-activity-ui';
+import { activityContextPath } from './merchant-activity-context';
+import { mCanVisit } from '../permissions/m-platform-runtime';
 import { runImpersonationWithLoading } from "./impersonation-loading";
 import {ensureBrandStoreDemoPresets} from './enterprise-merchant-store';
 import {bindBrandChangeLog} from './brand-change-log';
@@ -612,11 +615,12 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
       : "inline-flex h-9 items-center border-b-2 border-transparent px-3 text-sm text-muted-foreground hover:text-foreground";
 
   return `
-    <nav class="flex shrink-0 gap-1 border-b border-border" aria-label="品牌详情">
+    <nav class="flex shrink-0 flex-wrap gap-1 border-b border-border" aria-label="品牌详情">
       <a href="${merchantDetailHref(merchantId, "overview")}" class="${tabClass("overview")}">概览</a>
       <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">品牌门店</a>
       <a href="${merchantDetailHref(merchantId, "capabilities")}" class="${tabClass("capabilities")}">品牌菜单</a>
       <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">品牌管理员</a>
+      ${mCanVisit(activityContextPath({kind: 'brand', id: merchantId})) ? `<a href="${merchantDetailHref(merchantId, "usage")}" class="${tabClass("usage")}">使用情况</a>` : ""}
       <a href="${merchantDetailHref(merchantId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
     </nav>`;
 }
@@ -935,6 +939,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   }
   let body = "";
   if (tab === "org" || tab === "capabilities" || tab === "accounts" || tab === "changelog") body = renderBrandWorkspace(merchantId, tab);
+  else if (tab === "usage") body = `<section data-merchant-usage>${mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? renderActivityPage(activityContextPath({kind: "brand", id: merchantId}), true) : "<p>暂无系统使用分析权限，请联系服务商管理员。</p>"}</section>`;
   else body = renderMerchantDetailOverview(merchant);
 
   return `
@@ -958,6 +963,7 @@ function renderStoreDetailTabs(storeId: string, tab: StoreDetailTab): string {
     <nav class="flex flex-wrap gap-1 border-b border-border">
       <a href="${storeDetailHref(storeId)}" class="${tabClass("overview")}">概览</a>
       <a href="${storeDetailHref(storeId, "capabilities")}" class="${tabClass("capabilities")}">门店菜单</a>
+      ${mCanVisit(activityContextPath({kind: 'store', id: storeId})) ? `<a href="${storeDetailHref(storeId, "usage")}" class="${tabClass("usage")}">使用情况</a>` : ""}
       <a href="${storeDetailHref(storeId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
     </nav>`;
 }
@@ -1023,6 +1029,7 @@ function renderStoreDetailPage(storeId: string, tab: StoreDetailTab): string {
   let body = "";
   if (tab === "capabilities") body = renderStoreDetailCapabilities(storeId);
   else if (tab === "changelog") body = renderStoreDetailChangelog(storeId);
+  else if (tab === "usage") body = `<section data-merchant-usage>${mCanVisit(activityContextPath({kind: "store", id: storeId})) ? renderActivityPage(activityContextPath({kind: "store", id: storeId}), true) : "<p>暂无系统使用分析权限，请联系服务商管理员。</p>"}</section>`;
   else body = renderStoreDetailOverview(storeId);
 
   return `
@@ -1083,6 +1090,9 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces();
+  const usagePath = location.hash.slice(1), brandUsage = parseMerchantDetailPath(usagePath), storeUsage = parseStoreDetailPath(usagePath);
+  const usageContext = storeUsage?.tab === 'usage' ? {kind: 'store' as const, id: storeUsage.storeId} : brandUsage?.tab === 'usage' ? {kind: 'brand' as const, id: brandUsage.merchantId} : null;
+  if (usageContext && mCanVisit(usagePath) && mCanVisit(activityContextPath(usageContext))) bindActivityPage(onMount, activityContextPath(usageContext));
   bindBrandCreateWizard();
   document.querySelectorAll<HTMLButtonElement>("[data-brand-single-store]").forEach(button => button.onclick = () => { const store=getStoreById(button.dataset.brandSingleStore!); if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],"m-platform",onMount); });
   bindMerchantBrandStoresDialog();

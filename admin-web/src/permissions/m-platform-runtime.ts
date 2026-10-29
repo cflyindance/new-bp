@@ -4,6 +4,7 @@ import { currentMAccess, currentMAccount } from './m-platform-store';
 import { groupMNavigation } from './m-platform-navigation';
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export function mCanVisit(path: string): boolean {
+  if (/^\/m-platform\/merchants\/(?:stores\/[^/]+|[^/]+)\/usage$/.test(path) && currentMAccess(mPageKey('merchant-activity')) === 'hidden') return false;
   const page = mPageForPath(path);
   if (!page || currentMAccess(mPageKey(page.id)) === 'hidden') return false;
   if (/\/(new|create)(\/|$)/.test(path) || /\/edit(\/|$)/.test(path) && !['roles', 'presets', 'routing'].includes(page.id)) {
@@ -43,7 +44,7 @@ export function bindMNavigation(): void {
 }
 
 const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[data-view-switch-trigger],[data-theme-toggle],#theme-toggle,[data-sub-modal-close],[data-pp-changelog-close],[data-merchant-stores-dialog-close]';
-const readonlyBrowse = '[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search]';
+const readonlyBrowse = '[data-merchant-usage] [data-activity-browse],[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search]';
 function deniedControl(target: Element, type: string): boolean {
   const path = location.hash.slice(1), page = mPageForPath(path);
   if (!path.startsWith('/m-platform/') || !page || target.closest('.mp-center,.mp-permission-dialog')) return false;

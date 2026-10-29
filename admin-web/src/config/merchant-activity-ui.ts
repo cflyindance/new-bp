@@ -1,4 +1,9 @@
+import { activityManagementLinks } from './activity-management-links';
 import "./merchant-activity.css";
+import { activityContextPath, splitActivityContext, scopedActivityStores, type ActivityContext } from './merchant-activity-context';
+import { getMerchantById, getStoreById } from './enterprise-merchant-store';
+import { merchantDetailHref, storeDetailHref } from './enterprise-merchant-scope';
+import { mCanVisit } from '../permissions/m-platform-runtime';
 import {
   PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope,
   shiftDate, summarizeActivity, validatePeriod,
@@ -18,7 +23,17 @@ const state = {
 const esc = (value: string) => value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const n = (value: number | null) => value === null ? "—" : value.toLocaleString("zh-CN");
 const time = (value: string | null) => value ? esc(value.slice(0, 16).replace("T", " ")) : "—";
-const href = activityScopeHref;
+let activeContext: ActivityContext | null = null;
+let contextKey = '';
+const href = (scope?: ActivityScope) => activityScopeHref(scope, activeContext);
+function contextHeader(embedded: boolean): string {
+  if (!activeContext) return '';
+  const { kind, id } = activeContext;
+  const entity = kind === 'brand' ? getMerchantById(id) : getStoreById(id);
+  const target = kind === 'brand' ? merchantDetailHref(id, 'usage') : storeDetailHref(id, 'usage');
+  const fallbackName = kind === 'brand' ? data.stores.find(s => s.merchantId === id)?.merchantName : data.stores.find(s => s.id === id)?.name;
+  return `<section class="ma-context" data-activity-browse><div><strong>${kind === 'brand' ? '品牌' : '门店'}使用情况 · ${esc(entity?.name ?? fallbackName ?? id)}</strong><p>仅统计当前${kind === 'brand' ? '品牌所属门店' : '门店'}，使用与系统使用分析相同的统计口径。</p></div><div class="ma-context-links">${embedded ? `<a class="ma-link" href="${href()}">打开详细分析</a>` : entity && mCanVisit(target.slice(1)) ? `<a class="ma-link" href="${target}">返回${kind === 'brand' ? '品牌' : '门店'}使用情况</a>` : ''}<a class="ma-link" href="#${ACTIVITY_PATH}">查看全局分析</a></div></section>`;
+}
 const badge = (status: ActivityStatus) => '<span class="ma-badge ma-' + status + '">' + STATUS_LABELS[status] + "</span>";
 function neverNote(scope: ActivityScope): string {
   const store = data.stores.find(s => s.id === scope.storeId)!;
@@ -53,16 +68,18 @@ function dateControls(): string {
 }
 function filterControls(): string {
   const merchants = [...new Map(data.stores.map(s => [s.merchantId, s.merchantName])).entries()];
-  return '<form class="ma-filters" data-ma-filter-form data-activity-browse><label>商户<select name="merchant" aria-label="商户"><option value="">全部商户</option>' +
+  return '<form class="ma-filters" data-ma-filter-form data-activity-browse>' + (activeContext ? '' : '<label>商户<select name="merchant" aria-label="商户"><option value="">全部商户</option>' +
     merchants.map(([id, name]) => '<option value="' + id + '"' + (state.merchant === id ? " selected" : "") + ">" + esc(name) + "</option>").join("") +
-    '</select></label><label>活跃状态<select name="status" aria-label="活跃状态"><option value="">全部状态</option>' +
+    '</select></label>') + '<label>活跃状态<select name="status" aria-label="活跃状态"><option value="">全部状态</option>' +
     (Object.entries(STATUS_LABELS) as [ActivityStatus, string][]).filter(([id]) => id !== "unconfigured").map(([id, label]) =>
       '<option value="' + id + '"' + (state.status === id ? " selected" : "") + ">" + label + "</option>").join("") +
     '</select></label><label class="ma-search">门店／商户<input name="query" aria-label="搜索门店或商户" placeholder="搜索门店或商户名称" maxlength="80" value="' + esc(state.query) +
     '"></label><button type="submit">筛选</button><button type="button" data-ma-reset>重置筛选</button></form>';
 }
 function rootPage(): string {
-  const stores = data.stores.filter(s => (!state.merchant || s.merchantId === state.merchant) &&
+  const candidates = scopedActivityStores(data, activeContext);
+  if (activeContext && !candidates.length) return '<section class="ma-panel ma-empty" data-usage-empty><h3>暂无使用数据</h3><p>当前品牌或门店暂无使用数据。数据接入后，可在此查看活跃情况。</p></section>';
+  const stores = candidates.filter(s => (!state.merchant || s.merchantId === state.merchant) &&
     (!state.query || (s.name + s.merchantName).toLowerCase().includes(state.query.toLowerCase())) &&
     (!state.status || metrics({ storeId: s.id }).status === state.status));
   const rows = stores.map(s => ({ store: s, m: metrics({ storeId: s.id }) }));
@@ -74,7 +91,7 @@ function rootPage(): string {
   const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" href="' +
     href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + esc(store.merchantName) + '</small></td><td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + metricCells(m) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" href="' + href({ storeId: store.id }) + '">查看详情 →</a></td></tr>').join("");
+    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store) + '</td></tr>').join("");
   return filterControls() + summaryCards([
     { label: "门店", value: String(rows.length), note: "当前筛选范围" },
     { label: "活跃门店", value: String(active), note: "最近点单距今 0～6 天" },
@@ -123,20 +140,28 @@ function storeDrawer(scope: ActivityScope): string {
     '" aria-controls="ma-drawer-content" href="' + href({ storeId: scope.storeId, line }) + '">' + (line ?? '全部产线') + '</a>').join('');
   return '<div class="ma-drawer-backdrop" data-activity-browse><section class="ma-store-drawer" role="dialog" aria-modal="true" aria-labelledby="ma-drawer-title" tabindex="-1">' +
     '<header class="ma-drawer-heading"><div><p>门店详情</p><h2 id="ma-drawer-title">' + esc(store.name) + '</h2><div class="ma-drawer-context"><span>' + esc(store.merchantName) + '</span>' + badge(m.status) +
-    '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
+    activityManagementLinks(store) + '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-ma-drawer-close aria-label="关闭门店详情">关闭 ×</button></header>' +
     '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' +
     (store.quality === 'error' ? '<p class="ma-error-note" role="alert">该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : '') + scopeSummary(selected) +
     (!scope.line ? lineOverview(scope) + (m.unknown ? '<p class="ma-inline-note">来源待识别：' + n(m.unknown) + ' 单。未计入任何产线或设备。</p>' : '') : '') + devicesPage(scope) + '</div></section></div>';
 }
-export function renderActivityPage(path: string): string {
+export function renderActivityPage(path: string, embedded = false): string {
+  const route = splitActivityContext(path);
+  const nextContext = route?.context ?? null;
+  const nextKey = nextContext ? `${nextContext.kind}:${nextContext.id}` : '';
+  if (nextKey !== contextKey) {
+    state.filterDraft = null; state.periodDraft = null; state.merchant = ''; state.status = ''; state.query = '';
+    state.rootScroll = 0; state.drawerScroll = 0; state.wasOpen = false; state.openStoreId = ''; contextKey = nextKey;
+  }
+  activeContext = nextContext;
   const scope = parsedScope(path);
-  if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + href() + '">返回全部门店</a></section>';
-  return '<div class="ma-page" data-ma-page><div data-ma-background' + (scope ? ' inert' : '') + '>' + dateControls() + rootPage() +
+  if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
+  return '<div class="ma-page" data-ma-page><div data-ma-background' + (scope ? ' inert' : '') + '>' + contextHeader(embedded) + dateControls() + rootPage() +
     '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
     '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section></div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }
-export function bindActivityPage(onMount: () => void): void {
+export function bindActivityPage(onMount: () => void, pagePath = location.hash.slice(1)): void {
   const root = document.querySelector<HTMLElement>("[data-ma-page]");
   if (!root) return;
   root.querySelectorAll<HTMLButtonElement>("[data-ma-quick]").forEach(button => button.addEventListener("click", () => {
@@ -166,7 +191,7 @@ export function bindActivityPage(onMount: () => void): void {
   root.querySelector("[data-ma-reset]")?.addEventListener("click", () => {
     state.filterDraft = null; state.merchant = ""; state.status = ""; state.query = ""; onMount();
   });
-  const scope = parsedScope(location.hash.slice(1));
+  const scope = parsedScope(pagePath);
   const dialog = root.querySelector<HTMLElement>('.ma-store-drawer');
   const body = root.querySelector<HTMLElement>('.ma-drawer-body');
   const restoreDraft = (selector: string, draft: Record<string, string> | null) => {
@@ -182,7 +207,7 @@ export function bindActivityPage(onMount: () => void): void {
   root.scrollTop = state.rootScroll;
   if (dialog) root.style.overflow = "hidden";
   root.addEventListener('scroll', () => { if (!dialog) state.rootScroll = root.scrollTop; });
-  const saveDraft = (selector: string) => Object.fromEntries([...new FormData(root.querySelector<HTMLFormElement>(selector)!)].map(([key, value]) => [key, String(value)]));
+  const saveDraft = (selector: string) => { const form = root.querySelector<HTMLFormElement>(selector); return form ? Object.fromEntries([...new FormData(form)].map(([key, value]) => [key, String(value)])) : null; };
   root.addEventListener('click', event => {
     const anchor = (event.target as Element).closest<HTMLAnchorElement>('a[href]');
     if (!anchor || !anchor.hash.startsWith('#' + ACTIVITY_PATH)) return;
@@ -197,7 +222,7 @@ export function bindActivityPage(onMount: () => void): void {
       state.focusAfter = '[data-ma-line-tab="' + CSS.escape(next?.line ?? '') + '"]';
     }
   });
-  const closeDrawer = () => { state.focusAfter = ''; location.hash = ACTIVITY_PATH; };
+  const closeDrawer = () => { state.focusAfter = ''; location.hash = activityContextPath(activeContext); };
   root.querySelector('[data-ma-drawer-close]')?.addEventListener('click', closeDrawer);
   root.querySelector('.ma-drawer-backdrop')?.addEventListener('click', event => {
     if (event.target === event.currentTarget) closeDrawer();
