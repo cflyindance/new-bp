@@ -1,0 +1,73 @@
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+(async () => {
+  const browser = await chromium.launch({channel: 'msedge', headless: true});
+  try {
+    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const base = process.env.BRAND_PREVIEW_URL || 'http://127.0.0.1:5263';
+    const assets = process.env.USAGE_SCREENSHOT_DIR || 'docs/项目文档/assets/brand-store-detail-modal-20261029';
+    fs.mkdirSync(assets, {recursive: true});
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    const go = async path => { await page.goto(base + '/#' + path); await page.reload(); await page.waitForTimeout(300); };
+    const shot = async name => { await page.waitForTimeout(250); await page.screenshot({path: assets + '/' + name + '.png'}); };
+    const snapshot = () => page.evaluate(async () => JSON.stringify((await import('/src/config/enterprise-merchant-store.ts')).getEnterpriseMerchantSnapshot()));
+    await page.goto(base);
+    await page.evaluate(async () => { const a = await import('/src/auth/login.ts'); a.setAuthenticated(a.DEMO_LOGIN_ACCOUNT); (await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell(); });
+    await go('/m-platform/merchants/merchant-zhangji/usage');
+    await page.locator('[data-ma-entry=detail]').first().waitFor();
+    assert.equal(await page.getByRole('link', {name: '查看门店详情', exact: true}).count(), 0);
+    await shot('brand-usage');
+    await page.locator('[data-ma-entry=detail]').first().click();
+    await page.getByRole('dialog').waitFor();
+    assert.equal(await page.getByRole('dialog').getByRole('link', {name: '查看门店详情', exact: true}).count(), 0);
+    await shot('usage-drawer');
+    await page.getByRole('button', {name: '关闭门店详情', exact: true}).click();
+    await page.getByRole('link', {name: '品牌门店', exact: true}).click();
+    const first = page.locator('[data-ba="details:M00000001"]'); await first.waitFor();
+    const url = page.url(), history = await page.evaluate(() => window.history.length), before = await snapshot();
+    await page.locator('[data-store-query]').fill('上海');
+    await page.locator('[data-store-id="M00000001"]').check();
+    await first.click();
+    const dialog = page.locator('[data-brand-store-detail-dialog]'); await dialog.waitFor();
+    assert.equal(page.url(), url); assert.equal(await page.evaluate(() => window.history.length), history);
+    assert.equal(await page.locator('[data-store-detail-full-page]').count(), 0);
+    assert.equal(await dialog.locator('a').count(), 0);
+    const info = await dialog.locator('dl').evaluateAll(nodes => nodes.flatMap(n => [...n.children].map(row => [row.querySelector('dt').textContent, row.querySelector('dd').textContent.trim()])));
+    assert.equal(new Map(info).get('MID'), 'M00000001'); assert.equal(new Map(info).get('门店名称'), '上海陆家嘴店');
+    await shot('store-detail');
+    const scrollTop = await page.evaluate(() => document.querySelector('[data-brand-workbench]').parentElement.scrollTop);
+    await page.keyboard.press('Escape'); await dialog.waitFor({state: 'detached'});
+    assert.equal(await page.locator('[data-store-query]').inputValue(), '上海'); assert(await page.locator('[data-store-id="M00000001"]').isChecked());
+    assert.equal(await page.evaluate(() => document.querySelector('[data-brand-workbench]').parentElement.scrollTop), scrollTop);
+    assert(await first.evaluate(el => document.activeElement === el));
+    await first.click(); await dialog.waitFor(); await dialog.getByRole('button', {name: '关闭门店详情', exact: true}).click(); await dialog.waitFor({state: 'detached'});
+    await first.click(); await dialog.waitFor(); await dialog.getByRole('button', {name: '关闭', exact: true}).click(); await dialog.waitFor({state: 'detached'});
+    await first.click(); await dialog.waitFor(); await page.mouse.click(4, 500); await dialog.waitFor({state: 'detached'});
+    await page.locator('[data-store-query]').fill('广州');
+    await page.locator('[data-ba="details:M00000002"]').click(); await dialog.waitFor(); assert((await dialog.innerText()).includes('广州天河店')); assert((await dialog.innerText()).includes('M00000002')); assert(!(await dialog.innerText()).includes('上海陆家嘴店'));
+    await page.keyboard.press('Escape'); assert.equal(await snapshot(), before);
+    await page.locator('[data-store-query]').fill(''); await shot('brand-stores'); await page.locator('[data-store-query]').fill('广州');
+    // Tampered cross-brand ID is rechecked, not trusted from a row's action attribute.
+    const second = page.locator('[data-ba="details:M00000002"]');
+    const tampered = await second.elementHandle(); await second.evaluate(el => el.dataset.ba = 'details:M00000003'); await tampered.click();
+    assert.equal(await dialog.count(), 0); assert.equal(page.url(), url); assert.equal(await page.locator('[data-store-query]').inputValue(), '广州');
+    // Read-only users can browse, and losing store access hides/blocks the entry.
+    await page.evaluate(async () => {const s = await import('/src/permissions/m-platform-store.ts'); const state = s.createMState(); state.roles[0].grants['m:page:brands'] = 'read'; state.roles[0].grants['m:page:stores'] = 'read'; localStorage.setItem(s.M_PERMISSION_STORAGE, JSON.stringify(state));});
+    await go('/m-platform/merchants/merchant-zhangji/org'); await first.waitFor(); await first.click(); await dialog.waitFor(); await page.keyboard.press('Escape');
+    await first.click(); await dialog.waitFor();
+    await page.evaluate(() => location.hash = '/m-platform/merchants/merchant-zhangji'); await dialog.waitFor({state: 'detached'});
+    await page.getByRole('link', {name: '品牌门店', exact: true}).click();
+    await page.evaluate(async () => {const s = await import('/src/permissions/m-platform-store.ts'); const state = s.readMState(); state.roles[0].grants['m:page:stores'] = 'hidden'; localStorage.setItem(s.M_PERMISSION_STORAGE, JSON.stringify(state));});
+    await first.click(); assert.equal(await dialog.count(), 0);
+    await go('/m-platform/merchants/merchant-zhangji/org'); assert.equal(await page.locator('[data-brand-store-details]').count(), 0);
+    await page.evaluate(async () => {const s = await import('/src/permissions/m-platform-store.ts'); localStorage.setItem(s.M_PERMISSION_STORAGE, JSON.stringify(s.createMState()));});
+    // The B workspace does not acquire the M-only popup entry.
+    await page.evaluate(async () => {const ui = await import('/src/config/brand-access-ui.ts'); const host = document.createElement('div'); host.id = 'b-workspace-check'; host.innerHTML = ui.renderBrandWorkspace('merchant-zhangji', 'org', 'merchant'); document.body.append(host); ui.bindBrandWorkspaces();});
+    assert.equal(await page.locator('#b-workspace-check [data-brand-store-details]').count(), 0);
+    await go('/m-platform/merchants/activity'); const row = page.locator('[data-ma-store="M00000001"]'); await row.waitFor(); assert.equal(await row.getByRole('link', {name: '查看门店详情', exact: true}).count(), 1);
+    await go('/m-platform/merchants/stores/M00000001'); await page.getByRole('link', {name: '门店菜单', exact: true}).waitFor(); assert.equal(await page.locator('[data-brand-store-detail-dialog]').count(), 0);
+    assert.deepEqual(errors, []);
+    console.log('PASS brand store details modal: entry relocation, exact info, no URL/history/writes, close/Escape/mask/focus/filter/selection, cross-brand and revoked/readonly gates, route cleanup, B and standalone analysis unchanged');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exit(1); });
