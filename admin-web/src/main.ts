@@ -1,3 +1,5 @@
+import {renderServiceGate,renderServiceTrialNotice,bindServiceGate} from './config/service-entitlement-ui';
+import {installServiceEntitlementRuntime} from './config/service-entitlement-runtime';
 import { renderFutureVersionDiffBanner } from "./shell/future-version-banner";
 import { bindNavigationSubmenuActions } from './shell/navigation-submenu-actions';
 import { currentMAccount } from './permissions/m-platform-store';
@@ -11682,7 +11684,8 @@ function renderMain(): string {
         </div>
       </header>`;
 
-  const merchantTabPanelBody = (() => {
+  const commercialGate=renderServiceGate(path);
+  const merchantTabPanelBody = commercialGate ?? (() => {
     if (hubSearchCtx) {
       const index = buildHubSearchIndex(hubSearchCtx.hubId);
       const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
@@ -11846,7 +11849,7 @@ function renderMain(): string {
         <div class="${innerWrapperClass}">
           ${tabsSection}
           <div role="tabpanel" aria-label="${title.replace(/"/g, "&quot;")}" id="module-tab-panel"${tabPanelAttrs}>
-            ${wrapPageStoreConfigContent(path, merchantTabPanelBody)}
+            ${commercialGate ?? (renderServiceTrialNotice(path) + wrapPageStoreConfigContent(path, merchantTabPanelBody))}
           </div>
         </div>
       </main>
@@ -12425,6 +12428,8 @@ function mountInitializedPage(): void {
     </div>
   `;
 
+  installServiceEntitlementRuntime(mount);
+  bindServiceGate(mount);
   mountNavigationSubmenuSheet(app);
   bindNavigationSubmenuSheets(app.firstElementChild as HTMLElement);
 

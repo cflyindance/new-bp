@@ -262,6 +262,10 @@ export function brandCapabilityCeilingKeys(
   cap: MerchantCapabilitySnapshot,
   productLineId: ProductLineId,
 ): Set<string> {
+  // Explicit menu grants are route identities, independent of legacy billing buckets.
+  if (cap.menuGrantMode === 'explicit') {
+    return new Set(cap.services.filter(s => s.enabled).map(s => s.nodeKey ?? s.serviceId));
+  }
   const { included, paid } = capabilityToServiceSelections(cap, productLineId);
   return new Set([...enabledKeysFromSelection(included), ...enabledKeysFromSelection(paid)]);
 }

@@ -4,6 +4,14 @@ export type ServicePackageStatus = "unpublished" | "published" | "disabled";
 export type BillingInterval = "month" | "quarter" | "year" | "one-time";
 export type SubscriptionSubjectType = "group" | "brand" | "store";
 
+export interface ServiceCommercialPolicy {
+  chargeType: 'free' | 'paid';
+  billingUnit: 'brand' | 'store';
+  trialEnabled: boolean;
+  trialDays: number;
+}
+export type ServiceEntitlementKind = 'free' | 'trial' | 'paid' | 'gift';
+
 export interface ServicePackage {
   id: string;
   code: string;
@@ -12,6 +20,7 @@ export interface ServicePackage {
   priceMinor: number;
   currency: string;
   billingInterval: BillingInterval;
+  commercial?: ServiceCommercialPolicy;
   status: ServicePackageStatus;
   activeReleaseId?: string;
   createdAt: string;
@@ -28,6 +37,7 @@ export interface ServicePackageDraft {
   priceMinor: number;
   currency: string;
   billingInterval: BillingInterval;
+  commercial?: ServiceCommercialPolicy;
   routeNodeIds: string[];
   updatedAt: string;
 }
@@ -42,6 +52,7 @@ export interface ServicePackageRelease {
   priceMinor: number;
   currency: string;
   billingInterval: BillingInterval;
+  commercial?: ServiceCommercialPolicy;
   routeNodeIds: string[];
   publishedAt: string;
   publishedBy: string;
@@ -60,6 +71,15 @@ export interface MerchantSubscription {
   createdAt: string;
   createdBy: string;
   note?: string;
+  entitlementKind?: ServiceEntitlementKind;
+  scopeMode?: 'all' | 'selected';
+  storeIds?: string[];
+  agreedPriceMinor?: number;
+  agreedCurrency?: string;
+  agreedBillingInterval?: BillingInterval;
+  agreedBillingUnit?: 'brand' | 'store';
+  releaseId?: string;
+  reference?: string;
 }
 
 export interface SubscriptionAuditEntry {
@@ -80,6 +100,7 @@ export interface SubscriptionServiceSnapshot {
   releases: ServicePackageRelease[];
   subscriptions: MerchantSubscription[];
   audit: SubscriptionAuditEntry[];
+  protectedRoutes?: Array<{packageId: string; routeNodeId: string; path: string}>;
 }
 
 export interface RouteCatalogNode {

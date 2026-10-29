@@ -123,6 +123,7 @@ export function readScopeFilters(): ScopeFilterState {
 }
 
 export function writeScopeFilters(state: ScopeFilterState): void {
+  const previous=readScopeFilters();
   const ctx = getUserSessionContext();
   const principal=currentBrandPrincipal();
   const next = principal && isChainScopeMode() ? {brand:principal.merchantId,region:state.region,store:ctx?.storeAccess.ids.includes(state.store)?state.store:''} : ctx ? clampScopeToStoreAccess(ctx.storeAccess, state) : state;
@@ -134,6 +135,7 @@ export function writeScopeFilters(state: ScopeFilterState): void {
     /* ignore */
   }
   syncScopeFilterMetaForEmbeddedPages(next);
+  if (previous.brand===next.brand && previous.region===next.region && previous.store===next.store) return;
   window.dispatchEvent(
     new CustomEvent("menusifu:scope-filter-change", {
       detail: { ...next },
@@ -342,7 +344,12 @@ export function isStoreLayoutPreset(): boolean {
 
 /** 门店版布局 + 单店账号：锁定为当前门店 */
 export function ensureScopeFiltersForSession(): void {
-  const impersonation=readActiveImpersonation();if(impersonation?.storeId){writeScopeFilters({brand:impersonation.merchantId,region:"",store:impersonation.storeId});return;}
+  const impersonation=readActiveImpersonation();
+  if(impersonation?.storeId){
+    const cur=readScopeFilters(),brand=isChainScopeMode()?impersonation.merchantId:cur.brand;
+    if(cur.store!==impersonation.storeId||cur.region||cur.brand!==brand)writeScopeFilters({brand,region:"",store:impersonation.storeId});
+    return;
+  }
   const principal=currentBrandPrincipal();
   if(principal && isChainScopeMode()){
     const cur=readScopeFilters();

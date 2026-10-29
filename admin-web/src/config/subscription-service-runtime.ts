@@ -1,3 +1,5 @@
+import {serviceEntitlementData} from './service-entitlement-data';
+import {matchServicePackages} from './service-entitlement-domain';
 import { orderCenterGateId } from "./order-center-navigation";
 import { isStoreInformationPage, storeInformationGateId } from "./store-information-navigation";
 import {
@@ -10,7 +12,7 @@ import { getMerchantById, getStoreById } from "./enterprise-merchant-store";
 import { NAV_MODULES, type NavModule } from "./navigation";
 import { getSubscriptionRouteCatalog } from "./subscription-service-domain";
 import {
-  getEffectiveSubscriptionRoutes,
+  getEffectiveLegacySubscriptionRoutes,
   hasConfiguredSubscriptionForContext,
 } from "./subscription-service-store";
 
@@ -39,7 +41,7 @@ function currentRouteIds(): Set<string> | null {
   const context = resolveCurrentSubscriptionContext();
   if (!context) return null;
   if (!hasConfiguredSubscriptionForContext(context)) return null;
-  return getEffectiveSubscriptionRoutes(context);
+  return getEffectiveLegacySubscriptionRoutes(context);
 }
 
 export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[] {
@@ -47,7 +49,7 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
   if (!routeIds) return modules;
   return modules
     .map((module) => {
-      const children = module.children.filter((child) => routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id))));
+      const children = module.children.filter((child) => hasCommercialRoute(child.path) || routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id))));
       if (!children.length) return null;
       return { ...module, children };
     })
@@ -58,6 +60,7 @@ export function isPathAllowedBySubscription(path: string): boolean {
   path = path.split("?")[0] ?? path;
   if (isStoreInformationPage(path)) path = "/stores/settings";
   if (path === "/nav-home" || path === "/login" || path.startsWith("/login/") || path === "/onboarding" || path.startsWith("/onboarding/")) return true;
+  if (hasCommercialRoute(path)) return true;
   const routeIds = currentRouteIds();
   if (!routeIds) return true;
   const candidates = getSubscriptionRouteCatalog(NAV_MODULES)
@@ -66,4 +69,11 @@ export function isPathAllowedBySubscription(path: string): boolean {
   if (!candidates.length) return true;
   const id = candidates[0]!.id;
   return routeIds.has(id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(id)));
+}
+
+function hasCommercialRoute(path:string):boolean {
+  const {snapshot,catalog}=serviceEntitlementData();
+  if(!snapshot.packages.some(p=>p.commercial))return false;
+  if(matchServicePackages(snapshot,catalog,path).length)return true;
+  return (snapshot.protectedRoutes??[]).some(r=>r.path.startsWith(path.replace(/\/$/,'')+'/')&&snapshot.packages.some(p=>p.id===r.packageId&&p.commercial));
 }

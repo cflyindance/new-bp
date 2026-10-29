@@ -1,3 +1,6 @@
+import {renderCommercialFields,readCommercialFields} from './service-commercial-fields';
+import {validateCommercialPolicy} from './service-entitlement-domain';
+import type {ServiceCommercialPolicy} from './subscription-service-domain';
 import { type BillingInterval } from "./subscription-service-domain";
 import { SUBSCRIPTION_SERVICE_CREATE_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX } from "./subscription-service-scope";
 import { createServicePackageFromWizard, readSubscriptionServiceSnapshot } from "./subscription-service-store";
@@ -13,9 +16,10 @@ interface WizardDraft {
   price: string;
   billingInterval: BillingInterval;
   routeNodeIds: string[];
+  commercial?: ServiceCommercialPolicy;
 }
 
-const emptyDraft = (): WizardDraft => ({ name: "", code: "", description: "", price: "0", billingInterval: "month", routeNodeIds: [] });
+const emptyDraft = (): WizardDraft => ({ name: "", code: "", description: "", price: "0", billingInterval: "month", commercial:{chargeType:"free",billingUnit:"brand",trialEnabled:false,trialDays:14}, routeNodeIds: [] });
 let draft = emptyDraft();
 let step: WizardStep = 1;
 let search = "";
@@ -31,7 +35,7 @@ function esc(value: unknown): string {
 }
 
 function hasChanges(): boolean {
-  return Boolean(draft.name.trim() || draft.code.trim() || draft.description.trim() || draft.price !== "0" || draft.billingInterval !== "month" || draft.routeNodeIds.length);
+  return Boolean(draft.name.trim() || draft.code.trim() || draft.description.trim() || draft.price !== "0" || draft.billingInterval !== "month" || draft.commercial?.chargeType === "paid" || draft.commercial?.trialEnabled || draft.commercial?.billingUnit === "store" || draft.routeNodeIds.length);
 }
 
 function intervalLabel(value: BillingInterval): string {
@@ -63,11 +67,11 @@ function renderProductStep(): string {
       <div class="grid gap-6 md:grid-cols-2">
         <label class="text-sm font-semibold">服务包名称<span class="ml-1 text-rose-600">*</span><input name="name" value="${esc(draft.name)}" maxlength="60" autofocus placeholder="例如：高级经营版" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
         <label class="text-sm font-semibold">唯一编码<span class="ml-1 text-rose-600">*</span><input name="code" value="${esc(draft.code)}" maxlength="40" placeholder="例如：PRO_299" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm uppercase outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"><span class="mt-1.5 block text-xs font-normal text-muted-foreground">保存时自动转换为大写，创建后不可重复。</span></label>
-        <label class="text-sm font-semibold">展示价格（元）<input name="price" type="number" min="0" step="0.01" value="${esc(draft.price)}" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
+        <label class="text-sm font-semibold">标准价格（元）<input name="price" type="number" min="0" step="0.01" value="${esc(draft.price)}" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
         <label class="text-sm font-semibold">计费周期<select name="billingInterval" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600">${(["month", "quarter", "year", "one-time"] as BillingInterval[]).map((value) => `<option value="${value}" ${draft.billingInterval === value ? "selected" : ""}>${intervalLabel(value)}</option>`).join("")}</select></label>
       </div>
       <label class="mt-6 block text-sm font-semibold">服务包说明<textarea name="description" rows="5" maxlength="300" placeholder="说明该服务包适合的业态和包含的核心能力" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-3 text-sm leading-6 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15">${esc(draft.description)}</textarea></label>
-    </form>
+    ${renderCommercialFields(draft.commercial,true)}</form>
   </div>`;
 }
 
@@ -117,6 +121,7 @@ function syncProductForm(): void {
   draft.description = String(data.get("description") ?? "");
   draft.price = String(data.get("price") ?? "");
   draft.billingInterval = String(data.get("billingInterval") ?? "month") as BillingInterval;
+  draft.commercial=readCommercialFields(form);
 }
 
 function validateProduct(): string {
@@ -126,6 +131,7 @@ function validateProduct(): string {
   if (readSubscriptionServiceSnapshot().packages.some((item) => item.code.trim().toUpperCase() === code)) return "服务包编码已存在，请更换后重试";
   const price = Number(draft.price);
   if (!Number.isFinite(price) || price < 0) return "展示价格必须是非负数字";
+  try {validateCommercialPolicy(draft.commercial,Math.round(price*100));} catch(e){return (e as Error).message;}
   return "";
 }
 
@@ -179,7 +185,7 @@ export function bindSubscriptionServiceCreateWizard(onMount: () => void): void {
     if (errorMessage) return onMount();
     submitting = true; onMount();
     try {
-      createServicePackageFromWizard({ name: draft.name, code: draft.code, description: draft.description, priceMinor: Math.round(Number(draft.price) * 100), billingInterval: draft.billingInterval, routeNodeIds: draft.routeNodeIds, publish: button.dataset.wizardSubmit === "publish" });
+      createServicePackageFromWizard({ name: draft.name, code: draft.code, description: draft.description, priceMinor: Math.round(Number(draft.price) * 100), billingInterval: draft.billingInterval, routeNodeIds: draft.routeNodeIds, commercial:draft.commercial, publish: button.dataset.wizardSubmit === "publish" });
       feedbackAfterCreate = button.dataset.wizardSubmit === "publish" ? "服务包已创建并发布 v1" : "服务包已保存为未发布草稿";
       leaveWizard(onMount);
     } catch (error) { submitting = false; errorMessage = error instanceof Error ? error.message : "保存失败，请重试"; onMount(); }
