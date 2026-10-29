@@ -17,7 +17,8 @@ export function isActivityPath(path: string): boolean { return path === ACTIVITY
 const state = {
   period: { start: shiftDate(data.asOf, -6), end: data.asOf } as ActivityPeriod,
   quick: "7", merchant: "", query: "", status: "",
-  rootScroll: 0, drawerScroll: 0, openStoreId: "", returnStoreId: "", focusAfter: "", wasOpen: false,
+  rootScroll: 0, drawerScroll: 0, openStoreId: "", returnStoreId: "", returnEntry: "name", focusAfter: "", wasOpen: false,
+  inlineScope: null as ActivityScope | null,
   filterDraft: null as Record<string, string> | null, periodDraft: null as Record<string, string> | null,
 };
 const esc = (value: string) => value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -25,6 +26,39 @@ const n = (value: number | null) => value === null ? "—" : value.toLocaleStrin
 const time = (value: string | null) => value ? esc(value.slice(0, 16).replace("T", " ")) : "—";
 let activeContext: ActivityContext | null = null;
 let contextKey = '';
+let activeEmbedded = false;
+let releaseEmbeddedModal: (() => void) | null = null;
+// One navigation listener per module; local drawer actions never change the hash.
+window.addEventListener('hashchange', () => { state.inlineScope = null; releaseEmbeddedModal?.(); }, true);
+function lockEmbeddedModal(dialog: HTMLElement, scrollHost: HTMLElement): () => void {
+  const previousOverflow = scrollHost.style.overflow;
+  const background: { element: HTMLElement; inert: boolean }[] = [];
+  let branch: HTMLElement = dialog.closest<HTMLElement>('.ma-drawer-backdrop') ?? dialog;
+  while (branch.parentElement) {
+    const parent = branch.parentElement;
+    for (const sibling of [...parent.children]) {
+      if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+      background.push({ element: sibling, inert: sibling.inert });
+      sibling.inert = true;
+    }
+    if (parent === document.body) break;
+    branch = parent;
+  }
+  scrollHost.style.overflow = 'hidden';
+  let locked = true;
+  const observer = new MutationObserver(() => {
+    if (!dialog.isConnected) { state.inlineScope = null; release(); }
+  });
+  const release = () => {
+    if (!locked) return;
+    locked = false; observer.disconnect();
+    scrollHost.style.overflow = previousOverflow;
+    for (const item of background) item.element.inert = item.inert;
+    if (releaseEmbeddedModal === release) releaseEmbeddedModal = null;
+  };
+  observer.observe(document.body, { childList: true, subtree: true });
+  return release;
+}
 const href = (scope?: ActivityScope) => activityScopeHref(scope, activeContext);
 function contextHeader(embedded: boolean): string {
   if (!activeContext) return '';
@@ -88,16 +122,16 @@ function rootPage(): string {
   const errors = rows.length - complete.length;
   const active = rows.filter(row => row.m.status === "active").length;
   const follow = rows.filter(row => ["recent", "suspected", "long"].includes(row.m.status)).length;
-  const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" href="' +
+  const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
     href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + esc(store.merchantName) + ' · ' + esc(store.id) + '</small></td><td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + metricCells(m) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store) + '</td></tr>').join("");
+    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store) + '</td></tr>').join("");
   return filterControls() + summaryCards([
     { label: "门店", value: String(rows.length), note: "当前筛选范围" },
     { label: "活跃门店", value: String(active), note: "最近点单距今 0～6 天" },
     { label: "需关注门店", value: String(follow), note: "最近点单距今 ≥7 天" },
     { label: "期间点单数", value: n(count), note: errors ? "已知合计 · " + errors + " 家数据异常未计入" : "按业务订单去重" },
-  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3>门店使用情况</h3></div><span>' + rows.length +
+  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div><span>' + rows.length +
     ' 家门店</span></div><div class="ma-table-wrap"><table><thead><tr><th>门店／品牌</th><th>当前活跃状态</th>' + metricHeaders +
     '<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead><tbody>' +
     (table || '<tr><td colspan="12" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>') +
@@ -158,18 +192,27 @@ export function renderActivityPage(path: string, embedded = false): string {
   const nextKey = nextContext ? `${nextContext.kind}:${nextContext.id}` : '';
   if (nextKey !== contextKey) {
     state.filterDraft = null; state.periodDraft = null; state.merchant = ''; state.status = ''; state.query = '';
-    state.rootScroll = 0; state.drawerScroll = 0; state.wasOpen = false; state.openStoreId = ''; contextKey = nextKey;
+    state.rootScroll = 0; state.drawerScroll = 0; state.wasOpen = false; state.openStoreId = ''; state.inlineScope = null; contextKey = nextKey;
   }
   activeContext = nextContext;
-  const scope = parsedScope(path);
+  if (activeEmbedded !== embedded) state.inlineScope = null;
+  activeEmbedded = embedded;
+  let scope = parsedScope(path);
+  if (scope !== undefined && embedded) {
+    if (state.inlineScope) state.inlineScope = parsedScope(activityScopeHref(state.inlineScope, activeContext).slice(1)) ?? null;
+    scope = state.inlineScope;
+  }
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
-  return '<div class="ma-page" data-ma-page><div data-ma-background' + (scope ? ' inert' : '') + '>' + renderActivityDemoNotice() + contextHeader(embedded) + dateControls() + rootPage() +
+  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + renderActivityDemoNotice() + contextHeader(embedded) + dateControls() + rootPage() +
     '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
     '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section></div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }
 export function bindActivityPage(onMount: () => void, pagePath = location.hash.slice(1)): void {
   const root = document.querySelector<HTMLElement>("[data-ma-page]");
   if (!root) return;
+  releaseEmbeddedModal?.();
+  const embedded = root.dataset.activityEmbedded === 'true';
+  const scrollHost = embedded ? root.closest<HTMLElement>('[data-merchant-usage]')?.parentElement ?? root : root;
   root.querySelectorAll<HTMLButtonElement>("[data-ma-quick]").forEach(button => button.addEventListener("click", () => {
     state.periodDraft = null;
     state.quick = button.dataset.maQuick!;
@@ -197,7 +240,7 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
   root.querySelector("[data-ma-reset]")?.addEventListener("click", () => {
     state.filterDraft = null; state.merchant = ""; state.status = ""; state.query = ""; onMount();
   });
-  const scope = parsedScope(pagePath);
+  const scope = embedded ? state.inlineScope : parsedScope(pagePath);
   const dialog = root.querySelector<HTMLElement>('.ma-store-drawer');
   const body = root.querySelector<HTMLElement>('.ma-drawer-body');
   const restoreDraft = (selector: string, draft: Record<string, string> | null) => {
@@ -210,25 +253,42 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
   };
   restoreDraft('[data-ma-filter-form]', state.filterDraft);
   restoreDraft('[data-ma-form]', state.periodDraft);
-  root.scrollTop = state.rootScroll;
-  if (dialog) root.style.overflow = "hidden";
-  root.addEventListener('scroll', () => { if (!dialog) state.rootScroll = root.scrollTop; });
+  scrollHost.scrollTop = state.rootScroll;
+  if (dialog) {
+    if (embedded) releaseEmbeddedModal = lockEmbeddedModal(dialog, scrollHost);
+    else root.style.overflow = 'hidden';
+  }
+  scrollHost.addEventListener('scroll', () => { if (!dialog) state.rootScroll = scrollHost.scrollTop; });
   const saveDraft = (selector: string) => { const form = root.querySelector<HTMLFormElement>(selector); return form ? Object.fromEntries([...new FormData(form)].map(([key, value]) => [key, String(value)])) : null; };
   root.addEventListener('click', event => {
     const anchor = (event.target as Element).closest<HTMLAnchorElement>('a[href]');
     if (!anchor || !anchor.hash.startsWith('#' + ACTIVITY_PATH)) return;
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     if (!dialog) {
-      state.rootScroll = root.scrollTop;
+      state.rootScroll = scrollHost.scrollTop;
       state.filterDraft = saveDraft('[data-ma-filter-form]'); state.periodDraft = saveDraft('[data-ma-form]');
       state.returnStoreId = parsedScope(anchor.hash.slice(1))?.storeId ?? '';
+      state.returnEntry = anchor.dataset.maEntry ?? 'name';
       state.drawerScroll = 0; state.focusAfter = '';
     } else if (anchor.matches('[data-ma-line-tab],.ma-line-card')) {
       state.drawerScroll = 0;
       const next = parsedScope(anchor.hash.slice(1));
       state.focusAfter = '[data-ma-line-tab="' + CSS.escape(next?.line ?? '') + '"]';
     }
+    const target = parsedScope(anchor.hash.slice(1));
+    if (embedded && target) {
+      event.preventDefault(); event.stopPropagation();
+      const checked = parsedScope(activityScopeHref(target, activeContext).slice(1));
+      if (!checked) return;
+      state.inlineScope = checked;
+      onMount();
+    }
   });
-  const closeDrawer = () => { state.focusAfter = ''; location.hash = activityContextPath(activeContext); };
+  const closeDrawer = () => {
+    state.focusAfter = '';
+    if (embedded) { state.inlineScope = null; onMount(); }
+    else location.hash = activityContextPath(activeContext);
+  };
   root.querySelector('[data-ma-drawer-close]')?.addEventListener('click', closeDrawer);
   root.querySelector('.ma-drawer-backdrop')?.addEventListener('click', event => {
     if (event.target === event.currentTarget) closeDrawer();
@@ -259,7 +319,8 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
     });
   } else if (state.wasOpen) {
     state.wasOpen = false; state.openStoreId = ''; state.drawerScroll = 0;
-    root.querySelector<HTMLElement>('[data-ma-store="' + CSS.escape(state.returnStoreId) + '"] a')?.focus({ preventScroll: true });
+    const trigger = root.querySelector<HTMLElement>('[data-ma-store="' + CSS.escape(state.returnStoreId) + '"] [data-ma-entry="' + CSS.escape(state.returnEntry) + '"]') ?? root.querySelector<HTMLElement>('[data-ma-list-title],[data-ma-filter-form] input,[data-ma-form] button');
+    trigger?.focus({ preventScroll: true });
   }
 
 }
