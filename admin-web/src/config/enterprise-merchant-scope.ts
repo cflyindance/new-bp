@@ -6,7 +6,7 @@ import { getMerchantById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "
 export const ENTERPRISE_MERCHANT_ROUTE_PREFIX = "/m-platform/merchants";
 export const ENTERPRISE_MERCHANT_MODULE_LABEL = "商户管理中心";
 
-export type MerchantDetailTab = "overview" | "org" | "capabilities" | "accounts" | "changelog" | "usage";
+export type MerchantDetailTab = "overview" | "org" | "capabilities" | "accounts" | "changelog" | "usage" | "services";
 export type StoreDetailTab = "overview" | "capabilities" | "changelog" | "usage";
 
 export function isMPlatformMerchantPath(path: string): boolean {
@@ -61,7 +61,7 @@ export function parseMerchantDetailPath(path: string): { merchantId: string; tab
   const head = decodeURIComponent(parts[0]!);
   if (MERCHANT_RESERVED_PATH_SEGMENTS.has(head)) return null;
   const tab = (parts[1] as MerchantDetailTab | undefined) ?? "overview";
-  if (tab !== "overview" && tab !== "org" && tab !== "capabilities" && tab !== "accounts" && tab !== "changelog" && tab !== "usage") {
+  if (tab !== "overview" && tab !== "org" && tab !== "capabilities" && tab !== "accounts" && tab !== "changelog" && tab !== "usage" && tab !== "services") {
     return { merchantId: head, tab: "overview" };
   }
   return { merchantId: head, tab };
@@ -134,7 +134,7 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
     const merchant = getMerchantById(detail.merchantId);
     const name = merchant?.name ?? detail.merchantId;
     const tabTitle =
-      detail.tab === "usage" ? "使用情况" : detail.tab === "org"
+      detail.tab === "services" ? "服务权益" : detail.tab === "usage" ? "使用情况" : detail.tab === "org"
         ? "品牌门店"
         : detail.tab === "capabilities"
           ? "品牌菜单"

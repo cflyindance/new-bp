@@ -1,3 +1,4 @@
+import { validateCommercialPolicy } from './service-entitlement-domain';
 import { getGroups, getMerchantStores, getMerchants } from "./enterprise-merchant-store";
 import {
   getSubscriptionRouteCatalog,
@@ -82,6 +83,7 @@ function normalizeSnapshot(value: Partial<SubscriptionServiceSnapshot> | null): 
     releases: Array.isArray(value.releases) ? value.releases : [],
     subscriptions: Array.isArray(value.subscriptions) ? value.subscriptions : [],
     audit: Array.isArray(value.audit) ? value.audit : [],
+    protectedRoutes: Array.isArray(value.protectedRoutes) ? value.protectedRoutes : [],
   };
 }
 
@@ -93,11 +95,11 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
     /* fall through */
   }
   const seeded = seedSnapshot();
-  writeSnapshot(seeded, false);
+  writeSubscriptionServiceSnapshot(seeded, false);
   return seeded;
 }
 
-function writeSnapshot(snapshot: SubscriptionServiceSnapshot, notify = true): void {
+export function writeSubscriptionServiceSnapshot(snapshot: SubscriptionServiceSnapshot, notify = true): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   if (notify) window.dispatchEvent(new CustomEvent(SUBSCRIPTION_SERVICE_CHANGE_EVENT));
 }
@@ -107,17 +109,18 @@ function appendAudit(snapshot: SubscriptionServiceSnapshot, action: string, obje
   snapshot.audit = snapshot.audit.slice(0, 300);
 }
 
-export function createServicePackage(input: { code: string; name: string; description?: string; priceMinor: number; currency?: string; billingInterval?: BillingInterval }): ServicePackage {
+export function createServicePackage(input: { code: string; name: string; description?: string; priceMinor: number; currency?: string; billingInterval?: BillingInterval; commercial?: import("./subscription-service-domain").ServiceCommercialPolicy }): ServicePackage {
+  validateCommercialPolicy(input.commercial, input.priceMinor);
   const snapshot = readSubscriptionServiceSnapshot();
   const code = input.code.trim().toUpperCase();
   if (!code || snapshot.packages.some((item) => item.code === code)) throw new Error("服务包编码不能为空且必须唯一");
   if (!input.name.trim()) throw new Error("服务包名称不能为空");
   const at = nowIso();
-  const pkg: ServicePackage = { id: id("pkg"), code, name: input.name.trim(), description: input.description?.trim(), priceMinor: Math.max(0, Math.round(input.priceMinor)), currency: input.currency ?? "CNY", billingInterval: input.billingInterval ?? "month", status: "unpublished", createdAt: at, updatedAt: at };
+  const pkg: ServicePackage = { id: id("pkg"), code, name: input.name.trim(), description: input.description?.trim(), priceMinor: Math.max(0, Math.round(input.priceMinor)), currency: input.currency ?? "CNY", billingInterval: input.billingInterval ?? "month", commercial: input.commercial, status: "unpublished", createdAt: at, updatedAt: at };
   snapshot.packages.unshift(pkg);
-  snapshot.drafts.push({ packageId: pkg.id, routeBlueprintVersion: snapshot.routeBlueprintVersion, revision: 1, name: pkg.name, description: pkg.description, priceMinor: pkg.priceMinor, currency: pkg.currency, billingInterval: pkg.billingInterval, routeNodeIds: [], updatedAt: at });
+  snapshot.drafts.push({ packageId: pkg.id, routeBlueprintVersion: snapshot.routeBlueprintVersion, revision: 1, name: pkg.name, description: pkg.description, priceMinor: pkg.priceMinor, currency: pkg.currency, billingInterval: pkg.billingInterval, commercial: pkg.commercial, routeNodeIds: [], updatedAt: at });
   appendAudit(snapshot, "package.create", "package", pkg.id, `创建服务包「${pkg.name}」`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
   return pkg;
 }
 
@@ -129,8 +132,10 @@ export function createServicePackageFromWizard(input: {
   currency?: string;
   billingInterval?: BillingInterval;
   routeNodeIds: string[];
+  commercial?: import("./subscription-service-domain").ServiceCommercialPolicy;
   publish: boolean;
 }): ServicePackage {
+  validateCommercialPolicy(input.commercial, input.priceMinor);
   const snapshot = readSubscriptionServiceSnapshot();
   const code = input.code.trim().toUpperCase();
   const name = input.name.trim();
@@ -157,6 +162,7 @@ export function createServicePackageFromWizard(input: {
     priceMinor,
     currency,
     billingInterval,
+    commercial: input.commercial,
     status: input.publish ? "published" : "unpublished",
     activeReleaseId: releaseId,
     createdAt: at,
@@ -174,6 +180,7 @@ export function createServicePackageFromWizard(input: {
     priceMinor,
     currency,
     billingInterval,
+    commercial: input.commercial,
     routeNodeIds,
     updatedAt: at,
   });
@@ -187,12 +194,14 @@ export function createServicePackageFromWizard(input: {
     priceMinor,
     currency,
     billingInterval,
+    commercial: input.commercial,
     routeNodeIds,
     publishedAt: at,
     publishedBy: DEMO_OPERATOR,
   });
   appendAudit(snapshot, input.publish ? "package.create.publish" : "package.create", "package", packageId, input.publish ? `创建并发布服务包「${name}」v1` : `创建服务包「${name}」`);
-  writeSnapshot(snapshot);
+  if (input.publish) protectCommercialRoutes(snapshot, pkg.id, routeNodeIds, input.commercial);
+  writeSubscriptionServiceSnapshot(snapshot);
   return structuredClone(pkg);
 }
 
@@ -203,13 +212,14 @@ export function getOrCreatePackageDraft(packageId: string): ServicePackageDraft 
   const pkg = snapshot.packages.find((item) => item.id === packageId);
   if (!pkg) throw new Error("服务包不存在");
   const release = snapshot.releases.find((item) => item.id === pkg.activeReleaseId);
-  const draft: ServicePackageDraft = { packageId, baseReleaseId: release?.id, routeBlueprintVersion: getPublishedSubscriptionMenuTree()?.blueprintVersion ?? snapshot.routeBlueprintVersion, revision: 1, name: release?.name ?? pkg.name, description: release?.description ?? pkg.description, priceMinor: release?.priceMinor ?? pkg.priceMinor, currency: release?.currency ?? pkg.currency, billingInterval: release?.billingInterval ?? pkg.billingInterval, routeNodeIds: [...(release?.routeNodeIds ?? [])], updatedAt: nowIso() };
+  const draft: ServicePackageDraft = { packageId, baseReleaseId: release?.id, routeBlueprintVersion: getPublishedSubscriptionMenuTree()?.blueprintVersion ?? snapshot.routeBlueprintVersion, revision: 1, name: release?.name ?? pkg.name, description: release?.description ?? pkg.description, priceMinor: release?.priceMinor ?? pkg.priceMinor, currency: release?.currency ?? pkg.currency, billingInterval: release?.billingInterval ?? pkg.billingInterval, commercial: release?.commercial ?? pkg.commercial, routeNodeIds: [...(release?.routeNodeIds ?? [])], updatedAt: nowIso() };
   snapshot.drafts.push(draft);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
   return structuredClone(draft);
 }
 
 export function savePackageDraft(input: ServicePackageDraft): ServicePackageDraft {
+  validateCommercialPolicy(input.commercial, input.priceMinor);
   const snapshot = readSubscriptionServiceSnapshot();
   const current = snapshot.drafts.find((item) => item.packageId === input.packageId);
   if (current && current.revision !== input.revision) throw new Error("草稿已被其他操作更新，请重新打开后再保存");
@@ -222,7 +232,7 @@ export function savePackageDraft(input: ServicePackageDraft): ServicePackageDraf
   snapshot.drafts = snapshot.drafts.filter((item) => item.packageId !== input.packageId);
   snapshot.drafts.push(next);
   appendAudit(snapshot, "package.draft.save", "package", input.packageId, `保存草稿「${next.name}」`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
   return structuredClone(next);
 }
 
@@ -231,18 +241,21 @@ export function publishServicePackage(packageId: string, expectedRevision: numbe
   const pkg = snapshot.packages.find((item) => item.id === packageId);
   const draft = snapshot.drafts.find((item) => item.packageId === packageId);
   if (!pkg || !draft) throw new Error("服务包或草稿不存在");
+  validateCommercialPolicy(draft.commercial, draft.priceMinor);
+  if (pkg.commercial && !draft.commercial) throw Error("已启用的权益控制不能通过清除草稿取消。");
   if (draft.revision !== expectedRevision) throw new Error("草稿版本已变化，请重新确认发布");
   const publishedTree = getPublishedSubscriptionMenuTree();
   if (!publishedTree) throw new Error("请先发布菜单路由配置，再发布服务包");
   if (draft.routeBlueprintVersion !== publishedTree.blueprintVersion) throw new Error("菜单路由蓝图已更新，请重新保存服务包后再发布");
   if (!draft.routeNodeIds.length) throw new Error("请至少选择一个菜单路由");
   const version = Math.max(0, ...snapshot.releases.filter((item) => item.packageId === packageId).map((item) => item.version)) + 1;
-  const release: ServicePackageRelease = { id: id("rel"), packageId, version, routeBlueprintVersion: snapshot.routeBlueprintVersion, name: draft.name, description: draft.description, priceMinor: draft.priceMinor, currency: draft.currency, billingInterval: draft.billingInterval, routeNodeIds: [...draft.routeNodeIds], publishedAt: nowIso(), publishedBy: DEMO_OPERATOR };
+  const release: ServicePackageRelease = { id: id("rel"), packageId, version, routeBlueprintVersion: snapshot.routeBlueprintVersion, name: draft.name, description: draft.description, priceMinor: draft.priceMinor, currency: draft.currency, billingInterval: draft.billingInterval, commercial: draft.commercial, routeNodeIds: [...draft.routeNodeIds], publishedAt: nowIso(), publishedBy: DEMO_OPERATOR };
   snapshot.releases.push(release);
-  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, status: "published", activeReleaseId: release.id, updatedAt: nowIso() });
+  protectCommercialRoutes(snapshot, pkg.id, release.routeNodeIds, release.commercial);
+  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, status: "published", activeReleaseId: release.id, updatedAt: nowIso() });
   Object.assign(draft, { baseReleaseId: release.id, revision: draft.revision + 1, updatedAt: nowIso() });
   appendAudit(snapshot, "package.publish", "package", packageId, `发布「${pkg.name}」v${version}，包含 ${release.routeNodeIds.length} 个菜单`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
   return release;
 }
 
@@ -251,11 +264,13 @@ export function rollbackServicePackage(packageId: string, releaseId: string): vo
   const pkg = snapshot.packages.find((item) => item.id === packageId);
   const release = snapshot.releases.find((item) => item.id === releaseId && item.packageId === packageId);
   if (!pkg || !release) throw new Error("历史版本不存在");
-  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, activeReleaseId: release.id, status: "published", updatedAt: nowIso() });
+  validateCommercialPolicy(release.commercial??pkg.commercial,release.priceMinor);
+  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, activeReleaseId: release.id, status: "published", updatedAt: nowIso() });
   snapshot.drafts = snapshot.drafts.filter((item) => item.packageId !== packageId);
-  snapshot.drafts.push({ packageId, baseReleaseId: release.id, routeBlueprintVersion: snapshot.routeBlueprintVersion, revision: 1, name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, routeNodeIds: [...release.routeNodeIds], updatedAt: nowIso() });
+  snapshot.drafts.push({ packageId, baseReleaseId: release.id, routeBlueprintVersion: snapshot.routeBlueprintVersion, revision: 1, name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, routeNodeIds: [...release.routeNodeIds], updatedAt: nowIso() });
+  protectCommercialRoutes(snapshot, pkg.id, release.routeNodeIds, pkg.commercial);
   appendAudit(snapshot, "package.rollback", "package", packageId, `回滚「${pkg.name}」至 v${release.version}`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
 }
 
 export function disableServicePackage(packageId: string): void {
@@ -265,13 +280,14 @@ export function disableServicePackage(packageId: string): void {
   pkg.status = "disabled";
   pkg.updatedAt = nowIso();
   appendAudit(snapshot, "package.disable", "package", packageId, `停用服务包「${pkg.name}」`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
 }
 
 export function createMerchantSubscription(input: { subjectType: SubscriptionSubjectType; subjectId: string; packageId: string; startAt: string; endAt?: string; note?: string }): MerchantSubscription {
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === input.packageId);
   if (!pkg || pkg.status !== "published") throw new Error("只能开通已发布的服务包");
+  if (pkg.commercial) throw Error("该服务已启用权益控制，请从品牌详情的服务权益页开通并记录价格、依据和门店范围。");
   if (!input.subjectId) throw new Error("请选择开通主体");
   if (!Number.isFinite(new Date(input.startAt).getTime())) throw new Error("生效时间无效");
   if (input.endAt && new Date(input.endAt).getTime() <= new Date(input.startAt).getTime()) throw new Error("到期时间必须晚于生效时间");
@@ -279,7 +295,7 @@ export function createMerchantSubscription(input: { subjectType: SubscriptionSub
   const subscription: MerchantSubscription = { id: id("sub"), ...input, endAt: input.endAt || undefined, note: input.note?.trim(), createdAt: nowIso(), createdBy: DEMO_OPERATOR };
   snapshot.subscriptions.unshift(subscription);
   appendAudit(snapshot, "subscription.create", "subscription", subscription.id, `开通 ${pkg.name} 至 ${input.subjectType}:${input.subjectId}`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
   return subscription;
 }
 
@@ -287,12 +303,13 @@ export function extendMerchantSubscription(subscriptionId: string, endAt?: strin
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
   if (!subscription || subscription.disabledAt) throw new Error("订阅不存在或已停用");
+  if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理续期，试用不能通过续期重复获取。");
   if (endAt && new Date(endAt).getTime() <= new Date(subscription.startAt).getTime()) throw new Error("到期时间必须晚于生效时间");
   const candidate = { ...subscription, endAt: endAt || undefined };
   if (hasOverlappingSubscription(snapshot.subscriptions, candidate, subscriptionId)) throw new Error("续期后将与另一条订阅重叠");
   subscription.endAt = endAt || undefined;
   appendAudit(snapshot, "subscription.extend", "subscription", subscriptionId, `续期至 ${endAt || "长期有效"}`);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
 }
 
 export function disableMerchantSubscription(subscriptionId: string, reason: string): void {
@@ -303,7 +320,7 @@ export function disableMerchantSubscription(subscriptionId: string, reason: stri
   subscription.disabledBy = DEMO_OPERATOR;
   subscription.disableReason = reason.trim() || "运营人员手动停用";
   appendAudit(snapshot, "subscription.disable", "subscription", subscriptionId, subscription.disableReason);
-  writeSnapshot(snapshot);
+  writeSubscriptionServiceSnapshot(snapshot);
 }
 
 export function getEffectiveSubscriptionRoutes(context: EffectiveSubscriptionContext): Set<string> {
@@ -311,8 +328,25 @@ export function getEffectiveSubscriptionRoutes(context: EffectiveSubscriptionCon
 }
 
 export function hasConfiguredSubscriptionForContext(context: EffectiveSubscriptionContext): boolean {
+  const snapshot = readSubscriptionServiceSnapshot();
   const ids = new Set([context.groupId, context.brandId, context.storeId].filter((item): item is string => Boolean(item)));
-  return readSubscriptionServiceSnapshot().subscriptions.some(
-    (item) => ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-"),
+  return snapshot.subscriptions.some(
+    (item) => ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-") && !snapshot.packages.find(p=>p.id===item.packageId)?.commercial,
   );
+}
+
+function protectCommercialRoutes(snapshot: SubscriptionServiceSnapshot, packageId: string, ids: string[], policy?: import('./subscription-service-domain').ServiceCommercialPolicy): void {
+  if (!policy) return;
+  const catalog = getPublishedSubscriptionRouteCatalog();
+  snapshot.protectedRoutes ??= [];
+  for (const routeNodeId of ids) {
+    const node = catalog.find(n=>n.id===routeNodeId);
+    if (node && !snapshot.protectedRoutes.some(r=>r.packageId===packageId&&r.path===node.path)) snapshot.protectedRoutes.push({packageId,routeNodeId,path:node.path});
+  }
+}
+
+export function getEffectiveLegacySubscriptionRoutes(context: EffectiveSubscriptionContext): Set<string> {
+  const snapshot=readSubscriptionServiceSnapshot();
+  const legacy={...snapshot,packages:snapshot.packages.filter(p=>!p.commercial)};
+  return new Set(resolveEffectiveRouteSources(legacy,context).map(s=>s.routeNodeId));
 }

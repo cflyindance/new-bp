@@ -1,3 +1,5 @@
+import {renderBrandServiceEntitlements,bindBrandServiceEntitlements} from './service-entitlement-ui';
+import {MERCHANT_SUBSCRIPTIONS_PATH} from './subscription-service-scope';
 import { renderActivityPage, bindActivityPage } from './merchant-activity-ui';
 import { activityContextPath } from './merchant-activity-context';
 import { mCanVisit } from '../permissions/m-platform-runtime';
@@ -618,6 +620,7 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
   return `
     <nav class="flex shrink-0 flex-wrap gap-1 border-b border-border" aria-label="品牌详情">
       <a href="${merchantDetailHref(merchantId, "overview")}" class="${tabClass("overview")}">概览</a>
+      ${mCanVisit(MERCHANT_SUBSCRIPTIONS_PATH)?`<a href="${merchantDetailHref(merchantId,"services")}" class="${tabClass("services")}">服务权益</a>`:""}
       <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">品牌门店</a>
       <a href="${merchantDetailHref(merchantId, "capabilities")}" class="${tabClass("capabilities")}">品牌菜单</a>
       <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">品牌管理员</a>
@@ -940,6 +943,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   }
   let body = "";
   if (tab === "org" || tab === "capabilities" || tab === "accounts" || tab === "changelog") body = renderBrandWorkspace(merchantId, tab);
+  else if (tab === "services") body = renderBrandServiceEntitlements(merchantId);
   else if (tab === "usage") body = `<section data-merchant-usage>${mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? renderActivityPage(activityContextPath({kind: "brand", id: merchantId}), true) : "<p>暂无系统使用分析权限，请联系服务商管理员。</p>"}</section>`;
   else body = renderMerchantDetailOverview(merchant);
 
@@ -1146,6 +1150,7 @@ function readStoreFilter(form: HTMLFormElement): Parameters<typeof getEnterprise
 }
 
 export function bindEnterpriseMerchant(onMount: () => void): void {
+  bindBrandServiceEntitlements(onMount);
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces({canView: canViewBrandStoreDetails, open: openBrandStoreDetails});

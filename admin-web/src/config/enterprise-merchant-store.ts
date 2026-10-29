@@ -1457,10 +1457,8 @@ function readSnapshot(): EnterpriseMerchantSnapshot {
           changed = migrateLegacyBidFields(parsed) || changed;
           if (migrateStoreIdsToMidFormat(parsed)) changed = true;
           if (migrateSnapshotP3(parsed)) changed = true;
-          if (!parsed.requests.length) {
-            parsed.requests = buildSeedSnapshot().requests;
-            changed = true;
-          }
+          // Provisioning is external. An empty request list is valid; never
+          // rewrite it on reads or recreate a removed application workflow.
           // Legacy closing requests remain paused until explicitly handled; no automatic close.
           if (processLicenseExpiry(parsed)) changed = true;
           if (dedupeMerchantOrgStores(parsed)) changed = true;
