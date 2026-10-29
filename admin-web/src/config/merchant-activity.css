@@ -385,3 +385,9 @@
 .ma-device-drawer .ma-drawer-context { margin-top:10px; }
 
 @media(min-width:1001px) { .ma-device-drawer .ma-cards { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+
+.ma-context{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:16px;background:var(--color-card);border:1px solid var(--color-border);border-radius:10px;margin-bottom:16px}
+.ma-context p{margin-top:6px;color:var(--color-muted-foreground)}
+.ma-context-links{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.ma-empty h3{font-weight:600;margin-bottom:10px}
+.ma-empty p{color:var(--color-muted-foreground);line-height:1.7}

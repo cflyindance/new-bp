@@ -26,8 +26,6 @@ export const M_MODULES: MModule[] = [
   ])] },
   { id: 'merchants', title: '商户管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
-    page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
-    page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
     page('brands', '品牌管理', merchants, true, [
       action('impersonate', '进入商家后台', '[data-merchant-impersonate]'),
       action('lifecycle', '变更品牌状态', '[data-merchant-lifecycle]'),
@@ -38,6 +36,10 @@ export const M_MODULES: MModule[] = [
     page('org-tree', '组织树', `${merchants}/org-tree`, false),
     page('reports', '报表 / SLA', `${merchants}/reports`, false),
     page('merchant-log', '变更记录', `${merchants}/change-log`, false),
+  ] },
+  { id: 'activity-analysis', title: '系统使用分析', pages: [
+    page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
+    page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
   ] },
   { id: 'hardware', title: '硬件资产中心', pages: [
     page('hardware-overview', '总览', '/m-platform/hardware/overview', false),

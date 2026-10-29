@@ -1,3 +1,4 @@
+import { activityManagementLinks } from './activity-management-links';
 import "./merchant-activity.css";
 import {
   PRODUCT_LINES, STATUS_LABELS, dateNumber, periodOrders, shiftDate, validatePeriod,
@@ -120,7 +121,7 @@ function deviceDrawer(row: DeviceActivityRow): string {
     '<header class="ma-drawer-heading"><div><h2 id="device-drawer-title">' + esc(row.device.name) + '</h2><p>设备 ID：' + esc(row.device.id) + ' · 当前 License：' +
     (row.issue === 'binding' ? '归属待核对' : row.binding ? esc(row.binding.licenseId) : '未绑定') + '</p>' +
     '<div class="ma-drawer-context">' + badge(row) + '<span>当前产线：' + esc(owner(row, "line")) + '</span><span>所属品牌：' + esc(owner(row, "brand")) +
-    '</span><span>所属门店：' + esc(owner(row, "store")) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
+    '</span><span>所属门店：' + esc(owner(row, "store")) + '</span></div>' + (row.store && !row.issue ? activityManagementLinks(row.store) : '') + '<p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-device-drawer-close aria-label="关闭设备明细">关闭 ×</button></header>' +
     '<div class="ma-drawer-body">' + detailPage(row) + '</div></section></div>';
 }

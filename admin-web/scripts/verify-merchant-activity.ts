@@ -84,7 +84,7 @@ assert.equal(resolveOrders(future).length, orders.length);
 assert.equal(mPageForPath("/m-platform/merchants/activity/store/demo-all/line/POS")?.id, "merchant-activity");
 assert.equal(M_RESOURCES.get(mPageKey("merchant-activity"))?.editable, false);
 const access: MState = { schema: 1, revision: 0, roles: [{ id: "reader", name: "reader", description: "",
-  grants: { "m:module:merchants": "read", [mPageKey("merchant-activity")]: "read" } }],
+  grants: { "m:module:activity-analysis": "read", [mPageKey("merchant-activity")]: "read" } }],
   employees: [{ id: "reader", roleIds: ["reader"] }], logs: [] };
 assert.equal(mResolve(access, "reader", mPageKey("merchant-activity")), "read");
 delete access.roles[0]!.grants[mPageKey("merchant-activity")];

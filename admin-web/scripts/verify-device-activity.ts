@@ -54,7 +54,7 @@ const duplicate=structuredClone(data); duplicate.devices.push({...duplicate.devi
 assert.equal(globalDeviceRows(duplicate,resolveOrders(duplicate),week).length,rows.length);
 assert.equal(mPageForPath("/m-platform/merchants/device-activity/demo-all-switched")?.id,"device-activity");
 assert.equal(M_RESOURCES.get(mPageKey("device-activity"))?.editable,false);
-const state:MState={schema:1,revision:0,logs:[],roles:[{id:"read",name:"read",description:"",grants:{"m:module:merchants":"read","m:page:device-activity":"read"}}],employees:[{id:"a",roleIds:["read"]}]};
+const state:MState={schema:1,revision:0,logs:[],roles:[{id:"read",name:"read",description:"",grants:{"m:module:activity-analysis":"read","m:page:device-activity":"read"}}],employees:[{id:"a",roleIds:["read"]}]};
 assert.equal(mResolve(state,"a",mPageKey("device-activity")),"read");
 assert.equal(mResolve(state,"a",mPageKey("merchant-activity")),"hidden","independent visibility");
 delete state.roles[0]!.grants["m:page:device-activity"];

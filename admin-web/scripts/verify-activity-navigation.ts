@@ -11,18 +11,18 @@ assert.ok(grouped.find(m => m.id === 'merchants')?.pages.every(p => !p.id.endsWi
 assert.deepEqual(grouped.flatMap(m => m.pages.map(p => p.id)).sort(), M_MODULES.flatMap(m => m.pages.map(p => p.id)).sort(), 'every page appears exactly once');
 assert.equal(grouped.findIndex(m => m.id === 'activity-analysis'), grouped.findIndex(m => m.id === 'merchants') + 1);
 const state: MState = { schema: 1, revision: 0, logs: [], roles: [{ id: 'r', name: 'r', description: '', grants: {
-  [mModuleKey('merchants')]: 'read', [mPageKey('device-activity')]: 'read',
+  [mModuleKey('activity-analysis')]: 'read', [mPageKey('device-activity')]: 'read',
 } }], employees: [{ id: 'e', roleIds: ['r'] }] };
 const visible = () => groupMNavigation(M_MODULES.map(m => ({ ...m, pages: m.pages.filter(p => mResolve(state, 'e', mPageKey(p.id)) !== 'hidden') })).filter(m => m.pages.length && mResolve(state, 'e', mModuleKey(m.id)) !== 'hidden'));
 assert.deepEqual(visible().map(m => [m.id, m.pages.map(p => p.id)]), [['activity-analysis', ['device-activity']]], 'single authorized leaf keeps category');
-assert.equal(M_RESOURCES.get(mPageKey('device-activity'))?.parent, mModuleKey('merchants'));
-assert.equal(M_RESOURCES.has(mModuleKey('activity-analysis')), false, 'no implicit new grants');
+assert.equal(M_RESOURCES.get(mPageKey('device-activity'))?.parent, mModuleKey('activity-analysis'));
+assert.equal(M_RESOURCES.has(mModuleKey('activity-analysis')), true, 'independent explicit module gate');
 assert.equal(mPageForPath('/m-platform/merchants/device-activity/demo-all-switched')?.id, 'device-activity');
 assert.equal(mPageForPath('/m-platform/merchants/activity/store/demo-all')?.id, 'merchant-activity');
-state.roles[0]!.grants[mModuleKey('merchants')] = 'hidden';
+state.roles[0]!.grants[mModuleKey('activity-analysis')] = 'hidden';
 assert.deepEqual(visible(), [], 'hidden existing ancestor still denies access');
-state.roles[0]!.grants[mModuleKey('merchants')] = 'read';
+state.roles[0]!.grants[mModuleKey('activity-analysis')] = 'read';
 delete state.roles[0]!.grants[mPageKey('device-activity')];
 assert.deepEqual(visible(), [], 'empty category hidden');
 assert.deepEqual(groupMNavigation([]), []);
-console.log('PASS activity navigation: grouping, order, no duplication/mutation, single leaf, empty category, unchanged permissions and detail routes');
+console.log('PASS activity navigation: grouping, order, no duplication/mutation, single leaf, empty category, independent permissions and detail routes');
