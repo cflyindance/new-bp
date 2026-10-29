@@ -3,6 +3,7 @@
  */
 import type { PresetChangeItem } from "./platform-preset-changelog-diff";
 import {bindBusinessTemplateManager} from './business-menu-template-manager';
+import {openBusinessTypeEditor} from './business-type-maintenance';
 import {
   renderFourColumnMatrix,
   renderFourColumnMatrixShell,
@@ -522,7 +523,7 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
       <aside class="flex w-full min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:w-72 lg:self-stretch">
         <div class="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-card-foreground">经营业态</h2>
-          ${scope.scope==='enterprise'?'<button type="button" class="ba-btn" data-business-template-manage>业态菜单模板</button>':''}
+          ${scope.scope==='enterprise'?'<a class="ba-btn" href="#/m-platform/business-menu-templates">业态与菜单模板</a>':''}
           ${addButton}
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-sm max-h-[min(45dvh,22rem)] lg:max-h-none" data-pp-business-type-scroll>
@@ -767,10 +768,7 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
 
     if (target.closest("[data-pp-add-custom]") && listScope?.scope === scope.scope) {
       if (!canAddCustomBusinessTypes(scope)) return;
-      const label = window.prompt("自定义业态名称");
-      if (!label?.trim()) return;
-      scope.store.upsertCustomBusinessType(label.trim());
-      onMount();
+      openBusinessTypeEditor(()=>onMount());
       return;
     }
 

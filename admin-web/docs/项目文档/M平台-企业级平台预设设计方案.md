@@ -1,6 +1,6 @@
 # M 平台 · 企业级平台预设 — 设计方案
 
-> 版本：v1.1 · 2026-10-29
+> 版本：v1.3 · 2026-10-29
 > 状态：Phase 1 已落地（M 平台入口 + 企业级平台预设 CRUD）  
 > 关联：`平台预设-产品需求与设计说明.md`、`platform-preset-ui.ts`、`enterprise-platform-preset-store.ts`
 
@@ -392,4 +392,16 @@ if (isMPlatformShellMode() || isMPlatformPresetPath(path)) {
 
 ![模板管理](../verification/business-menu-templates-20261029/template-manager.png)
 
-变更BUSINESS-MENU-TEMPLATES-20261029-69。平台预设提供独立模板管理入口，复用当前菜单路由；草稿/发布/启停仅作用于后续批量选择，不改变原运行时推荐过滤或下发行为。字段、权限及页面权威入口：[业态菜单模板需求文档（个人规范版）](../需求文档/业态菜单模板/业态菜单模板需求文档（个人规范版）.md)，对应产品与研发文档在该入口互链。
+变更BUSINESS-MENU-TEMPLATES-20261029-69。M侧栏“业态与菜单模板”提供独立管理页面，复用当前菜单路由；草稿/发布/启停仅作用于后续批量选择，不改变原运行时推荐过滤或下发行为。字段、权限及页面权威入口：[业态菜单模板需求文档（个人规范版）](../需求文档/业态菜单模板/业态菜单模板需求文档（个人规范版）.md)，对应产品与研发文档在该入口互链。
+
+## 经营业态维护与绑定菜单
+
+![经营业态维护](../verification/business-type-maintenance-20261029/business-type-list.png)
+
+BUSINESS-TYPE-MAINTENANCE-20261029-70：复用M现有自定义业态目录，支持新增/改名并从业态进入菜单模板管理；原新增入口使用同一校验弹框。内置名称保留，菜单绑定仍走模板发布及商户主动应用。详见[业态菜单模板个人规范V1.1](../需求文档/业态菜单模板/业态菜单模板需求文档（个人规范版）.md)。
+
+## 业态菜单独立页面
+
+![业态与菜单模板](../verification/business-template-page-20261029/standalone-page.png)
+
+BUSINESS-TEMPLATE-PAGE-20261029-71：平台预设保留跳转链接，主要维护在独立/m-platform/business-menu-templates页面完成。原业态运行时预设规则不变；访问与发布权限复用presets资源。详见[个人规范V1.2](../需求文档/业态菜单模板/业态菜单模板需求文档（个人规范版）.md)。
