@@ -2,6 +2,7 @@
  * 平台预设 · 列表页与四列编辑页（支持商家级 / 企业级作用域）
  */
 import type { PresetChangeItem } from "./platform-preset-changelog-diff";
+import {bindBusinessTemplateManager} from './business-menu-template-manager';
 import {
   renderFourColumnMatrix,
   renderFourColumnMatrixShell,
@@ -521,6 +522,7 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
       <aside class="flex w-full min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:w-72 lg:self-stretch">
         <div class="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-card-foreground">经营业态</h2>
+          ${scope.scope==='enterprise'?'<button type="button" class="ba-btn" data-business-template-manage>业态菜单模板</button>':''}
           ${addButton}
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-sm max-h-[min(45dvh,22rem)] lg:max-h-none" data-pp-business-type-scroll>
@@ -731,6 +733,7 @@ function resolveScopeFromElement(el: HTMLElement | null): PresetScopeConfig | nu
 const boundScopes = new Set<string>();
 
 export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig): void {
+  if(scope.scope==='enterprise')bindBusinessTemplateManager();
   bindPlatformPresetChangelogDialog();
   if (boundScopes.has(scope.scope)) return;
   boundScopes.add(scope.scope);

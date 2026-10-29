@@ -359,6 +359,7 @@ export interface SubmitPosStoreRequestInput {
 
 export interface CreateMerchantInput {
   initialMenuKeys?: string[];
+    initialMenuSource?: string;
   initialStoreIds?: string[];
   accountProvisioningRequired?: boolean;
   name: string;

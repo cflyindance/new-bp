@@ -1,0 +1,3 @@
+[data-template-error]:empty,[data-template-confirm-error]:empty,[data-template-manager-error]:empty,[data-template-editor-error]:empty,[data-template-enable-error]:empty{display:none}
+[data-template-toolbar] select{width:100%;min-width:0}
+[data-template-manager-list] .ba-table-wrap{margin-bottom:12px}

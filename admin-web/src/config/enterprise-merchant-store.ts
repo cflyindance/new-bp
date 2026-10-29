@@ -2105,7 +2105,7 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     merchantId,
     action: "merchant.create",
     operatorEmail,
-    detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid}）`,
+    detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid}）${input.initialMenuSource?" · "+input.initialMenuSource:""}`,
   });
   if(input.accountProvisioningRequired)persistBrandConfiguration(snap);else writeSnapshot(snap);
   notifyChainBrandOrgSyncForMerchant(merchantId);
@@ -2193,7 +2193,7 @@ export function saveBrandStoreMenus(id:string,storeIds:string[],keys:string[],mo
   if(brandConfigurationVersion(id)!==expected)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
   const snap=structuredClone(readSnapshot()),cap=snap.capabilities.find(c=>c.merchantId===id);
   if(!cap)throw Error('品牌菜单配置不存在。');
-  const ceiling=new Set(cap.productLineIds.flatMap(pl=>[...brandStoreSelectableCeiling(cap,resolveMerchantServiceProductLine([pl]))]));
+  const ceiling=brandStorePerspectiveCeiling(cap);
   if(!storeIds.length || storeIds.some(sid=>!snap.stores.some(s=>s.storeId===sid&&s.merchantId===id)))throw Error('请选择当前品牌所属门店。');
   if(mode!=='inherit'&&keys.some(k=>!ceiling.has(k)))throw Error('包含品牌未开通的菜单，请刷新后重新选择。');
   snap.storeCapabilities??=[];
