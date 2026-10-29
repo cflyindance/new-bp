@@ -1,4 +1,5 @@
 import {brandServiceVersion,brandServiceReadiness,brandServiceImpact,transitionBrandService,type BrandServiceAction} from './brand-service-lifecycle';
+import {bindBusinessTemplateToolbar,templateSourceFor} from './business-menu-template-ui';
 import { historicalAdminFacts } from './brand-audit-history';
 import { bindBrandChangeLog } from './brand-change-log';
 import { bindOpenedBrandMenuTree } from './brand-menu-read-tree';
@@ -60,7 +61,7 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   dialog(title,'',`<div class="ba-admin-target"><strong>${esc(merchant.name)}</strong><span>${esc(merchant.bid??id)}</span></div><p class="ba-admin-hint">${hint}</p><p class="ba-muted">影响范围：${esc(brandServiceImpact(id))}</p>${issues.length?`<ul class="ba-admin-warning" role="alert">${issues.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:''}<label class="ba-field">操作原因 *<textarea name="reason" required minlength="2" maxlength="200" rows="3" placeholder="请填写2至200字的原因"></textarea></label>`,form=>{transitionBrandService(id,action,String(new FormData(form).get('reason')??''),expected);showAppToast(title+'成功',{variant:'success'});onSaved();return true;},{compact:true,action:'确认'+title,destructive:action==='suspend'||action==='close',blocked:issues.length>0});
 }
 
-function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>}={}):()=>string[] {
+export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
   const roots=available.filter(c=>c.level===1),byKey=new Map(available.map(c=>[c.key,c]));
@@ -100,7 +101,9 @@ function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],o
     host.querySelectorAll<HTMLSelectElement>('[data-edit]').forEach(el=>el.onchange=()=>{if(grants)grants[el.dataset.edit!]=el.value as Access;});
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
-  };render();return()=>[...selected];
+  };render();
+  if(!options.roles&&options.templates!==false)bindBusinessTemplateToolbar(host,choices,()=>[...selected],keys=>{selected.clear();keys.forEach(k=>selected.add(k));render();},options.allowed);
+  return()=>[...selected];
 }
 
 function brandMenuSelectionSummary(keys:string[],choices:MenuChoice[]):string {
@@ -127,8 +130,8 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   authorizeBrandManagement(id,source);
   const cap=getMerchantCapability(id),version=brandConfigurationVersion(id),stores=getMerchantStores(id).filter(s=>storeIds.includes(s.storeId));
   if(!cap||!stores.length)return;
-  const ceiling=brandRawMenuKeys(id),choices=brandMenuChoices(cap.productLineIds),inherited=brandStorePerspectiveCeiling(cap);
-  const initial=stores.length===1?getStoreCapability(stores[0].storeId)?.enabledKeys??[]:[];
+  const choices=brandMenuChoices(cap.productLineIds),inherited=brandStorePerspectiveCeiling(cap),ceiling=new Set([...brandRawMenuKeys(id)].filter(k=>inherited.has(k)));
+  const initial=stores.length===1?(getStoreCapability(stores[0].storeId)?.enabledKeys??[]).filter(k=>ceiling.has(k)):[];
   const defaultMode=stores.length===1?(getStoreCapability(stores[0].storeId)?.menuMode==='inherit'?'inherit':'replace'):'add';
   let read=()=>initial,preview:HTMLDialogElement|null=null;
   const d=dialog(stores.length===1?`${stores[0].name} · 菜单配置`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
@@ -157,7 +160,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
     current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
     current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!.onclick=()=>{
       if(saving||!current.open)return;const error=current.querySelector<HTMLElement>('[data-store-preview-error]')!,save=current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!;error.hidden=true;
-      try{saving=true;save.disabled=true;saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),source==='merchant'?'品牌 Admin':'M 平台运营');current.close();d.close();d.remove();showAppToast('门店菜单已保存',{variant:'success'});onSaved();}
+      try{saving=true;save.disabled=true;saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),(source==='merchant'?'品牌 Admin':'M 平台运营')+' '+templateSourceFor(d.querySelector('[data-menu-picker]')));current.close();d.close();d.remove();showAppToast('门店菜单已保存',{variant:'success'});onSaved();}
       catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
@@ -165,7 +168,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   d.addEventListener('close',()=>{preview?.close();},{once:true});
   read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
-  const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
+  const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-template-toolbar]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
   d.querySelector('[name=mode]')!.addEventListener('change',sync);sync();
 }
 
@@ -186,7 +189,7 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
     current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
     current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!.onclick=()=>{
       if(saving||!current.open)return;const save=current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!,error=current.querySelector<HTMLElement>('[data-brand-preview-error]')!;error.hidden=true;
-      try{saving=true;save.disabled=true;saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'),'M 平台运营');current.close();d.close();d.remove();showAppToast('品牌菜单已保存',{variant:'success'});onSaved();}
+      try{saving=true;save.disabled=true;saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'),'M 平台运营 '+templateSourceFor(d.querySelector('[data-menu-picker]')));current.close();d.close();d.remove();showAppToast('品牌菜单已保存',{variant:'success'});onSaved();}
       catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
@@ -367,13 +370,13 @@ export function bindBrandCreateWizard():void {
     const value=(name:string)=>esc(String(fd.get(name)??'').trim()||'—');
     const field=(title:string,content:string)=>`<div><dt>${title}</dt><dd>${content}</dd></div>`;
     const d=document.createElement('dialog');reviewDialog=d;d.className='ba ba-modal ba-create-confirm';d.setAttribute('aria-labelledby','brand-create-review-title');
-    d.innerHTML=`<form><header class="ba-dialog-header"><h2 id="brand-create-review-title">核对创建信息</h2><button type="button" class="ba-btn" data-review-close aria-label="关闭核对创建信息">×</button></header><section class="ba-dialog-body"><h3>品牌信息</h3><dl class="ba-create-summary">${field('品牌名称',value('name'))}${field('品牌编码',String(fd.get('code')??'').trim()?value('code'):'自动生成')}${field('联系人',value('contactName'))}${field('联系电话',value('contactPhone'))}${field('时区',value('timezone'))}${field('经营业态',esc(business.filter(item=>fd.getAll('businessTypeIds').includes(item.id)).map(item=>item.label).join('、')))}${field('产线',esc(lines.filter(item=>fd.getAll('productLineIds').includes(item.id)).map(item=>item.label).join('、')))}</dl><h3>品牌门店（${stores.length} 家）</h3>${stores.length?`<div class="ba-table-wrap"><table><thead><tr><th>门店名称</th><th>门店 MID</th><th>地址</th><th>邮编</th></tr></thead><tbody>${stores.map(store=>`<tr><td>${esc(store.name)}</td><td>${esc(store.storeId)}</td><td>${esc(store.address??'—')}</td><td>${esc(store.postalCode??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="ba-muted">未选择门店</p>'}${brandMenuSelectionSummary(selectedKeys,choices)}<p class="ba-error" data-confirm-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">确认后创建品牌</span><div class="ba-actions"><button type="button" class="ba-btn" data-review-close>返回修改</button><button type="submit" class="ba-btn ba-primary" data-confirm-create>确认创建品牌</button></div></footer></form>`;
+    d.innerHTML=`<form><header class="ba-dialog-header"><h2 id="brand-create-review-title">核对创建信息</h2><button type="button" class="ba-btn" data-review-close aria-label="关闭核对创建信息">×</button></header><section class="ba-dialog-body"><h3>品牌信息</h3><dl class="ba-create-summary">${field('品牌名称',value('name'))}${field('品牌编码',String(fd.get('code')??'').trim()?value('code'):'自动生成')}${field('联系人',value('contactName'))}${field('联系电话',value('contactPhone'))}${field('时区',value('timezone'))}${field('经营业态',esc(business.filter(item=>fd.getAll('businessTypeIds').includes(item.id)).map(item=>item.label).join('、')))}${field('产线',esc(lines.filter(item=>fd.getAll('productLineIds').includes(item.id)).map(item=>item.label).join('、')))}</dl><h3>品牌门店（${stores.length} 家）</h3>${stores.length?`<div class="ba-table-wrap"><table><thead><tr><th>门店名称</th><th>门店 MID</th><th>地址</th><th>邮编</th></tr></thead><tbody>${stores.map(store=>`<tr><td>${esc(store.name)}</td><td>${esc(store.storeId)}</td><td>${esc(store.address??'—')}</td><td>${esc(store.postalCode??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="ba-muted">未选择门店</p>'}<p class="ba-muted">${esc(templateSourceFor(root.querySelector('[data-create-picker]')))}</p>${brandMenuSelectionSummary(selectedKeys,choices)}<p class="ba-error" data-confirm-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">确认后创建品牌</span><div class="ba-actions"><button type="button" class="ba-btn" data-review-close>返回修改</button><button type="submit" class="ba-btn ba-primary" data-confirm-create>确认创建品牌</button></div></footer></form>`;
     const close=()=>d.close();d.querySelectorAll('[data-review-close]').forEach(button=>button.addEventListener('click',close));
     d.addEventListener('close',()=>{d.remove();if(reviewDialog===d)reviewDialog=null;if(root.isConnected)root.querySelector<HTMLButtonElement>('[data-next]')?.focus();},{once:true});
     let saving=false;
     d.querySelector('form')!.addEventListener('submit',event=>{event.preventDefault();if(saving)return;const error=d.querySelector<HTMLElement>('[data-confirm-error]')!,confirmButton=d.querySelector<HTMLButtonElement>('[data-confirm-create]')!;error.hidden=true;
       try{saving=true;confirmButton.disabled=true;validate();
-        const merchant=createMerchant({name:String(fd.get('name')).trim(),code:String(fd.get('code')??''),orgType:'chain',timezone:String(fd.get('timezone')),contactName:String(fd.get('contactName')),contactPhone:String(fd.get('contactPhone')??''),primaryAdminEmail:'',businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String),initialMenuKeys:selectedKeys,initialStoreIds:fd.getAll('storeIds').map(String),accountProvisioningRequired:true,activateImmediately:false});
+        const merchant=createMerchant({name:String(fd.get('name')).trim(),code:String(fd.get('code')??''),orgType:'chain',timezone:String(fd.get('timezone')),contactName:String(fd.get('contactName')),contactPhone:String(fd.get('contactPhone')??''),primaryAdminEmail:'',businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String),initialMenuKeys:selectedKeys,initialMenuSource:templateSourceFor(root.querySelector('[data-create-picker]')),initialStoreIds:fd.getAll('storeIds').map(String),accountProvisioningRequired:true,activateImmediately:false});
         dirty=false;window.removeEventListener('beforeunload',unload);window.removeEventListener('hashchange',guard,true);d.close();location.hash=merchantDetailHref(merchant.merchantId,'accounts');showAppToast('品牌已创建，请继续开通品牌 Admin',{variant:'success'});
       }catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;confirmButton.disabled=false;}
     });

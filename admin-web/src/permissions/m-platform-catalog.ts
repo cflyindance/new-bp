@@ -47,7 +47,7 @@ export const M_MODULES: MModule[] = [
     page('alerts', '告警', '/m-platform/hardware/alerts', false),
   ] },
   { id: 'presets', title: '平台预设', pages: [page('presets', '平台预设', '/m-platform/platform-preset', true, [
-    action('publish', '发布预设', '[data-pp-publish]'),
+    action('publish', '发布预设', '[data-pp-publish],[data-bt-publish],[data-template-publish-confirm],[data-template-enable-confirm],[data-template-enabled]'),
     action('sync', '同步商家', '[data-pp-sync-merchant]'),
     action('restore', '恢复默认预设', '[data-pp-restore-defaults]'),
   ])] },
