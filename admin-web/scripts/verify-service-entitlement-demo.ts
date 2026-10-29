@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {seedServiceEntitlementDemo} from '../src/config/service-entitlement-demo';
+import {serviceAccess} from '../src/config/service-entitlement-domain';
+import type {SubscriptionServiceSnapshot} from '../src/config/subscription-service-domain';
+const s:SubscriptionServiceSnapshot={schemaVersion:1,routeBlueprintVersion:1,packages:[],drafts:[],releases:[],subscriptions:[],audit:[]};
+const catalog=['/members/users/list','/members/crm/sms-tasks','/members/a','/members/b'].map((path,i)=>({id:'node'+i,path}));
+const now=Date.now(),brands=[{id:'merchant-zhangji',stores:['M00000001','M00000002']},{id:'merchant-tea-one',stores:['M00000003']}];
+assert(seedServiceEntitlementDemo(s,catalog,brands,now));assert.equal(s.packages.length,4);assert.equal(s.subscriptions.filter(g=>g.subjectId==='merchant-zhangji').length,7);
+const marketing=s.packages.find(p=>p.id.endsWith('marketing'))!,growth=s.packages.find(p=>p.id.endsWith('growth'))!;
+assert.equal(serviceAccess(s,marketing,{brandId:'merchant-zhangji'},now).label,'试用中');
+assert.equal(serviceAccess(s,marketing,{brandId:'merchant-tea-one'},now).label,'试用已结束');
+assert.equal(serviceAccess(s,growth,{brandId:'merchant-zhangji',storeId:'M00000001'},now).label,'正式生效');
+assert.equal(serviceAccess(s,growth,{brandId:'merchant-zhangji',storeId:'M00000002'},now).usable,false);
+assert.equal(s.subscriptions.find(g=>g.packageId===growth.id&&g.entitlementKind==='paid')!.agreedPriceMinor,15900);
+const before=JSON.stringify(s);assert.equal(seedServiceEntitlementDemo(s,catalog,brands,now+86400000),false);assert.equal(JSON.stringify(s),before,'reload must never refresh dates or overwrite edits');
+console.log('PASS demo fixtures: four services, seven rights states, actual store IDs, selected scope, contract snapshot and idempotent dates');

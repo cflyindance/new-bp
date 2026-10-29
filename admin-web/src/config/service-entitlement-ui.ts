@@ -6,7 +6,7 @@ import { showAppToast } from '../ui/app-toast';
 import { mCanVisit } from '../permissions/m-platform-runtime';
 import { MERCHANT_SUBSCRIPTIONS_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX } from './subscription-service-scope';
 import { readSubscriptionServiceSnapshot } from './subscription-service-store';
-import { getPublishedSubscriptionRouteCatalog } from './subscription-published-menu-tree';
+import { ensurePublishedSubscriptionMenuTree } from './subscription-published-menu-tree';
 import type { MerchantSubscription, ServiceEntitlementKind, ServicePackage } from './subscription-service-domain';
 import { serviceAccess } from './service-entitlement-domain';
 import { currentServiceAccess } from './service-entitlement-runtime';
@@ -67,6 +67,8 @@ export function openServiceEntitlement(brandId:string,packageId:string,kind:Serv
 
 export function bindBrandServiceEntitlements(onMount:()=>void):void {
   const root=document.querySelector<HTMLElement>('[data-brand-entitlements]');if(!root)return;
+  const demoVersion=readSubscriptionServiceSnapshot().entitlementDemoVersion;
+  if(demoVersion!==1)void ensurePublishedSubscriptionMenuTree().then(()=>{if(document.contains(root)&&readSubscriptionServiceSnapshot().entitlementDemoVersion===1)onMount();}).catch(()=>{});
   root.querySelectorAll<HTMLButtonElement>('[data-ent-menu]').forEach(b=>b.onclick=()=>{void openServiceMenuPreview(b.dataset.entMenu!);});
   root.querySelectorAll<HTMLButtonElement>('[data-ent-new]').forEach(b=>b.onclick=()=>openServiceEntitlement(root.dataset.brandEntitlements!,b.dataset.pkg!,b.dataset.entNew as ServiceEntitlementKind,'m-platform',onMount));
   root.querySelectorAll<HTMLButtonElement>('[data-ent-extend],[data-ent-disable]').forEach(b=>b.onclick=()=>{
