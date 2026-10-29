@@ -1865,7 +1865,6 @@ export function getEnterpriseStoreList(filter: EnterpriseStoreListFilter = {}): 
           store.postalCode,
           merchant.name,
           merchant.bid,
-          groupNameById.get(merchant.groupId),
           regionName,
           linkedName,
         ]
@@ -2000,7 +1999,7 @@ export function updateMerchantStatus(merchantId:string,status:MerchantStatus,ope
 export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant {
   const snap = input.accountProvisioningRequired ? structuredClone(readSnapshot()) : readSnapshot();
   const initialIds = [...new Set(input.initialStoreIds ?? [])];
-  const candidates = listBrandAssociationCandidates(input.groupId);
+  const candidates = listBrandAssociationCandidates();
   if (initialIds.some(id => !candidates.some(s => s.storeId === id))) throw Error('所选门店归属已变化，请重新选择。');
   const initialKeys = input.initialMenuKeys ? validateExplicitMenuKeys(input.initialMenuKeys, input.productLineIds) : undefined;
   const merchantId = genId("merchant");
@@ -2008,7 +2007,7 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
   const code = input.code.trim() || slugCode(input.name) || merchantId;
   const status: MerchantStatus = input.activateImmediately ? "active" : "onboarding";
   const group =
-    getGroupById(input.groupId) ??
+    (input.groupId ? getGroupById(input.groupId) : undefined) ??
     ensureDefaultGroupForEnterprise(snap, activeEnterpriseId());
   const merchant: EnterpriseMerchant = {
     accountProvisioningRequired: input.accountProvisioningRequired,
@@ -2108,7 +2107,7 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     merchantId,
     action: "merchant.create",
     operatorEmail,
-    detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid} · 集团 ${group.name}）`,
+    detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid}）`,
   });
   if(input.accountProvisioningRequired)persistBrandConfiguration(snap);else writeSnapshot(snap);
   notifyChainBrandOrgSyncForMerchant(merchantId);
@@ -2125,31 +2124,31 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
   return merchant;
 }
 
-/** Only independent single-store records in the same group may be associated here. */
-export function listBrandAssociationCandidates(groupId: string): MerchantOrgStore[] {
+/** Independent single-store records are scoped by Enterprise, not historical group membership. */
+export function listBrandAssociationCandidates(_legacyGroupId?: string, enterpriseId = activeEnterpriseId()): MerchantOrgStore[] {
   const snap = readSnapshot();
   return snap.stores.filter(s => {
     const owner=snap.merchants.find(m=>m.merchantId===s.merchantId);
-    return owner?.groupId===groupId && owner.orgType==='single-store' && s.linkedMerchantId===s.merchantId &&
+    return owner?.enterpriseId===enterpriseId && owner.orgType==='single-store' && s.linkedMerchantId===s.merchantId &&
       !snap.stores.some(other=>other.merchantId!==s.merchantId && other.linkedMerchantId===s.linkedMerchantId);
   });
 }
 
 /** Local prototype fixtures only: replenish unassociated demo stores for the creation wizard. */
-export function ensureBrandCreationDemoStores(groupId: string): void {
-  const group = getGroupById(groupId);
+export function ensureBrandCreationDemoStores(groupId?: string): void {
+  const group = groupId ? getGroupById(groupId) : ensureDefaultGroupForEnterprise(readSnapshot(), activeEnterpriseId());
   if (!group || group.enterpriseId !== activeEnterpriseId()) return;
-  const prefix = `brand-create-demo-${groupId}-`;
+  const prefix = `brand-create-demo-${group.groupId}-`;
   const available = listBrandAssociationCandidates(groupId).filter(store =>
     getMerchantById(store.merchantId)?.code.startsWith(prefix),
   );
   for (let index = available.length; index < 3; index++) {
     const code = `${prefix}${genId('fixture')}`;
     createMerchant({
-      name: `${group.name} · 演示门店 ${code.slice(-6)}`, code, groupId, orgType: 'single-store',
+      name: `演示门店 ${code.slice(-6)}`, code, groupId: group.groupId, orgType: 'single-store',
       timezone: 'Asia/Shanghai', contactName: '演示数据', primaryAdminEmail: '',
       businessTypeIds: ['full-service'], productLineIds: ['pos'],
-      firstStoreName: `${group.name} · 演示门店 ${code.slice(-6)}`, initialMenuKeys: [],
+      firstStoreName: `演示门店 ${code.slice(-6)}`, initialMenuKeys: [],
       accountProvisioningRequired: true, activateImmediately: true,
     }, '原型演示门店预置');
   }
@@ -2220,8 +2219,8 @@ export function associateBrandStores(id:string,storeIds:string[],expected:string
   if(brandConfigurationVersion(id)!==expected)throw Error('门店归属已更新，请刷新后重新选择。');
   const snap=structuredClone(readSnapshot()),merchant=snap.merchants.find(m=>m.merchantId===id);
   if(!merchant)throw Error('品牌不存在。');
-  const candidates=listBrandAssociationCandidates(merchant.groupId).filter(s=>s.merchantId!==id);
-  if(!storeIds.length || storeIds.some(sid=>!candidates.some(s=>s.storeId===sid)))throw Error('请选择同集团下可关联的独立门店；其他品牌门店不能直接转移。');
+  const candidates=listBrandAssociationCandidates(undefined,merchant.enterpriseId).filter(s=>s.merchantId!==id);
+  if(!storeIds.length || storeIds.some(sid=>!candidates.some(s=>s.storeId===sid)))throw Error('请选择当前租户内可关联的独立门店；其他品牌门店不能直接转移。');
   const brand=snap.brands.find(b=>b.merchantId===id),region=snap.regions.find(r=>r.merchantId===id);
   if(!brand||!region)throw Error('品牌组织信息缺失。');
   const associationId=genId('associate-operation');

@@ -1,7 +1,7 @@
 /**
  * M 平台 · 商户管理中心 · 路由
  */
-import { getMerchantById, getGroupById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "./enterprise-merchant-store";
+import { getMerchantById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "./enterprise-merchant-store";
 
 export const ENTERPRISE_MERCHANT_ROUTE_PREFIX = "/m-platform/merchants";
 export const ENTERPRISE_MERCHANT_MODULE_LABEL = "商户管理中心";
@@ -93,16 +93,8 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`) {
     return { title: "品牌总览", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
-  if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/groups`) {
-    return { title: "集团管理", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
-  }
-  if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/groups/new`) {
-    return { title: "新建集团", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
-  }
-  const groupForm = parseGroupFormPath(path);
-  if (groupForm?.mode === "edit") {
-    const group = getGroupById(groupForm.groupId);
-    return { title: group ? `编辑集团 · ${group.name}` : "编辑集团", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+  if (/^\/m-platform\/merchants\/groups(?:\/|$)/.test(path)) {
+    return { title: "品牌管理", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (isMerchantListPath(path)) {
     return { title: "品牌管理", module: ENTERPRISE_MERCHANT_MODULE_LABEL };

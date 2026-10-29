@@ -1,7 +1,7 @@
 .management-filters{flex-shrink:0;display:flex;flex-direction:column;gap:12px;max-height:48vh;overflow:auto;padding-bottom:2px}
 .management-filter-primary,.management-filter-secondary{display:grid;gap:12px;align-items:end}
-.management-filter-primary{grid-template-columns:repeat(5,minmax(0,1fr))}
-[data-management-filters="store"] .management-filter-primary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.management-filter-primary{grid-template-columns:repeat(4,minmax(0,1fr))}
+[data-management-filters="store"] .management-filter-primary{grid-template-columns:repeat(3,minmax(0,1fr))}
 .management-filter-secondary{grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) minmax(240px,3fr) auto}
 .management-filters label{min-width:0;gap:4px}
 .management-filters label>span{font-size:12px;line-height:18px}

@@ -143,6 +143,10 @@ function renderMPlatformMain(path: string): string {
 }
 
 function renderMPlatformShell(_onMount: () => void, path: string): string {
+  if (/^\/m-platform\/merchants\/groups(?:\/|$|\?)/.test(path)) {
+    path = ENTERPRISE_MERCHANT_ROUTE_PREFIX;
+    history.replaceState(history.state, "", `${location.pathname}${location.search}#${path}`);
+  }
   // 开通在外部平台完成；兼容旧申请书签，不开放申请审批页面。
   if (/^\/m-platform\/merchants\/requests(\/|$|\?)/.test(path)) {
     path = `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`;

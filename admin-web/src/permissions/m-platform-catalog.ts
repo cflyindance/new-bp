@@ -28,7 +28,6 @@ export const M_MODULES: MModule[] = [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
     page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
     page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
-    page('groups', '集团管理', `${merchants}/groups`, true, [action('delete', '删除集团', '[data-group-delete]')]),
     page('brands', '品牌管理', merchants, true, [
       action('impersonate', '进入商家后台', '[data-merchant-impersonate]'),
       action('lifecycle', '变更品牌状态', '[data-merchant-lifecycle]'),
@@ -86,7 +85,7 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
     [`${merchants}/activity/`, 'merchant-activity'],
     [`${permissions}/subscription-services/`, 'services'], [`${permissions}/merchant-subscriptions/`, 'subscriptions'],
     [`${permissions}/roles/`, 'roles'], [`${permissions}/staff/`, 'staff'],
-    [`${merchants}/groups/`, 'groups'], [`${merchants}/stores/`, 'stores'],
+    [`${merchants}/stores/`, 'stores'],
     ['/m-platform/hardware/devices/', 'devices'], ['/m-platform/nav-blueprint/', 'routing'],
     ['/m-platform/platform-preset/', 'presets'],
   ];
