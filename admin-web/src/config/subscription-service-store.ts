@@ -1,4 +1,5 @@
 import { validateCommercialPolicy } from './service-entitlement-domain';
+import { seedServiceEntitlementDemo } from './service-entitlement-demo';
 import { getGroups, getMerchantStores, getMerchants } from "./enterprise-merchant-store";
 import {
   getSubscriptionRouteCatalog,
@@ -84,19 +85,31 @@ function normalizeSnapshot(value: Partial<SubscriptionServiceSnapshot> | null): 
     subscriptions: Array.isArray(value.subscriptions) ? value.subscriptions : [],
     audit: Array.isArray(value.audit) ? value.audit : [],
     protectedRoutes: Array.isArray(value.protectedRoutes) ? value.protectedRoutes : [],
+    entitlementDemoVersion:value.entitlementDemoVersion,
   };
 }
 
 export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return normalizeSnapshot(JSON.parse(raw) as SubscriptionServiceSnapshot);
+    if (raw) {
+      const snapshot=normalizeSnapshot(JSON.parse(raw) as SubscriptionServiceSnapshot);
+      if(appendEntitlementDemo(snapshot))writeSubscriptionServiceSnapshot(snapshot,false);
+      return snapshot;
+    }
   } catch {
     /* fall through */
   }
   const seeded = seedSnapshot();
+  appendEntitlementDemo(seeded);
   writeSubscriptionServiceSnapshot(seeded, false);
   return seeded;
+}
+
+function appendEntitlementDemo(snapshot:SubscriptionServiceSnapshot):boolean {
+  if(snapshot.entitlementDemoVersion===1||getPublishedSubscriptionMenuTree()?.source!=='menu-document')return false;
+  const demoIds=new Set(['merchant-zhangji','merchant-tea-one','merchant-menusifu-na','merchant-sakura-sushi','merchant-burger-co']);
+  return seedServiceEntitlementDemo(snapshot,getPublishedSubscriptionRouteCatalog(),getMerchants({allEnterprises:true}).filter(m=>demoIds.has(m.merchantId)).map(m=>({id:m.merchantId,stores:getMerchantStores(m.merchantId).map(s=>s.storeId)})));
 }
 
 export function writeSubscriptionServiceSnapshot(snapshot: SubscriptionServiceSnapshot, notify = true): void {

@@ -93,6 +93,7 @@ export interface SubscriptionAuditEntry {
 }
 
 export interface SubscriptionServiceSnapshot {
+  entitlementDemoVersion?: number;
   schemaVersion: 1;
   routeBlueprintVersion: number;
   packages: ServicePackage[];

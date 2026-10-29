@@ -28,6 +28,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await p.locator('[data-wizard-next]').click();
   await p.locator('[data-subscription-menu-tree]').waitFor();
   const catalog=await p.evaluate(async()=>{const m=await import('/src/config/subscription-published-menu-tree.ts');await m.ensurePublishedSubscriptionMenuTree();return m.getPublishedSubscriptionRouteCatalog();});
+  // Isolate this custom expiry scenario from other valid default demo services
+  // bound to the same menu. Production correctly unions valid service sources.
+  await p.evaluate(async()=>{const s=await import('/src/config/subscription-service-store.ts'),data=s.readSubscriptionServiceSnapshot();const demo=new Set(data.packages.filter(p=>p.id.startsWith('pkg-ent-demo-')).map(p=>p.id));data.packages=data.packages.filter(p=>!demo.has(p.id));data.releases=data.releases.filter(r=>!demo.has(r.packageId));data.subscriptions=data.subscriptions.filter(g=>!demo.has(g.packageId));data.protectedRoutes=data.protectedRoutes?.filter(r=>!demo.has(r.packageId));s.writeSubscriptionServiceSnapshot(data);});
   const sms=catalog.find(n=>n.path==='/members/crm/sms-tasks'),member=catalog.find(n=>n.path==='/members/users/list');assert(sms&&member);
   await p.locator('input[data-sub-tree-select-ids]').evaluateAll((nodes,id)=>{const n=nodes.find(n=>n.getAttribute('data-sub-tree-select-ids')===JSON.stringify([id]));if(!n)throw Error('SMS node absent');n.click();},sms.id);
   await p.locator('[data-wizard-next]').click();await p.locator('[data-wizard-submit=publish]').click();
