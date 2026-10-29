@@ -363,7 +363,8 @@ export interface CreateMerchantInput {
   accountProvisioningRequired?: boolean;
   name: string;
   code: string;
-  groupId: string;
+  /** Internal legacy compatibility only; M brand creation does not require group membership. */
+  groupId?: string;
   orgType: MerchantOrgType;
   timezone: string;
   contactName: string;

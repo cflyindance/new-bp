@@ -1,0 +1,26 @@
+{
+  "baseline": "1716dfc4",
+  "url": "http://127.0.0.1:5256",
+  "id": "merchant-mvt571sk-m8fut",
+  "checks": [
+    "no group navigation/filter/column and stale caches do not hide data",
+    "create without group, cross-legacy-group store selected, inherited menus and admin destination",
+    "association without group; cross-tenant/owned/version protection; historical groups/menu/admin preserved"
+  ],
+  "domain": {
+    "associated": true,
+    "owned": true,
+    "cross": true,
+    "conflict": true,
+    "rejectedStable": true,
+    "groupsPreserved": true,
+    "oldPreserved": true,
+    "brandCacheIgnored": true,
+    "storeCacheIgnored": true,
+    "resources": [],
+    "readiness": [
+      "请先开通至少一名已启用的品牌管理员"
+    ]
+  },
+  "errors": []
+}

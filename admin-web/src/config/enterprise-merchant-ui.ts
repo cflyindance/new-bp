@@ -15,11 +15,8 @@ import {
   ENTERPRISE_MERCHANT_ROUTE_PREFIX,
   isMerchantListPath,
   isStoreListPath,
-  isGroupMgmtPath,
   merchantDetailHref,
-  merchantGroupEditHref,
   merchantHref,
-  parseGroupFormPath,
   parseMerchantDetailPath,
   parseStoreDetailPath,
   storeDetailHref,
@@ -37,10 +34,7 @@ import {
 import {
   businessTypeLabel,
   countStoresForMerchant,
-  createGroup,
   createMerchant,
-  countMerchantsForGroup,
-  deleteGroup,
   getBusinessTypeOptions,
   getMerchantBrands,
   getMerchantById,
@@ -58,11 +52,7 @@ import {
   getMerchantSlaMetrics,
   getMerchantReportSummary,
   getMerchants,
-  getGroups,
-  getGroupById,
-  getGroupName,
   getEnterpriseStoreList,
-  getGroupsForSelect,
   getProductLineOptions,
   getContractStatusLabel,
   getLicenseStatusLabel,
@@ -78,7 +68,6 @@ import {
   syncMerchantFromCrm,
   syncMerchantCapabilityPresets,
   updateMerchantStoreStatus,
-  updateGroup,
 } from "./enterprise-merchant-store";
 import { canImpersonateStore, enterStoreBackendAsImpersonator, canImpersonateMerchant, enterMerchantBackendAsImpersonator } from "./enterprise-merchant-impersonate";
 import {
@@ -105,30 +94,21 @@ import {
   renderFourColumnMatrixShell,
 } from "./permission-four-column-ui";
 import type {
-  CreateGroupInput,
   CreateMerchantInput,
-  EnterpriseGroup,
   EnterpriseMerchant,
   EnterpriseStoreListRow,
-  GroupFilter,
   MerchantFilter,
   MerchantOrgStoreStatus,
   MerchantStatus,
-  UpdateGroupInput,
 } from "./enterprise-merchant-types";
 import { hardwareHref } from "./enterprise-hardware-scope";
-
-/** 集团管理页固定展示米聚企业（该页无 Enterprise 切换器） */
-function groupMgmtFilter(extra: GroupFilter = {}): GroupFilter {
-  return { ...extra, enterpriseId: DEFAULT_ENTERPRISE_ID };
-}
 
 /** 品牌列表展示全部 Enterprise 下的品牌（不含连锁挂载的门店租户） */
 function listMerchantsFilter(extra: MerchantFilter = {}): MerchantFilter {
   return { ...extra, allEnterprises: true, excludeLinkedStoreTenants: true };
 }
 
-/** 门店列表展示全部 Enterprise 下、全部集团、全部品牌的门店 */
+/** 门店列表展示全部 Enterprise 下、全部品牌的门店 */
 function listEnterpriseStoresFilter(
   extra: Parameters<typeof getEnterpriseStoreList>[0] = {},
 ): Parameters<typeof getEnterpriseStoreList>[0] {
@@ -225,143 +205,6 @@ function renderOverviewPage(): string {
     </div>`;
 }
 
-function renderGroupsTable(groups: ReturnType<typeof getGroups>): string {
-  if (groups.length === 0) {
-    return `<p class="py-8 text-center text-sm text-muted-foreground">暂无集团，请先新建集团后再创建品牌。</p>`;
-  }
-  return `
-    <div class="overflow-x-auto rounded-xl border border-border">
-      <table data-m-merchant-future data-m-group-future class="w-full min-w-[40rem] text-sm">
-        <thead class="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th class="px-3 py-2.5 font-medium">集团名称</th>
-            <th class="px-3 py-2.5 font-medium">编码</th>
-            <th class="px-3 py-2.5 font-medium">品牌数</th>
-            <th class="px-3 py-2.5 font-medium">状态</th>
-            <th class="px-3 py-2.5 font-medium">说明</th>
-            <th class="px-3 py-2.5 font-medium">创建时间</th>
-            <th class="px-3 py-2.5 font-medium w-28"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          ${groups
-            .map(
-              (g) => `
-            <tr class="hover:bg-muted/30">
-              <td class="px-3 py-2.5 font-medium">${escapeHtml(g.name)}</td>
-              <td class="px-3 py-2.5 font-mono text-xs text-muted-foreground">${escapeHtml(g.code)}</td>
-              <td class="px-3 py-2.5 tabular-nums">${countMerchantsForGroup(g.groupId)}</td>
-              <td class="px-3 py-2.5">${g.status === "active" ? '<span class="inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">在营</span>' : '<span class="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">停用</span>'}</td>
-              <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(g.description ?? "—")}</td>
-              <td class="px-3 py-2.5 text-xs text-muted-foreground">${formatDate(g.createdAt)}</td>
-              <td class="px-3 py-2.5">
-                <div class="flex flex-wrap gap-2">
-                  <a href="${merchantGroupEditHref(g.groupId)}" class="text-xs text-primary hover:underline">编辑</a>
-                  <button type="button" data-group-delete="${escapeHtml(g.groupId)}" data-group-name="${escapeHtml(g.name)}" class="text-xs text-destructive hover:underline">删除</button>
-                </div>
-              </td>
-            </tr>`,
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function renderGroupsListPage(): string {
-  return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="groups">
-      <div class="flex shrink-0 flex-wrap items-center justify-end gap-3">
-        <a href="${merchantHref("/groups/new")}" data-m-merchant-future data-m-group-future class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">新建集团</a>
-      </div>
-      <form class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" data-enterprise-group-filter-form data-m-merchant-future data-m-group-future>
-        <label class="flex min-w-[12rem] flex-1 flex-col gap-1">
-          <span class="text-xs text-muted-foreground">搜索</span>
-          <input type="search" name="query" data-group-filter="query" placeholder="名称 / 编码" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-        </label>
-      </form>
-      <div class="min-h-0 flex-1 overflow-y-auto" data-enterprise-group-table>
-        ${renderGroupsTable(getGroups(groupMgmtFilter()))}
-      </div>
-    </div>`;
-}
-
-function renderGroupFormPage(group?: EnterpriseGroup): string {
-  const isEdit = !!group;
-  const title = isEdit ? "编辑集团" : "新建集团";
-  const subtitle = isEdit
-    ? "修改集团名称与说明；集团编码创建后不可变更。"
-    : "创建集团后，可在「新建品牌」时选择所属集团。";
-  const submitLabel = isEdit ? "保存" : "创建集团";
-  const codeField = isEdit
-    ? `<label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">集团编码</span>
-              <input name="code" value="${escapeHtml(group.code)}" readonly class="h-9 cursor-not-allowed rounded-md border border-input bg-muted/50 px-3 text-sm text-muted-foreground" />
-            </label>`
-    : `<label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">集团编码</span>
-              <input name="code" class="h-9 rounded-md border border-input bg-background px-3 text-sm" placeholder="留空自动生成" />
-            </label>`;
-  const statusField = isEdit
-    ? `<label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">状态</span>
-              <select name="status" class="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                <option value="active"${group.status === "active" ? " selected" : ""}>在营</option>
-                <option value="inactive"${group.status === "inactive" ? " selected" : ""}>停用</option>
-              </select>
-            </label>`
-    : "";
-
-  return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-enterprise-merchant-page="groups-form">
-      <a href="${merchantHref("/groups")}" class="text-sm text-primary hover:underline">← 返回集团管理</a>
-      ${card(`
-        <h2 class="text-sm font-semibold text-card-foreground">${title}</h2>
-        <p class="mt-1 text-sm text-muted-foreground">${subtitle}</p>
-        <form class="mt-4 space-y-4" data-enterprise-group-form data-m-merchant-future data-m-group-future${group ? ` data-group-id="${escapeHtml(group.groupId)}"` : ""}>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="flex flex-col gap-1 sm:col-span-2">
-              <span class="text-xs text-muted-foreground">集团名称 *</span>
-              <input name="name" required value="${group ? escapeHtml(group.name) : ""}" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-            </label>
-            ${codeField}
-            ${statusField}
-            <label class="flex flex-col gap-1 sm:col-span-2">
-              <span class="text-xs text-muted-foreground">说明</span>
-              <textarea name="description" rows="2" class="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="可选">${group?.description ? escapeHtml(group.description) : ""}</textarea>
-            </label>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button type="submit" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">${submitLabel}</button>
-            <a href="${merchantHref("/groups")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">取消</a>
-            ${
-              isEdit
-                ? `<button type="button" data-group-delete="${escapeHtml(group.groupId)}" data-group-name="${escapeHtml(group.name)}" class="ml-auto inline-flex h-9 items-center rounded-md border border-destructive/40 px-4 text-sm text-destructive hover:bg-destructive/10">删除集团</button>`
-                : ""
-            }
-          </div>
-        </form>
-      `)}
-    </div>`;
-}
-
-function renderNewGroupPage(): string {
-  return renderGroupFormPage();
-}
-
-function renderEditGroupPage(groupId: string): string {
-  const group = getGroupById(groupId, DEFAULT_ENTERPRISE_ID);
-  if (!group) {
-    return `
-      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-        <a href="${merchantHref("/groups")}" class="text-sm text-primary hover:underline">← 返回集团管理</a>
-        <p class="text-sm text-muted-foreground">集团不存在或无权访问。</p>
-      </div>`;
-  }
-  return renderGroupFormPage(group);
-}
-
-/** M 平台品牌列表统一按连锁品牌展示（单店亦视为 1 店连锁） */
 const MERCHANT_LIST_CHAIN_ORG_LABEL = "连锁";
 
 function renderMerchantBrandStoreTable(
@@ -410,7 +253,6 @@ function renderMerchantBrandStoresDialog(merchant: NonNullable<ReturnType<typeof
   const stores = getMerchantStores(merchant.merchantId);
   const closeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
   const subtitle = [
-    getGroupName(merchant.groupId),
     merchant.bid ? `BID ${merchant.bid}` : "",
     `${stores.length} 家门店`,
   ]
@@ -436,7 +278,7 @@ function renderMerchantBrandStoresDialog(merchant: NonNullable<ReturnType<typeof
         <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div class="min-w-0">
             <h2 id="enterprise-merchant-stores-dialog-title" class="truncate text-base font-semibold text-card-foreground">${escapeHtml(merchant.name)} · 门店列表</h2>
-            <p data-m-merchant-future data-m-group-future class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
           </div>
           <button
             type="button"
@@ -493,9 +335,9 @@ function bindMerchantBrandStoresDialog(): void {
 function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string {
   if(!merchants.length)return '<p class="ba ba-empty">暂无匹配品牌</p>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th data-m-merchant-future data-m-group-future>所属集团</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
+  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.isPage&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
-    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td data-m-merchant-future data-m-group-future>${escapeHtml(getGroupName(m.groupId))}</td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
+    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -513,9 +355,9 @@ function renderStoreStatusBadge(status: MerchantOrgStoreStatus): string {
 function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
   if(!rows.length)return '<div class="ba ba-empty">暂无匹配门店</div>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th data-m-merchant-future data-m-group-future>所属集团</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
+  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
     const capability=getStoreCapability(row.store.storeId),keys=new Set(capability?.enabledKeys??[]),count=choices.filter(c=>c.isPage&&keys.has(c.key)).length;
-    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td data-m-merchant-future data-m-group-future>${escapeHtml(row.groupName)}</td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="所属品牌服务未启用或暂无可用管理员"'}>代登录</button></div></td></tr>`;
+    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="所属品牌服务未启用或暂无可用管理员"'}>代登录</button></div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -792,7 +634,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
   const cap = getMerchantCapability(merchant.merchantId);
   const storeCount = countStoresForMerchant(merchant.merchantId);
   const row = (label: string, value: string) =>
-    `<div${label === "所属集团" ? ' data-m-merchant-future data-m-group-future' : ''} class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
+    `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
   return `
     ${renderServicePanel(merchant)}
@@ -802,7 +644,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
         <dl class="mt-2">
           ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.merchantId)}</span>`)}
           ${row("BID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
-          ${row("所属集团", escapeHtml(getGroupName(merchant.groupId)))}
+
           ${row("编码", escapeHtml(merchant.code))}
           ${row("组织类型", escapeHtml(getMerchantOrgTypeLabel(merchant.orgType)))}
           ${row("状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(merchant.status)}">${escapeHtml(getMerchantStatusLabel(merchant.status))}</span>`)}
@@ -1129,7 +971,7 @@ function renderStoreDetailOverview(storeId: string): string {
   const storeCap = getStoreCapability(storeId);
   const brandCap = getMerchantCapability(store.merchantId);
   const row = (label: string, value: string) =>
-    `<div${label === "所属集团" ? ' data-m-merchant-future data-m-group-future' : ''} class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
+    `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
   return `
     <div class="grid gap-4 lg:grid-cols-2">
@@ -1201,31 +1043,21 @@ function renderStoreDetailPage(storeId: string, tab: StoreDetailTab): string {
 
 export function renderEnterpriseMerchantPage(path: string): string {
   ensureBrandStoreDemoPresets();
+  if (/^\/m-platform\/merchants\/groups(?:\/|$)/.test(path)) path = ENTERPRISE_MERCHANT_ROUTE_PREFIX;
   let body: string;
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`) body = renderOverviewPage();
-  else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/groups`) body = renderGroupsListPage();
-  else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/groups/new`) body = renderNewGroupPage();
+  else if (isMerchantListPath(path)) body = renderListPage();
+  else if (isStoreListPath(path)) body = renderStoreListPage();
   else {
-    const groupForm = parseGroupFormPath(path);
-    if (groupForm?.mode === "edit") body = renderEditGroupPage(groupForm.groupId);
-    else if (isMerchantListPath(path)) body = renderListPage();
-    else if (isStoreListPath(path)) body = renderStoreListPage();
-    else {
-      const storeDetail = parseStoreDetailPath(path);
-      if (storeDetail) body = renderStoreDetailPage(storeDetail.storeId, storeDetail.tab);
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderBrandCreateWizard();
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) body = renderOrgTreePage();
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/requests`) body = renderOverviewPage();
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/reports`) body = renderReportsPage();
-      else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/change-log`) body = renderChangeLogPage();
-      else {
-        const detail = parseMerchantDetailPath(path);
-        body = detail ? renderMerchantDetailPage(detail.merchantId, detail.tab) : renderOverviewPage();
-      }
-    }
+    const storeDetail = parseStoreDetailPath(path);
+    if (storeDetail) body = renderStoreDetailPage(storeDetail.storeId, storeDetail.tab);
+    else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) body = renderBrandCreateWizard();
+    else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/org-tree`) body = renderOrgTreePage();
+    else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/reports`) body = renderReportsPage();
+    else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/change-log`) body = renderChangeLogPage();
+    else { const detail = parseMerchantDetailPath(path); body = detail ? renderMerchantDetailPage(detail.merchantId, detail.tab) : renderOverviewPage(); }
   }
-  const hideEnterpriseBar =
-    isGroupMgmtPath(path) || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path)) || path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`;
+  const hideEnterpriseBar = isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path)) || path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`;
   return wrapMerchantPage(body, { hideEnterpriseBar });
 }
 
@@ -1234,14 +1066,6 @@ function readMerchantFilter(form: HTMLFormElement): MerchantFilter {
   return {
     status: (get("status") || undefined) as MerchantFilter["status"],
     orgType: (get("orgType") || undefined) as MerchantFilter["orgType"],
-    groupId: get("groupId") || undefined,
-    query: get("query") || undefined,
-  };
-}
-
-function readGroupFilter(form: HTMLFormElement): GroupFilter {
-  const get = (name: string) => form.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-group-filter="${name}"]`)?.value ?? "";
-  return {
     query: get("query") || undefined,
   };
 }
@@ -1249,7 +1073,6 @@ function readGroupFilter(form: HTMLFormElement): GroupFilter {
 function readStoreFilter(form: HTMLFormElement): Parameters<typeof getEnterpriseStoreList>[0] {
   const get = (name: string) => form.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-store-filter="${name}"]`)?.value ?? "";
   return {
-    groupId: get("groupId") || undefined,
     merchantId: get("merchantId") || undefined,
     status: (get("status") || undefined) as MerchantOrgStoreStatus | undefined,
     query: get("query") || undefined,
@@ -1292,84 +1115,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   const storeTableHost=document.querySelector<HTMLElement>('[data-enterprise-store-table]');
   bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
   if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;void runImpersonationWithLoading(button,()=>enterStoreBackendAsImpersonator(button.dataset.storeImpersonate!,merchantHref('/stores')),'当前门店暂不支持代登录，请检查所属品牌服务状态和管理员。');};
-
-  const groupFilterForm = document.querySelector<HTMLFormElement>("[data-enterprise-group-filter-form]");
-  const groupTableHost = document.querySelector<HTMLElement>("[data-enterprise-group-table]");
-  const applyGroupFilter = () => {
-    if (!groupTableHost) return;
-    const filter = groupFilterForm ? readGroupFilter(groupFilterForm) : {};
-    groupTableHost.innerHTML = renderGroupsTable(getGroups(groupMgmtFilter(filter)));
-  };
-  groupFilterForm?.querySelectorAll<HTMLInputElement>("[data-group-filter]").forEach((el) => {
-    el.addEventListener("change", applyGroupFilter);
-    if (el.type === "search") el.addEventListener("input", applyGroupFilter);
-  });
-
-  groupTableHost?.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-group-delete]");
-    if (!btn) return;
-    const groupId = btn.dataset.groupDelete;
-    const groupName = btn.dataset.groupName ?? groupId;
-    if (!groupId) return;
-    if (!window.confirm(`确认删除集团「${groupName}」？此操作不可恢复。`)) return;
-    const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
-    if (!result.ok) {
-      window.alert(result.reason);
-      return;
-    }
-    applyGroupFilter();
-    onMount();
-  });
-
-  document.querySelector<HTMLFormElement>("[data-enterprise-group-form]")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const fd = new FormData(form);
-    const name = String(fd.get("name") ?? "").trim();
-    if (!name) {
-      window.alert("请填写集团名称");
-      return;
-    }
-    const groupId = form.dataset.groupId;
-    if (groupId) {
-      const input: UpdateGroupInput = {
-        name,
-        description: String(fd.get("description") ?? "") || undefined,
-        status: (String(fd.get("status") ?? "active") as UpdateGroupInput["status"]) || "active",
-      };
-      const updated = updateGroup(groupId, input, undefined, DEFAULT_ENTERPRISE_ID);
-      if (!updated) {
-        window.alert("保存失败：集团不存在或无权访问。");
-        return;
-      }
-    } else {
-      const input: CreateGroupInput = {
-        name,
-        code: String(fd.get("code") ?? "") || undefined,
-        description: String(fd.get("description") ?? "") || undefined,
-      };
-      createGroup(input, undefined, DEFAULT_ENTERPRISE_ID);
-    }
-    location.hash = merchantHref("/groups");
-    onMount();
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-group-delete]").forEach((btn) => {
-    if (btn.closest("[data-enterprise-group-table]")) return;
-    btn.addEventListener("click", () => {
-      const groupId = btn.dataset.groupDelete;
-      const groupName = btn.dataset.groupName ?? groupId;
-      if (!groupId) return;
-      if (!window.confirm(`确认删除集团「${groupName}」？此操作不可恢复。`)) return;
-      const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
-      if (!result.ok) {
-        window.alert(result.reason);
-        return;
-      }
-      location.hash = merchantHref("/groups");
-      onMount();
-    });
-  });
 
   document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
   document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;void runImpersonationWithLoading(button,()=>enterMerchantBackendAsImpersonator(id,merchantDetailHref(id)),'当前品牌服务状态不支持代登录。');});

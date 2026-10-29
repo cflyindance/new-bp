@@ -5,7 +5,7 @@ import {serviceStatus} from './brand-service-policy';
 export type BrandServiceAction='activate'|'suspend'|'resume'|'close';
 export function brandServiceReadiness(id:string):string[]{
  const m=getMerchantById(id);if(!m)return ['品牌不存在'];const access=readBrandAccess(id),issues:string[]=[];
- if(!m.name.trim()||!m.contactName?.trim()||!m.groupId)issues.push('请补全品牌名称、所属集团和联系人');
+ if(!m.name.trim()||!m.contactName?.trim())issues.push('请补全品牌名称和联系人');
  const legacy=!m.accountProvisioningRequired&&m.primaryAdminEmail&&!access.accounts.some(a=>a.email.toLowerCase()===m.primaryAdminEmail!.toLowerCase());
  if(!access.accounts.some(a=>a.admin&&a.enabled)&&!legacy)issues.push('请先开通至少一名已启用的品牌管理员');
  const keys=brandRawMenuKeys(id);if(!brandMenuChoices(getMerchantCapability(id)?.productLineIds).some(c=>c.isPage&&keys.has(c.key)))issues.push('请至少开通一个品牌菜单页面');
