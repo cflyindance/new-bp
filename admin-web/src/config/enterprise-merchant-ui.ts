@@ -1,6 +1,7 @@
 import { renderActivityPage, bindActivityPage } from './merchant-activity-ui';
 import { activityContextPath } from './merchant-activity-context';
 import { mCanVisit } from '../permissions/m-platform-runtime';
+import { showAppToast } from '../ui/app-toast';
 import { runImpersonationWithLoading } from "./impersonation-loading";
 import {ensureBrandStoreDemoPresets} from './enterprise-merchant-store';
 import {bindBrandChangeLog} from './brand-change-log';
@@ -968,7 +969,7 @@ function renderStoreDetailTabs(storeId: string, tab: StoreDetailTab): string {
     </nav>`;
 }
 
-function renderStoreDetailOverview(storeId: string): string {
+function renderStoreDetailOverview(storeId: string, readOnly = false): string {
   const store = getStoreById(storeId);
   if (!store) {
     return card(`<p class="text-sm text-muted-foreground">未找到门店 <code>${escapeHtml(storeId)}</code></p>`);
@@ -989,7 +990,7 @@ function renderStoreDetailOverview(storeId: string): string {
           ${row("编码", escapeHtml(store.code))}
           ${row("状态", renderStoreStatusBadge(store.status))}
           ${row("地址", escapeHtml(store.address ?? "—"))}
-          ${row("所属品牌", merchant ? `<a href="${merchantDetailHref(merchant.merchantId)}" class="text-primary hover:underline">${escapeHtml(merchant.name)}</a>` : escapeHtml(store.merchantId))}
+          ${row("所属品牌", merchant ? readOnly ? escapeHtml(merchant.name) : `<a href="${merchantDetailHref(merchant.merchantId)}" class="text-primary hover:underline">${escapeHtml(merchant.name)}</a>` : escapeHtml(store.merchantId))}
           ${row("品牌 BID", `<span class="font-mono text-xs">${escapeHtml(merchant?.bid ?? "—")}</span>`)}
         </dl>
       `)}
@@ -1004,12 +1005,70 @@ function renderStoreDetailOverview(storeId: string): string {
           ${row("操作人", escapeHtml(storeCap?.updatedBy ?? "—"))}
         </dl>
         <p class="mt-3 text-xs text-muted-foreground">继承模式随品牌菜单同步，独立配置按本店设置生效。</p>
-        <div class="mt-4 flex flex-wrap gap-2">
+        ${readOnly ? '' : `<div class="mt-4 flex flex-wrap gap-2">
           <a href="${storeDetailHref(storeId, "capabilities")}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">编辑门店菜单</a>
           <a href="${storeDetailHref(storeId, "changelog")}" class="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted">变更记录</a>
-        </div>
+        </div>`}
       `)}
     </div>`;
+}
+
+function canViewBrandStoreDetails(merchantId: string, storeId: string): boolean {
+  const route = parseMerchantDetailPath(location.hash.slice(1));
+  return route?.merchantId === merchantId && route.tab === 'org' &&
+    getStoreById(storeId)?.merchantId === merchantId &&
+    mCanVisit(merchantDetailHref(merchantId, 'org').slice(1)) && mCanVisit(storeDetailHref(storeId).slice(1));
+}
+
+function openBrandStoreDetails(merchantId: string, storeId: string): void {
+  if (!canViewBrandStoreDetails(merchantId, storeId)) {
+    showAppToast('无法查看门店详情：门店归属已变更、数据不存在或无访问权限。', {variant: 'error'});
+    return;
+  }
+  if (document.querySelector('[data-brand-store-detail-dialog]')) return;
+  const store = getStoreById(storeId)!;
+  const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const workspace = trigger?.closest<HTMLElement>('[data-brand-workbench]') ?? null;
+  const scrollHost = workspace?.parentElement;
+  const overflow = scrollHost?.style.overflow ?? '';
+  const scrollTop = scrollHost?.scrollTop ?? 0;
+  const originalHash = location.hash;
+  const d = document.createElement('dialog');
+  d.className = 'ba ba-modal';
+  d.dataset.brandStoreDetailDialog = storeId;
+  d.setAttribute('aria-labelledby', 'brand-store-detail-title');
+  d.innerHTML = `<div class="ba-dialog-inner"><header class="ba-dialog-header"><div><h2 id="brand-store-detail-title">${escapeHtml(store.name)} · 门店详情</h2><p class="ba-muted">${escapeHtml(store.storeId)} · 只读概览</p></div><button type="button" class="ba-btn" data-store-detail-close aria-label="关闭门店详情">×</button></header><section class="ba-dialog-body">${renderStoreDetailOverview(storeId, true)}</section><footer class="ba-footer"><span class="ba-muted">门店信息与当前已保存菜单摘要</span><button type="button" class="ba-btn" data-store-detail-close>关闭</button></footer></div>`;
+  let finished = false;
+  const close = () => {
+    if (finished) return;
+    finished = true;
+    observer.disconnect();
+    window.removeEventListener('hashchange', close);
+    window.removeEventListener('storage', check);
+    if (d.open) d.close();
+    d.remove();
+    if (scrollHost) { scrollHost.style.overflow = overflow; scrollHost.scrollTop = scrollTop; }
+    if (location.hash === originalHash) {
+      const focus = trigger?.isConnected ? trigger : document.querySelector<HTMLElement>('[data-store-query]');
+      focus?.focus({preventScroll: true});
+    }
+  };
+  const check = () => { if (!workspace?.isConnected || !canViewBrandStoreDetails(merchantId, storeId)) close(); };
+  const observer = new MutationObserver(check);
+  d.querySelectorAll('[data-store-detail-close]').forEach(button => button.addEventListener('click', close));
+  d.addEventListener('cancel', event => { event.preventDefault(); close(); });
+  d.addEventListener('close', close);
+  d.addEventListener('click', event => {
+    if (event.target !== d) return;
+    const rect = d.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
+  });
+  document.body.append(d);
+  if (scrollHost) scrollHost.style.overflow = 'hidden';
+  d.showModal();
+  window.addEventListener('hashchange', close);
+  window.addEventListener('storage', check);
+  observer.observe(document.body, {childList: true, subtree: true});
 }
 
 function renderStoreDetailCapabilities(storeId: string): string {
@@ -1089,7 +1148,7 @@ function readStoreFilter(form: HTMLFormElement): Parameters<typeof getEnterprise
 export function bindEnterpriseMerchant(onMount: () => void): void {
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
-  bindBrandWorkspaces();
+  bindBrandWorkspaces({canView: canViewBrandStoreDetails, open: openBrandStoreDetails});
   const usagePath = location.hash.slice(1), brandUsage = parseMerchantDetailPath(usagePath), storeUsage = parseStoreDetailPath(usagePath);
   const usageContext = storeUsage?.tab === 'usage' ? {kind: 'store' as const, id: storeUsage.storeId} : brandUsage?.tab === 'usage' ? {kind: 'brand' as const, id: brandUsage.merchantId} : null;
   if (usageContext && mCanVisit(usagePath) && mCanVisit(activityContextPath(usageContext))) bindActivityPage(onMount, activityContextPath(usageContext));
