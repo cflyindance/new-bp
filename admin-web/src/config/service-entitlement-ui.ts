@@ -1,4 +1,5 @@
 import './brand-access-ui.css';
+import { openServiceMenuPreview } from './service-entitlement-menu-preview';
 import { currentBrandPrincipal } from './brand-access-store';
 import { getMerchantById, getMerchantStores } from './enterprise-merchant-store';
 import { showAppToast } from '../ui/app-toast';
@@ -28,7 +29,7 @@ export function renderBrandServiceEntitlements(brandId:string):string {
     const result=serviceAccess(snapshot,pkg,{brandId});
     const grant=result.grant;
     const related=snapshot.subscriptions.filter(s=>s.subjectType==='brand'&&s.subjectId===brandId&&s.packageId===pkg.id);
-    return `<tr><td><strong>${esc(pkg.name)}</strong><small class="block text-muted-foreground">${esc(pkg.code)}</small></td><td>${esc(price(pkg))}</td><td><span class="ba-tag ${result.usable?'active':''}">${result.label}</span>${grant?`<small class="block text-muted-foreground">${date(grant.startAt)} 至 ${date(grant.endAt)}</small>`:''}${!grant&&related.some(s=>s.scopeMode==='selected')?'<small class="block text-muted-foreground">各指定门店请查看下方权益明细</small>':''}</td><td><div class="ba-actions">${canManageServiceEntitlements()&&pkg.status==='published'?`${pkg.commercial!.chargeType==='free'?btn('免费开通',`data-ent-new="free" data-pkg="${esc(pkg.id)}"`):`${result.canTrial?btn('开始试用',`data-ent-new="trial" data-pkg="${esc(pkg.id)}"`):''}${btn('正式开通',`data-ent-new="paid" data-pkg="${esc(pkg.id)}"`)}${btn('赠送',`data-ent-new="gift" data-pkg="${esc(pkg.id)}"`)}`}`:''}</div></td></tr>`;
+    return `<tr><td><strong>${esc(pkg.name)}</strong><small class="block text-muted-foreground">${esc(pkg.code)}</small></td><td>${esc(price(pkg))}</td><td><span class="ba-tag ${result.usable?'active':''}">${result.label}</span>${grant?`<small class="block text-muted-foreground">${date(grant.startAt)} 至 ${date(grant.endAt)}</small>`:''}${!grant&&related.some(s=>s.scopeMode==='selected')?'<small class="block text-muted-foreground">各指定门店请查看下方权益明细</small>':''}</td><td><div class="ba-actions">${pkg.commercial?.chargeType==='paid'?btn('查看菜单',`data-ent-menu="${esc(pkg.id)}"`):''}${canManageServiceEntitlements()&&pkg.status==='published'?`${pkg.commercial!.chargeType==='free'?btn('免费开通',`data-ent-new="free" data-pkg="${esc(pkg.id)}"`):`${result.canTrial?btn('开始试用',`data-ent-new="trial" data-pkg="${esc(pkg.id)}"`):''}${btn('正式开通',`data-ent-new="paid" data-pkg="${esc(pkg.id)}"`)}${btn('赠送',`data-ent-new="gift" data-pkg="${esc(pkg.id)}"`)}`}`:''}</div></td></tr>`;
   }).join('');
   const grants=snapshot.subscriptions.filter(s=>s.subjectType==='brand'&&s.subjectId===brandId&&s.entitlementKind);
   const grantRows=grants.map(g=>{
@@ -66,6 +67,7 @@ export function openServiceEntitlement(brandId:string,packageId:string,kind:Serv
 
 export function bindBrandServiceEntitlements(onMount:()=>void):void {
   const root=document.querySelector<HTMLElement>('[data-brand-entitlements]');if(!root)return;
+  root.querySelectorAll<HTMLButtonElement>('[data-ent-menu]').forEach(b=>b.onclick=()=>{void openServiceMenuPreview(b.dataset.entMenu!);});
   root.querySelectorAll<HTMLButtonElement>('[data-ent-new]').forEach(b=>b.onclick=()=>openServiceEntitlement(root.dataset.brandEntitlements!,b.dataset.pkg!,b.dataset.entNew as ServiceEntitlementKind,'m-platform',onMount));
   root.querySelectorAll<HTMLButtonElement>('[data-ent-extend],[data-ent-disable]').forEach(b=>b.onclick=()=>{
     const extend=!!b.dataset.entExtend,id=b.dataset.entExtend??b.dataset.entDisable!;

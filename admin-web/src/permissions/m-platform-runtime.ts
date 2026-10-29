@@ -57,6 +57,7 @@ function deniedControl(target: Element, type: string): boolean {
   const keys = page.actions.filter(action => target.closest(action.selector));
   if (keys.some(action => currentMAccess(mActionKey(page.id, action.id)) !== 'edit')) return true;
   if (currentMAccess(mPageKey(page.id)) === 'edit') return false;
+  if (target.closest('[data-ent-menu],[data-service-menu-preview]')) return false;
   if (keys.length && keys.every(a => !a.write)) return false;
   if (target.closest('[data-pp-enable],[data-rbac-l4-editable],[data-nb-edit-l1],[data-nb-drag-handle],[data-nb-draggable-row]')) return true;
   if (target.closest(readonlyBrowse) || page.id === 'merchant-activity' && target.closest('[data-activity-browse]') || page.id === 'device-activity' && target.closest('[data-device-activity-browse]')) return false;
