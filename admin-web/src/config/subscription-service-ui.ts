@@ -1,3 +1,4 @@
+import {renderListFilters,bindListFilters,matchesPackage,matchesSubscription,subscriptionRemaining,subscriptionMethod,subscriptionBrand,packageCharge} from './subscription-list-filters';
 import {packageSubscriptionSubjects,openPackageSubjects} from './service-package-subject-preview';
 import {subscriptionAgreedPrice} from './subscription-agreed-price';
 import {openServiceMenuPreview} from './service-entitlement-menu-preview';
@@ -70,25 +71,25 @@ function renderPackageList(): string {
   feedback = consumeSubscriptionWizardFeedback() || feedback;
   const snapshot = readSubscriptionServiceSnapshot();
   const catalogCount = getPublishedSubscriptionMenuTree()?.selectableNodeCount ?? 0;
-  const rows = snapshot.packages.map((pkg) => {
+  const rows = snapshot.packages.filter(pkg=>matchesPackage(pkg)).map((pkg) => {
     const release = snapshot.releases.find((item) => item.id === pkg.activeReleaseId);
     const subscribers = packageSubscriptionSubjects(snapshot,pkg.id).length;
     return `<tr class="border-b border-border/70 last:border-0 hover:bg-muted/30">
       <td class="px-5 py-4"><div class="font-semibold text-foreground">${esc(pkg.name)}</div></td>
-      <td class="px-4 py-4"><div class="font-semibold">${money(pkg.priceMinor, pkg.currency)}</div><div class="text-xs text-muted-foreground">/${intervalLabel(pkg.billingInterval)}</div></td>
+      <td class="px-4 py-4 text-sm">${packageCharge(pkg)==='free'?'免费':'收费'}</td><td class="px-4 py-4"><div class="font-semibold">${packageCharge(pkg)==='free'?'免费':money(pkg.priceMinor, pkg.currency)}</div>${packageCharge(pkg)==='free'?'':`<div class="text-xs text-muted-foreground">/${pkg.commercial?.billingUnit==='store'?'门店':pkg.commercial?.billingUnit==='brand'?'品牌':'单位未记录'}/${intervalLabel(pkg.billingInterval)}</div>`}</td><td class="px-4 py-4 text-sm">${pkg.commercial?.trialEnabled?`可试用${pkg.commercial.trialDays}天`:'不支持试用'}</td>
       <td class="px-4 py-4 text-sm"><button type="button" data-ent-menu="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}菜单能力" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${release?.routeNodeIds.length ?? 0}</span> / ${catalogCount} 个菜单</button></td>
       <td class="px-4 py-4 text-sm"><button type="button" data-package-subjects-open="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}订阅主体" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${subscribers}</span> 个主体</button></td>
-      <td class="px-4 py-4">${statusBadge(pkg.status)}</td>
+      <td class="px-4 py-4">${statusBadge(pkg.status)}</td><td class="px-4 py-4 text-xs whitespace-nowrap">${esc(Number.isFinite(Date.parse(pkg.updatedAt))?new Date(pkg.updatedAt).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'—')}</td>
       <td class="px-5 py-4 text-right"><a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}/${encodeURIComponent(pkg.id)}" class="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-semibold hover:bg-muted">配置与版本</a></td>
     </tr>`;
   }).join("");
   return `${renderHeader("订阅服务包", "", `<a href="#${SUBSCRIPTION_SERVICE_CREATE_PATH}" class="inline-flex h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800">＋ 创建服务包</a>`)}
     <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7">
-      <div class="mx-auto max-w-[86rem] overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="mx-auto max-w-[100rem]">${renderListFilters('packages',snapshot.packages)}<div class="overflow-auto rounded-2xl border border-border bg-card shadow-sm">
         <div class="flex items-center justify-between border-b border-border px-5 py-4"><div><h3 class="font-semibold">服务包目录</h3></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">${snapshot.packages.length} 个服务包</div></div>
-        <table class="w-full min-w-[820px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-5 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">标准价格</th><th class="px-4 py-3 font-medium">菜单能力</th><th class="px-4 py-3 font-medium">订阅主体</th><th class="px-4 py-3 font-medium">状态</th><th class="px-5 py-3"></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="p-12 text-center text-sm text-muted-foreground">暂无服务包</td></tr>`}</tbody></table>
+        <table class="w-full min-w-[1200px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-5 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">收费类型</th><th class="px-4 py-3 font-medium">标准价格</th><th class="px-4 py-3 font-medium">试用政策</th><th class="px-4 py-3 font-medium">菜单能力</th><th class="px-4 py-3 font-medium">订阅主体</th><th class="px-4 py-3 font-medium">发布状态</th><th class="px-4 py-3 font-medium">更新时间</th><th class="px-5 py-3">操作</th></tr></thead><tbody>${rows || `<tr><td colspan="9" class="p-12 text-center text-sm text-muted-foreground">没有符合条件的服务包</td></tr>`}</tbody></table>
       </div>
-    </div>${renderModal()}</section>`;
+    </div></div>${renderModal()}</section>`;
 }
 
 function renderPackageDetail(packageId:string):string {return renderServicePackageEditor(packageId)||renderHeader('服务包不存在','未找到服务包。');}
@@ -113,21 +114,21 @@ function subjectLabel(type: unknown, id: string): string {
 function renderSubscriptions(): string {
   const snapshot = readSubscriptionServiceSnapshot();
   const publishedPackages = snapshot.packages.filter((item) => item.status === "published");
-  const rows = snapshot.subscriptions.filter(s=>s.subjectType==='brand'||s.subjectType==='store').map((subscription) => {
+  const rows = snapshot.subscriptions.filter(s=>matchesSubscription(s,snapshot.packages.find(p=>p.id===s.packageId))).map((subscription) => {
     const pkg = snapshot.packages.find(item=>item.id===subscription.packageId);
     const rawStatus=subscriptionStatusLabel(subscription,pkg?.status),status=subscription.entitlementKind==='trial'&&rawStatus==='已到期'?'试用已结束':rawStatus;
     const label=subjectLabel(subscription.subjectType,subscription.subjectId),typeLabel=subjectTypeLabel(subscription.subjectType);
     const publicId=subscription.subjectType==='brand'?(getMerchantById(subscription.subjectId)?.bid??subscription.subjectId):subscription.subjectId;
     const formatDate=(value?:string)=>{if(!value)return '长期';const at=new Date(value);return Number.isFinite(at.getTime())?at.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'—';};
-    const source=subscription.entitlementKind?({trial:'试用',paid:'正式开通',free:'免费开通',gift:'赠送'})[subscription.entitlementKind]:'标准订阅';
+    const source=subscriptionMethod(subscription);
     const packageName=pkg?`<button type="button" data-ent-menu="${esc(pkg.id)}" aria-haspopup="dialog" class="text-left font-semibold text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">${esc(pkg.name)}</button>`:'未知服务包';
     const agreed=subscriptionAgreedPrice(subscription);
     const actionClass='text-xs font-semibold hover:underline';
     const actions=subscription.entitlementKind?`<button type="button" class="${actionClass} text-primary" data-sub-brand-rights="${esc(subscription.subjectId)}">查看品牌服务权益</button>`:!subscription.disabledAt?`<button type="button" data-sub-extend data-subscription-id="${esc(subscription.id)}" class="${actionClass} text-emerald-700">续期</button><button type="button" data-sub-disable data-subscription-id="${esc(subscription.id)}" class="${actionClass} text-rose-700">停用</button>`:'';
-    return `<tr class="border-b border-border/70 last:border-0 hover:bg-muted/30" data-subscription-row="${esc(subscription.id)}"><td class="px-4 py-4 text-sm"><div class="font-semibold">${esc(label)}</div><div class="mt-1 font-mono text-[11px] text-muted-foreground">${esc(publicId)}</div></td><td class="px-4 py-4"><span class="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold">${typeLabel}</span></td><td class="px-4 py-4 text-sm">${packageName}</td><td class="px-4 py-4 text-sm whitespace-nowrap" data-subscription-method>${source}</td><td class="px-4 py-4 text-sm whitespace-nowrap" data-subscription-price><div>${esc(agreed.amount)}</div>${agreed.basis?`<div class="mt-1 text-xs text-muted-foreground">${esc(agreed.basis)}</div>`:""}</td><td class="px-4 py-4 text-xs leading-5 whitespace-nowrap"><div>${esc(formatDate(subscription.startAt))}</div><div class="text-muted-foreground">至 ${esc(formatDate(subscription.endAt))}</div></td><td class="px-4 py-4" data-subscription-status>${statusBadge(status)}</td><td class="px-4 py-4 text-right"><div class="flex items-center justify-end gap-3 whitespace-nowrap">${actions}</div></td></tr>`;
+    return `<tr class="border-b border-border/70 last:border-0 hover:bg-muted/30" data-subscription-row="${esc(subscription.id)}"><td class="px-4 py-4 text-sm"><div class="font-semibold">${esc(label)}</div>${subscription.subjectType==='store'?`<div class="mt-1 text-xs text-muted-foreground">${esc(subscriptionBrand(subscription)?.name??'所属品牌未记录')}</div>`:''}<div class="mt-1 font-mono text-[11px] text-muted-foreground">${esc(publicId)}</div></td><td class="px-4 py-4"><span class="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold">${typeLabel}</span></td><td class="px-4 py-4 text-sm">${packageName}</td><td class="px-4 py-4 text-sm whitespace-nowrap" data-subscription-method>${source}</td><td class="px-4 py-4 text-sm whitespace-nowrap" data-subscription-price><div>${esc(agreed.amount)}</div>${agreed.basis?`<div class="mt-1 text-xs text-muted-foreground">${esc(agreed.basis)}</div>`:""}</td><td class="px-4 py-4 text-xs leading-5 whitespace-nowrap"><div>${esc(formatDate(subscription.startAt))}</div><div class="text-muted-foreground">至 ${esc(formatDate(subscription.endAt))}</div></td><td class="px-4 py-4 text-sm whitespace-nowrap" data-subscription-remaining>${esc(subscriptionRemaining(subscription,pkg))}</td><td class="px-4 py-4" data-subscription-status>${statusBadge(status)}</td><td class="px-4 py-4 text-right"><div class="flex items-center justify-end gap-3 whitespace-nowrap">${actions}</div></td></tr>`;
   }).join('');
   return `${renderHeader("商家订阅", "", `<button type="button" data-sub-open-create class="inline-flex h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800">＋ 新增商家</button>`)}
-    <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7"><div class="mx-auto max-w-[92rem] overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><h3 class="font-semibold">订阅明细</h3></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">品牌 / 门店</div></div><div class="overflow-auto"><table class="w-full min-w-[1120px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">主体</th><th class="px-4 py-3 font-medium">主体类型</th><th class="px-4 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">开通方式</th><th class="px-4 py-3 font-medium">成交单价</th><th class="px-4 py-3 font-medium">有效期</th><th class="px-4 py-3 font-medium">状态</th><th class="px-4 py-3 text-right font-medium">操作</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="p-12 text-center text-sm text-muted-foreground">暂无订阅记录</td></tr>`}</tbody></table></div></div></div>${renderModal()}</section>`;
+    <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7"><div class="mx-auto max-w-[100rem]">${renderListFilters('subscriptions',snapshot.packages)}<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><h3 class="font-semibold">订阅明细</h3></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">品牌 / 门店</div></div><div class="overflow-auto"><table class="w-full min-w-[1120px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">主体</th><th class="px-4 py-3 font-medium">主体类型</th><th class="px-4 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">开通方式</th><th class="px-4 py-3 font-medium">成交单价</th><th class="px-4 py-3 font-medium">有效期</th><th class="px-4 py-3 font-medium">剩余天数</th><th class="px-4 py-3 font-medium">订阅状态</th><th class="px-4 py-3 text-right font-medium">操作</th></tr></thead><tbody>${rows || `<tr><td colspan="9" class="p-12 text-center text-sm text-muted-foreground">没有符合条件的订阅记录</td></tr>`}</tbody></table></div></div></div></div>${renderModal()}</section>`;
 }
 
 function resetCreateSubscriptionDraft(): void {
@@ -232,6 +233,7 @@ function bindSubscriptionDialogKeyboard(): void {
 
 export function bindSubscriptionServicePage(onMount: () => void): void {
   activeSubscriptionMount = onMount;
+  bindListFilters(onMount);
   bindSubscriptionDialogKeyboard();
   void ensurePublishedSubscriptionMenuTree().then((changed) => { if (changed) onMount(); });
   if (isSubscriptionServiceCreatePath(location.hash.slice(1))) {
