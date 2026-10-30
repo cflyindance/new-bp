@@ -1,0 +1,3 @@
+.package-menu button[data-sub-operation="disable"],
+.package-menu button[data-sub-operation="cancel"],
+.package-menu button[data-sub-entitlement-action="disable"] { color: #c12d23; }

@@ -1,6 +1,9 @@
 import { subscriptionOperationPolicy, type SubscriptionImpactPreview, type SubscriptionOperation, type SubscriptionPackageState } from "./subscription-operations-domain";
 import type { MerchantSubscription, SubscriptionServiceSnapshot } from "./subscription-service-domain";
 import "./package-action-feedback.css";
+import './subscription-entitlement-actions.css';
+import { entitlementRowPolicy } from './subscription-entitlement-policy';
+import { canManageServiceEntitlements } from './service-entitlement-store';
 
 const labels: Record<SubscriptionOperation, string> = {
   edit: "编辑",
@@ -30,11 +33,17 @@ function operationButton(operation: SubscriptionOperation, subscriptionId: strin
   const classes = primary ? "h-9 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-800" : `w-full rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-muted ${dangerous ? "text-rose-700" : "text-foreground"}`;
   if (primary) return `<button type="button" aria-label="${labels[operation]}" data-sub-operation="${operation}" data-subscription-id="${esc(subscriptionId)}" ${disabledReason ? `disabled title="${esc(disabledReason)}"` : ""} class="${classes} disabled:cursor-not-allowed disabled:opacity-45">${labels[operation]}</button>`;
   const reasonId = `subscription-${encodeURIComponent(subscriptionId)}-${operation}-reason`;
-  return `<button type="button" role="menuitem" tabindex="-1" aria-label="${labels[operation]}" data-sub-operation="${operation}" data-subscription-id="${esc(subscriptionId)}" data-package-action="${dangerous ? "disable" : "subscription"}" ${disabledReason ? `aria-disabled="true" aria-describedby="${esc(reasonId)}"` : ""} class="${classes}${disabledReason ? " cursor-not-allowed opacity-45" : ""}">${labels[operation]}${disabledReason ? `<span id="${esc(reasonId)}" data-sub-disabled-reason class="mt-1 block whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">${esc(disabledReason)}</span>` : ""}</button>`;
+  return `<button type="button" role="menuitem" tabindex="-1" aria-label="${labels[operation]}" data-sub-operation="${operation}" data-subscription-id="${esc(subscriptionId)}" ${disabledReason ? `aria-disabled="true" aria-describedby="${esc(reasonId)}"` : ""} class="${classes}${disabledReason ? " cursor-not-allowed opacity-45" : ""}">${labels[operation]}${disabledReason ? `<span id="${esc(reasonId)}" data-sub-disabled-reason class="mt-1 block whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">${esc(disabledReason)}</span>` : ""}</button>`;
 }
 
 export function renderSubscriptionRowOperations(snapshot: SubscriptionServiceSnapshot, subscription: MerchantSubscription, now = new Date()): string {
-  if (subscription.entitlementKind) return `<button type="button" class="text-xs font-semibold text-primary hover:underline" data-sub-brand-rights="${esc(subscription.subjectId)}">查看品牌服务权益</button>`;
+  if (subscription.entitlementKind) {
+    const policy = entitlementRowPolicy(subscription, snapshot.packages.find(p => p.id === subscription.packageId), now.getTime());
+    const may = (action: 'create' | 'extend' | 'disable') => canManageServiceEntitlements(action);
+    const primary = policy.primary && may(policy.primary === 'extend' ? 'extend' : 'create') ? `<button type="button" class="h-9 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white" data-sub-entitlement-action="${policy.primary}" data-subscription-id="${esc(subscription.id)}">${policy.label}</button>` : '';
+    const menuId = `subscription-operations-${encodeURIComponent(subscription.id)}`;
+    return `${primary}<button type="button" class="ba-btn package-more" data-sub-more="${esc(subscription.id)}" aria-haspopup="menu" aria-controls="${esc(menuId)}" aria-expanded="false">更多 <span aria-hidden="true">⌄</span></button><div id="${esc(menuId)}" popover="auto" class="package-menu" data-sub-operations-menu="${esc(subscription.id)}" role="menu" aria-label="订阅更多操作">${operationButton('detail', subscription.id)}${policy.canDisable && may('disable') ? `<button type="button" role="menuitem" tabindex="-1" data-sub-entitlement-action="disable" data-subscription-id="${esc(subscription.id)}">停用</button>` : ''}${operationButton('audit', subscription.id)}<button type="button" role="menuitem" tabindex="-1" data-sub-brand-rights="${esc(subscription.subjectId)}">查看品牌服务权益</button>${policy.unavailable ? `<p class="px-3 py-2 whitespace-normal text-xs text-muted-foreground">${esc(policy.unavailable)}</p>` : ''}</div>`;
+  }
   const policy = subscriptionOperationPolicy(snapshot, subscription, now);
   const primary = policy.primary ? operationButton(policy.primary, subscription.id, policy.disabled[policy.primary], true) : "";
   const more = policy.allowed.filter((operation) => operation !== policy.primary).map((operation) => operationButton(operation, subscription.id)).join("");
