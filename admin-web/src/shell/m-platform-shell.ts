@@ -32,6 +32,7 @@ import {
   isAnySubscriptionAdminPath,
   isSubscriptionServiceCreatePath,
   isSubscriptionServiceDetailPath,
+  parseSubscriptionBrandRightsPath,
 } from "../config/subscription-service-scope";
 import { bindSubscriptionServicePage, renderSubscriptionServicePage } from "../config/subscription-service-ui";
 import {
@@ -170,7 +171,7 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
   if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
     return `<div class="relative h-full min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
   }
-  if ((isSubscriptionServiceCreatePath(path) || isSubscriptionServiceDetailPath(path)) && mCanVisit(path)) {
+  if ((isSubscriptionServiceCreatePath(path) || isSubscriptionServiceDetailPath(path) || parseSubscriptionBrandRightsPath(path)) && mCanVisit(path)) {
     return `<div class="relative flex h-full min-h-0 w-full flex-col overflow-hidden" ${isSubscriptionServiceDetailPath(path) ? "data-subscription-detail-full-page" : ""} data-m-platform-content>${renderSubscriptionServicePage(path)}</div>`;
   }
   return `
@@ -194,7 +195,7 @@ export function bindMPlatformShell(onMount: () => void): void {
   installMRuntimeGuards();
   bindMNavigation();
   if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(currentPath) && mCanVisit(currentPath)) { bindMCenter(onMount); return; }
-  if ((isSubscriptionServiceCreatePath(currentPath) || isSubscriptionServiceDetailPath(currentPath)) && mCanVisit(currentPath)) {
+  if ((isSubscriptionServiceCreatePath(currentPath) || isSubscriptionServiceDetailPath(currentPath) || parseSubscriptionBrandRightsPath(currentPath)) && mCanVisit(currentPath)) {
     bindSubscriptionServicePage(onMount);
     applyMControlStates();
     return;

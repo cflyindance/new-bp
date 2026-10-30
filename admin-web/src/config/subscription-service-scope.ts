@@ -16,6 +16,12 @@ export function isSubscriptionServiceDetailPath(path:string):boolean {
  return path.startsWith(prefix)&&!isSubscriptionServiceCreatePath(path)&&/^[^/?#]+$/.test(path.slice(prefix.length));
 }
 
+export function subscriptionBrandRightsHref(brandId:string):string {return MERCHANT_SUBSCRIPTIONS_PATH+'/brands/'+encodeURIComponent(brandId)+'/services';}
+export function parseSubscriptionBrandRightsPath(path:string):string|null {
+ const prefix=MERCHANT_SUBSCRIPTIONS_PATH+'/brands/';if(!path.startsWith(prefix)||!path.endsWith('/services'))return null;
+ const id=path.slice(prefix.length,-'/services'.length);if(!id||id.includes('/'))return null;try{return decodeURIComponent(id);}catch{return null;}
+}
+
 export function isMerchantSubscriptionsPath(path: string): boolean {
   return path === MERCHANT_SUBSCRIPTIONS_PATH || path.startsWith(`${MERCHANT_SUBSCRIPTIONS_PATH}/`);
 }
