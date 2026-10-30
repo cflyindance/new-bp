@@ -1,3 +1,4 @@
+import {seedGrowthMenuDemo} from './subscription-growth-menu-demo';
 import { validateCommercialPolicy } from './service-entitlement-domain';
 import { seedServiceEntitlementDemo } from './service-entitlement-demo';
 import { getMerchantStores, getMerchants } from "./enterprise-merchant-store";
@@ -93,7 +94,8 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const snapshot=normalizeSnapshot(JSON.parse(raw) as SubscriptionServiceSnapshot);
-      if(appendEntitlementDemo(snapshot))writeSubscriptionServiceSnapshot(snapshot,false);
+      const entChanged=appendEntitlementDemo(snapshot),growthChanged=appendGrowthDemo(snapshot);
+      if(entChanged||growthChanged)writeSubscriptionServiceSnapshot(snapshot,false);
       return snapshot;
     }
   } catch {
@@ -101,8 +103,13 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
   }
   const seeded = seedSnapshot();
   appendEntitlementDemo(seeded);
+  appendGrowthDemo(seeded);
   writeSubscriptionServiceSnapshot(seeded, false);
   return seeded;
+}
+
+function appendGrowthDemo(snapshot:SubscriptionServiceSnapshot):boolean {
+ const tree=getPublishedSubscriptionMenuTree();return tree?.source==='menu-document'?seedGrowthMenuDemo(snapshot,getPublishedSubscriptionRouteCatalog(),tree.blueprintVersion):false;
 }
 
 function appendEntitlementDemo(snapshot:SubscriptionServiceSnapshot):boolean {
