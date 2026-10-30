@@ -1,6 +1,7 @@
 import {openServiceMenuPreview} from './service-entitlement-menu-preview';
 import {renderServicePackageEditor,bindServicePackageEditor} from './service-package-detail-editor';
-import {merchantDetailHref} from './enterprise-merchant-scope';
+import {openSubscriptionBrandRights,renderSubscriptionBrandRightsPage,bindSubscriptionBrandRightsPage,restoreSubscriptionListScroll} from './subscription-brand-rights-page';
+import {parseSubscriptionBrandRightsPath} from './subscription-service-scope';
 import { getGroups, getMerchantById, getMerchantStores, getMerchants, getStoreById } from "./enterprise-merchant-store";
 import { resolveEffectiveRouteSources, subscriptionStatusLabel, type BillingInterval, type SubscriptionSubjectType } from "./subscription-service-domain";
 import { SUBSCRIPTION_SERVICE_CREATE_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX, isMerchantSubscriptionsPath, isSubscriptionServiceCreatePath, isSubscriptionServicePath } from "./subscription-service-scope";
@@ -119,7 +120,7 @@ function renderSubscriptions(): string {
     const label = subjectLabel(subscription.subjectType, subscription.subjectId);
     const typeLabel = subjectTypeLabel(subscription.subjectType);
     const packageName=pkg?`<button type="button" data-ent-menu="${esc(pkg.id)}" aria-haspopup="dialog" class="text-left font-semibold text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">${esc(pkg.name)}</button>`:"未知服务包";
-    if(subscription.entitlementKind)return `<tr><td class="px-4 py-4">${esc(label)}</td><td class="px-4 py-4">${typeLabel}</td><td class="px-4 py-4">${packageName}<small class="block text-muted-foreground">${({trial:"试用",paid:"正式开通",free:"免费",gift:"赠送"})[subscription.entitlementKind]}</small></td><td class="px-4 py-4">${esc(subscription.endAt??"长期有效")}</td><td class="px-4 py-4">${statusBadge(status)}<small class="block">成交价 ${money(subscription.agreedPriceMinor??0,subscription.agreedCurrency??"CNY")}</small></td><td class="px-4 py-4"><a class="text-primary" href="${merchantDetailHref(subscription.subjectId,"services")}">查看品牌服务权益</a></td></tr>`;
+    if(subscription.entitlementKind)return `<tr><td class="px-4 py-4">${esc(label)}</td><td class="px-4 py-4">${typeLabel}</td><td class="px-4 py-4">${packageName}<small class="block text-muted-foreground">${({trial:"试用",paid:"正式开通",free:"免费",gift:"赠送"})[subscription.entitlementKind]}</small></td><td class="px-4 py-4">${esc(subscription.endAt??"长期有效")}</td><td class="px-4 py-4">${statusBadge(status)}<small class="block">成交价 ${money(subscription.agreedPriceMinor??0,subscription.agreedCurrency??"CNY")}</small></td><td class="px-4 py-4"><button type="button" class="text-primary hover:underline" data-sub-brand-rights="${esc(subscription.subjectId)}">查看品牌服务权益</button></td></tr>`;
     const subjectIdLine = label === subscription.subjectId ? "" : `<div class="mt-1 font-mono text-[10px] text-muted-foreground">${esc(subscription.subjectId)}</div>`;
     return `<tr class="border-b border-border/70 last:border-0"><td class="px-4 py-4"><div class="font-semibold">${esc(label)}</div>${subjectIdLine}</td><td class="px-4 py-4"><span class="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold">${typeLabel}</span></td><td class="px-4 py-4"><div>${packageName}</div><div class="mt-1 font-mono text-[10px] text-muted-foreground">${esc(pkg?.code)}</div></td><td class="px-4 py-4 text-xs leading-5"><div>${new Date(subscription.startAt).toLocaleDateString("zh-CN")}</div><div class="text-muted-foreground">至 ${subscription.endAt ? new Date(subscription.endAt).toLocaleDateString("zh-CN") : "长期"}</div></td><td class="px-4 py-4">${statusBadge(status)}</td><td class="px-4 py-4 text-right">${!subscription.disabledAt ? `<button type="button" data-sub-extend data-subscription-id="${esc(subscription.id)}" class="mr-2 text-xs font-semibold text-emerald-700">续期</button><button type="button" data-sub-disable data-subscription-id="${esc(subscription.id)}" class="text-xs font-semibold text-rose-700">停用</button>` : ""}</td></tr>`;
   }).join("");
@@ -179,6 +180,7 @@ function renderModal(): string {
 
 export function renderSubscriptionServicePage(path: string): string {
   if (isSubscriptionServiceCreatePath(path)) return renderSubscriptionServiceCreateWizard();
+  const rightsBrand=parseSubscriptionBrandRightsPath(path);if(rightsBrand)return renderSubscriptionBrandRightsPage(rightsBrand);
   if (isMerchantSubscriptionsPath(path)) return renderSubscriptions();
   const packageId = isSubscriptionServicePath(path) ? decodeURIComponent(path.slice(SUBSCRIPTION_SERVICE_ROUTE_PREFIX.length).replace(/^\//, "")) : "";
   return packageId ? renderPackageDetail(packageId) : renderPackageList();
@@ -234,8 +236,11 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
     bindSubscriptionServiceCreateWizard(onMount);
     return;
   }
+  if(document.querySelector('[data-subscription-brand-rights-page]')){bindSubscriptionBrandRightsPage();return;}
+  restoreSubscriptionListScroll();
   if(document.querySelector('[data-spe-editor]')){bindServicePackageEditor(onMount);return;}
   document.querySelectorAll<HTMLButtonElement>("[data-ent-menu]").forEach(button=>button.addEventListener("click",()=>{void openServiceMenuPreview(button.dataset.entMenu!);}));
+  document.querySelectorAll<HTMLButtonElement>("[data-sub-brand-rights]").forEach(button=>button.addEventListener("click",()=>openSubscriptionBrandRights(button.dataset.subBrandRights!)));
   initializeSubscriptionMenuTreeIndeterminate();
   const createModalOpen = modalState?.kind === "create-subscription";
   document.querySelectorAll<HTMLElement>("[data-subscription-service-page] > :not([data-sub-modal-backdrop])").forEach((element) => { element.inert = createModalOpen; });
