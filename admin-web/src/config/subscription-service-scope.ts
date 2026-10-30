@@ -31,7 +31,7 @@ export function isAnySubscriptionAdminPath(path: string): boolean {
 }
 
 export function findSubscriptionAdminPageTitle(path: string): { title: string; module: string } | null {
-  if (isSubscriptionServicePath(path)) return { title: "服务包管理", module: "权限管理中心 · 订阅服务" };
-  if (isMerchantSubscriptionsPath(path)) return { title: "商家订阅", module: "权限管理中心 · 订阅服务" };
+  if (isSubscriptionServicePath(path)) return { title: "服务包管理", module: "服务与订阅" };
+  if (isMerchantSubscriptionsPath(path)) return { title: "商家订阅", module: "服务与订阅" };
   return null;
 }

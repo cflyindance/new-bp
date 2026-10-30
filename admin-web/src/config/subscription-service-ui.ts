@@ -84,7 +84,7 @@ function renderPackageList(): string {
       <td class="px-5 py-4 text-right"><a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}/${encodeURIComponent(pkg.id)}" class="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-semibold hover:bg-muted">配置与版本</a></td>
     </tr>`;
   }).join("");
-  return `${renderHeader("订阅服务包", "", `<a href="#${SUBSCRIPTION_SERVICE_CREATE_PATH}" class="inline-flex h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800">＋ 创建服务包</a>`)}
+  return `${renderHeader("服务包管理", "", `<a href="#${SUBSCRIPTION_SERVICE_CREATE_PATH}" class="inline-flex h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800">＋ 创建服务包</a>`)}
     <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7">
       <div class="mx-auto max-w-[100rem]">${renderListFilters('packages',snapshot.packages)}<div class="overflow-auto rounded-2xl border border-border bg-card shadow-sm">
         <div class="flex items-center justify-between border-b border-border px-5 py-4"><div><h3 class="font-semibold">服务包目录</h3></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">${snapshot.packages.length} 个服务包</div></div>

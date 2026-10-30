@@ -14,7 +14,7 @@ export const M_MODULES: MModule[] = [
     action('sync', '同步平台预设', '[data-nb-sync-presets]'),
     action('delete', '删除一级导航', '[data-nb-delete-l1]'),
   ])] },
-  { id: 'services', title: '服务包管理', pages: [page('services', '服务包管理', `${permissions}/subscription-services`, true, [
+  { id: 'services', title: '服务与订阅', pages: [page('services', '服务包管理', `${permissions}/subscription-services`, true, [
     action('create', '新增服务包', '[data-sub-open-create]'),
     action('publish', '发布服务包', '[data-sub-publish],[data-sub-confirm-publish]'),
     action('disable', '停用服务包', '[data-sub-disable-package],[data-sub-disable-form][data-kind="package"]'),
