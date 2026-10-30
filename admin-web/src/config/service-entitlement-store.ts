@@ -28,8 +28,10 @@ function actorFor(brandId: string, source: 'm-platform'|'merchant', action: 'cre
   return principal.account.email;
 }
 
-function commit(snapshot: SubscriptionServiceSnapshot, grant: MerchantSubscription, action: string, detail: string, actor: string): void {
-  snapshot.audit.unshift({id:`ent-audit-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,objectType:'subscription',objectId:grant.id,action,detail,actor,at:new Date().toISOString()});
+function commit(snapshot: SubscriptionServiceSnapshot, grant: MerchantSubscription, action: string, detail: string, actor: string, previous?: {endAt?:string}): void {
+  const pkg=snapshot.packages.find(p=>p.id===grant.packageId),stores=getMerchantStores(grant.subjectId);
+  const entitlementChange={serviceName:pkg?.name??'服务已移除',kind:grant.entitlementKind,scope:grant.scopeMode==='selected'?(grant.storeIds??[]).map(id=>stores.find(s=>s.storeId===id)?.name??'门店资料未记录').join('、'):'全部门店（含新增）',startAt:grant.startAt,endAt:grant.endAt,previousEndRecorded:!!previous,previousEndAt:previous?.endAt,priceMinor:grant.agreedPriceMinor,currency:grant.agreedCurrency,reference:grant.reference,reason:grant.disableReason};
+  snapshot.audit.unshift({entitlementChange,id:`ent-audit-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,objectType:'subscription',objectId:grant.id,action,detail,actor,at:new Date().toISOString()});
   writeSubscriptionServiceSnapshot(snapshot);
 }
 
@@ -87,6 +89,7 @@ export function changeServiceEntitlement(id: string, operation: 'disable'|'exten
   const actor=actorFor(grant.subjectId,'m-platform',operation==='disable'?'disable':'extend');
   if (grant.disabledAt) throw Error('权益已停用，不能修改。');
   const pkg=snapshot.packages.find(p=>p.id===grant.packageId);
+  const previous={endAt:grant.endAt};
   if (operation==='disable') {
     if (!value.trim()) throw Error('请填写停用原因。');
     grant.disabledAt=new Date().toISOString();grant.disabledBy=actor;grant.disableReason=value.trim();
@@ -95,5 +98,5 @@ export function changeServiceEntitlement(id: string, operation: 'disable'|'exten
     if (!Number.isFinite(Date.parse(value)) || Date.parse(value)<=Math.max(Date.now(),Date.parse(grant.endAt??''))) throw Error('新的到期时间必须晚于当前时间和原到期时间。');
     grant.endAt=value;
   }
-  commit(snapshot,grant,`entitlement.${operation}`,`${getMerchantById(grant.subjectId)?.name??grant.subjectId} · ${pkg?.name??grant.packageId} · ${operation==='disable'?'停用：':'续期至：'}${value}`,actor);
+  commit(snapshot,grant,`entitlement.${operation}`,`${getMerchantById(grant.subjectId)?.name??grant.subjectId} · ${pkg?.name??grant.packageId} · ${operation==='disable'?'停用：':'续期至：'}${value}`,actor,previous);
 }
