@@ -84,12 +84,28 @@ export interface MerchantSubscription {
   reference?: string;
 }
 
+export interface EntitlementAuditChange {
+  serviceName: string;
+  kind?: ServiceEntitlementKind;
+  scope: string;
+  startAt: string;
+  endAt?: string;
+  previousEndRecorded: boolean;
+  previousEndAt?: string;
+  priceMinor?: number;
+  currency?: string;
+  reference?: string;
+  reason?: string;
+}
+
 export interface SubscriptionAuditEntry {
   id: string;
   action: string;
   objectType: "package" | "subscription";
   objectId: string;
   detail: string;
+  /** Immutable event facts; absent on historical text-only records. */
+  entitlementChange?: EntitlementAuditChange;
   at: string;
   actor: string;
 }
