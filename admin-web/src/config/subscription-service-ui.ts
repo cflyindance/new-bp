@@ -1,3 +1,4 @@
+import {packageSubscriptionSubjects,openPackageSubjects} from './service-package-subject-preview';
 import {subscriptionAgreedPrice} from './subscription-agreed-price';
 import {openServiceMenuPreview} from './service-entitlement-menu-preview';
 import {renderServicePackageEditor,bindServicePackageEditor} from './service-package-detail-editor';
@@ -71,12 +72,12 @@ function renderPackageList(): string {
   const catalogCount = getPublishedSubscriptionMenuTree()?.selectableNodeCount ?? 0;
   const rows = snapshot.packages.map((pkg) => {
     const release = snapshot.releases.find((item) => item.id === pkg.activeReleaseId);
-    const subscribers = snapshot.subscriptions.filter((item) => item.subjectType !== "group" && item.packageId === pkg.id && !item.disabledAt).length;
+    const subscribers = packageSubscriptionSubjects(snapshot,pkg.id).length;
     return `<tr class="border-b border-border/70 last:border-0 hover:bg-muted/30">
       <td class="px-5 py-4"><div class="font-semibold text-foreground">${esc(pkg.name)}</div><div class="mt-1 font-mono text-[11px] text-muted-foreground">${esc(pkg.code)}</div></td>
       <td class="px-4 py-4"><div class="font-semibold">${money(pkg.priceMinor, pkg.currency)}</div><div class="text-xs text-muted-foreground">/${intervalLabel(pkg.billingInterval)}</div></td>
-      <td class="px-4 py-4 text-sm"><span class="font-semibold">${release?.routeNodeIds.length ?? 0}</span><span class="text-muted-foreground"> / ${catalogCount} 个菜单</span></td>
-      <td class="px-4 py-4 text-sm"><span class="font-semibold">${subscribers}</span><span class="text-muted-foreground"> 个主体</span></td>
+      <td class="px-4 py-4 text-sm"><button type="button" data-ent-menu="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}菜单能力" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${release?.routeNodeIds.length ?? 0}</span> / ${catalogCount} 个菜单</button></td>
+      <td class="px-4 py-4 text-sm"><button type="button" data-package-subjects-open="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}订阅主体" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${subscribers}</span> 个主体</button></td>
       <td class="px-4 py-4">${statusBadge(pkg.status)}</td>
       <td class="px-5 py-4 text-right"><a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}/${encodeURIComponent(pkg.id)}" class="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-semibold hover:bg-muted">配置与版本</a></td>
     </tr>`;
@@ -242,6 +243,7 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
   if(document.querySelector('[data-spe-editor]')){bindServicePackageEditor(onMount);return;}
   document.querySelectorAll<HTMLButtonElement>("[data-ent-menu]").forEach(button=>button.addEventListener("click",()=>{void openServiceMenuPreview(button.dataset.entMenu!);}));
   document.querySelectorAll<HTMLButtonElement>("[data-sub-brand-rights]").forEach(button=>button.addEventListener("click",()=>openSubscriptionBrandRights(button.dataset.subBrandRights!)));
+  document.querySelectorAll<HTMLButtonElement>("[data-package-subjects-open]").forEach(button=>button.addEventListener("click",()=>openPackageSubjects(button.dataset.packageSubjectsOpen!)));
   initializeSubscriptionMenuTreeIndeterminate();
   const createModalOpen = modalState?.kind === "create-subscription";
   document.querySelectorAll<HTMLElement>("[data-subscription-service-page] > :not([data-sub-modal-backdrop])").forEach((element) => { element.inert = createModalOpen; });
