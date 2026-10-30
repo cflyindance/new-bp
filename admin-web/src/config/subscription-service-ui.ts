@@ -1,21 +1,17 @@
-import {renderCommercialFields,readCommercialFields} from './service-commercial-fields';
+import {renderServicePackageEditor,bindServicePackageEditor} from './service-package-detail-editor';
 import {merchantDetailHref} from './enterprise-merchant-scope';
 import { getGroups, getMerchantById, getMerchantStores, getMerchants, getStoreById } from "./enterprise-merchant-store";
-import { resolveEffectiveRouteSources, subscriptionStatusLabel, type BillingInterval, type ServicePackageDraft, type SubscriptionSubjectType } from "./subscription-service-domain";
+import { resolveEffectiveRouteSources, subscriptionStatusLabel, type BillingInterval, type SubscriptionSubjectType } from "./subscription-service-domain";
 import { SUBSCRIPTION_SERVICE_CREATE_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX, isMerchantSubscriptionsPath, isSubscriptionServiceCreatePath, isSubscriptionServicePath } from "./subscription-service-scope";
 import { bindSubscriptionServiceCreateWizard, consumeSubscriptionWizardFeedback, renderSubscriptionServiceCreateWizard } from "./subscription-service-create-wizard-ui";
-import { ensurePublishedSubscriptionMenuTree, flattenSubscriptionMenuTree, getPublishedSubscriptionMenuTree } from "./subscription-published-menu-tree";
-import { initializeSubscriptionMenuTreeIndeterminate, readSubscriptionMenuTreeToggle, renderSubscriptionMenuTree } from "./subscription-menu-tree-ui";
+import { ensurePublishedSubscriptionMenuTree, getPublishedSubscriptionMenuTree } from "./subscription-published-menu-tree";
+import { initializeSubscriptionMenuTreeIndeterminate } from "./subscription-menu-tree-ui";
 import {
   createMerchantSubscription,
   disableMerchantSubscription,
   disableServicePackage,
   extendMerchantSubscription,
-  getOrCreatePackageDraft,
-  publishServicePackage,
   readSubscriptionServiceSnapshot,
-  rollbackServicePackage,
-  savePackageDraft,
 } from "./subscription-service-store";
 
 type ModalState =
@@ -28,7 +24,6 @@ type ModalState =
 
 let modalState: ModalState = null;
 let feedback = "";
-let routeSearch = "";
 let subscriptionType: SubscriptionSubjectType = "brand";
 let createSubscriptionDraft: { subjectId: string; packageId: string; startAt: string; endAt: string; note: string } | null = null;
 let createSubscriptionError = "";
@@ -92,28 +87,7 @@ function renderPackageList(): string {
     </div>${renderModal()}</section>`;
 }
 
-function renderRouteTree(draft: ServicePackageDraft): string {
-  const tree = getPublishedSubscriptionMenuTree();
-  const validIds = new Set(tree ? flattenSubscriptionMenuTree(tree.roots).filter((node) => node.selectable).map((node) => node.routeNodeId) : []);
-  const invalidIds = draft.routeNodeIds.filter((id) => !validIds.has(id));
-  return `${invalidIds.length ? `<div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>${invalidIds.length} 项已失效菜单</strong><p class="mt-1 text-xs">${invalidIds.map(esc).join("、")}</p><p class="mt-1 text-xs">保存草稿后将自动移除这些失效能力，已发布版本保持不变。</p></div>` : ""}${renderSubscriptionMenuTree({ tree, selectedIds: draft.routeNodeIds.filter((id) => validIds.has(id)), query: routeSearch })}`;
-}
-
-function renderPackageDetail(packageId: string): string {
-  const snapshot = readSubscriptionServiceSnapshot();
-  const pkg = snapshot.packages.find((item) => item.id === packageId);
-  if (!pkg) return `${renderHeader("服务包不存在", "该服务包可能已被移除。", `<a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}" class="rounded-lg border px-4 py-2 text-sm">返回列表</a>`)}<div class="p-10 text-sm text-muted-foreground">未找到服务包。</div></section>`;
-  const draft = getOrCreatePackageDraft(packageId);
-  const releases = snapshot.releases.filter((item) => item.packageId === packageId).sort((a, b) => b.version - a.version);
-  const subscriberCount = snapshot.subscriptions.filter((item) => item.packageId === packageId && !item.disabledAt).length;
-  return `${renderHeader(pkg.name, `${pkg.code} · 当前 ${pkg.status === "published" ? `v${releases.find((item) => item.id === pkg.activeReleaseId)?.version ?? 0}` : "尚未发布"}`, `<a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}" class="h-10 rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold hover:bg-muted">返回列表</a>`)}
-    <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7"><form data-sub-package-form data-package-id="${esc(pkg.id)}" data-revision="${draft.revision}" class="mx-auto grid max-w-[92rem] gap-5 xl:grid-cols-[360px_minmax(0,1fr)_320px]">
-      <aside class="space-y-4"><div class="rounded-2xl border border-border bg-card p-5 shadow-sm"><div class="flex items-center justify-between"><h3 class="font-semibold">产品定义</h3>${statusBadge(pkg.status)}</div><label class="mt-5 block text-xs font-semibold text-muted-foreground">名称<input name="name" value="${esc(draft.name)}" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600"></label><label class="mt-4 block text-xs font-semibold text-muted-foreground">说明<textarea name="description" rows="4" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-600">${esc(draft.description)}</textarea></label><div class="mt-4 grid grid-cols-[1fr_110px] gap-3"><label class="text-xs font-semibold text-muted-foreground">标准价格（元）<input name="price" type="number" min="0" step="0.01" value="${(draft.priceMinor / 100).toFixed(2)}" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"></label><label class="text-xs font-semibold text-muted-foreground">周期<select name="billingInterval" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm">${(["month", "quarter", "year", "one-time"] as BillingInterval[]).map((value) => `<option value="${value}" ${draft.billingInterval === value ? "selected" : ""}>${intervalLabel(value)}</option>`).join("")}</select></label></div><button type="submit" class="mt-5 h-10 w-full rounded-lg border border-border bg-background text-sm font-semibold hover:bg-muted">保存草稿</button>${renderCommercialFields(draft.commercial)}</div>
-      <div class="rounded-2xl border border-border bg-slate-950 p-5 text-white shadow-sm"><p class="text-xs font-semibold uppercase tracking-[.15em] text-emerald-300">发布影响</p><div class="mt-4 grid grid-cols-2 gap-4"><div><p class="text-3xl font-semibold">${draft.routeNodeIds.length}</p><p class="text-xs text-slate-400">菜单节点</p></div><div><p class="text-3xl font-semibold">${subscriberCount}</p><p class="text-xs text-slate-400">订阅主体</p></div></div><button type="button" data-sub-publish data-package-id="${esc(pkg.id)}" data-revision="${draft.revision}" class="mt-5 h-10 w-full rounded-lg bg-emerald-500 text-sm font-bold text-slate-950 hover:bg-emerald-400">校验并发布</button>${pkg.status !== "disabled" ? `<button type="button" data-sub-disable-package data-package-id="${esc(pkg.id)}" class="mt-2 h-9 w-full rounded-lg border border-white/20 text-xs font-semibold text-white/80 hover:bg-white/10">停用服务包</button>` : ""}</div></aside>
-      <main class="min-w-0 rounded-2xl border border-border bg-card shadow-sm"><div class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 p-4 backdrop-blur"><div><h3 class="font-semibold">菜单路由能力</h3><p class="text-xs text-muted-foreground">只选择页面路由；页面内操作继续由角色权限控制。</p></div><input data-sub-route-search value="${esc(routeSearch)}" placeholder="搜索菜单或路径" class="h-9 w-64 rounded-lg border border-border bg-background px-3 text-sm"></div><div class="space-y-3 p-4">${renderRouteTree(draft) || `<div class="p-10 text-center text-sm text-muted-foreground">没有匹配的菜单</div>`}</div></main>
-      <aside class="space-y-4"><div class="rounded-2xl border border-border bg-card p-5 shadow-sm"><h3 class="font-semibold">版本历史</h3><div class="mt-4 space-y-3">${releases.map((release) => `<div class="rounded-xl border ${release.id === pkg.activeReleaseId ? "border-emerald-300 bg-emerald-50/60" : "border-border"} p-3"><div class="flex items-center justify-between"><strong class="text-sm">v${release.version}</strong>${release.id === pkg.activeReleaseId ? `<span class="text-[10px] font-bold text-emerald-700">当前</span>` : `<button type="button" data-sub-rollback data-package-id="${esc(pkg.id)}" data-release-id="${esc(release.id)}" class="text-xs font-semibold text-emerald-700">回滚</button>`}</div><p class="mt-1 text-xs text-muted-foreground">${release.routeNodeIds.length} 个菜单 · ${new Date(release.publishedAt).toLocaleString("zh-CN")}</p></div>`).join("") || `<p class="text-sm text-muted-foreground">发布后将在此保留不可变版本。</p>`}</div></div><div class="rounded-2xl border border-border bg-card p-5 text-sm shadow-sm"><h3 class="font-semibold">规则边界</h3><ul class="mt-3 space-y-2 text-xs leading-5 text-muted-foreground"><li>• 发布后所有有效订阅统一更新</li><li>• 多个服务包的菜单能力取并集</li><li>• 下级订阅只能增加上级能力</li><li>• 记录标准价与成交快照，不触发在线扣款</li></ul></div></aside>
-    </form></div>${renderModal()}</section>`;
-}
+function renderPackageDetail(packageId:string):string {return renderServicePackageEditor(packageId)||renderHeader('服务包不存在','未找到服务包。');}
 
 function subjectOptions(type: SubscriptionSubjectType): Array<{ id: string; label: string }> {
   if (type === "group") return getGroups({ allEnterprises: true, status: "active" }).map((item) => ({ id: item.groupId, label: `${item.name} · ${item.code}` }));
@@ -258,6 +232,7 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
     bindSubscriptionServiceCreateWizard(onMount);
     return;
   }
+  if(document.querySelector('[data-spe-editor]')){bindServicePackageEditor(onMount);return;}
   initializeSubscriptionMenuTreeIndeterminate();
   const createModalOpen = modalState?.kind === "create-subscription";
   document.querySelectorAll<HTMLElement>("[data-subscription-service-page] > :not([data-sub-modal-backdrop])").forEach((element) => { element.inert = createModalOpen; });
@@ -269,19 +244,6 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
   document.querySelector<HTMLButtonElement>("[data-sub-open-create]")?.addEventListener("click", () => { resetCreateSubscriptionDraft(); modalState = { kind: "create-subscription" }; refresh(onMount); });
   document.querySelector<HTMLElement>("[data-sub-modal-backdrop]")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) closeSubscriptionModal(onMount); });
   document.querySelectorAll<HTMLButtonElement>("[data-sub-modal-close]").forEach((button) => button.addEventListener("click", () => closeSubscriptionModal(onMount)));
-  document.querySelector<HTMLInputElement>("[data-sub-route-search]")?.addEventListener("input", (event) => { routeSearch = (event.currentTarget as HTMLInputElement).value; refresh(onMount); });
-  document.querySelector<HTMLFormElement>("[data-sub-package-form]")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement; const packageId = form.dataset.packageId!; const data = new FormData(form); const current = getOrCreatePackageDraft(packageId);
-    try { savePackageDraft({ ...current, revision: Number(form.dataset.revision), name: String(data.get("name") ?? ""), description: String(data.get("description") ?? ""), priceMinor: Math.round(Number(data.get("price") ?? 0) * 100), billingInterval: String(data.get("billingInterval") ?? "month") as BillingInterval, commercial:readCommercialFields(form,current.commercial) }); refresh(onMount, "草稿已保存，尚未影响商家"); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "保存失败"); }
-  });
-  document.querySelectorAll<HTMLInputElement>("[data-sub-tree-select-ids]").forEach((input) => input.addEventListener("change", () => {
-    const form = document.querySelector<HTMLFormElement>("[data-sub-package-form]"); if (!form) return; const draft = getOrCreatePackageDraft(form.dataset.packageId!); const selected = new Set(draft.routeNodeIds); const toggle = readSubscriptionMenuTreeToggle(input); toggle.routeNodeIds.forEach((id) => toggle.checked ? selected.add(id) : selected.delete(id)); draft.routeNodeIds = [...selected]; try { savePackageDraft({ ...draft, revision: Number(form.dataset.revision), commercial:readCommercialFields(form,draft.commercial), priceMinor:Math.round(Number(new FormData(form).get("price"))*100), name:String(new FormData(form).get("name")??draft.name) }); refresh(onMount); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "更新失败"); }
-  }));
-  document.querySelectorAll<HTMLButtonElement>("[data-sub-publish]").forEach((button) => button.addEventListener("click", () => { modalState = { kind: "publish", packageId: button.dataset.packageId!, revision: Number(button.dataset.revision) }; refresh(onMount); }));
-  document.querySelector<HTMLButtonElement>("[data-sub-confirm-publish]")?.addEventListener("click", (event) => { const button = event.currentTarget as HTMLButtonElement; try { const release = publishServicePackage(button.dataset.packageId!, Number(button.dataset.revision)); modalState = null; refresh(onMount, `已发布 v${release.version}，所有有效订阅已更新`); } catch (error) { modalState = null; refresh(onMount, error instanceof Error ? error.message : "发布失败"); } });
-  document.querySelectorAll<HTMLButtonElement>("[data-sub-disable-package]").forEach((button) => button.addEventListener("click", () => { modalState = { kind: "disable-package", packageId: button.dataset.packageId! }; refresh(onMount); }));
-  document.querySelectorAll<HTMLButtonElement>("[data-sub-rollback]").forEach((button) => button.addEventListener("click", () => { try { rollbackServicePackage(button.dataset.packageId!, button.dataset.releaseId!); refresh(onMount, "已统一回滚到所选版本"); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "回滚失败"); } }));
   document.querySelector<HTMLSelectElement>("[data-sub-subject-type]")?.addEventListener("change", (event) => { syncCreateSubscriptionDraft(); subscriptionType = (event.currentTarget as HTMLSelectElement).value as SubscriptionSubjectType; if (createSubscriptionDraft) createSubscriptionDraft.subjectId = subjectOptions(subscriptionType)[0]?.id ?? ""; createSubscriptionError = ""; refresh(onMount); });
   document.querySelector<HTMLFormElement>("[data-sub-create-subscription]")?.addEventListener("input", () => { if (createSubscriptionError) { createSubscriptionError = ""; document.querySelector("[data-sub-create-error]")?.remove(); } });
   document.querySelector<HTMLFormElement>("[data-sub-create-subscription]")?.addEventListener("submit", (event) => {

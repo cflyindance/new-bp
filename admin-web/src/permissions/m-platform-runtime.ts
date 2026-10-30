@@ -45,8 +45,8 @@ export function bindMNavigation(): void {
   });
 }
 
-const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[data-view-switch-trigger],[data-theme-toggle],#theme-toggle,[data-sub-modal-close],[data-pp-changelog-close],[data-merchant-stores-dialog-close]';
-const readonlyBrowse = '[data-brand-store-details],[data-brand-store-detail-dialog],[data-merchant-usage] [data-activity-browse],[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search]';
+const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[data-view-switch-trigger],[data-theme-toggle],#theme-toggle,[data-sub-modal-close],[data-template-close],[data-pp-changelog-close],[data-merchant-stores-dialog-close]';
+const readonlyBrowse = '[data-brand-store-details],[data-brand-store-detail-dialog],[data-merchant-usage] [data-activity-browse],[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search],[data-spe-tab],[data-spe-category],[data-spe-search],[data-spe-only],[data-spe-expand],[data-spe-collapse],[data-spe-version]';
 function deniedControl(target: Element, type: string): boolean {
   const path = location.hash.slice(1), page = mPageForPath(path);
   if (!path.startsWith('/m-platform/') || !page || target.closest('.mp-center,.mp-permission-dialog')) return false;
