@@ -1,3 +1,4 @@
+import {seedBasicMenuDemo} from './subscription-basic-menu-demo';
 import {seedGrowthMenuDemo} from './subscription-growth-menu-demo';
 import { validateCommercialPolicy } from './service-entitlement-domain';
 import { seedServiceEntitlementDemo } from './service-entitlement-demo';
@@ -94,8 +95,8 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const snapshot=normalizeSnapshot(JSON.parse(raw) as SubscriptionServiceSnapshot);
-      const entChanged=appendEntitlementDemo(snapshot),growthChanged=appendGrowthDemo(snapshot);
-      if(entChanged||growthChanged)writeSubscriptionServiceSnapshot(snapshot,false);
+      const entChanged=appendEntitlementDemo(snapshot),growthChanged=appendGrowthDemo(snapshot),basicChanged=appendBasicDemo(snapshot);
+      if(entChanged||growthChanged||basicChanged)writeSubscriptionServiceSnapshot(snapshot,false);
       return snapshot;
     }
   } catch {
@@ -104,8 +105,13 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
   const seeded = seedSnapshot();
   appendEntitlementDemo(seeded);
   appendGrowthDemo(seeded);
+  appendBasicDemo(seeded);
   writeSubscriptionServiceSnapshot(seeded, false);
   return seeded;
+}
+
+function appendBasicDemo(snapshot:SubscriptionServiceSnapshot):boolean {
+ const tree=getPublishedSubscriptionMenuTree();return tree?.source==='menu-document'?seedBasicMenuDemo(snapshot,getPublishedSubscriptionRouteCatalog(),tree.blueprintVersion):false;
 }
 
 function appendGrowthDemo(snapshot:SubscriptionServiceSnapshot):boolean {
