@@ -32,8 +32,9 @@ const snapshot: SubscriptionServiceSnapshot = {
 };
 
 const sources = resolveEffectiveRouteSources(snapshot, { groupId: "g1", brandId: "b1", storeId: "s1" }, now);
-assert.deepEqual([...new Set(sources.map((item) => item.routeNodeId))].sort(), ["menu-a", "menu-b", "menu-shared"]);
-assert.equal(sources.find((item) => item.subscriptionId === "sub-group")?.inherited, true);
+assert.deepEqual([...new Set(sources.map((item) => item.routeNodeId))].sort(), ["menu-b", "menu-shared"]);
+assert.equal(sources.some(item=>item.subscriptionId==="sub-group"),false,"历史集团订阅不提供能力");
+assert.equal(resolveEffectiveRouteSources(snapshot,{groupId:"g1"},now).length,0);
 assert.equal(sources.find((item) => item.subscriptionId === "sub-brand")?.inherited, true);
 assert.equal(sources.some((item) => item.subscriptionId === "sub-store-future"), false);
 
@@ -44,4 +45,9 @@ assert.equal(subscriptionStatusLabel(subscriptions[0]!, "disabled", now), "服�
 assert.equal(hasOverlappingSubscription(subscriptions, { subjectType: "group", subjectId: "g1", packageId: "p1", startAt: "2026-08-01T00:00:00.000Z", endAt: "2026-09-01T00:00:00.000Z" }), true);
 assert.equal(hasOverlappingSubscription(subscriptions, { subjectType: "group", subjectId: "g1", packageId: "p2", startAt: "2026-08-01T00:00:00.000Z", endAt: "2026-09-01T00:00:00.000Z" }), false);
 
-console.log("subscription-service verification passed");
+const activeStore={...subscriptions[2]!,startAt:"2026-01-01T00:00:00.000Z"};
+const combined=resolveEffectiveRouteSources({...snapshot,subscriptions:[...subscriptions,activeStore]},{groupId:"g1",brandId:"b1",storeId:"s1"},now);
+assert.deepEqual([...new Set(combined.map(s=>s.routeNodeId))].sort(),["menu-a","menu-b","menu-shared"]);
+assert.equal(combined.find(s=>s.subscriptionId==="sub-store-future")?.inherited,false);
+assert.equal(combined.some(s=>s.subscriptionId==="sub-group"),false);
+console.log("subscription-service verification passed: brand-to-store inheritance, store additions and ignored historical groups");

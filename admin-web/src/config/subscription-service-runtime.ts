@@ -31,7 +31,6 @@ export function resolveCurrentSubscriptionContext(): CurrentSubscriptionContext 
   const merchant = brandId ? getMerchantById(brandId) : undefined;
   if (!impersonation && !store && !merchant) return null;
   return {
-    groupId: merchant?.groupId,
     brandId: perspective === "group-hq" ? undefined : brandId,
     storeId,
   };
