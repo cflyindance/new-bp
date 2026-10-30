@@ -3,3 +3,5 @@
 @media(max-width:1000px){.spe-fields{grid-template-columns:1fr}.spe-wide{grid-column:auto}}
 
 .spe>main:has(.spe-menu-grid){display:flex;flex-direction:column}.spe-menu-grid{height:auto;min-height:300px;flex:1}.spe-menu-tools,.spe-warning{flex-shrink:0}
+
+.package-direct-actions{align-self:flex-start;display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding-top:4px}.package-direct-actions .ba-btn{height:38px;min-width:76px;padding:8px 14px;white-space:nowrap}.package-direct-danger{color:#bd3027!important;border-color:#e5b0ab!important}.spe-title-line{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 8px}.spe-title-line h2{margin:0}.spe-package-status{display:flex;align-items:center;gap:10px;font-size:12px}.spe-package-status>span{background:#e7f5ef;color:#126347;padding:4px 9px;border-radius:5px}.spe-package-status .ba-muted{margin:0}@media(max-width:700px){.spe-header{flex-wrap:wrap}.package-direct-actions{justify-content:flex-start;padding:0}.spe-title-line{gap:10px}}
