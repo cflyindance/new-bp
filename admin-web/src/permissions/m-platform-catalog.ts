@@ -17,8 +17,11 @@ export const M_MODULES: MModule[] = [
   { id: 'services', title: '服务与订阅', pages: [page('services', '服务包管理', `${permissions}/subscription-services`, true, [
     action('create', '新增服务包', '[data-sub-open-create]'),
     action('publish', '发布服务包', '[data-sub-publish],[data-sub-confirm-publish]'),
-    action('disable', '停用服务包', '[data-sub-disable-package],[data-sub-disable-form][data-kind="package"]'),
+    action('disable', '停用服务包', '[data-sub-disable-package],[data-sub-disable-form][data-kind="package"],[data-package-action=disable],[data-package-confirm=disable]'),
     action('rollback', '回滚服务包', '[data-sub-rollback]'),
+    action('shelf','服务包上下架','[data-package-action=off],[data-package-action=on],[data-package-confirm=off],[data-package-confirm=on]'),
+    action('restore','恢复服务包','[data-package-action=restore],[data-package-confirm=restore]'),
+    action('delete','删除服务包草稿','[data-package-action=delete],[data-package-confirm=delete]'),
   ]), page('subscriptions', '商家订阅', `${permissions}/merchant-subscriptions`, true, [
     action('create', '创建订阅', '[data-sub-create-subscription]'),
     action('extend', '延长订阅', '[data-sub-extend],[data-sub-extend-form]'),

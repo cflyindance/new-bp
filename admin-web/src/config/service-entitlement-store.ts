@@ -1,3 +1,4 @@
+import {packageOnSale} from './service-package-lifecycle-domain';
 import { currentBrandPrincipal, isBrandPathAllowed } from './brand-access-store';
 import { getMerchantById, getMerchantStores } from './enterprise-merchant-store';
 import { getAuthenticatedEmail } from '../auth/login';
@@ -50,7 +51,7 @@ export function recordServiceEntitlement(input: RecordEntitlementInput, source: 
   const actor = actorFor(input.brandId, source);
   if (source === 'merchant' && input.kind !== 'trial') throw Error('正式开通、赠送及免费开通由服务商记录。');
   const snapshot = readSubscriptionServiceSnapshot(), pkg = snapshot.packages.find(p=>p.id===input.packageId);
-  if (!pkg?.commercial || pkg.status !== 'published' || !pkg.activeReleaseId) throw Error('请选择已发布且启用权益控制的服务。');
+  if (!pkg?.commercial || !packageOnSale(pkg) || !pkg.activeReleaseId) throw Error('请选择已发布、已上架且运行中的权益服务。');
   validateCommercialPolicy(pkg.commercial,pkg.priceMinor);
   if (!['free','trial','paid','gift'].includes(input.kind) || !['all','selected'].includes(input.scopeMode)) throw Error('权益来源或范围无效。');
   if (source === 'merchant') {
@@ -94,6 +95,7 @@ export function changeServiceEntitlement(id: string, operation: 'disable'|'exten
     if (!value.trim()) throw Error('请填写停用原因。');
     grant.disabledAt=new Date().toISOString();grant.disabledBy=actor;grant.disableReason=value.trim();
   } else {
+    if(!pkg||!packageOnSale(pkg))throw Error('服务包已下架或停用，不能续期。');
     if (grant.entitlementKind==='trial'||grant.entitlementKind==='free') throw Error('试用及长期免费权益不支持续期，请按规则正式开通。');
     if (!Number.isFinite(Date.parse(value)) || Date.parse(value)<=Math.max(Date.now(),Date.parse(grant.endAt??''))) throw Error('新的到期时间必须晚于当前时间和原到期时间。');
     grant.endAt=value;

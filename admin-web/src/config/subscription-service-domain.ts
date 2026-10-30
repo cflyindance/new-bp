@@ -24,6 +24,8 @@ export interface ServicePackage {
   billingInterval: BillingInterval;
   commercial?: ServiceCommercialPolicy;
   status: ServicePackageStatus;
+  saleStatus?: "on" | "off";
+  disabledReason?: string;
   activeReleaseId?: string;
   createdAt: string;
   updatedAt: string;
