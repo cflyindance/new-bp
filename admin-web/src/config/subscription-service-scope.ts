@@ -10,6 +10,12 @@ export function isSubscriptionServiceCreatePath(path: string): boolean {
   return path === SUBSCRIPTION_SERVICE_CREATE_PATH;
 }
 
+/** Package detail uses the independent full-page shell, excluding creation and lists. */
+export function isSubscriptionServiceDetailPath(path:string):boolean {
+ const prefix=SUBSCRIPTION_SERVICE_ROUTE_PREFIX+'/';
+ return path.startsWith(prefix)&&!isSubscriptionServiceCreatePath(path)&&/^[^/?#]+$/.test(path.slice(prefix.length));
+}
+
 export function isMerchantSubscriptionsPath(path: string): boolean {
   return path === MERCHANT_SUBSCRIPTIONS_PATH || path.startsWith(`${MERCHANT_SUBSCRIPTIONS_PATH}/`);
 }
