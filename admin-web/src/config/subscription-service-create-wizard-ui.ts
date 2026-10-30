@@ -62,11 +62,11 @@ function renderSteps(): string {
 
 function renderProductStep(): string {
   return `<div class="mx-auto w-full max-w-4xl">
-    <div class="mb-7"><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 01</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">定义服务产品</h2><p class="mt-2 text-sm text-muted-foreground">设置商家看到的名称、价格和计费方式，保存后仍可继续调整。</p></div>
+    <div class="mb-7"><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 01</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">定义服务产品</h2></div>
     <form data-wizard-product-form class="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
       <div class="grid gap-6 md:grid-cols-2">
         <label class="text-sm font-semibold">服务包名称<span class="ml-1 text-rose-600">*</span><input name="name" value="${esc(draft.name)}" maxlength="60" autofocus placeholder="例如：高级经营版" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
-        <label class="text-sm font-semibold">唯一编码<span class="ml-1 text-rose-600">*</span><input name="code" value="${esc(draft.code)}" maxlength="40" placeholder="例如：PRO_299" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm uppercase outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"><span class="mt-1.5 block text-xs font-normal text-muted-foreground">保存时自动转换为大写，创建后不可重复。</span></label>
+        <label class="text-sm font-semibold">唯一编码<span class="ml-1 text-rose-600">*</span><input name="code" value="${esc(draft.code)}" maxlength="40" placeholder="例如：PRO_299" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm uppercase outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
         <label class="text-sm font-semibold">标准价格（元）<input name="price" type="number" min="0" step="0.01" value="${esc(draft.price)}" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"></label>
         <label class="text-sm font-semibold">计费周期<select name="billingInterval" class="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-600">${(["month", "quarter", "year", "one-time"] as BillingInterval[]).map((value) => `<option value="${value}" ${draft.billingInterval === value ? "selected" : ""}>${intervalLabel(value)}</option>`).join("")}</select></label>
       </div>
@@ -78,9 +78,9 @@ function renderProductStep(): string {
 function renderRouteStep(): string {
   const tree = getPublishedSubscriptionMenuTree();
   const selected = new Set(draft.routeNodeIds);
-  return `<div class="mx-auto w-full max-w-6xl"><div class="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 02</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">选择菜单路由能力</h2><p class="mt-2 text-sm text-muted-foreground">服务包控制页面入口，页面内操作继续由角色权限控制。</p></div><div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><strong class="text-xl">${selected.size}</strong> 个菜单已选择</div></div>
+  return `<div class="mx-auto w-full max-w-6xl"><div class="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 02</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">选择菜单路由能力</h2></div><div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><strong class="text-xl">${selected.size}</strong> 个菜单已选择</div></div>
     <div class="sticky top-0 z-10 mb-4 rounded-xl border border-border bg-background/95 p-3 shadow-sm backdrop-blur"><input data-wizard-route-search value="${esc(search)}" placeholder="搜索菜单名称或路由路径" class="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-emerald-600"></div>
-    ${renderSubscriptionMenuTree({ tree, selectedIds: draft.routeNodeIds, query: search })}</div>`;
+    ${renderSubscriptionMenuTree({ tree, selectedIds: draft.routeNodeIds, query: search, showMetadata: false })}</div>`;
 }
 
 function renderConfirmStep(): string {
@@ -91,7 +91,7 @@ function renderConfirmStep(): string {
     const names = flattenSubscriptionMenuTree([root]).filter((node) => node.selectable && selected.has(node.routeNodeId)).map((node) => node.title);
     if (names.length) modules.set(root.title, names);
   }
-  return `<div class="mx-auto w-full max-w-5xl"><div class="mb-7"><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 03</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">确认服务包内容</h2><p class="mt-2 text-sm text-muted-foreground">确认后可保存为未发布草稿，或直接创建并发布 v1。</p></div>
+  return `<div class="mx-auto w-full max-w-5xl"><div class="mb-7"><p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">STEP 03</p><h2 class="mt-2 text-3xl font-semibold tracking-tight">确认服务包内容</h2></div>
     <div class="grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
       <section class="rounded-2xl border border-border bg-card p-6 shadow-sm"><p class="text-xs font-bold uppercase tracking-[.15em] text-muted-foreground">产品定义</p><h3 class="mt-3 text-2xl font-semibold">${esc(draft.name)}</h3><p class="mt-1 font-mono text-xs text-muted-foreground">${esc(draft.code.trim().toUpperCase())}</p><div class="mt-6 grid grid-cols-2 gap-4"><div class="rounded-xl bg-muted/50 p-4"><p class="text-xs text-muted-foreground">展示价格</p><p class="mt-1 text-xl font-semibold">${esc(money())}</p></div><div class="rounded-xl bg-muted/50 p-4"><p class="text-xs text-muted-foreground">计费周期</p><p class="mt-1 text-xl font-semibold">${intervalLabel(draft.billingInterval)}</p></div></div><p class="mt-5 text-sm leading-6 text-muted-foreground">${esc(draft.description || "未填写服务包说明")}</p></section>
       <section class="rounded-2xl border border-border bg-card p-6 shadow-sm"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-[.15em] text-muted-foreground">菜单路由能力</p><h3 class="mt-2 text-lg font-semibold">共 ${selected.size} 个菜单</h3></div><button type="button" data-wizard-go-step="2" class="text-sm font-semibold text-emerald-700 hover:underline">返回调整</button></div><div class="mt-5 space-y-3">${[...modules.entries()].map(([title, names]) => `<div class="rounded-xl border border-border p-4"><div class="flex items-center justify-between gap-3"><strong class="text-sm">${esc(title)}</strong><span class="text-xs text-muted-foreground">${names.length} 项</span></div><p class="mt-2 text-xs leading-5 text-muted-foreground">${names.map(esc).join("、")}</p></div>`).join("")}</div></section>
