@@ -7,10 +7,10 @@ let active:{root:HTMLElement;close:()=>void}|undefined;
 export function openEntitlementDrawer(root:HTMLElement,trigger:HTMLButtonElement):void {
  active?.close();
  const row=trigger.closest('tbody'),content=row?.querySelector<HTMLElement>('[data-rights-detail-content]');if(!row||!content)return;
- const anchor=content.parentElement!,name=row.querySelector('[data-ent-menu],strong')?.textContent??'服务',tag=row.querySelector('tr > td:nth-child(2) .ba-tag'),state=tag?.textContent??'';
+ const anchor=content.parentElement!,name=row.querySelector('[data-ent-menu],strong')?.textContent??'服务';
  const scrollHost=(()=>{let n=root.parentElement;while(n){if(['auto','scroll'].includes(getComputedStyle(n).overflowY))return n;n=n.parentElement;}return document.scrollingElement as HTMLElement;})(),position=scrollHost.scrollTop;
  const d=document.createElement('dialog');d.className='ba ba-modal ba-admin-dialog ba-rights-drawer';d.dataset.rightsDrawer='';d.setAttribute('aria-labelledby','rights-drawer-title');
- d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><div><h2 id="rights-drawer-title">${esc(name)} · 权益明细</h2><span class="ba-tag ${tag?.classList.contains('active')?'active':''}" style="margin-top:10px">${esc(state)}</span></div><button type="button" class="ba-btn" data-rights-drawer-close aria-label="关闭权益明细">×</button></header><section class="ba-dialog-body"></section><footer class="ba-footer" style="justify-content:flex-end"><button type="button" class="ba-btn" data-rights-drawer-close>关闭</button></footer></div>`;
+ d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><div><h2 id="rights-drawer-title">${esc(name)} · 历史权益</h2></div><button type="button" class="ba-btn" data-rights-drawer-close aria-label="关闭历史权益">×</button></header><section class="ba-dialog-body"></section><footer class="ba-footer" style="justify-content:flex-end"><button type="button" class="ba-btn" data-rights-drawer-close>关闭</button></footer></div>`;
  d.querySelector('.ba-dialog-body')!.append(content);
  let closed=false;
  const observer=new MutationObserver(()=>{if(!root.isConnected)close();});
