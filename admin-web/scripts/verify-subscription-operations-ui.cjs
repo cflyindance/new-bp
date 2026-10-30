@@ -12,6 +12,26 @@ for (const hook of ['data-sub-operation','data-sub-edit-form','data-sub-risk-for
 for (const metric of ['providedRouteCount','lostRouteCount','retainedRouteCount','gainedRouteCount','alreadyCoveredRouteCount','nextBoundaryAt','expiresAt','snapshotToken']) assert(domain.includes(metric), `missing impact field ${metric}`);
 for (const action of ['subscription.update_scheduled','subscription.activate_now','subscription.extend','subscription.adjust_end','subscription.disable','subscription.cancel','subscription.reopen']) assert(store.includes(action), `missing audit ${action}`);
 assert(page.includes('maxlength="200"'), 'risk reasons must be capped at 200');
-assert(ui.includes('<details'), 'row operations must expose primary plus more');
+assert(!ui.includes('<details'), 'row operations must not expand table rows');
+for (const hook of [
+  'data-sub-more',
+  'data-sub-operations-menu',
+  'popover="auto"',
+  'aria-haspopup="menu"',
+  'aria-controls',
+  'aria-expanded="false"',
+  'role="menu"',
+  'role="menuitem"',
+  'package-more',
+  'package-menu',
+  'aria-disabled="true"',
+  'aria-describedby',
+]) assert(ui.includes(hook), `missing popover contract ${hook}`);
+for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Escape', 'Tab']) {
+  assert(ui.includes(key), `missing keyboard behavior ${key}`);
+}
+assert(/if \(event\.key === "Tab"\) \{\s*menu\.hidePopover\(\);\s*if \(trigger\.isConnected\) trigger\.focus\(\{ preventScroll: true \}\);\s*return;\s*\}/.test(ui), 'Tab must close and restore the trigger as the native focus-order starting point');
+assert(ui.includes("closest('[data-sub-operations-menu]')"), 'menu scroll must stay open');
+assert(page.includes('bindSubscriptionMoreMenus(document)'), 'subscription page must bind more menus');
 assert(page.includes('aria-modal="true"'), 'operation layers must be modal-accessible');
 console.log('subscription operation UI verification passed');
