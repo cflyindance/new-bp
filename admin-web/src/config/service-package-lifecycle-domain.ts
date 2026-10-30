@@ -1,6 +1,6 @@
 import {getMerchantById,getMerchantStores,getStoreById} from './enterprise-merchant-store';
 import type {ServicePackage,ServicePackageDraft,SubscriptionServiceSnapshot} from './subscription-service-domain';
-export const packageOnSale=(p:ServicePackage)=>p.status==='published'&&p.saleStatus!=='off';
+export { packageOnSale } from './service-package-availability';
 export function canDeletePackage(s:SubscriptionServiceSnapshot,id:string){return s.packages.some(p=>p.id===id&&p.status==='unpublished'&&!p.activeReleaseId)&&!s.releases.some(r=>r.packageId===id)&&!s.subscriptions.some(g=>g.packageId===id);}
 export function packageChangeToken(s:SubscriptionServiceSnapshot,id:string){return JSON.stringify([s.packages.find(p=>p.id===id),s.drafts.find(d=>d.packageId===id),s.subscriptions.filter(g=>g.packageId===id),s.releases.filter(r=>r.packageId===id)]);}
 /** Existing contracts freeze commercial dimensions, not standard price or trial policy. */

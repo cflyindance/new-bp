@@ -20,6 +20,7 @@ export function entitlementAuditPresentation(a:SubscriptionAuditEntry):{service:
  if(a.action==='entitlement.extend'){
   const old=c.previousEndRecorded?date(c.previousEndAt,'长期'):'未记录';
   summary=`到期时间：${old} → ${date(c.endAt,'长期')}`;fields.push(['原到期时间',old],['新到期时间',date(c.endAt,'长期')]);
+  if(c.reason){summary+=`；延长原因：${c.reason}`;fields.push(['延长原因',c.reason]);}
  }
  if(a.action==='entitlement.disable'){summary=`权益已停用${c.reason?`；原因：${c.reason}`:''}`;fields.push(['停用原因',c.reason||'未记录']);}
  if(c.priceMinor!==undefined&&typeof c.priceMinor==='number'&&Number.isSafeInteger(c.priceMinor)&&c.priceMinor>=0){let amount=(c.priceMinor/100).toFixed(2);try{amount=new Intl.NumberFormat('zh-CN',{style:'currency',currency:c.currency!}).format(c.priceMinor/100);}catch{amount+='（币种未记录）';}fields.push(['成交金额',amount]);}

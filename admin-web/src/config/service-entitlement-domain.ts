@@ -1,4 +1,4 @@
-import {packageOnSale} from './service-package-lifecycle-domain';
+import {packageOnSale} from './service-package-availability';
 import type { EffectiveSubscriptionContext, MerchantSubscription, ServiceCommercialPolicy, ServicePackage, SubscriptionServiceSnapshot } from './subscription-service-domain';
 
 export function validateCommercialPolicy(policy: ServiceCommercialPolicy | undefined, price: number): void {

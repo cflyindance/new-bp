@@ -13,6 +13,7 @@ import { currentServiceAccess } from './service-entitlement-runtime';
 import { resolveCurrentSubscriptionContext } from './subscription-service-runtime';
 import { canManageServiceEntitlements, changeServiceEntitlement, recordServiceEntitlement } from './service-entitlement-store';
 import {renderEntitlementOverview,bindEntitlementOverview} from './service-entitlement-overview';
+import { entitlementDisableImpact } from './service-entitlement-impact';
 
 
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -41,7 +42,7 @@ function openDialog(title:string,body:string,action:string,submit:(data:FormData
   d.querySelector('form')!.onsubmit=e=>{e.preventDefault();try{submit(new FormData(e.currentTarget as HTMLFormElement));close();onSaved();showAppToast('服务权益已更新',{variant:'success'});}catch(err){d.querySelector('[data-ent-error]')!.textContent=(err as Error).message;}};
   document.body.append(d);d.showModal();window.addEventListener('hashchange',close);return d;
 }
-export function openServiceEntitlement(brandId:string,packageId:string,kind:ServiceEntitlementKind,source:'m-platform'|'merchant',onSaved:()=>void):void {
+export function openServiceEntitlement(brandId:string,packageId:string,kind:ServiceEntitlementKind,source:'m-platform'|'merchant',onSaved:()=>void,preset?:MerchantSubscription):void {
   const pkg=readSubscriptionServiceSnapshot().packages.find(p=>p.id===packageId);
   if(!pkg?.commercial)return;
   const stores=getMerchantStores(brandId),now=Date.now();
@@ -51,7 +52,33 @@ export function openServiceEntitlement(brandId:string,packageId:string,kind:Serv
     const raw=String(data.get('endAt')??'');
     recordServiceEntitlement({brandId,packageId,kind,scopeMode:String(data.get('scopeMode')) as 'all'|'selected',storeIds:data.getAll('storeIds').map(String),priceMinor:Math.round(Number(data.get('price'))*100),endAt:raw?new Date(raw).toISOString():undefined,reference:String(data.get('reference')??'')},source);
   },onSaved);
+  if (preset) {
+    const scope = d.querySelector<HTMLSelectElement>('[name=scopeMode]')!;
+    scope.value = preset.scopeMode ?? 'all';
+    d.querySelector<HTMLElement>('[data-scope-stores]')!.hidden = scope.value !== 'selected';
+    d.querySelectorAll<HTMLInputElement>('[name=storeIds]').forEach(input => { input.checked = !!preset.storeIds?.includes(input.value); });
+    const notice = document.createElement('p'); notice.className = 'ba-note';
+    notice.textContent = '确认后从办理时新建权益记录，保留原记录及到期空档。请核对适用门店、成交价和开通依据。';
+    d.querySelector('.ba-dialog-body')!.prepend(notice);
+  }
   d.querySelector('select')!.onchange=e=>{d.querySelector<HTMLElement>('[data-scope-stores]')!.hidden=(e.target as HTMLSelectElement).value!=='selected';};
+}
+
+export function openServiceEntitlementChange(id:string,operation:'extend'|'disable',onSaved:()=>void):void {
+  const snapshot=readSubscriptionServiceSnapshot(),grant=snapshot.subscriptions.find(g=>g.id===id);
+  if(!grant?.entitlementKind || !canManageServiceEntitlements(operation))return;
+  const stores=getMerchantStores(grant.subjectId).map(s=>s.storeId),previewAt=Date.now();
+  const token=JSON.stringify({snapshot,stores}),impact=entitlementDisableImpact(snapshot,id,stores,previewAt);
+  const gift=grant.entitlementKind==='gift',extend=operation==='extend';
+  const title=extend?(gift?'延长赠送':'续期服务权益'):'停用服务权益';
+  const body=extend?`<p class="ba-note">仅延长当前记录的期限，保留成交价及开通依据；价格或合同变化时请办理新开通。</p><label class="ba-field">新的到期时间<input type="datetime-local" name="value" required></label>${gift?'<label class="ba-field">延长赠送原因<textarea name="reason" required maxlength="200"></textarea></label>':''}`:`<p class="ba-note">直接主体：${esc(getMerchantById(grant.subjectId)?.name??grant.subjectId)}<br>适用门店：${impact.stores} 家 · 服务菜单：${impact.provided}<br>实际失去：${impact.lost} · 其他订阅保留：${impact.retained}<br>确认后立即停止本条权益，历史记录保留。菜单数按主体与门店上下文分别计数。</p><label class="ba-field">停用原因<textarea name="value" required maxlength="200"></textarea></label>`;
+  openDialog(title,body,extend?(gift?'确认延长赠送':'确认续期'):'确认停用',data=>{
+    const latest=readSubscriptionServiceSnapshot(),currentStores=getMerchantStores(grant.subjectId).map(s=>s.storeId);
+    const boundaries=snapshot.subscriptions.flatMap(g=>[g.startAt,g.endAt]).filter((s):s is string=>!!s).map(Date.parse);
+    if(Date.now()-previewAt>=300000||boundaries.some(t=>previewAt<t&&t<=Date.now())||JSON.stringify({snapshot:latest,stores:currentStores})!==token)throw Error('权益或状态已变化，请关闭弹框后重新查看影响。');
+    const raw=String(data.get('value')??'');
+    changeServiceEntitlement(id,operation,extend?new Date(raw).toISOString():raw,String(data.get('reason')??''));
+  },onSaved);
 }
 
 export function bindBrandServiceEntitlements(onMount:()=>void):void {
@@ -63,8 +90,7 @@ export function bindBrandServiceEntitlements(onMount:()=>void):void {
   root.querySelectorAll<HTMLButtonElement>('[data-ent-new]').forEach(b=>b.onclick=()=>openServiceEntitlement(root.dataset.brandEntitlements!,b.dataset.pkg!,b.dataset.entNew as ServiceEntitlementKind,'m-platform',onMount));
   root.querySelectorAll<HTMLButtonElement>('[data-ent-extend],[data-ent-disable]').forEach(b=>b.onclick=()=>{
     const extend=!!b.dataset.entExtend,id=b.dataset.entExtend??b.dataset.entDisable!;
-    const body=extend?'<label class="ba-field">新的到期时间<input type="datetime-local" name="value" required></label>':'<label class="ba-field">停用原因<textarea name="value" required maxlength="200"></textarea></label>';
-    openDialog(extend?'续期服务权益':'停用服务权益',body,extend?'确认续期':'确认停用',data=>changeServiceEntitlement(id,extend?'extend':'disable',extend?new Date(String(data.get('value'))).toISOString():String(data.get('value'))),onMount);
+    openServiceEntitlementChange(id,extend?'extend':'disable',onMount);
   });
 }
 
