@@ -11,7 +11,7 @@ import {parseSubscriptionBrandRightsPath} from './subscription-service-scope';
 import { getMerchantById, getMerchantStores, getMerchants, getStoreById } from "./enterprise-merchant-store";
 import { resolveEffectiveRouteSources, subscriptionStatusLabel, type BillingInterval, type SubscriptionSubjectType } from "./subscription-service-domain";
 import { buildSubscriptionImpactPreview, subscriptionOperationPolicy, type SubscriptionImpactPreview } from "./subscription-operations-domain";
-import { renderImpactCards, renderPackageStateBadge, renderSubscriptionRowOperations } from "./subscription-operations-ui";
+import { bindSubscriptionMoreMenus, renderImpactCards, renderPackageStateBadge, renderSubscriptionRowOperations } from "./subscription-operations-ui";
 import { SUBSCRIPTION_SERVICE_CREATE_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX, isMerchantSubscriptionsPath, isSubscriptionServiceCreatePath, isSubscriptionServicePath } from "./subscription-service-scope";
 import { bindSubscriptionServiceCreateWizard, consumeSubscriptionWizardFeedback, renderSubscriptionServiceCreateWizard } from "./subscription-service-create-wizard-ui";
 import { ensurePublishedSubscriptionMenuTree, getPublishedSubscriptionMenuTree } from "./subscription-published-menu-tree";
@@ -318,7 +318,9 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
       modalState = null; createSubscriptionDraft = null; createSubscriptionSubmitting = false; restoreSubscriptionModalBackground(); refresh(onMount, "服务已开通，菜单能力立即按层级继承"); queueMicrotask(() => document.querySelector<HTMLButtonElement>("[data-sub-open-create]")?.focus());
     } catch (error) { createSubscriptionSubmitting = false; createSubscriptionError = error instanceof Error ? error.message : "开通失败"; refresh(onMount); }
   });
+  bindSubscriptionMoreMenus(document);
   document.querySelectorAll<HTMLButtonElement>("[data-sub-operation]").forEach((button) => button.addEventListener("click", () => {
+    if(button.getAttribute("aria-disabled")==="true")return;
     const subscriptionId=button.dataset.subscriptionId!,operation=button.dataset.subOperation!;
     activeImpactPreview=null;operationReason="";
     const snapshot=readSubscriptionServiceSnapshot(),subscription=snapshot.subscriptions.find(item=>item.id===subscriptionId);
