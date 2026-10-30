@@ -1,3 +1,6 @@
+import {currentMAccess} from '../permissions/m-platform-store';
+import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
+import {packageOnSale,canDeletePackage,packageChangeToken,validatePackageTerms} from './service-package-lifecycle-domain';
 import {seedBasicMenuDemo} from './subscription-basic-menu-demo';
 import {seedGrowthMenuDemo} from './subscription-growth-menu-demo';
 import { validateCommercialPolicy } from './service-entitlement-domain';
@@ -244,8 +247,10 @@ export function getOrCreatePackageDraft(packageId: string): ServicePackageDraft 
 }
 
 export function savePackageDraft(input: ServicePackageDraft): ServicePackageDraft {
+  requirePackageWrite();
   validateCommercialPolicy(input.commercial, input.priceMinor);
   const snapshot = readSubscriptionServiceSnapshot();
+  validatePackageTerms(snapshot,input.packageId,input);
   const current = snapshot.drafts.find((item) => item.packageId === input.packageId);
   if (current && current.revision !== input.revision) throw new Error("草稿已被其他操作更新，请重新打开后再保存");
   if (!input.name.trim()) throw new Error("服务包名称不能为空");
@@ -262,10 +267,12 @@ export function savePackageDraft(input: ServicePackageDraft): ServicePackageDraf
 }
 
 export function publishServicePackage(packageId: string, expectedRevision: number): ServicePackageRelease {
+  requirePackageWrite("publish");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === packageId);
   const draft = snapshot.drafts.find((item) => item.packageId === packageId);
   if (!pkg || !draft) throw new Error("服务包或草稿不存在");
+  validatePackageTerms(snapshot,packageId,draft);
   validateCommercialPolicy(draft.commercial, draft.priceMinor);
   if (pkg.commercial && !draft.commercial) throw Error("已启用的权益控制不能通过清除草稿取消。");
   if (draft.revision !== expectedRevision) throw new Error("草稿版本已变化，请重新确认发布");
@@ -277,7 +284,7 @@ export function publishServicePackage(packageId: string, expectedRevision: numbe
   const release: ServicePackageRelease = { id: id("rel"), packageId, version, routeBlueprintVersion: snapshot.routeBlueprintVersion, name: draft.name, description: draft.description, priceMinor: draft.priceMinor, currency: draft.currency, billingInterval: draft.billingInterval, commercial: draft.commercial, routeNodeIds: [...draft.routeNodeIds], publishedAt: nowIso(), publishedBy: DEMO_OPERATOR };
   snapshot.releases.push(release);
   protectCommercialRoutes(snapshot, pkg.id, release.routeNodeIds, release.commercial);
-  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, status: "published", activeReleaseId: release.id, updatedAt: nowIso() });
+  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, status: pkg.status==='disabled'?'disabled':'published', activeReleaseId: release.id, updatedAt: nowIso() });
   Object.assign(draft, { baseReleaseId: release.id, revision: draft.revision + 1, updatedAt: nowIso() });
   appendAudit(snapshot, "package.publish", "package", packageId, `发布「${pkg.name}」v${version}，包含 ${release.routeNodeIds.length} 个菜单`);
   writeSubscriptionServiceSnapshot(snapshot);
@@ -285,12 +292,14 @@ export function publishServicePackage(packageId: string, expectedRevision: numbe
 }
 
 export function rollbackServicePackage(packageId: string, releaseId: string): void {
+  requirePackageWrite("rollback");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === packageId);
   const release = snapshot.releases.find((item) => item.id === releaseId && item.packageId === packageId);
   if (!pkg || !release) throw new Error("历史版本不存在");
+  validatePackageTerms(snapshot,packageId,{...release,commercial:release.commercial??pkg.commercial});
   validateCommercialPolicy(release.commercial??pkg.commercial,release.priceMinor);
-  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, activeReleaseId: release.id, status: "published", updatedAt: nowIso() });
+  Object.assign(pkg, { name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, activeReleaseId: release.id, status: pkg.status==='disabled'?'disabled':'published', updatedAt: nowIso() });
   snapshot.drafts = snapshot.drafts.filter((item) => item.packageId !== packageId);
   snapshot.drafts.push({ packageId, baseReleaseId: release.id, routeBlueprintVersion: snapshot.routeBlueprintVersion, revision: 1, name: release.name, description: release.description, priceMinor: release.priceMinor, currency: release.currency, billingInterval: release.billingInterval, commercial: release.commercial ?? pkg.commercial, routeNodeIds: [...release.routeNodeIds], updatedAt: nowIso() });
   protectCommercialRoutes(snapshot, pkg.id, release.routeNodeIds, pkg.commercial);
@@ -298,21 +307,38 @@ export function rollbackServicePackage(packageId: string, releaseId: string): vo
   writeSubscriptionServiceSnapshot(snapshot);
 }
 
-export function disableServicePackage(packageId: string): void {
-  const snapshot = readSubscriptionServiceSnapshot();
-  const pkg = snapshot.packages.find((item) => item.id === packageId);
-  if (!pkg) return;
-  pkg.status = "disabled";
-  pkg.updatedAt = nowIso();
-  appendAudit(snapshot, "package.disable", "package", packageId, `停用服务包「${pkg.name}」`);
-  writeSubscriptionServiceSnapshot(snapshot);
+function requirePackageWrite(action?:string){if(currentMAccess(mPageKey('services'))!=='edit'||action&&currentMAccess(mActionKey('services',action))!=='edit')throw Error('暂无服务包操作权限。');}
+export function changePackageLifecycle(packageId:string,operation:'off'|'on'|'disable'|'restore'|'delete',reason='',expected?:string):void{
+ if(!['off','on','disable','restore','delete'].includes(operation))throw Error('服务包操作无效。');
+ requirePackageWrite(operation==='off'||operation==='on'?'shelf':operation);
+ const snapshot=readSubscriptionServiceSnapshot(),pkg=snapshot.packages.find(p=>p.id===packageId);if(!pkg)throw Error('服务包不存在。');
+ if(expected!==undefined&&expected!==packageChangeToken(snapshot,packageId))throw Error('服务包或订阅已变化，请关闭后重新预览影响。');
+ if(operation==='delete'){
+  if(!canDeletePackage(snapshot,packageId))throw Error('仅从未发布且没有任何订阅记录的草稿可以删除。');
+  snapshot.packages=snapshot.packages.filter(p=>p.id!==packageId);snapshot.drafts=snapshot.drafts.filter(d=>d.packageId!==packageId);
+ }else if(operation==='disable'){
+  if(pkg.status!=='published'||!pkg.activeReleaseId)throw Error('仅已发布且运行中的服务包可以停用。');
+  if(!reason.trim())throw Error('请填写停用原因。');if(reason.trim().length>200)throw Error('停用原因不能超过200字。');
+  pkg.status='disabled';pkg.saleStatus='off';pkg.disabledReason=reason.trim();
+ }else if(operation==='restore'){
+  if(pkg.status!=='disabled'||!pkg.activeReleaseId)throw Error('仅已停用且有发布版本的服务包可以恢复。');
+  pkg.status='published';pkg.saleStatus='off';
+ }else{
+  if(pkg.status!=='published'||!pkg.activeReleaseId)throw Error('仅运行中的已发布服务包可以上下架。');
+  if(operation==='off'&&!packageOnSale(pkg)||operation==='on'&&packageOnSale(pkg))throw Error('上架状态已变化，请刷新列表。');
+  pkg.saleStatus=operation;
+ }
+ pkg.updatedAt=nowIso();
+ const verb={off:'下架',on:'重新上架',disable:'停用服务',restore:'恢复服务',delete:'删除草稿'}[operation];
+ appendAudit(snapshot,'package.'+operation,'package',packageId,`${verb}「${pkg.name}」${reason.trim()?'：'+reason.trim():''}`);writeSubscriptionServiceSnapshot(snapshot);
 }
+export function disableServicePackage(packageId:string,reason:string=''):void{changePackageLifecycle(packageId,'disable',reason);}
 
 export function createMerchantSubscription(input: { subjectType: SubscriptionSubjectType; subjectId: string; packageId: string; startAt: string; endAt?: string; note?: string }): MerchantSubscription {
   if (input.subjectType !== "brand" && input.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === input.packageId);
-  if (!pkg || pkg.status !== "published") throw new Error("只能开通已发布的服务包");
+  if (!pkg || !packageOnSale(pkg)) throw new Error("只能开通已发布且上架运行中的服务包");
   if (pkg.commercial) throw Error("该服务已启用权益控制，请从品牌详情的服务权益页开通并记录价格、依据和门店范围。");
   if (!input.subjectId) throw new Error("请选择开通主体");
   if (!Number.isFinite(new Date(input.startAt).getTime())) throw new Error("生效时间无效");
@@ -330,6 +356,7 @@ export function extendMerchantSubscription(subscriptionId: string, endAt?: strin
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
   if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   if (!subscription || subscription.disabledAt) throw new Error("订阅不存在或已停用");
+  const pkg=snapshot.packages.find(p=>p.id===subscription.packageId);if(!pkg||!packageOnSale(pkg))throw Error('服务包已下架或停用，不能续期。');
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理续期，试用不能通过续期重复获取。");
   if (endAt && new Date(endAt).getTime() <= new Date(subscription.startAt).getTime()) throw new Error("到期时间必须晚于生效时间");
   const candidate = { ...subscription, endAt: endAt || undefined };

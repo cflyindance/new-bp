@@ -1,3 +1,4 @@
+import {packageOnSale} from './service-package-lifecycle-domain';
 import type { EffectiveSubscriptionContext, MerchantSubscription, ServiceCommercialPolicy, ServicePackage, SubscriptionServiceSnapshot } from './subscription-service-domain';
 
 export function validateCommercialPolicy(policy: ServiceCommercialPolicy | undefined, price: number): void {
@@ -35,7 +36,7 @@ export function serviceAccess(snapshot: SubscriptionServiceSnapshot, pkg: Servic
   const relevant = grants.filter(s => entitlementApplies(s, context));
   const valid = relevant.filter(s => grantActive(s, now));
   const usedTrial = grants.some(s => s.subjectType === 'brand' && s.subjectId === context.brandId && s.entitlementKind === 'trial');
-  const base = {package: pkg, usable: false, canTrial: !!context.brandId && !!pkg.commercial?.trialEnabled && !usedTrial && pkg.status === 'published'};
+  const base = {package: pkg, usable: false, canTrial: !!context.brandId && !!pkg.commercial?.trialEnabled && !usedTrial && packageOnSale(pkg)};
   if (pkg.status !== 'published' || !pkg.activeReleaseId) return {...base, canTrial: false, label: '服务已停用'};
   const grant = valid.find(s => s.entitlementKind === 'paid' || s.entitlementKind == null) ?? valid.find(s => s.entitlementKind !== 'trial') ?? valid[0];
   if (grant) return {...base, usable: true, canTrial: false, grant, label: grant.entitlementKind === 'trial' ? '试用中' : grant.entitlementKind === 'free' ? '免费生效' : grant.entitlementKind === 'gift' ? '赠送生效' : '正式生效'};
