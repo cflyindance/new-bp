@@ -32,7 +32,7 @@ export function renderBrandServiceEntitlements(brandId:string,options:{readOnly?
 let activeDialog:HTMLDialogElement|null=null;
 function openDialog(title:string,body:string,action:string,submit:(data:FormData)=>void,onSaved:()=>void):HTMLDialogElement {
   activeDialog?.close();activeDialog?.remove();
-  const d=document.createElement('dialog');activeDialog=d;d.className='ba ba-modal ba-admin-dialog';d.setAttribute('aria-label',title);d.setAttribute('data-service-gate','');
+  const d=document.createElement('dialog');activeDialog=d;d.className='ba ba-modal ba-admin-dialog';d.setAttribute('aria-label',title);d.setAttribute('data-service-gate','');if(document.querySelector('[data-rights-drawer][open]'))d.dataset.rightsDrawerChild='';
   d.innerHTML=`<form><header class="ba-dialog-header"><h2>${esc(title)}</h2>${btn('×','data-ent-close aria-label="关闭"')}</header><section class="ba-dialog-body">${body}<p class="ba-error" role="alert" data-ent-error></p></section><footer class="ba-footer"><span class="ba-muted">取消不写入</span><div class="ba-actions">${btn('取消','data-ent-close')}<button type="submit" class="ba-btn ba-primary">${esc(action)}</button></div></footer></form>`;
   const close=()=>{if(d.open)d.close();d.remove();window.removeEventListener('hashchange',close);if(activeDialog===d)activeDialog=null;};
   d.querySelectorAll('[data-ent-close]').forEach(b=>b.addEventListener('click',close));

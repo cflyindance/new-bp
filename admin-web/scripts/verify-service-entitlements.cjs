@@ -60,7 +60,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await p.getByRole('button',{name:'确认正式开通',exact:true}).click();
   const paid=await p.evaluate(async id=>(await import('/src/config/subscription-service-store.ts')).readSubscriptionServiceSnapshot().subscriptions.find(s=>s.packageId===id&&s.entitlementKind==='paid'),pkg.id);assert.equal(paid.agreedPriceMinor,19900);assert.deepEqual(paid.storeIds,['M00000001']);
   await shot('brand-paid');
-  const rightsGroup=p.locator(`[data-rights-service="${pkg.id}"]`);if(await rightsGroup.locator('[data-rights-expand]').getAttribute('aria-expanded')==='false')await rightsGroup.locator('[data-rights-expand]').click();
+  const rightsGroup=p.locator(`[data-rights-service="${pkg.id}"]`);await rightsGroup.locator('[data-rights-expand]').click();
   await p.locator(`[data-ent-extend="${paid.id}"]`).click();await shot('renew-confirm');await p.getByRole('button',{name:'取消',exact:true}).click();
   await p.locator(`[data-ent-disable="${paid.id}"]`).click();await shot('disable-confirm');await p.getByRole('button',{name:'取消',exact:true}).click();
   const invalid=await p.evaluate(async id=>{const s=await import('/src/config/service-entitlement-store.ts');try{s.recordServiceEntitlement({brandId:'merchant-zhangji',packageId:id,kind:'gift',scopeMode:'selected',storeIds:['M00000003'],reference:'invalid',endAt:new Date(Date.now()+86400000).toISOString()},'m-platform');return false}catch{return true}},pkg.id);assert(invalid);
