@@ -11,7 +11,7 @@ export const subscriptionBrand=(s:MerchantSubscription)=>s.subjectType==='brand'
 export function subscriptionRemaining(s:MerchantSubscription,p:ServicePackage|undefined,now=Date.now()):string {
  if(!Number.isFinite(Date.parse(s.startAt))||(s.endAt&&!Number.isFinite(Date.parse(s.endAt))))return '—';
  const status=subscriptionStatusLabel(s,p?.status,new Date(now));
- if(status==='已停用'||status==='服务包已停用'||status==='待生效')return status;
+ if(status==='已作废'||status==='已停用'||status==='待生效')return status;
  if(!s.endAt)return '长期';
  const diff=Date.parse(s.endAt)-now;
  if(!Number.isFinite(diff))return '—';
@@ -37,7 +37,7 @@ export function renderListFilters(kind:'packages'|'subscriptions',list:ServicePa
  const formClass='mb-5 rounded-xl border border-border bg-card p-4';
  if(kind==='packages')return `<form data-service-list-filter="packages" class="${formClass}"><div class="grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,2fr)_1fr_1fr_1fr_1fr_auto]">${input(f,'服务包名称')}${select(f,'status','发布状态',[['unpublished','未发布'],['published','已发布']])}${select(f,'sale','服务状态',[['on','已上架'],['off','已下架'],['disabled','已停用']])}${select(f,'charge','收费类型',[['free','免费'],['paid','收费']])}${select(f,'trial','是否支持试用',[['yes','支持试用'],['no','不支持试用']])}${buttons}</div></form>`;
  const brands=getMerchants({allEnterprises:true}).map(b=>[b.merchantId,b.name] as [string,string]);
- return `<form data-service-list-filter="subscriptions" class="${formClass}"><div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">${select(f,'brand','所属品牌',brands)}${select(f,'type','主体类型',[['brand','品牌'],['store','门店']])}${select(f,'package','服务包',list.map(p=>[p.id,p.name]))}${select(f,'status','订阅状态',['待生效','生效中','已到期','已停用','服务包已停用'].map(t=>[t,t]))}</div><div class="mt-3 grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_minmax(260px,2fr)_auto]">${select(f,'method','开通方式',['标准订阅','免费开通','试用','付费开通','赠送'].map(t=>[t,t]))}${select(f,'expiry','到期范围',[['7','未来7天'],['30','未来30天'],['expired','已到期'],['long','长期有效']])}${input(f,'品牌名称 / 门店名称 / BID / MID')}${buttons}</div></form>`;
+ return `<form data-service-list-filter="subscriptions" class="${formClass}"><div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">${select(f,'brand','所属品牌',brands)}${select(f,'type','主体类型',[['brand','品牌'],['store','门店']])}${select(f,'package','服务包',list.map(p=>[p.id,p.name]))}${select(f,'status','订阅状态',['待生效','生效中','已到期','已停用','已作废'].map(t=>[t,t]))}</div><div class="mt-3 grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_minmax(260px,2fr)_auto]">${select(f,'method','开通方式',['标准订阅','免费开通','试用','付费开通','赠送'].map(t=>[t,t]))}${select(f,'expiry','到期范围',[['7','未来7天'],['30','未来30天'],['expired','已到期'],['long','长期有效']])}${input(f,'品牌名称 / 门店名称 / BID / MID')}${buttons}</div></form>`;
 }
 export function bindListFilters(onMount:()=>void):void {
  const form=document.querySelector<HTMLFormElement>('[data-service-list-filter]');if(!form)return;

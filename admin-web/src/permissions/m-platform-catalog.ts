@@ -24,8 +24,13 @@ export const M_MODULES: MModule[] = [
     action('delete','删除服务包草稿','[data-package-action=delete],[data-package-confirm=delete]'),
   ]), page('subscriptions', '商家订阅', `${permissions}/merchant-subscriptions`, true, [
     action('create', '创建订阅', '[data-sub-create-subscription]'),
-    action('extend', '延长订阅', '[data-sub-extend],[data-sub-extend-form]'),
-    action('disable', '停用订阅', '[data-sub-disable],[data-sub-disable-form][data-kind="subscription"]'),
+    action('edit', '编辑待生效订阅', '[data-sub-operation=edit],[data-sub-edit-form]'),
+    action('activate', '立即生效', '[data-sub-operation=activate],[data-sub-risk-form][data-operation="activate-subscription"]'),
+    action('extend', '延长订阅', '[data-sub-operation=extend],[data-sub-extend-form]'),
+    action('adjust-end', '提前结束订阅', '[data-sub-operation="adjust-end"],[data-sub-adjust-form]'),
+    action('disable', '停用订阅', '[data-sub-operation=disable],[data-sub-risk-form][data-operation="disable-subscription"]'),
+    action('cancel', '撤销待生效订阅', '[data-sub-operation=cancel],[data-sub-risk-form][data-operation="cancel-subscription"]'),
+    action('audit', '查看订阅操作记录', '[data-sub-operation=audit]', false),
   ])] },
   { id: 'merchants', title: '商户管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),

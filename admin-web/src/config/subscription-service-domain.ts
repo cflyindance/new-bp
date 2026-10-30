@@ -72,6 +72,10 @@ export interface MerchantSubscription {
   disabledAt?: string;
   disabledBy?: string;
   disableReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  updatedAt?: string;
   createdAt: string;
   createdBy: string;
   note?: string;
@@ -163,19 +167,26 @@ export function isSubscriptionActive(subscription: MerchantSubscription, now = n
   const at = now.getTime();
   const start = new Date(subscription.startAt).getTime();
   const end = subscription.endAt ? new Date(subscription.endAt).getTime() : Number.POSITIVE_INFINITY;
-  return !subscription.disabledAt && Number.isFinite(start) && start <= at && at < end;
+  return !subscription.cancelledAt && !subscription.disabledAt && Number.isFinite(start) && start <= at && at < end;
+}
+
+export type SubscriptionLifecycle = "已作废" | "已停用" | "待生效" | "已到期" | "生效中";
+
+export function subscriptionLifecycle(subscription: MerchantSubscription, now = new Date()): SubscriptionLifecycle {
+  if (subscription.cancelledAt) return "已作废";
+  if (subscription.disabledAt) return "已停用";
+  if (new Date(subscription.startAt).getTime() > now.getTime()) return "待生效";
+  if (subscription.endAt && new Date(subscription.endAt).getTime() <= now.getTime()) return "已到期";
+  return "生效中";
 }
 
 export function subscriptionStatusLabel(
   subscription: MerchantSubscription,
   packageStatus: ServicePackageStatus | undefined,
   now = new Date(),
-): "待生效" | "生效中" | "已到期" | "已停用" | "服务包已停用" {
-  if (subscription.disabledAt) return "已停用";
-  if (packageStatus !== "published") return "服务包已停用";
-  if (new Date(subscription.startAt).getTime() > now.getTime()) return "待生效";
-  if (subscription.endAt && new Date(subscription.endAt).getTime() <= now.getTime()) return "已到期";
-  return "生效中";
+): SubscriptionLifecycle {
+  void packageStatus;
+  return subscriptionLifecycle(subscription, now);
 }
 
 export function resolveEffectiveRouteSources(
@@ -217,7 +228,7 @@ export function hasOverlappingSubscription(
   const start = new Date(candidate.startAt).getTime();
   const end = candidate.endAt ? new Date(candidate.endAt).getTime() : Number.POSITIVE_INFINITY;
   return subscriptions.some((item) => {
-    if (item.id === ignoreId || item.disabledAt) return false;
+    if (item.id === ignoreId || item.disabledAt || item.cancelledAt) return false;
     if (item.subjectType !== candidate.subjectType || item.subjectId !== candidate.subjectId || item.packageId !== candidate.packageId) return false;
     const itemStart = new Date(item.startAt).getTime();
     const itemEnd = item.endAt ? new Date(item.endAt).getTime() : Number.POSITIVE_INFINITY;

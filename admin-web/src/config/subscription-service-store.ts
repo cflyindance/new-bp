@@ -10,6 +10,7 @@ import {
   getSubscriptionRouteCatalog,
   hasOverlappingSubscription,
   resolveEffectiveRouteSources,
+  subscriptionLifecycle,
   type BillingInterval,
   type EffectiveSubscriptionContext,
   type MerchantSubscription,
@@ -19,6 +20,7 @@ import {
   type SubscriptionServiceSnapshot,
   type SubscriptionSubjectType,
 } from "./subscription-service-domain";
+import { assertSubscriptionImpactPreview, subscriptionOperationPolicy, type SubscriptionImpactPreview } from "./subscription-operations-domain";
 import { getPublishedSubscriptionMenuTree, getPublishedSubscriptionRouteCatalog } from "./subscription-published-menu-tree";
 
 const STORAGE_KEY = "menusifu:subscription-service-packages-v1";
@@ -334,7 +336,12 @@ export function changePackageLifecycle(packageId:string,operation:'off'|'on'|'di
 }
 export function disableServicePackage(packageId:string,reason:string=''):void{changePackageLifecycle(packageId,'disable',reason);}
 
+function requireSubscriptionWrite(action:string):void {
+  if(currentMAccess(mPageKey('subscriptions'))!=='edit'||currentMAccess(mActionKey('subscriptions',action))!=='edit')throw Error('暂无商家订阅操作权限。');
+}
+
 export function createMerchantSubscription(input: { subjectType: SubscriptionSubjectType; subjectId: string; packageId: string; startAt: string; endAt?: string; note?: string }): MerchantSubscription {
+  requireSubscriptionWrite('create');
   if (input.subjectType !== "brand" && input.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === input.packageId);
@@ -352,30 +359,140 @@ export function createMerchantSubscription(input: { subjectType: SubscriptionSub
 }
 
 export function extendMerchantSubscription(subscriptionId: string, endAt?: string): void {
+  requireSubscriptionWrite('extend');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
   if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
-  if (!subscription || subscription.disabledAt) throw new Error("订阅不存在或已停用");
+  if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw new Error("仅生效中的订阅可以续期");
   const pkg=snapshot.packages.find(p=>p.id===subscription.packageId);if(!pkg||!packageOnSale(pkg))throw Error('服务包已下架或停用，不能续期。');
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理续期，试用不能通过续期重复获取。");
-  if (endAt && new Date(endAt).getTime() <= new Date(subscription.startAt).getTime()) throw new Error("到期时间必须晚于生效时间");
+  if (!endAt || !Number.isFinite(Date.parse(endAt))) throw new Error("请选择新的到期时间");
+  const now = Date.now(), next = Date.parse(endAt), previous = subscription.endAt ? Date.parse(subscription.endAt) : Number.NEGATIVE_INFINITY;
+  if (next <= now || next <= previous) throw new Error("续期后的到期时间必须晚于当前时间和原到期时间");
   const candidate = { ...subscription, endAt: endAt || undefined };
   if (hasOverlappingSubscription(snapshot.subscriptions, candidate, subscriptionId)) throw new Error("续期后将与另一条订阅重叠");
-  subscription.endAt = endAt || undefined;
-  appendAudit(snapshot, "subscription.extend", "subscription", subscriptionId, `续期至 ${endAt || "长期有效"}`);
+  subscription.endAt = endAt;
+  subscription.updatedAt = nowIso();
+  appendAudit(snapshot, "subscription.extend", "subscription", subscriptionId, `续期至 ${endAt}`);
   writeSubscriptionServiceSnapshot(snapshot);
 }
 
-export function disableMerchantSubscription(subscriptionId: string, reason: string): void {
+export function disableMerchantSubscription(subscriptionId: string, reason: string, preview: SubscriptionImpactPreview): void {
+  requireSubscriptionWrite('disable');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
   if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
-  if (!subscription || subscription.disabledAt) return;
+  if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw Error("仅生效中的订阅可以停用");
+  if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理停用。");
+  const normalizedReason = reason.trim();
+  if (!normalizedReason || normalizedReason.length > 200) throw Error("停用原因需填写 1 至 200 字。");
+  assertSubscriptionImpactPreview(snapshot, preview);
   subscription.disabledAt = nowIso();
   subscription.disabledBy = DEMO_OPERATOR;
-  subscription.disableReason = reason.trim() || "运营人员手动停用";
+  subscription.disableReason = normalizedReason;
+  subscription.updatedAt = subscription.disabledAt;
   appendAudit(snapshot, "subscription.disable", "subscription", subscriptionId, subscription.disableReason);
   writeSubscriptionServiceSnapshot(snapshot);
+}
+
+export interface UpdateScheduledMerchantSubscriptionInput {
+  id: string;
+  subjectType: SubscriptionSubjectType;
+  subjectId: string;
+  packageId: string;
+  startAt: string;
+  endAt?: string;
+  note?: string;
+  agreedPriceMinor?: number;
+  agreedCurrency?: string;
+  agreedBillingInterval?: BillingInterval;
+}
+
+export function updateScheduledMerchantSubscription(input: UpdateScheduledMerchantSubscriptionInput): void {
+  requireSubscriptionWrite('edit');
+  const snapshot = readSubscriptionServiceSnapshot();
+  const subscription = snapshot.subscriptions.find((item) => item.id === input.id);
+  if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以编辑。");
+  if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
+  const policy = subscriptionOperationPolicy(snapshot, subscription);
+  const currentPackage = snapshot.packages.find((item) => item.id === subscription.packageId);
+  const nextPackage = snapshot.packages.find((item) => item.id === input.packageId);
+  if (!nextPackage) throw Error("服务包不存在。");
+  if (policy.limitedEdit) {
+    const locked = input.subjectType !== subscription.subjectType || input.subjectId !== subscription.subjectId || input.packageId !== subscription.packageId || input.startAt !== subscription.startAt || input.agreedPriceMinor !== subscription.agreedPriceMinor || input.agreedCurrency !== subscription.agreedCurrency || input.agreedBillingInterval !== subscription.agreedBillingInterval;
+    if (locked) throw Error("服务包已下架，只能修改到期时间和备注。");
+  } else if (!packageOnSale(nextPackage)) throw Error("请改选已发布且上架运行中的服务包。");
+  if (!input.subjectId) throw Error("请选择开通主体。");
+  if (!Number.isFinite(Date.parse(input.startAt)) || (input.endAt && Date.parse(input.endAt) <= Date.parse(input.startAt))) throw Error("到期时间必须晚于生效时间。");
+  if (hasOverlappingSubscription(snapshot.subscriptions, input, input.id)) throw Error("该主体已存在有效期重叠的相同服务包。");
+  Object.assign(subscription, { ...input, endAt: input.endAt || undefined, note: input.note?.trim(), updatedAt: nowIso() });
+  appendAudit(snapshot, "subscription.update_scheduled", "subscription", subscription.id, `编辑待生效订阅；服务包 ${currentPackage?.name ?? subscription.packageId} → ${nextPackage.name}`);
+  writeSubscriptionServiceSnapshot(snapshot);
+}
+
+export function activateMerchantSubscriptionNow(subscriptionId: string, preview: SubscriptionImpactPreview): void {
+  requireSubscriptionWrite('activate');
+  const snapshot = readSubscriptionServiceSnapshot();
+  const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以立即生效。");
+  if (!subscriptionOperationPolicy(snapshot, subscription).allowed.includes("activate")) throw Error("当前服务包不可立即生效。");
+  assertSubscriptionImpactPreview(snapshot, preview);
+  const startAt = nowIso();
+  const candidate = { ...subscription, startAt };
+  if (hasOverlappingSubscription(snapshot.subscriptions, candidate, subscriptionId)) throw Error("立即生效后将与另一条订阅重叠。");
+  subscription.startAt = startAt;
+  subscription.updatedAt = startAt;
+  appendAudit(snapshot, "subscription.activate_now", "subscription", subscriptionId, "立即生效");
+  writeSubscriptionServiceSnapshot(snapshot);
+}
+
+export function adjustMerchantSubscriptionEnd(subscriptionId: string, endAt: string, reason: string, preview: SubscriptionImpactPreview): void {
+  requireSubscriptionWrite('adjust-end');
+  const snapshot = readSubscriptionServiceSnapshot();
+  const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw Error("仅生效中的订阅可以调整到期时间。");
+  if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
+  const next = Date.parse(endAt), now = Date.now(), previous = subscription.endAt ? Date.parse(subscription.endAt) : undefined;
+  if (!Number.isFinite(next) || next <= now || (previous !== undefined && next >= previous)) throw Error("新的到期时间必须晚于当前时间且早于原到期时间。");
+  const normalizedReason = reason.trim();
+  if (!normalizedReason || normalizedReason.length > 200) throw Error("调整原因需填写 1 至 200 字。");
+  if (preview.proposedEndAt !== endAt) throw Error("订阅信息或状态已发生变化，请关闭弹窗后重新查看影响");
+  assertSubscriptionImpactPreview(snapshot, preview);
+  subscription.endAt = endAt;
+  subscription.updatedAt = nowIso();
+  appendAudit(snapshot, "subscription.adjust_end", "subscription", subscriptionId, `提前到期至 ${endAt}：${normalizedReason}`);
+  writeSubscriptionServiceSnapshot(snapshot);
+}
+
+export function cancelScheduledMerchantSubscription(subscriptionId: string, reason: string, preview: SubscriptionImpactPreview): void {
+  requireSubscriptionWrite('cancel');
+  const snapshot = readSubscriptionServiceSnapshot();
+  const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以撤销。");
+  if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
+  const normalizedReason = reason.trim();
+  if (!normalizedReason || normalizedReason.length > 200) throw Error("撤销原因需填写 1 至 200 字。");
+  assertSubscriptionImpactPreview(snapshot, preview);
+  subscription.cancelledAt = nowIso(); subscription.cancelledBy = DEMO_OPERATOR; subscription.cancelReason = normalizedReason; subscription.updatedAt = subscription.cancelledAt;
+  appendAudit(snapshot, "subscription.cancel", "subscription", subscriptionId, normalizedReason);
+  writeSubscriptionServiceSnapshot(snapshot);
+}
+
+export function createMerchantSubscriptionFromExisting(sourceId: string, input: Pick<UpdateScheduledMerchantSubscriptionInput, "startAt" | "endAt" | "note">): MerchantSubscription {
+  requireSubscriptionWrite('create');
+  const snapshot = readSubscriptionServiceSnapshot();
+  const source = snapshot.subscriptions.find((item) => item.id === sourceId);
+  if (!source || !["已到期", "已停用", "已作废"].includes(subscriptionLifecycle(source))) throw Error("仅历史订阅可以重新开通。");
+  if (source.subjectType !== "brand" && source.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
+  const created = createMerchantSubscription({ subjectType: source.subjectType, subjectId: source.subjectId, packageId: source.packageId, startAt: input.startAt, endAt: input.endAt, note: input.note ?? source.note });
+  const latest = readSubscriptionServiceSnapshot();
+  appendAudit(latest, "subscription.reopen", "subscription", created.id, `从 ${sourceId} 重新开通`);
+  writeSubscriptionServiceSnapshot(latest);
+  return created;
+}
+
+export function getSubscriptionAuditEntries(subscriptionId: string) {
+  return readSubscriptionServiceSnapshot().audit.filter((entry) => entry.objectType === "subscription" && entry.objectId === subscriptionId);
 }
 
 export function getEffectiveSubscriptionRoutes(context: EffectiveSubscriptionContext): Set<string> {
@@ -386,7 +503,7 @@ export function hasConfiguredSubscriptionForContext(context: EffectiveSubscripti
   const snapshot = readSubscriptionServiceSnapshot();
   const ids = new Set([context.brandId, context.storeId].filter((item): item is string => Boolean(item)));
   return snapshot.subscriptions.some(
-    (item) => (item.subjectType === "brand" || item.subjectType === "store") && ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-") && !snapshot.packages.find(p=>p.id===item.packageId)?.commercial,
+    (item) => (item.subjectType === "brand" || item.subjectType === "store") && ids.has(item.subjectId) && !item.disabledAt && !item.cancelledAt && !item.id.startsWith("sub-demo-") && !snapshot.packages.find(p=>p.id===item.packageId)?.commercial,
   );
 }
 
