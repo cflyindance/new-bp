@@ -59,7 +59,7 @@ function renderHeader(title: string, description: string, action = ""): string {
   return `<section class="flex min-h-0 flex-1 flex-col overflow-hidden" data-subscription-service-page>
     <div class="shrink-0 border-b border-border bg-card px-5 py-5 lg:px-7">
       <div class="flex flex-wrap items-start justify-between gap-4">
-        <div><p class="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">ENTITLEMENT CONTROL</p><h2 class="mt-1 text-2xl font-semibold tracking-tight text-card-foreground">${esc(title)}</h2>${description ? `<p class="mt-1 max-w-3xl text-sm text-muted-foreground">${esc(description)}</p>` : ""}</div>
+        <div><h2 class="text-2xl font-semibold tracking-tight text-card-foreground">${esc(title)}</h2>${description ? `<p class="mt-1 max-w-3xl text-sm text-muted-foreground">${esc(description)}</p>` : ""}</div>
         ${action ? `<div class="flex flex-wrap items-center gap-2">${action}</div>` : ""}
       </div>
       ${feedback ? `<div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" role="status">${esc(feedback)}</div>` : ""}
@@ -74,7 +74,7 @@ function renderPackageList(): string {
     const release = snapshot.releases.find((item) => item.id === pkg.activeReleaseId);
     const subscribers = packageSubscriptionSubjects(snapshot,pkg.id).length;
     return `<tr class="border-b border-border/70 last:border-0 hover:bg-muted/30">
-      <td class="px-5 py-4"><div class="font-semibold text-foreground">${esc(pkg.name)}</div><div class="mt-1 font-mono text-[11px] text-muted-foreground">${esc(pkg.code)}</div></td>
+      <td class="px-5 py-4"><div class="font-semibold text-foreground">${esc(pkg.name)}</div></td>
       <td class="px-4 py-4"><div class="font-semibold">${money(pkg.priceMinor, pkg.currency)}</div><div class="text-xs text-muted-foreground">/${intervalLabel(pkg.billingInterval)}</div></td>
       <td class="px-4 py-4 text-sm"><button type="button" data-ent-menu="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}菜单能力" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${release?.routeNodeIds.length ?? 0}</span> / ${catalogCount} 个菜单</button></td>
       <td class="px-4 py-4 text-sm"><button type="button" data-package-subjects-open="${esc(pkg.id)}" aria-haspopup="dialog" aria-label="${esc(pkg.name)}订阅主体" class="text-primary hover:underline focus-visible:outline focus-visible:outline-2"><span class="font-semibold">${subscribers}</span> 个主体</button></td>
