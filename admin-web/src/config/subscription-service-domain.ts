@@ -2,7 +2,9 @@ import { NAV_MODULES, type NavModule } from "./navigation";
 
 export type ServicePackageStatus = "unpublished" | "published" | "disabled";
 export type BillingInterval = "month" | "quarter" | "year" | "one-time";
-export type SubscriptionSubjectType = "group" | "brand" | "store";
+export type SubscriptionSubjectType = "brand" | "store";
+/** Historical storage only; group subscriptions are not usable or creatable. */
+export type StoredSubscriptionSubjectType = SubscriptionSubjectType | "group";
 
 export interface ServiceCommercialPolicy {
   chargeType: 'free' | 'paid';
@@ -60,7 +62,7 @@ export interface ServicePackageRelease {
 
 export interface MerchantSubscription {
   id: string;
-  subjectType: SubscriptionSubjectType;
+  subjectType: StoredSubscriptionSubjectType;
   subjectId: string;
   packageId: string;
   startAt: string;
@@ -164,10 +166,9 @@ export function resolveEffectiveRouteSources(
   now = new Date(),
 ): EffectiveRouteSource[] {
   const subjects = new Map<string, SubscriptionSubjectType>();
-  if (context.groupId) subjects.set(context.groupId, "group");
   if (context.brandId) subjects.set(context.brandId, "brand");
   if (context.storeId) subjects.set(context.storeId, "store");
-  const directSubjectId = context.storeId ?? context.brandId ?? context.groupId;
+  const directSubjectId = context.storeId ?? context.brandId;
   const results: EffectiveRouteSource[] = [];
   for (const subscription of snapshot.subscriptions) {
     const subjectType = subjects.get(subscription.subjectId);

@@ -1,6 +1,6 @@
 import { validateCommercialPolicy } from './service-entitlement-domain';
 import { seedServiceEntitlementDemo } from './service-entitlement-demo';
-import { getGroups, getMerchantStores, getMerchants } from "./enterprise-merchant-store";
+import { getMerchantStores, getMerchants } from "./enterprise-merchant-store";
 import {
   getSubscriptionRouteCatalog,
   hasOverlappingSubscription,
@@ -63,12 +63,11 @@ function seedSnapshot(): SubscriptionServiceSnapshot {
     { id: "rel-basic-1", packageId: packageBasic.id, version: 1, routeBlueprintVersion: 1, name: packageBasic.name, description: packageBasic.description, priceMinor: packageBasic.priceMinor, currency: packageBasic.currency, billingInterval: packageBasic.billingInterval, routeNodeIds: basicRoutes, publishedAt: now, publishedBy: DEMO_OPERATOR },
     { id: "rel-growth-1", packageId: packageGrowth.id, version: 1, routeBlueprintVersion: 1, name: packageGrowth.name, description: packageGrowth.description, priceMinor: packageGrowth.priceMinor, currency: packageGrowth.currency, billingInterval: packageGrowth.billingInterval, routeNodeIds: growthRoutes, publishedAt: now, publishedBy: DEMO_OPERATOR },
   ];
-  const groups = getGroups({ allEnterprises: true, status: "active" });
   const merchants = getMerchants({ allEnterprises: true }).filter((merchant) => merchant.status === "active");
   const firstMerchant = merchants[0];
   const firstStore = firstMerchant ? getMerchantStores(firstMerchant.merchantId)[0] : undefined;
   const subscriptions: MerchantSubscription[] = [];
-  if (groups[0]) subscriptions.push({ id: "sub-demo-group", subjectType: "group", subjectId: groups[0].groupId, packageId: packageBasic.id, startAt: now, createdAt: now, createdBy: DEMO_OPERATOR, note: "演示集团基础包" });
+  if (firstMerchant) subscriptions.push({ id: "sub-demo-brand-basic", subjectType: "brand", subjectId: firstMerchant.merchantId, packageId: packageBasic.id, startAt: now, createdAt: now, createdBy: DEMO_OPERATOR, note: "演示品牌基础包" });
   if (firstMerchant) subscriptions.push({ id: "sub-demo-brand", subjectType: "brand", subjectId: firstMerchant.merchantId, packageId: packageGrowth.id, startAt: now, createdAt: now, createdBy: DEMO_OPERATOR, note: "演示品牌增长包" });
   if (firstStore) subscriptions.push({ id: "sub-demo-store", subjectType: "store", subjectId: firstStore.storeId, packageId: packageGrowth.id, startAt: now, createdAt: now, createdBy: DEMO_OPERATOR, note: "演示门店增配" });
   return { schemaVersion: 1, routeBlueprintVersion: 1, packages: [packageBasic, packageGrowth], drafts: [], releases, subscriptions, audit: [] };
@@ -297,6 +296,7 @@ export function disableServicePackage(packageId: string): void {
 }
 
 export function createMerchantSubscription(input: { subjectType: SubscriptionSubjectType; subjectId: string; packageId: string; startAt: string; endAt?: string; note?: string }): MerchantSubscription {
+  if (input.subjectType !== "brand" && input.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === input.packageId);
   if (!pkg || pkg.status !== "published") throw new Error("只能开通已发布的服务包");
@@ -315,6 +315,7 @@ export function createMerchantSubscription(input: { subjectType: SubscriptionSub
 export function extendMerchantSubscription(subscriptionId: string, endAt?: string): void {
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   if (!subscription || subscription.disabledAt) throw new Error("订阅不存在或已停用");
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理续期，试用不能通过续期重复获取。");
   if (endAt && new Date(endAt).getTime() <= new Date(subscription.startAt).getTime()) throw new Error("到期时间必须晚于生效时间");
@@ -328,6 +329,7 @@ export function extendMerchantSubscription(subscriptionId: string, endAt?: strin
 export function disableMerchantSubscription(subscriptionId: string, reason: string): void {
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   if (!subscription || subscription.disabledAt) return;
   subscription.disabledAt = nowIso();
   subscription.disabledBy = DEMO_OPERATOR;
@@ -342,9 +344,9 @@ export function getEffectiveSubscriptionRoutes(context: EffectiveSubscriptionCon
 
 export function hasConfiguredSubscriptionForContext(context: EffectiveSubscriptionContext): boolean {
   const snapshot = readSubscriptionServiceSnapshot();
-  const ids = new Set([context.groupId, context.brandId, context.storeId].filter((item): item is string => Boolean(item)));
+  const ids = new Set([context.brandId, context.storeId].filter((item): item is string => Boolean(item)));
   return snapshot.subscriptions.some(
-    (item) => ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-") && !snapshot.packages.find(p=>p.id===item.packageId)?.commercial,
+    (item) => (item.subjectType === "brand" || item.subjectType === "store") && ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-") && !snapshot.packages.find(p=>p.id===item.packageId)?.commercial,
   );
 }
 
