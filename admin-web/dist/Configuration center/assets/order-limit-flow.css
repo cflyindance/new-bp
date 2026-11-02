@@ -177,8 +177,11 @@ button { color: inherit; }
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
-.olf-choice:hover { border-color: #91caff; }
+.olf-choice:not(:disabled):hover { border-color: #91caff; }
 .olf-choice.is-selected { border-color: var(--olf-primary); background: var(--olf-primary-soft); box-shadow: inset 0 0 0 1px var(--olf-primary); }
+.olf-choice.is-locked:disabled { cursor: default; }
+.olf-choice.is-locked:disabled:not(.is-selected) { opacity: .56; }
+.olf-choice.is-locked:disabled.is-selected { opacity: 1; }
 .olf-choice strong { display: block; padding-right: 22px; font-size: 15px; line-height: 23px; font-weight: 600; }
 .olf-choice span { display: block; margin-top: 6px; font-size: 13px; line-height: 20px; color: var(--olf-secondary); }
 .olf-choice-check { position: absolute; top: 14px; right: 14px; color: var(--olf-primary); opacity: 0; }
