@@ -1,3 +1,4 @@
+import {providerTargetAllowed} from '../auth/provider-access-runtime';
 import {lifecycleActions,lifecycleBadges,bindLifecycleActions} from './service-package-lifecycle-ui';
 import {packageOnSale} from './service-package-lifecycle-domain';
 import {openSubscriptionSubjectInfo} from './subscription-subject-info';
@@ -29,7 +30,7 @@ import {
   disableServicePackage,
   extendMerchantSubscription,
   getSubscriptionAuditEntries,
-  readSubscriptionServiceSnapshot,
+  readProviderSubscriptionView as readSubscriptionServiceSnapshot,
   updateScheduledMerchantSubscription,
 } from "./subscription-service-store";
 
@@ -118,7 +119,7 @@ function renderPackageList(): string {
 function renderPackageDetail(packageId:string):string {return renderServicePackageEditor(packageId)||renderHeader('服务包不存在','未找到服务包。');}
 
 function subjectOptions(type: SubscriptionSubjectType): Array<{ id: string; label: string }> {
-  if (type === "brand") return getMerchants({ allEnterprises: true }).filter((item) => item.status !== "closed").map((item) => ({ id: item.merchantId, label: `${item.name} · ${item.code}` }));
+  if (type === "brand") return getMerchants({ allEnterprises: true }).filter((item) => item.status !== "closed"&&providerTargetAllowed(item.merchantId)).map((item) => ({ id: item.merchantId, label: `${item.name} · ${item.code}` }));
   return getMerchants({ allEnterprises: true }).flatMap((merchant) => getMerchantStores(merchant.merchantId).map((store) => ({ id: store.storeId, label: `${store.name} · ${merchant.name}` })));
 }
 

@@ -6,7 +6,7 @@
 
 import { LEGACY_STORE_BID_TO_MID } from "../config/enterprise-merchant-bid";
 
-import { getEnterpriseMerchantSnapshot } from "../config/enterprise-merchant-store";
+import { getEnterpriseMerchantSnapshotForAuthorization } from "../config/enterprise-merchant-store";
 
 import type { EnterpriseMerchant, EnterpriseMerchantSnapshot, MerchantOrgStore } from "../config/enterprise-merchant-types";
 
@@ -186,7 +186,7 @@ export function listMPlatformStoreScopeEntries(): MPlatformStoreScopeEntry[] {
 
   if (!cachedEntries) {
 
-    cachedEntries = collectStoreEntriesFromSnapshot(getEnterpriseMerchantSnapshot());
+    cachedEntries = collectStoreEntriesFromSnapshot(getEnterpriseMerchantSnapshotForAuthorization());
 
   }
 

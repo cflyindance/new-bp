@@ -35,12 +35,12 @@ export const M_MODULES: MModule[] = [
   { id: 'merchants', title: '商户管理中心', pages: [
     page('merchant-overview', '总览', `${merchants}/overview`, false),
     page('brands', '品牌管理', merchants, true, [
-      action('impersonate', '进入商家后台', '[data-merchant-impersonate]'),
+      action('impersonate', '进入商家后台', '[data-merchant-impersonate],[data-merchant-lifecycle="impersonate"]', false),
       action('lifecycle', '变更品牌状态', '[data-merchant-lifecycle]'),
       action('sync', '同步 CRM', '[data-merchant-crm-sync]'),
       action('capability-sync', '同步品牌能力', '[data-merchant-capability-sync]'),
     ]),
-    page('stores', '门店管理', `${merchants}/stores`, true, [action('status', '变更门店状态', '[data-merchant-store-status]')]),
+    page('stores', '门店管理', `${merchants}/stores`, true, [action('impersonate','进入门店后台','[data-store-impersonate]',false), action('status', '变更门店状态', '[data-merchant-store-status]')]),
     page('org-tree', '组织树', `${merchants}/org-tree`, false),
     page('reports', '报表 / SLA', `${merchants}/reports`, false),
     page('merchant-log', '变更记录', `${merchants}/change-log`, false),
@@ -61,6 +61,7 @@ export const M_MODULES: MModule[] = [
   ])] },
   { id: 'permissions', title: '权限管理中心', pages: [
     page('permission-overview', '权限总览', `${permissions}/overview`, false),
+    page('provider-roles','商家后台访问角色',`${permissions}/provider-roles`,true,[action('manage','管理商户访问授权','[data-provider-new],[data-provider-info],[data-provider-copy],[data-provider-delete],[data-provider-add-binding],[data-provider-binding],[data-provider-remove],[data-provider-save]')]),
     page('roles', '角色与功能权限', `${permissions}/roles`, true, [
       action('create', '新建 / 复制角色', '[data-mp-do="new-role"],[data-mp-copy]'),
       action('edit', '编辑角色与权限', '[data-mp-edit],[data-mp-do="save-role"],[data-mp-do="save-grants"]'),
@@ -96,7 +97,7 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
     [`${merchants}/device-activity/`, 'device-activity'],
     [`${merchants}/activity/`, 'merchant-activity'],
     [`${permissions}/subscription-services/`, 'services'], [`${permissions}/merchant-subscriptions/`, 'subscriptions'],
-    [`${permissions}/roles/`, 'roles'], [`${permissions}/staff/`, 'staff'],
+    [`${permissions}/provider-roles/`, 'provider-roles'], [`${permissions}/roles/`, 'roles'], [`${permissions}/staff/`, 'staff'],
     [`${merchants}/stores/`, 'stores'],
     ['/m-platform/hardware/devices/', 'devices'], ['/m-platform/nav-blueprint/', 'routing'],
     ['/m-platform/platform-preset/', 'presets'],

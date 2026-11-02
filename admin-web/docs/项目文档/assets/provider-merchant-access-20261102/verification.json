@@ -1,0 +1,40 @@
+{
+  "base": "http://127.0.0.1:5301",
+  "fixture": {
+    "brandId": "merchant-zhangji",
+    "stores": [
+      "M00000001",
+      "M00000002"
+    ],
+    "first": {
+      "key": "page:/orders/all",
+      "path": "/orders/all"
+    },
+    "second": {
+      "key": "page:/reports/revenue",
+      "path": "/reports/revenue"
+    },
+    "a": "ent002",
+    "b": "ent003"
+  },
+  "checks": [
+    "role create UI",
+    "staff scope UI",
+    "role editor",
+    "same store different employee menus",
+    "same employee different store menus",
+    "direct path denial",
+    "out-of-scope entry denied",
+    "no brand elevation",
+    "store list scope",
+    "read-only function guard",
+    "management function guard",
+    "failed write preserved",
+    "corrupt state denied",
+    "cross-window live revocation",
+    "concurrent save conflict",
+    "target menu preview",
+    "scope dialog and confirmation"
+  ],
+  "errors": []
+}

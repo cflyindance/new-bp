@@ -1,13 +1,25 @@
+import {parseSubscriptionBrandRightsPath} from '../config/subscription-service-scope';
+import {providerTargetAllowed} from '../auth/provider-access-runtime';
+import {getEnterpriseMerchantSnapshot} from '../config/enterprise-merchant-store';
 import { bindNavigationSubmenuActions } from '../shell/navigation-submenu-actions';
 import { M_MODULES, M_PAGES, mPageForPath, mPageKey, mModuleKey, mActionKey, type MModule } from './m-platform-catalog';
 import { currentMAccess, currentMAccount } from './m-platform-store';
 import { groupMNavigation } from './m-platform-navigation';
+const decodeTarget=(id:string)=>{try{return decodeURIComponent(id);}catch{return '';}};
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export function mCanVisit(path: string): boolean {
+  path=path.split('?')[0];
+  const rightsBrand=parseSubscriptionBrandRightsPath(path);if(rightsBrand&&!providerTargetAllowed(rightsBrand))return false;
+  if(path.endsWith('/merchant-access')&&currentMAccess(mPageKey('provider-roles'))==='hidden')return false;
+  const storeMatch=/^\/m-platform\/merchants\/stores\/([^/]+)/.exec(path);
+  if(storeMatch){const store=getEnterpriseMerchantSnapshot().stores.find(s=>s.storeId===decodeTarget(storeMatch[1]));if(!store||!providerTargetAllowed(store.merchantId,store.storeId))return false;}
+  const brandMatch=/^\/m-platform\/merchants\/([^/]+)/.exec(path);
+  if(brandMatch&&!['stores','overview','new','activity','device-activity','org-tree','reports','change-log'].includes(brandMatch[1])&&!providerTargetAllowed(decodeTarget(brandMatch[1])))return false;
+
   if (/^\/m-platform\/merchants\/(?:stores\/[^/]+|[^/]+)\/usage$/.test(path) && currentMAccess(mPageKey('merchant-activity')) === 'hidden') return false;
   const page = mPageForPath(path);
   if (!page || currentMAccess(mPageKey(page.id)) === 'hidden') return false;
-  if (/\/(new|create)(\/|$)/.test(path) || /\/edit(\/|$)/.test(path) && !['roles', 'presets', 'routing'].includes(page.id)) {
+  if (/\/(new|create)(\/|$)/.test(path) || /\/edit(\/|$)/.test(path) && !['roles', 'provider-roles', 'presets', 'routing'].includes(page.id)) {
     if (currentMAccess(mPageKey(page.id)) !== 'edit') return false;
     if (page.id === 'roles' && path.endsWith('/new')) return currentMAccess(mActionKey('roles', 'create')) === 'edit';
     if (page.id === 'services' && path.endsWith('/create')) return currentMAccess(mActionKey('services', 'create')) === 'edit';
@@ -49,7 +61,7 @@ const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[da
 const readonlyBrowse = '[data-sub-more],[data-sub-operation=detail],[data-brand-store-details],[data-brand-store-detail-dialog],[data-merchant-usage] [data-activity-browse],[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search],[data-spe-tab],[data-spe-category],[data-spe-search],[data-spe-only],[data-spe-expand],[data-spe-collapse],[data-spe-version],[data-sub-brand-rights],[data-rights-query],[data-rights-status],[data-rights-store],[data-rights-expand],[data-rights-stores],[data-rights-store-dialog],[data-rights-audit-more],[data-rights-tab],[data-rights-audit-query],[data-rights-audit-operation],[data-rights-audit-from],[data-rights-audit-to],[data-rights-audit-reset],[data-rights-drawer-close],[data-rights-history-open],[data-rights-basis],[data-rights-basis-dialog],[data-package-toast-close],[data-service-version-preview]';
 function deniedControl(target: Element, type: string): boolean {
   const path = location.hash.slice(1), page = mPageForPath(path);
-  if (!path.startsWith('/m-platform/') || !page || target.closest('.mp-center,.mp-permission-dialog')) return false;
+  if (!path.startsWith('/m-platform/') || !page || target.closest('#m-permission-center,.mp-permission-dialog,dialog.provider-dialog')) return false;
   if (target.closest(harmless)) return false;
   if (!mCanVisit(path)) return true;
   const control = target.closest('button,input,select,textarea,a,form,[draggable="true"]');

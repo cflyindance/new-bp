@@ -5,7 +5,7 @@ import { assertMGrantCeiling, mIsAdministrator, mResolve, migrateMActivityModule
 export const M_PERMISSION_STORAGE = 'menusifu:m-platform-permissions:v1';
 export function createMState(): MState {
   // Explicit initial system role. No old merchant/enterprise selection is converted.
-  return { schema: 1, catalogVersion: 2, revision: 0, roles: [{ id: 'm-system-admin', name: '服务商管理员', description: 'M 平台初始系统管理员', system: true,
+  return { schema: 1, catalogVersion: 3, revision: 0, roles: [{ id: 'm-system-admin', name: '服务商管理员', description: 'M 平台初始系统管理员', system: true,
     grants: Object.fromEntries([...M_RESOURCES].map(([key, resource]) => [key, resource.kind === 'module' || resource.kind === 'page' && !resource.editable ? 'read' : 'edit'])) }],
     employees: [{ id: 'ent001', roleIds: ['m-system-admin'] }], logs: [] };
 }
@@ -56,7 +56,7 @@ export function saveMState(next: MState, action: string, object: string, gate: [
   }
   if (!listStaffLoginAccounts().some(account => account.enabled && mIsAdministrator(next, account.employeeId))) throw Error('至少保留一名已启用且能管理角色和员工授权的管理员');
   const saved = structuredClone(next);
-  saved.catalogVersion = 2;
+  saved.catalogVersion = 3;
   saved.revision++;
   // Permissions logs contain no password or account credential snapshots.
   saved.logs = [{ id: crypto.randomUUID(), at: new Date().toISOString(), actor: actor.employeeName, action, object,

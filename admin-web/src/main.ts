@@ -354,7 +354,7 @@ import {
   shouldShowRestartOnboardingControl,
   syncProductVersionDocumentAttribute,
 } from "./config/product-version";
-import { bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
+import { bindProviderSessionRevalidation, bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
   bindChainBrandMgmtControls,
@@ -13341,6 +13341,7 @@ if (["", "#", "#/", "#/home", "#/home/"].includes(location.hash) && applyDefault
 }
 
 bindPageSaveGuard();
+bindProviderSessionRevalidation(mount);
 bindBrandRuntimeGuards();
 window.addEventListener("hashchange", mount);
 

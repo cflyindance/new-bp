@@ -1,18 +1,20 @@
+import {readProviderState} from '../permissions/provider-access-store';
+import {canProviderEnter} from '../permissions/provider-access-store';
+import {M_PAGES,mPageKey} from '../permissions/m-platform-catalog';
+import {currentMAccount,currentMAccess} from '../permissions/m-platform-store';
 import { withImpersonationContextChange } from "./impersonation-transition";
 /**
  * M 平台 · 代登录商家后台（演示）
  */
 import { getAuthenticatedEmail } from "../auth/login";
-import { brandPrimaryAdminEmail } from '../auth/brand-access-runtime';
-import { markPlatformPresetOnboardingComplete, ONBOARDING_PATH, resetPlatformPresetOnboarding } from "./platform-preset-onboarding";
+import { providerHasAnyMenu } from '../auth/brand-access-runtime';
+import { ONBOARDING_PATH } from "./platform-preset-onboarding";
 import {
   appendImpersonationLogEnd,
   appendImpersonationLogStart,
   getMerchantById,
   getStoreById,
-  syncMerchantCapabilityPresets,
 } from "./enterprise-merchant-store";
-import { syncChainBrandOrgForMerchant, bindChainBrandOrgSyncListener } from "./merchant-chain-brand-sync";
 import type { EnterpriseMerchant } from "./enterprise-merchant-types";
 import { exitMPlatformShell, enterMPlatformShell } from "../shell/app-shell-mode";
 import { merchantDetailHref } from "./enterprise-merchant-scope";
@@ -35,6 +37,7 @@ export interface MerchantImpersonationSession {
   merchantId: string;
   merchantName: string;
   operatorEmail: string;
+  operatorEmployeeId?:string;
   impersonatedAsEmail: string;
   startedAt: string;
   returnPath: string;
@@ -74,13 +77,12 @@ function writeImpersonationSession(session: MerchantImpersonationSession | null)
 }
 
 export function canImpersonateMerchant(merchant: EnterpriseMerchant): boolean {
-  if(merchant.accountProvisioningRequired && !brandPrimaryAdminEmail(merchant.merchantId))return false;
-  return merchant.status === "active";
+  return merchant.status === "active"&&canProviderEnter(merchant.merchantId);
 }
 
 export function canImpersonateStore(storeId:string):boolean{
  const store=getStoreById(storeId),merchant=store&&getMerchantById(store.merchantId);
- return !!(merchant&&canImpersonateMerchant(merchant)&&brandPrimaryAdminEmail(merchant.merchantId).trim());
+ return !!(merchant&&merchant.status==='active'&&canProviderEnter(merchant.merchantId,storeId));
 }
 
 function resolveEntryPath(merchant: EnterpriseMerchant): string {
@@ -96,39 +98,29 @@ function applyImpersonationScopeLock(merchant: EnterpriseMerchant): void {
   resetScopeFiltersForPerspectiveChange();
 }
 
-function prepareImpersonatedMerchantContext(merchant: EnterpriseMerchant): void {
-  const email = brandPrimaryAdminEmail(merchant.merchantId).trim();
-  if (!email) return;
-  if (merchant.status === "onboarding") {
-    resetPlatformPresetOnboarding(email);
-    return;
-  }
-  markPlatformPresetOnboardingComplete(email);
-  syncMerchantCapabilityPresets(merchant.merchantId, false);
-  syncChainBrandOrgForMerchant(merchant.merchantId);
-}
-
 function prepareMerchantImpersonation(
   merchantId: string,
   operatorEmail: string | null = getAuthenticatedEmail(),
   returnPath?: string,
   storeId?:string,
 ): MerchantImpersonationSession | null {
-  if(storeId&&(!getAuthenticatedEmail()||!location.hash.startsWith('#/m-platform/')||readActiveImpersonation()))return null;
+  if(!getAuthenticatedEmail()||!location.hash.startsWith('#/m-platform/')||readActiveImpersonation())return null;
   const merchant = getMerchantById(merchantId);
   if (!merchant) return null;
   const store=storeId?getStoreById(storeId):undefined;
   if(storeId&&(!store||store.merchantId!==merchantId||!canImpersonateStore(storeId)))return null;
-  if (!canImpersonateMerchant(merchant)) return null;
+  if(storeId?!canImpersonateStore(storeId):!canImpersonateMerchant(merchant))return null;
 
-  const operator = operatorEmail?.trim() || "hq.admin@menusifu.cn";
-  const impersonatedAsEmail = brandPrimaryAdminEmail(merchant.merchantId).trim() || operator;
+  const account=currentMAccount();if(!account?.enabled||!providerHasAnyMenu(merchantId,storeId))return null;
+  const operator=account.loginEmail;
+  const impersonatedAsEmail=operator;
   const session: MerchantImpersonationSession = {
     sessionId: genSessionId(),
     ...(store?{storeId:store.storeId,storeName:store.name}:{}),
     merchantId: merchant.merchantId,
     merchantName: merchant.name,
     operatorEmail: operator,
+    operatorEmployeeId:account.employeeId,
     impersonatedAsEmail,
     startedAt: new Date().toISOString(),
     returnPath: returnPath ?? merchantDetailHref(merchantId),
@@ -136,7 +128,7 @@ function prepareMerchantImpersonation(
 
   appendImpersonationLogStart(session);
   applyImpersonationScopeLock(merchant);
-  prepareImpersonatedMerchantContext(merchant);
+  // Delegated access does not provision or impersonate a brand administrator.
   writeImpersonationSession(session);
   if(store){
     writeSidebarNavLayoutPreset('store');
@@ -175,8 +167,8 @@ export function enterStoreBackendAsImpersonator(storeId:string,returnPath:string
 export function endMerchantImpersonation(reason: "manual" = "manual"): void {
   const session = readActiveImpersonation();
   if (!session) return;
-  appendImpersonationLogEnd(session.sessionId, reason);
   writeImpersonationSession(null);
+  appendImpersonationLogEnd(session.sessionId, reason);
   enterMPlatformShell();
   location.hash = session.returnPath.startsWith("#") ? session.returnPath : `#${session.returnPath}`;
 }
@@ -197,7 +189,7 @@ export function renderImpersonationBanner(): string {
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
         操作人 ${escapeHtml(session.operatorEmail)}
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
-        模拟 ${escapeHtml(session.impersonatedAsEmail)}
+        按员工授权访问
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
         <span class="text-xs">${session.storeId?'已锁定门店视角':'已锁定品牌视角'}</span>
       </p>
@@ -218,4 +210,27 @@ export function bindImpersonationBanner(onMount: () => void): void {
       onMount();
     });
   });
+}
+
+let providerRevalidationBound=false;
+export function bindProviderSessionRevalidation(onMount:()=>void):void {
+ if(providerRevalidationBound)return;providerRevalidationBound=true;
+ let signature='',checking=false;
+ const check=(refresh=false,force=false)=>{
+  if(checking)return;checking=true;
+  try{
+  const session=readActiveImpersonation();if(!session){signature='';return;}
+  const account=currentMAccount();
+  if(!session.operatorEmployeeId||account?.employeeId!==session.operatorEmployeeId||!canProviderEnter(session.merchantId,session.storeId)||getMerchantById(session.merchantId)?.status!=='active'){
+   endMerchantImpersonation();const fallback=M_PAGES.find(p=>currentMAccess(mPageKey(p.id))!=='hidden')?.path??'/m-platform/permissions/overview';location.hash='#'+fallback;sessionStorage.setItem('menusifu:provider-access-notice','商户访问授权已失效，请联系管理员。');onMount();return;
+  }
+  let next='';try{const state=readProviderState(),employee=state.employees.find(e=>e.employeeId===account.employeeId);next=JSON.stringify([account.enabled,employee,state.systemEmployeeIds.includes(account.employeeId),state.roles.filter(r=>employee?.bindings.some(b=>b.roleId===r.id))]);}catch{next='invalid';}
+  const changed=signature&&signature!==next;signature=next;
+  if(refresh&&(changed||force))onMount();
+  }finally{checking=false;}
+ };
+ for(const type of ['click','submit','beforeinput','change'])document.addEventListener(type,event=>{if(!readActiveImpersonation())return;const session=readActiveImpersonation();check();if(session&&!readActiveImpersonation()){event.preventDefault();event.stopImmediatePropagation();}},true);
+ for(const type of ['menusifu:provider-access-changed','m-platform-permissions-changed','menusifu:enterprise-merchant-snapshot-changed'])window.addEventListener(type,()=>check(true,type==='menusifu:enterprise-merchant-snapshot-changed'));
+ window.addEventListener('storage',e=>{if(e.key===null||['menusifu:provider-merchant-access:v1','menusifu:m-platform-permissions:v1','menusifu:enterprise-staff-login-accounts:v1'].includes(e.key))check(true);});
+ window.addEventListener('hashchange',()=>check());check();
 }

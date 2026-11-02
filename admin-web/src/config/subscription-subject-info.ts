@@ -1,3 +1,4 @@
+import {assertProviderTarget} from '../auth/provider-access-runtime';
 import {getMerchantById,getMerchantStores,getStoreById,getMerchantStatusLabel,getStoreStatusLabel} from './enterprise-merchant-store';
 
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -7,6 +8,7 @@ let active:HTMLDialogElement|undefined;
 /** Current subject facts only; does not navigate, provision or alter subscriptions. */
 export function openSubscriptionSubjectInfo(type:string,id:string):void {
  if(type!=='brand'&&type!=='store')return;
+ const targetStore=type==='store'?getStoreById(id):undefined;assertProviderTarget(type==='brand'?id:targetStore?.merchantId??'',type==='store'?id:undefined);
  active?.close();
  const trigger=document.activeElement as HTMLElement|null,isBrand=type==='brand',brand=isBrand?getMerchantById(id):undefined,store=!isBrand?getStoreById(id):undefined;
  const owner=store?getMerchantById(store.merchantId):undefined,entity=brand??store;

@@ -1,3 +1,6 @@
+import {currentMAccess} from '../permissions/m-platform-store';
+import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
+import {providerScopeActive,providerTargetAllowed,providerBrandListed,assertProviderTarget} from '../auth/provider-access-runtime';
 import {fillBrandStoreDemoPresets} from './brand-store-demo-presets';
 import {listCustomBusinessTypes} from './enterprise-platform-preset-store';
 import { serviceStatus,serviceLabel } from './brand-service-policy';
@@ -1529,8 +1532,12 @@ export function ensureBrandStoreDemoPresets():void {
  const snap=readSnapshot();if(fillBrandStoreDemoPresets(snap,snap.brandStoreDemoFresh===true)){delete snap.brandStoreDemoFresh;enrichLicenseFields(snap);writeSnapshot(snap);}
 }
 
+export function getEnterpriseMerchantSnapshotForAuthorization():EnterpriseMerchantSnapshot{return readSnapshot();}
 export function getEnterpriseMerchantSnapshot(): EnterpriseMerchantSnapshot {
-  return readSnapshot();
+  const snap=readSnapshot();if(!providerScopeActive())return snap;
+  const merchants=snap.merchants.filter(m=>providerBrandListed(m.merchantId)),brandIds=new Set(merchants.map(m=>m.merchantId));
+  const stores=snap.stores.filter(s=>brandIds.has(s.merchantId)&&providerTargetAllowed(s.merchantId,s.storeId)),storeIds=new Set(stores.map(s=>s.storeId));
+  return {...snap,merchants,stores,brands:snap.brands.filter(b=>brandIds.has(b.merchantId)),regions:snap.regions.filter(r=>brandIds.has(r.merchantId)),capabilities:snap.capabilities.filter(c=>providerTargetAllowed(c.merchantId)),storeCapabilities:snap.storeCapabilities?.filter(c=>storeIds.has(c.storeId)),changelog:snap.changelog.filter(c=>c.storeId?storeIds.has(c.storeId):!!c.merchantId&&providerTargetAllowed(c.merchantId))};
 }
 
 export function getMerchants(filter: MerchantFilter = {}): EnterpriseMerchant[] {
@@ -1539,6 +1546,7 @@ export function getMerchants(filter: MerchantFilter = {}): EnterpriseMerchant[] 
   const eid = activeEnterpriseId();
   const linkedTenants = filter.excludeLinkedStoreTenants ? linkedStoreTenantIds(snap) : null;
   return snap.merchants.filter((m) => {
+    if(providerScopeActive()&&!providerBrandListed(m.merchantId))return false;
     if (linkedTenants?.has(m.merchantId)) return false;
     if (!all && m.enterpriseId !== eid) return false;
     if (filter.status && serviceStatus(m.status) !== serviceStatus(filter.status)) return false;
@@ -1700,7 +1708,7 @@ export function getMerchantRegions(merchantId: string): MerchantOrgRegion[] {
 
 export function getMerchantStores(merchantId: string): MerchantOrgStore[] {
   const snap = readSnapshot();
-  const stores = snap.stores.filter((s) => s.merchantId === merchantId);
+  const stores = snap.stores.filter((s) => s.merchantId === merchantId&&(!providerScopeActive()||providerTargetAllowed(merchantId,s.storeId)));
   return dedupeStoresList(snap, stores);
 }
 
@@ -1752,6 +1760,8 @@ export function saveStoreCapability(
   const snap = readSnapshot();
   const store = snap.stores.find((s) => s.storeId === storeId);
   if (!store) return null;
+  assertProviderTarget(store.merchantId,storeId);
+  if(providerScopeActive()&&currentMAccess(mPageKey('stores'))!=='edit'&&currentMAccess(mPageKey('brands'))!=='edit')throw Error('暂无门店菜单编辑权限。');
 
   const brandCap = snap.capabilities.find((c) => c.merchantId === store.merchantId);
   if (!brandCap) return null;
@@ -1809,7 +1819,7 @@ export function getMerchantChangelog(merchantId?: string): MerchantChangeLogEntr
   const snap = readSnapshot();
   const eid = activeEnterpriseId();
   const ids = merchantIdsForEnterprise(snap, eid);
-  let logs = snap.changelog.filter((l) => l.enterpriseId === eid || ids.has(l.merchantId) || l.merchantId === "enterprise");
+  let logs = snap.changelog.filter((l) => (l.enterpriseId === eid || ids.has(l.merchantId) || l.merchantId === "enterprise")&&(!providerScopeActive()||(l.storeId?providerTargetAllowed(l.merchantId,l.storeId):providerTargetAllowed(l.merchantId))));
   if (!merchantId) return logs;
   return logs.filter((l) => l.merchantId === merchantId);
 }
@@ -1910,7 +1920,7 @@ export function getMerchantOverviewStats(): {
 } {
   const snap = readSnapshot();
   const eid = activeEnterpriseId();
-  const merchants = snap.merchants.filter((m) => m.enterpriseId === eid);
+  const merchants = snap.merchants.filter((m) => m.enterpriseId === eid&&(!providerScopeActive()||providerBrandListed(m.merchantId)));
   const ids = merchantIdsForEnterprise(snap, eid);
   const in30Days = Date.now() + 30 * 24 * 60 * 60 * 1000;
   return {
@@ -1920,7 +1930,7 @@ export function getMerchantOverviewStats(): {
     suspended: merchants.filter((m) => serviceStatus(m.status) === "suspended").length,
     draft: merchants.filter((m) => m.status === "draft").length,
     closed: merchants.filter((m) => m.status === "closed").length,
-    storeCount: snap.stores.filter((s) => ids.has(s.merchantId)).length,
+    storeCount: snap.stores.filter((s) => ids.has(s.merchantId)&&(!providerScopeActive()||providerTargetAllowed(s.merchantId,s.storeId))).length,
     expiringSoon: merchants.filter((m) => {
       if (!m.contractExpiresAt) return false;
       const exp = new Date(m.contractExpiresAt).getTime();
@@ -1979,6 +1989,8 @@ export function getProductLineOptions(): { id: string; label: string }[] {
 }
 
 export function updateMerchantStatus(merchantId:string,status:MerchantStatus,operatorEmail=DEMO_OPERATOR,options?:{expected:string;reason:string}):EnterpriseMerchant|null {
+  assertProviderTarget(merchantId);
+  if(providerScopeActive()&&currentMAccess(mActionKey('brands','lifecycle'))!=='edit')throw Error('暂无品牌状态操作权限。');
   if(!options)throw Error('请通过品牌服务状态操作，并填写原因。');
   if(brandConfigurationVersion(merchantId)!==options.expected)throw Error('品牌配置已更新，请刷新后重试。');
   const snap=structuredClone(readSnapshot()),merchant=snap.merchants.find(m=>m.merchantId===merchantId);if(!merchant)return null;
@@ -2190,6 +2202,8 @@ export function saveExplicitBrandMenus(id:string,keys:string[],expected:string,a
 }
 
 export function saveBrandStoreMenus(id:string,storeIds:string[],keys:string[],mode:'add'|'replace'|'inherit',expected:string,actor:string,source:string):void {
+  if(providerScopeActive()&&currentMAccess(mPageKey('brands'))!=='edit'&&currentMAccess(mPageKey('stores'))!=='edit')throw Error('暂无门店菜单编辑权限。');
+  for(const sid of storeIds)assertProviderTarget(id,sid);
   if(!['add','replace','inherit'].includes(mode))throw Error('门店菜单配置方式无效。');
   if(brandConfigurationVersion(id)!==expected)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
   const snap=structuredClone(readSnapshot()),cap=snap.capabilities.find(c=>c.merchantId===id);
@@ -2375,6 +2389,8 @@ export function saveMerchantCapability(
   input: UpdateMerchantCapabilityInput,
   operatorEmail = DEMO_OPERATOR,
 ): { capability: MerchantCapabilitySnapshot; syncResult?: EnterpriseToMerchantSyncResult } {
+  assertProviderTarget(merchantId);
+  if(providerScopeActive()&&currentMAccess(mPageKey('brands'))!=='edit')throw Error('暂无品牌菜单编辑权限。');
   const snap = readSnapshot();
   let cap = snap.capabilities.find((c) => c.merchantId === merchantId);
   if (!cap) {
@@ -2842,7 +2858,7 @@ export function renewMerchantContract(
 export function getMerchantSlaMetrics(): MerchantSlaMetrics[] {
   const snap = readSnapshot();
   const ids = merchantIdsForEnterprise(snap, activeEnterpriseId());
-  return snap.slaMetrics.filter((s) => ids.has(s.merchantId));
+  return snap.slaMetrics.filter((s) => ids.has(s.merchantId)&&(!providerScopeActive()||providerTargetAllowed(s.merchantId)));
 }
 
 export function getMerchantReportSummary(): MerchantReportSummary {

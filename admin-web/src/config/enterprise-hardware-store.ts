@@ -1,3 +1,5 @@
+import {providerScopeActive,providerTargetAllowed} from '../auth/provider-access-runtime';
+import {getEnterpriseMerchantSnapshotForAuthorization} from './enterprise-merchant-store';
 /**
  * M 平台 · 企业级硬件资产 · 演示数据与查询
  */
@@ -503,28 +505,34 @@ function readSnapshot(): EnterpriseHardwareSnapshot {
   return seed;
 }
 
+function scopedHardwareSnapshot():EnterpriseHardwareSnapshot {
+ const snap=readSnapshot();if(!providerScopeActive())return snap;
+ const meta=getEnterpriseMerchantSnapshotForAuthorization();
+ const stores=snap.stores.filter(s=>{const id=migrateLegacyStoreId(s.storeId),store=meta.stores.find(x=>x.storeId===id);return !!store&&providerTargetAllowed(store.merchantId,id);});
+ const ids=new Set(stores.map(s=>s.storeId));return {...snap,stores,devices:snap.devices.filter(d=>ids.has(d.storeId)),alerts:snap.alerts.filter(a=>ids.has(a.storeId))};
+}
 export function getEnterpriseHardwareSnapshot(): EnterpriseHardwareSnapshot {
-  return readSnapshot();
+  return scopedHardwareSnapshot();
 }
 
 export function getEnterpriseStores(): EnterpriseHardwareStore[] {
-  return readSnapshot().stores;
+  return scopedHardwareSnapshot().stores;
 }
 
 export function getEnterpriseStoreById(storeId: string): EnterpriseHardwareStore | undefined {
-  return readSnapshot().stores.find((s) => s.storeId === storeId);
+  return scopedHardwareSnapshot().stores.find((s) => s.storeId === storeId);
 }
 
 export function getEnterpriseDevices(): EnterpriseDevice[] {
-  return readSnapshot().devices;
+  return scopedHardwareSnapshot().devices;
 }
 
 export function getEnterpriseDeviceByUid(uid: string): EnterpriseDevice | undefined {
-  return readSnapshot().devices.find((d) => d.uid === uid);
+  return scopedHardwareSnapshot().devices.find((d) => d.uid === uid);
 }
 
 export function getEnterpriseAlerts(): EnterpriseHardwareAlert[] {
-  return readSnapshot().alerts;
+  return scopedHardwareSnapshot().alerts;
 }
 
 /** 与商家后台 DEVICE_MANAGEMENT_HARDWARE_SUBNAV 顺序、命名、路由一一对应 */
@@ -584,7 +592,7 @@ export function countEnterpriseDevicesByType(): Record<EnterpriseDeviceType, num
   for (const item of ENTERPRISE_HARDWARE_TYPE_NAV) {
     counts[item.deviceType] = 0;
   }
-  for (const device of readSnapshot().devices) {
+  for (const device of scopedHardwareSnapshot().devices) {
     counts[device.deviceType] = (counts[device.deviceType] ?? 0) + 1;
   }
   return counts;
@@ -656,12 +664,12 @@ function matchesFilter(device: EnterpriseDevice, filter: EnterpriseDeviceFilter,
 }
 
 export function filterEnterpriseDevices(filter: EnterpriseDeviceFilter = {}): EnterpriseDevice[] {
-  const snap = readSnapshot();
+  const snap = scopedHardwareSnapshot();
   return snap.devices.filter((d) => matchesFilter(d, filter, snap.stores));
 }
 
 export function getEnterpriseOverviewStats(): EnterpriseHardwareOverviewStats {
-  const snap = readSnapshot();
+  const snap = scopedHardwareSnapshot();
   const devices = snap.devices;
   const onlineCount = devices.filter((d) => d.status === "online").length;
   const offlineCount = devices.filter((d) => d.status === "offline").length;
@@ -719,7 +727,7 @@ export function formatRelativeLastSeen(iso: string): string {
 }
 
 export function exportDevicesCsv(devices: EnterpriseDevice[]): string {
-  const stores = readSnapshot().stores;
+  const stores = scopedHardwareSnapshot().stores;
   const hasMobileTerminal = devices.some(isMobileTerminalDevice);
   const header = [
     "设备UID",

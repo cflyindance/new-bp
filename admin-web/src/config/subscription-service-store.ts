@@ -1,3 +1,5 @@
+import {providerScopeActive,providerTargetAllowed,assertProviderTarget} from '../auth/provider-access-runtime';
+import {getStoreById} from './enterprise-merchant-store';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
 import {packageOnSale,canDeletePackage,packageChangeToken,validatePackageTerms} from './service-package-lifecycle-domain';
@@ -342,6 +344,7 @@ function requireSubscriptionWrite(action:string):void {
 
 export function createMerchantSubscription(input: { subjectType: SubscriptionSubjectType; subjectId: string; packageId: string; startAt: string; endAt?: string; note?: string }): MerchantSubscription {
   requireSubscriptionWrite('create');
+  assertProviderSubscription(input.subjectType,input.subjectId);
   if (input.subjectType !== "brand" && input.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   const snapshot = readSubscriptionServiceSnapshot();
   const pkg = snapshot.packages.find((item) => item.id === input.packageId);
@@ -362,6 +365,7 @@ export function extendMerchantSubscription(subscriptionId: string, endAt?: strin
   requireSubscriptionWrite('extend');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
   if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw new Error("仅生效中的订阅可以续期");
   const pkg=snapshot.packages.find(p=>p.id===subscription.packageId);if(!pkg||!packageOnSale(pkg))throw Error('服务包已下架或停用，不能续期。');
@@ -381,6 +385,7 @@ export function disableMerchantSubscription(subscriptionId: string, reason: stri
   requireSubscriptionWrite('disable');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
   if (subscription && subscription.subjectType !== "brand" && subscription.subjectType !== "store") throw Error("仅支持品牌或门店订阅。");
   if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw Error("仅生效中的订阅可以停用");
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理停用。");
@@ -412,6 +417,8 @@ export function updateScheduledMerchantSubscription(input: UpdateScheduledMercha
   requireSubscriptionWrite('edit');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === input.id);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
+  assertProviderSubscription(input.subjectType,input.subjectId);
   if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以编辑。");
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
   const policy = subscriptionOperationPolicy(snapshot, subscription);
@@ -434,6 +441,7 @@ export function activateMerchantSubscriptionNow(subscriptionId: string, preview:
   requireSubscriptionWrite('activate');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
   if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以立即生效。");
   if (!subscriptionOperationPolicy(snapshot, subscription).allowed.includes("activate")) throw Error("当前服务包不可立即生效。");
   assertSubscriptionImpactPreview(snapshot, preview);
@@ -450,6 +458,7 @@ export function adjustMerchantSubscriptionEnd(subscriptionId: string, endAt: str
   requireSubscriptionWrite('adjust-end');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
   if (!subscription || subscriptionLifecycle(subscription) !== "生效中") throw Error("仅生效中的订阅可以调整到期时间。");
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
   const next = Date.parse(endAt), now = Date.now(), previous = subscription.endAt ? Date.parse(subscription.endAt) : undefined;
@@ -468,6 +477,7 @@ export function cancelScheduledMerchantSubscription(subscriptionId: string, reas
   requireSubscriptionWrite('cancel');
   const snapshot = readSubscriptionServiceSnapshot();
   const subscription = snapshot.subscriptions.find((item) => item.id === subscriptionId);
+  if(subscription)assertProviderSubscription(subscription.subjectType,subscription.subjectId);
   if (!subscription || subscriptionLifecycle(subscription) !== "待生效") throw Error("仅待生效订阅可以撤销。");
   if (subscription.entitlementKind) throw Error("请从品牌服务权益页办理变更。");
   const normalizedReason = reason.trim();
@@ -521,4 +531,18 @@ export function getEffectiveLegacySubscriptionRoutes(context: EffectiveSubscript
   const snapshot=readSubscriptionServiceSnapshot();
   const legacy={...snapshot,packages:snapshot.packages.filter(p=>!p.commercial)};
   return new Set(resolveEffectiveRouteSources(legacy,context).map(s=>s.routeNodeId));
+}
+
+export function providerSubscriptionAllowed(type:string,id:string):boolean {
+ if(!providerScopeActive())return true;
+ if(type==='brand')return providerTargetAllowed(id);
+ const store=type==='store'?getStoreById(id):undefined;return !!store&&providerTargetAllowed(store.merchantId,id);
+}
+export function readProviderSubscriptionView():SubscriptionServiceSnapshot {
+ const snapshot=readSubscriptionServiceSnapshot();if(!providerScopeActive())return snapshot;
+ const subscriptions=snapshot.subscriptions.filter(s=>providerSubscriptionAllowed(s.subjectType,s.subjectId)),ids=new Set(subscriptions.map(s=>s.id));
+ return {...snapshot,subscriptions,audit:snapshot.audit.filter(a=>a.objectType!=='subscription'||ids.has(a.objectId))};
+}
+function assertProviderSubscription(type:string,id:string):void{
+ if(!providerSubscriptionAllowed(type,id))throw Error('当前员工未获准访问此订阅主体。');
 }

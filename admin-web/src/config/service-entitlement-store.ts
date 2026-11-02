@@ -1,3 +1,4 @@
+import {assertProviderTarget} from '../auth/provider-access-runtime';
 import {packageOnSale} from './service-package-lifecycle-domain';
 import { currentBrandPrincipal, isBrandPathAllowed } from './brand-access-store';
 import { getMerchantById, getMerchantStores } from './enterprise-merchant-store';
@@ -21,6 +22,7 @@ export function canManageServiceEntitlements(action: 'create'|'extend'|'disable'
 function actorFor(brandId: string, source: 'm-platform'|'merchant', action: 'create'|'extend'|'disable' = 'create'): string {
   if (!getMerchantById(brandId)) throw Error('品牌不存在。');
   if (source === 'm-platform') {
+    assertProviderTarget(brandId);
     if (!canManageServiceEntitlements(action)) throw Error('暂无品牌服务权益操作权限。');
     return getAuthenticatedEmail() ?? 'M平台运营';
   }

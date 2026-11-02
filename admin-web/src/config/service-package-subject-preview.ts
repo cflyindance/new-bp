@@ -1,5 +1,5 @@
 import {getMerchantById, getStoreById} from './enterprise-merchant-store';
-import {readSubscriptionServiceSnapshot} from './subscription-service-store';
+import {readProviderSubscriptionView as readSubscriptionServiceSnapshot} from './subscription-service-store';
 import {subscriptionStatusLabel, type SubscriptionServiceSnapshot} from './subscription-service-domain';
 
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));

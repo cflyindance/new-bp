@@ -168,7 +168,7 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
   if (parseMerchantDetailPath(path) && mCanVisit(path)) {
     return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
-  if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
+  if (/^\/m-platform\/permissions\/(roles\/edit|provider-roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
     return `<div class="relative h-full min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
   }
   if ((isSubscriptionServiceCreatePath(path) || isSubscriptionServiceDetailPath(path) || parseSubscriptionBrandRightsPath(path)) && mCanVisit(path)) {
@@ -186,15 +186,17 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
 export function mountMPlatformShell(onMount: () => void, path: string): string {
   return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell>
     ${isMPlatformMerchantPath(path) ? renderFutureVersionDiffBanner(true) : ""}
+    ${sessionStorage.getItem('menusifu:provider-access-notice')?'<div role="alert" class="mp-readonly-note" data-provider-session-notice>商户访问授权已失效，请联系管理员。<button type="button" data-provider-notice-close style="margin-left:20px">关闭</button></div>':''}
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">${renderMPlatformShell(onMount, path)}</div>
   </div>`;
 }
 
 export function bindMPlatformShell(onMount: () => void): void {
   const currentPath = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
+  document.querySelector('[data-provider-notice-close]')?.addEventListener('click',()=>{sessionStorage.removeItem('menusifu:provider-access-notice');document.querySelector('[data-provider-session-notice]')?.remove();});
   installMRuntimeGuards();
   bindMNavigation();
-  if (/^\/m-platform\/permissions\/(roles\/edit|staff)\/.+/.test(currentPath) && mCanVisit(currentPath)) { bindMCenter(onMount); return; }
+  if (/^\/m-platform\/permissions\/(roles\/edit|provider-roles\/edit|staff)\/.+/.test(currentPath) && mCanVisit(currentPath)) { bindMCenter(onMount); return; }
   if ((isSubscriptionServiceCreatePath(currentPath) || isSubscriptionServiceDetailPath(currentPath) || parseSubscriptionBrandRightsPath(currentPath)) && mCanVisit(currentPath)) {
     bindSubscriptionServicePage(onMount);
     applyMControlStates();

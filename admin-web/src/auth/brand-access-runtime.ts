@@ -6,6 +6,7 @@ import type { Store } from '../permissions/center-domain';
 type Principal={merchantId:string;account:BrandAccount;state:BrandAccessState};
 type Identity={name:string;groupId:string;regions:{regionId:string;name:string}[]};
 interface BrandAccessRuntime {
+  providerHasAnyMenu?:(brandId:string,storeId?:string)=>boolean;
   recordBrandSuccessfulLogin?:(email:string)=>void;
   currentBrandPrincipal:()=>Principal|null;
   buildBrandSessionContext:()=>UserSessionContext|null;
@@ -28,3 +29,5 @@ export const brandIdentity=(id:string)=>runtime?.brandIdentity(id)??null;
 export const brandPrimaryAdminEmail=(id:string)=>runtime?.brandPrimaryAdminEmail(id)??'';
 
 export const recordBrandSuccessfulLogin=(email:string)=>runtime?.recordBrandSuccessfulLogin?.(email);
+
+export const providerHasAnyMenu=(brandId:string,storeId?:string)=>runtime?.providerHasAnyMenu?.(brandId,storeId)??false;

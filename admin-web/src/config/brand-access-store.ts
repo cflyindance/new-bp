@@ -1,3 +1,6 @@
+import {currentProviderCanTarget as requireProviderBrandTarget} from '../permissions/provider-access-store';
+import {currentMAccount} from '../permissions/m-platform-store';
+import {readProviderState,canProviderEnter,currentProviderAccess} from '../permissions/provider-access-store';
 import {demoBrandAccess} from './brand-store-demo-presets';
 import {DEMO_LOGIN_PASSWORD} from '../auth/login';
 import {getUiLocale} from '../i18n';
@@ -69,11 +72,19 @@ export function currentBrandPrincipal(): Principal | null {
 }
 function resolveBrandPrincipal(): Principal | null {
   const impersonation=readActiveImpersonation();
-  const email=(impersonation?.impersonatedAsEmail??getAuthenticatedEmail()??'').toLowerCase();
+  if(impersonation){
+    const operator=currentMAccount(),id=impersonation.operatorEmployeeId??'invalid-legacy-session';
+    let state:ReturnType<typeof readProviderState>;try{state=readProviderState();}catch{state={schema:1,revision:0,systemEmployeeIds:[],roles:[],employees:[],logs:[]};}
+    const valid=!!operator?.enabled&&operator.employeeId===id&&canProviderEnter(impersonation.merchantId,impersonation.storeId)&&getMerchantById(impersonation.merchantId)?.status==='active';
+    const account:BrandAccount={id,name:operator?.employeeName??'服务商员工',email:operator?.loginEmail??impersonation.operatorEmail,enabled:valid,admin:valid&&state.systemEmployeeIds.includes(id),password:''};
+    const bindings=state.employees.find(e=>e.employeeId===id)?.bindings??[];
+    return {merchantId:impersonation.merchantId,account,state:{schema:1,version:state.revision,employeeAuthorization:'roles-only',merchantId:impersonation.merchantId,accounts:[account],roles:state.roles,employees:[{id,name:account.name,email:account.email,status:valid?'enabled':'disabled',overrides:{},bindings}],logs:[]}};
+  }
+  const email=(getAuthenticatedEmail()??'').toLowerCase();
   if (!email) return null;
   const snap=getEnterpriseMerchantSnapshot();
   for (const merchant of snap.merchants) {
-    if (impersonation && merchant.merchantId!==impersonation.merchantId) continue;
+
     const state=readBrandAccess(merchant.merchantId);
     const explicit=state.accounts.find(a=>a.email.toLowerCase()===email);
     const active=merchant.status==='active';
@@ -86,6 +97,7 @@ function resolveBrandPrincipal(): Principal | null {
 
 export function authorizeBrandManagement(id:string,source:'m-platform'|'merchant'): string {
   const principal=currentBrandPrincipal();
+  if(source==='m-platform'&&!(requireProviderBrandTarget(id)))throw Error('当前员工未获准管理此品牌。');
   if (source==='merchant' && (!principal || principal.merchantId!==id || !principal.account.admin || !principal.account.enabled)) throw Error('仅当前品牌 Admin 可以管理所属门店与账号。');
   if (source==='m-platform' && !location.hash.startsWith('#/m-platform/')) throw Error('请从 M 平台进入品牌管理。');
   return source==='merchant' ? principal!.account.email : getAuthenticatedEmail()??'M 平台运营';
@@ -167,7 +179,7 @@ function runtimeCatalog():Catalog{
  const locale=getUiLocale();if(runtimeDirectory?.locale===locale)return runtimeDirectory.catalog;
  return (runtimeDirectory={locale,catalog:buildCenterCatalog()}).catalog;
 }
-function mappedRuntimeKeys(raw:Set<string>,catalog:Catalog):Set<string>{
+export function mappedRuntimeKeys(raw:Set<string>,catalog:Catalog):Set<string>{
  let cache=runtimeKeyMaps.get(catalog);if(!cache){cache=new Map();runtimeKeyMaps.set(catalog,cache);}
  const key=brandMenuRouteVersion()+':'+JSON.stringify([...raw].sort());const found=cache.get(key);if(found)return found;
  const result=centerKeysForRaw(raw,catalog);if(cache.size>=128)cache.clear();cache.set(key,result);return result;
@@ -190,7 +202,11 @@ export function currentBrandAccess(key:string):Access|undefined {
   const ctx=brandRuntime();if(!ctx)return undefined;
   if(ctx.values.has(key))return ctx.values.get(key);
   const {p,catalog,ceiling,all,storeIds,caps,brandPerspective}=ctx;
-  const value=resolveBrandAccess(p.state,p.account,storeIds,key,all,catalog.resources,ceiling,caps,brandPerspective);
+  let value:Access;
+  if(readActiveImpersonation()){
+    value=!p.account.enabled||!ceiling.has(key)?'hidden':currentProviderAccess(p.merchantId,brandPerspective?undefined:storeIds[0],key,catalog.resources);
+    if(!brandPerspective&&(storeIds.length!==1||!caps.get(storeIds[0])?.has(key)))value='hidden';
+  }else value=resolveBrandAccess(p.state,p.account,storeIds,key,all,catalog.resources,ceiling,caps,brandPerspective);
   ctx.values.set(key,value);return value;
 }
 export function buildBrandSessionContext():UserSessionContext|null {
@@ -204,7 +220,7 @@ export function buildBrandSessionContext():UserSessionContext|null {
     selection[node.key]={enabled:value!=='hidden',display:value!=='hidden',l4EditMode:value==='edit'?'editable':'display-only'};
   }
   // The brand's store management is an administrative entry, not a business-menu grant.
-  selection['brand-store-list']={enabled:p.account.enabled&&!readActiveImpersonation()?.storeId,display:p.account.enabled&&!readActiveImpersonation()?.storeId};
+  selection['brand-store-list']={enabled:p.account.enabled&&!readActiveImpersonation()?.storeId&&(!readActiveImpersonation()||p.account.admin),display:p.account.enabled&&!readActiveImpersonation()?.storeId&&(!readActiveImpersonation()||p.account.admin)};
   return runtime.session={employeeId:p.account.id,employeeName:p.account.name,email:p.account.email,orgTier:'chain',roleIds:p.account.admin?['brand-admin']:p.state.employees.find(e=>e.id===p.account.id)?.bindings.map(b=>b.roleId)??['brand-unassigned'],storeAccess:{mode:'stores',ids:readActiveImpersonation()?.storeId?[readActiveImpersonation()!.storeId!]:brandAccountStores(p.state,p.account,runtime.all)},permissionSnapshot:selection,builtAt:new Date().toISOString()};
 }
 
@@ -215,6 +231,7 @@ export function isBrandPathAllowed(path:string):boolean {
   path=path.split('?')[0]!;
   if(!p.account.enabled)return path==='/login';
   if (isNavHomePath(path) || path==='/login' || path==='/onboarding') return true;
+  if (path.startsWith('/brand-stores/')&&readActiveImpersonation()&&!p.account.admin)return false;
   if (path.startsWith('/brand-stores/')) return !readActiveImpersonation()?.storeId && p.account.enabled && (p.account.admin || path==='/brand-stores/list' || path==='/brand-stores/overview');
   if(runtime.paths.has(path))return runtime.paths.get(path)!;
   const pages=[...catalog.resources.values()].filter(r=>r.type==='page' && r.path && (path===r.path || path.startsWith(r.path+'/'))).sort((a,b)=>b.path!.length-a.path!.length);
@@ -255,7 +272,7 @@ export function bindBrandRuntimeGuards():void {
     if(!currentBrandPrincipal())return;
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     const path=location.hash.replace(/^#/,'').split('?')[0]||'/home';
-    let denied=false;
+    let denied=!isBrandPathAllowed(path);
     const row=target.closest('[data-module-setting-row-seq]');
     const toggle=target.closest('[data-module-setting-toggle]');
     const seq=Number(toggle?.getAttribute('data-module-setting-toggle')??row?.getAttribute('data-module-setting-row-seq'));
@@ -272,6 +289,13 @@ export function bindBrandRuntimeGuards():void {
   };
   document.addEventListener('click',guard,true);
   document.addEventListener('beforeinput',guard,true);
+  document.addEventListener('submit',guard,true);
+  document.addEventListener('change',guard,true);
 }
 
-installBrandAccessRuntime({recordBrandSuccessfulLogin,currentBrandPrincipal,buildBrandSessionContext,validateBrandLogin,isBrandPathAllowed,brandStoresForPath,brandStores,brandIdentity,brandPrimaryAdminEmail});
+installBrandAccessRuntime({providerHasAnyMenu,recordBrandSuccessfulLogin,currentBrandPrincipal,buildBrandSessionContext,validateBrandLogin,isBrandPathAllowed,brandStoresForPath,brandStores,brandIdentity,brandPrimaryAdminEmail});
+
+export function providerHasAnyMenu(brandId:string,storeId?:string):boolean {
+ try{const catalog=runtimeCatalog(),ceiling=brandCatalog(brandId,catalog).ceiling,storeCeiling=storeId?mappedRuntimeKeys(new Set(getStoreCapability(storeId)?.enabledKeys??[]),catalog):undefined;
+ return [...catalog.resources.values()].some(r=>r.type==='page'&&!r.compatibilityOnly&&ceiling.has(r.key)&&(!storeCeiling||storeCeiling.has(r.key))&&currentProviderAccess(brandId,storeId,r.key,catalog.resources)!=='hidden');}catch{return false;}
+}
