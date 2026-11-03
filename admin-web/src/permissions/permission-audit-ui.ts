@@ -1,9 +1,9 @@
 import {currentMAccess,readMState} from './m-platform-store';
-import {mPageKey} from './m-platform-catalog';
+import {PERMISSION_ROLE_LABELS,mPageKey} from './m-platform-catalog';
 import {readProviderState} from './provider-access-store';
 import {allowedAuditTypes,filterAuditRecords,type AuditRecord} from './permission-audit-domain';
 const esc=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-const label=(type:string)=>type==='m'?'M 平台权限':'商家后台访问权限';
+const label=(type:string)=>type==='m'?PERMISSION_ROLE_LABELS.platformScope+'权限':PERMISSION_ROLE_LABELS.merchantScope+'权限';
 export function bindPermissionAudit(host:HTMLElement):void {
  const query=new URLSearchParams(location.hash.split('?')[1]??'');
  const legacy=location.hash.startsWith('#/m-platform/permissions/provider-roles/change-log');

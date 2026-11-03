@@ -28,7 +28,7 @@ export function mCanVisit(path: string): boolean {
   return true;
 }
 export function mDenied(): string {
-  return `<section class="mp-denied" role="alert"><h1>暂无 M 平台访问权限</h1><p>${currentMAccount()?.enabled === false ? '该服务商员工账号已停用。' : '请联系服务商管理员，为当前员工分配具有相应菜单权限的角色。'}</p><p class="mt-4"><a href="#/nav-home" class="text-primary">返回商家后台</a></p></section>`;
+  return `<section class="mp-denied" role="alert"><h1>暂无平台管理权限</h1><p>${currentMAccount()?.enabled === false ? '该服务商员工账号已停用。' : '请联系服务商管理员，为当前员工分配具有相应菜单权限的角色。'}</p><p class="mt-4"><a href="#/nav-home" class="text-primary">返回商户后台</a></p></section>`;
 }
 export function renderMNavigation(path: string): string {
   const modules = groupMNavigation(M_MODULES.map(module => ({ ...module, pages: module.pages.filter(p => currentMAccess(mPageKey(p.id)) !== 'hidden'||p.id==='permission-log'&&currentMAccess(mPageKey('provider-roles'))!=='hidden') })).filter(module => module.pages.length && currentMAccess(mModuleKey(module.id)) !== 'hidden'));
@@ -36,7 +36,7 @@ export function renderMNavigation(path: string): string {
   if(presetIndex>=0){const page=modules[presetIndex].pages.find(p=>p.id==='presets')!;modules.splice(presetIndex,0,{id:'business-menu-template-nav',title:'业态与菜单模板',pages:[{...page,title:'业态与菜单模板',path:'/m-platform/business-menu-templates'}]});}
   const rolePages = modules.find(m=>m.id==='permissions')?.pages.filter(p=>['roles','provider-roles'].includes(p.id)) ?? [];
   rolePages.sort((a,b)=>Number(b.id==='roles')-Number(a.id==='roles'));
-  if(rolePages.length) modules.push({id:'role-permissions-nav',title:'角色与权限',pages:rolePages.map(p=>({...p,title:p.id==='roles'?'M 平台角色':'商家后台访问角色'}))});
+  if(rolePages.length) modules.push({id:'role-permissions-nav',title:'角色与权限',pages:rolePages});
   const providerActive = rolePages.some(p=>path.split('?')[0]===p.path||path.startsWith(p.path+'/')&&!path.startsWith(p.path+'/change-log'));
   const hasChildren = (module: MModule) => module.id === 'activity-analysis' || (M_MODULES.find(original => original.id === module.id)?.pages.length ?? module.pages.length) > 1 || module.id === 'permissions';
   const active = mPageForPath(path);

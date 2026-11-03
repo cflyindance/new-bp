@@ -13,7 +13,7 @@ import { applyCategoryGrant } from './center-category-grants';
 import { assertSettingChoice } from './center-setting-levels';
 import { readProviderState, saveProviderState, currentProviderCanTarget } from './provider-access-store';
 import { currentMAccess } from './m-platform-store';
-import { mActionKey } from './m-platform-catalog';
+import { PERMISSION_ROLE_LABELS, mActionKey } from './m-platform-catalog';
 import { getEnterpriseMerchantSnapshot } from '../config/enterprise-merchant-store';
 import { listStaffLoginAccounts } from './enterprise-staff-account-store';
 import { providerBindingMatches, providerCanTarget, providerRoleAccess, type ProviderBinding } from './provider-access-domain';
@@ -81,10 +81,10 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
   function render():void {
     const positions=[...host.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll,el.scrollTop] as const);
     const readOnly=!canEdit();
-    let body='',title='商家后台访问角色与权限';
+    let body='',title:string=PERMISSION_ROLE_LABELS.merchantTitle;
     if(path===prefix+'/change-log'){
       title='变更记录';
-      body=`<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th></tr></thead><tbody>${saved.logs.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td>${esc(l.object)}</td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无商家后台访问角色变更记录</td></tr>'}</tbody></table>`;
+      body=`<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th></tr></thead><tbody>${saved.logs.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td>${esc(l.object)}</td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无商户访问角色变更记录</td></tr>'}</tbody></table>`;
     }else if(employeeId&&options.employeePreview){
       title='商户访问权限';
       if(!account){host.innerHTML='<p class="pc-empty">员工不存在</p>';return;}
@@ -140,7 +140,7 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
       if(b.hasAttribute('data-provider-add-binding')){bindingDialog();return;}
       if(b.dataset.providerBinding){bindingDialog(b.dataset.providerBinding);return;}
       if(b.dataset.providerRemove){const employee=draft.employees.find(e=>e.employeeId===employeeId);if(employee)employee.bindings=employee.bindings.filter(x=>x.id!==b.dataset.providerRemove);mark();render();return;}
-      if(b.hasAttribute('data-provider-save')){modal('保存授权',`<p>${roleId?'角色权限调整将影响 '+members(roleId)+' 位已绑定员工。':'保存后将按新的角色及范围计算该员工访问权限。'}</p><p>已进入商家后台的会话会重新校验。</p>`,()=>persist(roleId?'更新访问角色权限':'更新商户访问范围',role()?.name??account?.employeeName??employeeId),'确认保存');return;}
+      if(b.hasAttribute('data-provider-save')){modal('保存授权',`<p>${roleId?'角色权限调整将影响 '+members(roleId)+' 位已绑定员工。':'保存后将按新的角色及范围计算该员工访问权限。'}</p><p>已进入商户后台的会话会重新校验。</p>`,()=>persist(roleId?'更新访问角色权限':'更新商户访问范围',role()?.name??account?.employeeName??employeeId),'确认保存');return;}
       if(preview||!role())return;
       const value=(key:string)=>roleAccess(role()!,key,catalog.resources),v=b.dataset.value as Access;
       if(b.dataset.submenuMode)applySubmenuMode(catalog,role()!,page,b.dataset.submenuMode,v);

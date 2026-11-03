@@ -1,4 +1,10 @@
 /** M 平台自己的菜单和真实操作；不读取商家后台资源目录。 */
+/** Display names only: route ids, resource keys and persisted role names stay unchanged. */
+export const PERMISSION_ROLE_LABELS = {
+  platformRole: '平台管理角色', merchantRole: '商户访问角色',
+  platformTitle: '平台管理角色与权限', merchantTitle: '商户访问角色与权限',
+  platformScope: '平台管理', merchantScope: '商户访问',
+} as const;
 export type MAccess = 'hidden' | 'read' | 'edit';
 export interface MAction { id: string; title: string; selector: string; write: boolean }
 export interface MPage { id: string; title: string; path: string; editable: boolean; actions: MAction[] }
@@ -61,8 +67,8 @@ export const M_MODULES: MModule[] = [
   ])] },
   { id: 'permissions', title: '权限管理中心', pages: [
     page('permission-overview', '权限总览', `${permissions}/overview`, false),
-    page('provider-roles','商家后台访问角色',`${permissions}/provider-roles`,true,[action('manage','管理商户访问授权','[data-provider-new],[data-provider-info],[data-provider-copy],[data-provider-delete],[data-provider-add-binding],[data-provider-binding],[data-provider-remove],[data-provider-save]')]),
-    page('roles', 'M 平台角色', `${permissions}/roles`, true, [
+    page('provider-roles',PERMISSION_ROLE_LABELS.merchantRole,`${permissions}/provider-roles`,true,[action('manage','管理商户访问授权','[data-provider-new],[data-provider-info],[data-provider-copy],[data-provider-delete],[data-provider-add-binding],[data-provider-binding],[data-provider-remove],[data-provider-save]')]),
+    page('roles', PERMISSION_ROLE_LABELS.platformRole, `${permissions}/roles`, true, [
       action('create', '新建 / 复制角色', '[data-mp-do="new-role"],[data-mp-copy]'),
       action('edit', '编辑角色与权限', '[data-mp-edit],[data-mp-do="save-role"],[data-mp-do="save-grants"]'),
       action('delete', '删除角色', '[data-mp-delete]'),
@@ -90,9 +96,9 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
   if(path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');return provider?{...provider,title:'变更记录'}:undefined;}
   // Independent navigation entry, reusing the existing preset permission resource.
   if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
-  if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':'商家后台访问角色与权限'};}
+  if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':PERMISSION_ROLE_LABELS.merchantTitle};}
   const exact = M_PAGES.find(p => p.path === path);
-  if (exact) return exact;
+  if (exact) return exact.id === 'roles' ? {...exact, title: PERMISSION_ROLE_LABELS.platformTitle} : exact;
   if (path === permissions) return M_PAGES.find(p => p.id === 'permission-overview');
   if (path === `${permissions}/staff-accounts`) return M_PAGES.find(p => p.id === 'staff');
   if (path === '/m-platform/hardware') return M_PAGES.find(p => p.id === 'hardware-overview');

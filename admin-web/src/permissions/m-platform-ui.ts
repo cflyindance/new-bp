@@ -7,7 +7,7 @@ import { bindPermissionAudit } from './permission-audit-ui';
 import {bindProviderAccess} from './provider-access-ui';
 import './center.css';
 import './m-platform.css';
-import { M_MODULES, M_PAGES, mModuleKey, mPageKey, mActionKey, type MAccess, type MPage } from './m-platform-catalog';
+import { PERMISSION_ROLE_LABELS, M_MODULES, M_PAGES, mModuleKey, mPageKey, mActionKey, type MAccess, type MPage } from './m-platform-catalog';
 import { mResolve, mRoleState, mIsAdministrator, type MRole, type MState } from './m-platform-domain';
 import { currentMAccess, readMState, saveMState, requireMAction } from './m-platform-store';
 import * as accounts from './enterprise-staff-account-store';
@@ -106,15 +106,15 @@ export function bindMCenter(onMount: () => void): void {
           delete: button(ROLE_ACTION_LABELS.delete, `data-mp-delete="${mEsc(r.id)}"`, allowed('roles', 'delete') && !r.system),
         })}</td></tr>`;
       }).join('');
-      host.innerHTML = `<header class="pc-heading permission-role-list-heading"><h1>M 平台角色与权限</h1>${button(ROLE_LIST_CREATE_LABEL, 'data-mp-do="new-role"', allowed('roles', 'create'), true)}</header>${message}${renderRoleListTable(rows)}`;
+      host.innerHTML = `<header class="pc-heading permission-role-list-heading"><h1>${PERMISSION_ROLE_LABELS.platformTitle}</h1>${button(ROLE_LIST_CREATE_LABEL, 'data-mp-do="new-role"', allowed('roles', 'create'), true)}</header>${message}${renderRoleListTable(rows)}`;
     } else if (staffView) {
       let providerState:ReturnType<typeof readProviderState>|undefined;
       const providerVisible=currentMAccess(mPageKey('provider-roles'))!=='hidden';
       if(providerVisible)try{providerState=readProviderState();}catch{/* Keep the independent M dimension available. */}
       const rows = accounts.listStaffLoginAccounts().filter(a => `${a.employeeId} ${a.employeeName} ${a.loginEmail}`.toLowerCase().includes(query.toLowerCase()));
-      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${a.enabled ? '已启用' : '已停用'}</td><td><div class="employee-role-summary"><span>M 平台：${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</span><span>商户访问：${!providerVisible?'无查看权限':providerState?mEsc(providerEmployeeSummary(providerState,a.employeeId)):'数据读取失败'}</span></div></td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/roles">配置角色与权限</a>${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
+      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${a.enabled ? '已启用' : '已停用'}</td><td><div class="employee-role-summary"><span>${PERMISSION_ROLE_LABELS.platformScope}：${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</span><span>商户访问：${!providerVisible?'无查看权限':providerState?mEsc(providerEmployeeSummary(providerState,a.employeeId)):'数据读取失败'}</span></div></td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/roles">配置角色与权限</a>${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
     } else if (path.endsWith('/change-log')) {
-      host.innerHTML = `<h1>M 平台权限变更记录</h1>${message}<div class="pc-card">${logs()}</div>`;
+      host.innerHTML = `<h1>${PERMISSION_ROLE_LABELS.platformScope}权限变更记录</h1>${message}<div class="pc-card">${logs()}</div>`;
     } else {
       const stats = [['角色', state.roles.length], ['员工账号', accounts.listStaffLoginAccounts().length], ['已授权员工', state.employees.filter(e => e.roleIds.length).length], ['可授权菜单页', M_PAGES.length]];
       host.innerHTML = `<h1>权限总览</h1><p class="pc-muted">通过角色管理服务商内部员工的 M 平台菜单与操作权限。</p>${message}<div class="pc-stats">${stats.map(([label, count]) => `<div class="pc-card">${label}<strong>${count}</strong></div>`).join('')}</div><section class="pc-card"><h2>最近变更</h2>${logs()}</section>`;
