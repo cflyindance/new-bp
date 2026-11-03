@@ -62,7 +62,7 @@ export const M_MODULES: MModule[] = [
   { id: 'permissions', title: '权限管理中心', pages: [
     page('permission-overview', '权限总览', `${permissions}/overview`, false),
     page('provider-roles','商家后台访问角色',`${permissions}/provider-roles`,true,[action('manage','管理商户访问授权','[data-provider-new],[data-provider-info],[data-provider-copy],[data-provider-delete],[data-provider-add-binding],[data-provider-binding],[data-provider-remove],[data-provider-save]')]),
-    page('roles', '角色与功能权限', `${permissions}/roles`, true, [
+    page('roles', 'M 平台角色', `${permissions}/roles`, true, [
       action('create', '新建 / 复制角色', '[data-mp-do="new-role"],[data-mp-copy]'),
       action('edit', '编辑角色与权限', '[data-mp-edit],[data-mp-do="save-role"],[data-mp-do="save-grants"]'),
       action('delete', '删除角色', '[data-mp-delete]'),
@@ -71,7 +71,7 @@ export const M_MODULES: MModule[] = [
       action('assign', '分配角色', '[data-mp-assign],[data-mp-do="save-assignment"]'),
       action('account', '管理员工账号', '[data-mp-do="new-account"],[data-mp-account],[data-mp-toggle]'),
     ]),
-    page('permission-log', 'M 平台权限变更记录', `${permissions}/change-log`, false),
+    page('permission-log', '变更记录', `${permissions}/change-log`, false),
   ] },
 ];
 export const mModuleKey = (id: string): string => `m:module:${id}`;
@@ -86,9 +86,11 @@ export const M_RESOURCES = new Map<string, { kind: 'module' | 'page' | 'action';
   ]),
 ]));
 export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
+  path=path.split('?')[0];
+  if(path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');return provider?{...provider,title:'变更记录'}:undefined;}
   // Independent navigation entry, reusing the existing preset permission resource.
   if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
-  if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':'角色访问设置'};}
+  if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':'商家后台访问角色与权限'};}
   const exact = M_PAGES.find(p => p.path === path);
   if (exact) return exact;
   if (path === permissions) return M_PAGES.find(p => p.id === 'permission-overview');
