@@ -191,7 +191,7 @@
     var ledger=s.employeeContributions||[];
     if(ledger.length!==ids.size||new Set(ledger.map(function(e){return e.employeeId;})).size!==ids.size||ledger.some(function(e){return !ids.has(e.employeeId)||cents(e.amount)!==(contributed[e.employeeId]||0);}))throw new Error('贡献汇总与流水不一致');
   }
-  function supportsExisting(rules){return rules.length>0&&rules.every(function(r){return !r.funding&&(r.poolKind||'tip')==='tip'&&(!r.allocationMode||['legacy_pool','order_tip_then_residual'].indexOf(r.allocationMode)>=0)&&(r.poolRules||[]).every(function(p){return ['sales','personal_sales','tips','manual'].indexOf(p.type)>=0;});});}
+  function supportsExisting(rules){return rules.length>0&&rules.every(function(r){return !r.funding&&(r.poolKind||'tip')==='tip'&&(!r.allocationMode||['legacy_pool','order_tip_then_residual'].indexOf(r.allocationMode)>=0)&&(r.poolRules||[]).every(function(p){return ['sales','personal_sales','tips','manual'].indexOf(p.type)>=0 || (r.contributionMode==='merchant' && p.type==='custom');});});}
   function round(value){return cents(value)/100;}
   function selectedMenuValues(menu,key,legacyKey){var value=menu&&(menu[key]||menu[legacyKey])||[];return Array.isArray(value)?value:(value?[value]:[]);}
   function checkMenuSource(menu){
@@ -205,6 +205,7 @@
   }
   function sourceBase(poolRule,facts,dateKey){
     var c=poolRule.conditions||{},type=poolRule.type;
+    if(type==='custom')return cents(poolRule.amount)/100;
     if(['sales','personal_sales','tips','manual'].indexOf(type)<0)throw new Error('当前入池来源需单独确认兼容方式');
     if((c.shift||[]).length||c.surchargeType||c.types)throw new Error('当前演示数据没有班次或加收服务费明细，无法核对取值条件');
     checkMenuSource(c.containsProduct);checkMenuSource(c.menu);
@@ -361,12 +362,21 @@
       if(view){views[String(rule.id)]=view;view.contributions.forEach(function(e){remaining[e.employeeId]-=cents(e.amount);});}
       else if(supportsExisting([rule])&&(rule.allocationMode||'legacy_pool')==='legacy_pool'){
         var groups=existingGroups(rule,facts),shares=groups.length===1?[cents(target)]:split(cents(target),groups.map(function(g){return g.weight;}));
-        groups.forEach(function(g,i){var capacities=g.members.map(function(f){return remaining[f.employeeId];}),pieces=split(Math.min(shares[i],capacities.reduce(function(a,b){return a+b;},0)),capacities);g.members.forEach(function(f,j){remaining[f.employeeId]-=pieces[j];});});
+        var contributionRows=[];
+        groups.forEach(function(g,i){
+          var capacities=g.members.map(function(f){return remaining[f.employeeId];}),pieces=split(Math.min(shares[i],capacities.reduce(function(a,b){return a+b;},0)),capacities),dues=split(shares[i],capacities);
+          g.members.forEach(function(f,j){contributionRows.push({employeeId:f.employeeId,name:f.name,role:f.role,due:dues[j]/100,available:capacities[j]/100,amount:pieces[j]/100});remaining[f.employeeId]-=pieces[j];});
+        });
+        views[String(rule.id)]={contributions:contributionRows};
       }
     });return views;
   }
   // Only explicit per-employee bases have an independent contract; do not migrate role-only/fixed group rules.
   function previewIndependent(rule,facts,dateKey,target,remaining){
+    if (rule.contributionMode === 'merchant') {
+      var budget = cents(target) / 100;
+      return { target: budget, contributed: 0, actual: budget, ownerContribution: budget, excess: 0, contributions: [] };
+    }
     var config=rule.deductConfig||{}, entries=[];
     var customEntries=[];
     ['salesPct','personalSalesPct','tipIncome'].forEach(function(key){var v=config[key];if(v)(Array.isArray(v)?v:[v]).forEach(function(entry,i){customEntries.push({key:key,entry:entry,index:i});});});

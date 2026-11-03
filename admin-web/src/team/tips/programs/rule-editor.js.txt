@@ -476,7 +476,21 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     // Load rule into form (edit mode)
+    var contributionMode = 'merchant';
+    function setContributionMode(mode) {
+      if (mode !== 'merchant' && mode !== 'employees') return;
+      contributionMode = mode;
+      syncContributionModeUi();
+    }
+    function syncContributionModeUi() {
+      document.querySelectorAll('input[name="contributionMode"]').forEach(function(input) { input.checked = input.value === contributionMode; });
+      var settings = document.getElementById('contributorEmployeeSettings');
+      if (settings) settings.hidden = contributionMode === 'merchant';
+    }
     function loadRuleForEdit(rule) {
+      var cfg = rule.deductConfig || {};
+      contributionMode = rule.contributionMode || ((cfg.salesPct || cfg.personalSalesPct || cfg.tipIncome || (rule.deductRoles || []).length || rule.deductEmployees) ? 'employees' : null);
+      syncContributionModeUi();
       currentPoolKind = rule.poolKind === 'surcharge' ? 'surcharge' : 'tip';
       applyPoolKindUi(true);
       document.getElementById('ruleName').value = rule.ruleName || '';
@@ -3336,6 +3350,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     function collectDeductRuleData() {
+      if (contributionMode === 'merchant') return { deductConfig: {}, deductRoles: [], deductEmployees: null };
       ensureDeductTabsInited();
       var deductConfig = {};
       var deductRoles = [];
@@ -3390,6 +3405,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var show = !isSurchargePoolKind();
       if (el) el.style.display = show ? 'block' : 'none';
       syncContributorGroupVisibility();
+      syncContributionModeUi();
       if (show) ensureDeductTabsInited();
     }
 
@@ -4836,6 +4852,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         poolRules: poolRules,
         deductRoles: deductRoles,
         deductEmployees: deductEmployees,
+        contributionMode: contributionMode,
         deductConfig: deductData.deductConfig,
         receivers: receivers,
         distribution: distRadio ? distRadio.value : 'average',
@@ -4882,7 +4899,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         return;
       }
       if (!validateWorkHoursConfig()) return;
-      if (typeof validateContributorSharesBeforeSave === 'function' && !validateContributorSharesBeforeSave()) return;
+      if (contributionMode !== 'merchant' && typeof validateContributorSharesBeforeSave === 'function' && !validateContributorSharesBeforeSave()) return;
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
@@ -4916,10 +4933,12 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           showNotification('请为「' + condErr + '」设置取值条件（必填）', 'error');
           return;
         }
+        if (!isSurchargePoolKind() && !contributionMode) { showNotification('请选择贡献方式', 'error'); return; }
+        if (!isSurchargePoolKind() && contributionMode === 'employees' && !document.querySelector('#deductRulesContainer .deduct-basis-card')) { showNotification('请至少添加一条员工贡献规则', 'error'); return; }
         var deductCondErr = null;
         var deductRateErr = null;
         document.querySelectorAll('#deductRulesContainer .deduct-basis-card').forEach(function(card) {
-          if (deductCondErr || deductRateErr) return;
+          if (contributionMode === 'merchant' || deductCondErr || deductRateErr) return;
           var cardId = card.dataset.deductId;
           var basis = card.dataset.basis || parseDeductCardBasis(cardId);
           if (!isDeductRatePctValid(cardId)) {
@@ -5054,6 +5073,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
             rule.deductRoles = data.deductRoles;
             rule.deductEmployees = data.deductEmployees || null;
             rule.deductConfig = data.deductConfig || {};
+          rule.contributionMode = data.contributionMode;
             rule.receivers = data.receivers;
             rule.salesConditions = data.salesConditions || {};
             rule.tipsConditions = data.tipsConditions || {};
@@ -5090,6 +5110,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           rule.deductRoles = data.deductRoles;
           rule.deductEmployees = data.deductEmployees || null;
           rule.deductConfig = data.deductConfig || {};
+          rule.contributionMode = data.contributionMode;
           rule.receivers = data.receivers;
           rule.salesConditions = data.salesConditions || {};
           rule.tipsConditions = data.tipsConditions || {};

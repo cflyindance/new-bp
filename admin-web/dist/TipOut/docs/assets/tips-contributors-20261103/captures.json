@@ -1,0 +1,32 @@
+[
+  {
+    "file": "assets/tips-contributors-20261103/details-parties.png",
+    "sha256": "276b0aac478bd397b7d7f53a386a493d014b9915046776c5982146d534b63e37",
+    "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+    "capturedAt": "2026-11-03",
+    "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+    "route": "http://127.0.0.1:65230/#/team/tips/details",
+    "width": 1280,
+    "height": 900
+  },
+  {
+    "file": "assets/tips-contributors-20261103/employee-settings.png",
+    "sha256": "40f470855c66cb39d0af5a3a4f86ed43a9ecbecd21f7f64d8f73833e17a3606d",
+    "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+    "capturedAt": "2026-11-03",
+    "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+    "route": "http://127.0.0.1:65230/#/team/tips/rules/editor",
+    "width": 1280,
+    "height": 420
+  },
+  {
+    "file": "assets/tips-contributors-20261103/merchant-settings.png",
+    "sha256": "77d93f7a3fffa6f373cd0afe40bbf1024b216ca128401eacf7833af03f9c1749",
+    "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+    "capturedAt": "2026-11-03",
+    "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+    "route": "http://127.0.0.1:65230/#/team/tips/rules/editor",
+    "width": 1280,
+    "height": 220
+  }
+]

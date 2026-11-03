@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-DOC-COMPLETION-20261027-01",
-  "baseline": "64ddec8f",
+  "documentId": "TIPOUT-CONTRIBUTORS-20261103-01",
+  "baseline": "0e737e4c",
   "versions": {
-    "PRD_产品需求文档.md": "V4.52",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.52",
-    "小费管理需求文档（个人规范版）.md": "V2.50"
+    "PRD_产品需求文档.md": "V4.53",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.53",
+    "小费管理需求文档（个人规范版）.md": "V2.51"
   },
   "scope": "当前产品交付范围",
   "images": [
@@ -122,18 +122,6 @@
       "sha256": "34d5bf67ce5ea7c40437a38df1012ef73547875f63e01a7da002e65ad5553386",
       "width": 1600,
       "height": 1000
-    },
-    {
-      "file": "assets/tips-current-scope-20261027/contribution.png",
-      "sha256": "40e79539a0736cc3b8281c6716c1e656ee9326e878ca29946a3be2182c763e8a",
-      "width": 1238,
-      "height": 198,
-      "baseline": "64ddec8f",
-      "route": "http://127.0.0.1:65200/#/team/tips/rules/editor?mode=edit&id=7",
-      "capturedAt": "2026-10-27T09:45:04",
-      "source": "完整应用实际操作后的原生元素截图；仅临时添加ARIA定位标签，未改变可见UI或业务数据",
-      "selector": "#deductRulesSection",
-      "note": ""
     },
     {
       "file": "assets/tips-current-scope-20261027/daily.png",
@@ -614,6 +602,36 @@
       "source": "完整应用登录后实际路由操作",
       "selector": null,
       "note": ""
+    },
+    {
+      "file": "assets/tips-contributors-20261103/details-parties.png",
+      "sha256": "276b0aac478bd397b7d7f53a386a493d014b9915046776c5982146d534b63e37",
+      "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+      "capturedAt": "2026-11-03",
+      "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+      "route": "http://127.0.0.1:65230/#/team/tips/details",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": "assets/tips-contributors-20261103/employee-settings.png",
+      "sha256": "40f470855c66cb39d0af5a3a4f86ed43a9ecbecd21f7f64d8f73833e17a3606d",
+      "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+      "capturedAt": "2026-11-03",
+      "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+      "route": "http://127.0.0.1:65230/#/team/tips/rules/editor",
+      "width": 1280,
+      "height": 420
+    },
+    {
+      "file": "assets/tips-contributors-20261103/merchant-settings.png",
+      "sha256": "77d93f7a3fffa6f373cd0afe40bbf1024b216ca128401eacf7833af03f9c1749",
+      "baseline": "0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01",
+      "capturedAt": "2026-11-03",
+      "source": "隔离功能分支实际页面，受控演示数据；通过视口尺寸定位区域，未修改可见UI",
+      "route": "http://127.0.0.1:65230/#/team/tips/rules/editor",
+      "width": 1280,
+      "height": 220
     }
   ],
   "sourceHashes": {
@@ -637,7 +655,7 @@
     "src/team/tips/legacy/tipout-detail-rule-filter.js.txt": "36bd5627ecff093e020e8670774bd0ddee5860f84e7ca3396f980ca5a422465b",
     "src/team/tips/legacy/tipout-detail-snapshot.js.txt": "28cf373063a7330a6cc9fa01f2229304b105bcc804e906753e951dc98099ee78",
     "src/team/tips/legacy/tipout-employee-weights.js.txt": "2701eefec3c7e05be5b92ce138779443e03e5ac21e745917cc1012b721dbc511",
-    "src/team/tips/legacy/tipout-funding.js.txt": "15c6d79f56a926d68df763faee579c92da2836cb6f445fdb5846919fe40a9731",
+    "src/team/tips/legacy/tipout-funding.js.txt": "65dd4bd7be081c7a95d6b643faee0acc4012a2b0a33c7c17cfa39143bdb4241f",
     "src/team/tips/legacy/tipout-manual-hours-store.js.txt": "832231d2e16613d1a05c7e0c64f65e848b3865d7dc03e2ddda982c2039d4df21",
     "src/team/tips/legacy/tipout-payout-record-ui.js.txt": "fce7100debdf877f824de831345f0d6b29a5a34ca4bd834c79dbb93358d87c66",
     "src/team/tips/legacy/tipout-payroll-bridge.js.txt": "d3f3b1933d95fc1d7a9df16e410b106d92e617e1b84d5bd0cfb1ec4f86366f84",
@@ -645,22 +663,22 @@
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
-    "src/team/tips/programs/details.js.txt": "704595e60642a0ef1684700532c3be7899a054b8b13486bc2b22356ca78b80e8",
+    "src/team/tips/programs/details.js.txt": "0c68c7205878f229577ee0781f8276bc06690d442b20f2c10b5fd00784fe99d3",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "ac4872f29d7950375ee8ba0be30b38d276cdac1885d221175334a8faeb7bceab",
+    "src/team/tips/programs/rule-editor.js.txt": "2bebe96ac6784bfd16f9bc9e58e4e421754848da5ec0d591db18c0a08537958a",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "3d9f43297a7977ff1cc064d31c7085d705e4c881707860160c96db92d7a0a36e",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
     "src/team/tips/templates/distribution.html": "b38af3fbb0846509267b91727e5f90b331662a1c7e509025d5f86eaa4ed7e1e8",
     "src/team/tips/templates/employee-reconciliation.html": "1f883ec131892cbb32d857f1ac89998420ec70a74f837fedb2adaad024f8b0c4",
-    "src/team/tips/templates/rule-editor.html": "3105f5715c6e7aa28e23e9493e52ce083e8ed9447824e3f97a822d680ff4989f",
+    "src/team/tips/templates/rule-editor.html": "c205dd619c0e814fe8c252dc2a00ca0798fa7858746f7fa938147642233719f5",
     "src/team/tips/templates/rules.html": "ebbfdefd526c2c1fa0ac25b7db7148d4275661e6002375077529c4fe4d3c5716",
     "src/team/tips/tips-context.ts": "17602e2b0e4df90cf23bbb22795ffb6b9ea3d63790ceb0ebb2005457d21db226",
     "src/team/tips/tips-escape.ts": "196bb6b4061fad24ad6a09f21d9609c6e3b481853e76fb63a603651e85f5152a",
     "src/team/tips/tips-legacy-runtime.ts": "35176442082513790bc9dd1cd4f64484dcf068ea2f75ff33c52461bb12684a39",
     "src/team/tips/tips-navigation.ts": "35d23035cc9a6996b1e0cd0e046a6a0e2621c341c394cc3872757eba434aac7c",
-    "src/team/tips/tips-page.css": "b299460780a6f26898fc4bfe7b6198cd75d3313ae7333e944c83b6e7b6231fa5",
+    "src/team/tips/tips-page.css": "75814c0994f6f903dee9d609458b4ccdf276f1a50b0db442830f1f993dd7807e",
     "src/team/tips/tips-shell.css": "822ce1993b3d4af8ee5b713945e75a9394060277e46811719efaa7ec2ed29131",
     "src/team/tips/tips-templates.ts": "c7cb6b1af263b31df6d067a8446ece455c966c02a00f25b30b68b3e9c675fe1f"
   },
@@ -1621,7 +1639,7 @@
       "section": "接收组与员工行",
       "operation": "接收角色／组",
       "definition": "同一配置行的共同预算组，可折叠查看。",
-      "line": 215,
+      "line": 229,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1631,7 +1649,7 @@
       "section": "接收组与员工行",
       "operation": "角色分配比例",
       "definition": "组占比；同层合计须符合100%约束。",
-      "line": 216,
+      "line": 230,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1641,7 +1659,7 @@
       "section": "接收组与员工行",
       "operation": "角色分配金额",
       "definition": "由该池实际可分配金额和组占比得到。",
-      "line": 217,
+      "line": 231,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1651,7 +1669,7 @@
       "section": "接收组与员工行",
       "operation": "分配员工",
       "definition": "选择当前门店及接收范围员工；真实考勤标签保持。",
-      "line": 218,
+      "line": 232,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1661,7 +1679,7 @@
       "section": "接收组与员工行",
       "operation": "员工权重",
       "definition": "规则默认值，可调整当日采用值；0合法，不修改规则默认。",
-      "line": 219,
+      "line": 233,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1671,7 +1689,7 @@
       "section": "接收组与员工行",
       "operation": "分配工时",
       "definition": "工时方式适用，普通按日可明确修改或补录；不反写考勤。",
-      "line": 220,
+      "line": 234,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1681,7 +1699,7 @@
       "section": "接收组与员工行",
       "operation": "有效订单笔数",
       "definition": "订单方式的事实依据；只读，不用销售额代替。",
-      "line": 221,
+      "line": 235,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1691,7 +1709,7 @@
       "section": "接收组与员工行",
       "operation": "员工分配比例",
       "definition": "自动来自加权基数；普通工时方式可明确改为人工最终比例。",
-      "line": 222,
+      "line": 236,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1701,7 +1719,7 @@
       "section": "接收组与员工行",
       "operation": "员工分配金额",
       "definition": "从池分得金额A，不等同分配后F。",
-      "line": 223,
+      "line": 237,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1711,7 +1729,7 @@
       "section": "接收组与员工行",
       "operation": "新增行",
       "definition": "加入本次分配草稿，不创建员工目录；参与及依据必须有效。",
-      "line": 224,
+      "line": 238,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1721,7 +1739,7 @@
       "section": "接收组与员工行",
       "operation": "删除行",
       "definition": "移除本次草稿行，重算相关分配，不删除员工。",
-      "line": 225,
+      "line": 239,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1731,7 +1749,7 @@
       "section": "页面操作",
       "operation": "返回汇总",
       "definition": "恢复来源视角、筛选和位置；有未保存调整先保护草稿。",
-      "line": 231,
+      "line": 245,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1741,7 +1759,7 @@
       "section": "页面操作",
       "operation": "更新小费数据",
       "definition": "确认后重新读取来源、重建默认计算；已发放不能更新。",
-      "line": 232,
+      "line": 246,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1751,7 +1769,7 @@
       "section": "页面操作",
       "operation": "确认分配",
       "definition": "首次保存整日所有规则；校验失败留在页面并保留草稿。",
-      "line": 233,
+      "line": 247,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1761,7 +1779,7 @@
       "section": "页面操作",
       "operation": "重新确认分配",
       "definition": "已有分配时按系统规则重新生成；人工结果须确认覆盖。",
-      "line": 234,
+      "line": 248,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1771,7 +1789,7 @@
       "section": "页面操作",
       "operation": "保存当前分配",
       "definition": "已有结果且发生手调时可用；无手调显示“当前系统分配数据未进行手动调整”，不写入。",
-      "line": 235,
+      "line": 249,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1781,7 +1799,7 @@
       "section": "页面操作",
       "operation": "确认已发放",
       "definition": "整日有效快照、无未保存调整且未发放时可登记；发放后锁定编辑。",
-      "line": 236,
+      "line": 250,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1791,7 +1809,7 @@
       "section": "筛选与统计",
       "operation": "门店筛选",
       "definition": "默认全部门店，可选择指定门店，限制列表及统计。",
-      "line": 250,
+      "line": 264,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1801,7 +1819,7 @@
       "section": "筛选与统计",
       "operation": "规则总数",
       "definition": "当前筛选规则数量。",
-      "line": 251,
+      "line": 265,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1811,7 +1829,7 @@
       "section": "筛选与统计",
       "operation": "小费池",
       "definition": "当前筛选中小费池规则数量。",
-      "line": 252,
+      "line": 266,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1821,7 +1839,7 @@
       "section": "筛选与统计",
       "operation": "加收服务费池",
       "definition": "当前筛选中服务费池规则数量。",
-      "line": 253,
+      "line": 267,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1831,7 +1849,7 @@
       "section": "列表与操作",
       "operation": "规则名称",
       "definition": "规则保存名称，不是某天的确认结果。",
-      "line": 259,
+      "line": 273,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1841,7 +1859,7 @@
       "section": "列表与操作",
       "operation": "门店",
       "definition": "该规则适用的门店。",
-      "line": 260,
+      "line": 274,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1851,7 +1869,7 @@
       "section": "列表与操作",
       "operation": "池类型与规则摘要",
       "definition": "显示来源类别及来源摘要。",
-      "line": 261,
+      "line": 275,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1861,7 +1879,7 @@
       "section": "列表与操作",
       "operation": "分配说明",
       "definition": "概述金额计算、贡献、接收组、算法及工时配置。",
-      "line": 262,
+      "line": 276,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1871,7 +1889,7 @@
       "section": "列表与操作",
       "operation": "编辑",
       "definition": "打开该规则当前配置。",
-      "line": 263,
+      "line": 277,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1881,7 +1899,7 @@
       "section": "列表与操作",
       "operation": "更多操作／复制",
       "definition": "克隆配置并生成新规则ID和副本名称；不复制分配或发放结果。",
-      "line": 264,
+      "line": 278,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1891,7 +1909,7 @@
       "section": "列表与操作",
       "operation": "更多操作／删除",
       "definition": "打开确认框；确认删除规则配置，取消保留。不会清除已保存的日期快照。",
-      "line": 265,
+      "line": 279,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1901,7 +1919,7 @@
       "section": "列表与操作",
       "operation": "新增规则",
       "definition": "先选择小费池或加收服务费池，再进入编辑页。",
-      "line": 266,
+      "line": 280,
       "interfaceImage": "assets/tips-current-scope-20261027/rules.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1911,7 +1929,7 @@
       "section": "基础信息与顶部操作",
       "operation": "规则名称",
       "definition": "必填，去除首尾空格；为空阻止保存。仅用于识别规则。",
-      "line": 282,
+      "line": 296,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1921,7 +1939,7 @@
       "section": "基础信息与顶部操作",
       "operation": "门店",
       "definition": "必选；决定角色、员工和取值条件候选，不能跨门店复用员工引用。",
-      "line": 283,
+      "line": 297,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1931,7 +1949,7 @@
       "section": "基础信息与顶部操作",
       "operation": "池类型",
       "definition": "由新增入口带入，小费池或加收服务费池；决定来源名称和可选条件。",
-      "line": 284,
+      "line": 298,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1941,7 +1959,7 @@
       "section": "基础信息与顶部操作",
       "operation": "保存规则",
       "definition": "校验名称、门店、金额来源、接收角色和占比、权重、贡献条件、员工承担及工时配置。成功保存本地规则并返回列表；失败保留输入和页面。",
-      "line": 285,
+      "line": 299,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1951,7 +1969,7 @@
       "section": "基础信息与顶部操作",
       "operation": "取消",
       "definition": "打开“取消编辑”确认框；确定离开则丢弃本次输入并返回列表，取消或关闭确认框继续编辑。",
-      "line": 286,
+      "line": 300,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1961,7 +1979,7 @@
       "section": "基础信息与顶部操作",
       "operation": "返回规则列表",
       "definition": "返回列表；当前未保存输入不写入正式规则。",
-      "line": 287,
+      "line": 301,
       "interfaceImage": "assets/tips-current-scope-20261027/editor-top.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1971,7 +1989,7 @@
       "section": "1. 小费池设置",
       "operation": "小费池金额计算规则",
       "definition": "确定金额来源、取值条件和比例；多项结果相加形成计划池金额P。",
-      "line": 297,
+      "line": 311,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1981,7 +1999,7 @@
       "section": "1. 小费池设置",
       "operation": "新增选项",
       "definition": "可添加销售额、小费、手动上报小费、自定义小费；加收服务费池按其池类型提供对应来源。每次添加一项。",
-      "line": 298,
+      "line": 312,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -1991,7 +2009,7 @@
       "section": "1. 小费池设置",
       "operation": "计算项名称",
       "definition": "默认使用来源名称，可编辑，仅标识本计算项。",
-      "line": 299,
+      "line": 313,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2001,7 +2019,7 @@
       "section": "1. 小费池设置",
       "operation": "来源类型",
       "definition": "决定基数来源及支持的条件；不能将某来源不支持的条件作为有效配置。",
-      "line": 300,
+      "line": 314,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2011,7 +2029,7 @@
       "section": "1. 小费池设置",
       "operation": "计算比例",
       "definition": "默认100；百分数输入，基数×比例÷100。有限非负且不超过100。",
-      "line": 301,
+      "line": 315,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2021,7 +2039,7 @@
       "section": "1. 小费池设置",
       "operation": "自定义金额",
       "definition": "自定义来源时填写，默认0；与比例共同计算，不等于某员工贡献金额。",
-      "line": 302,
+      "line": 316,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2031,7 +2049,7 @@
       "section": "1. 小费池设置",
       "operation": "设置取值条件",
       "definition": "打开本项独立抽屉，提交应用到当前规则草稿；必填条件不全时不能保存规则。",
-      "line": 303,
+      "line": 317,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2041,7 +2059,7 @@
       "section": "1. 小费池设置",
       "operation": "删除计算项",
       "definition": "只移除本规则草稿中的该项。至少保留一个有效金额来源。",
-      "line": 304,
+      "line": 318,
       "interfaceImage": "assets/tips-current-scope-20261027/pool.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2051,7 +2069,7 @@
       "section": "2. 小费分配设置",
       "operation": "按员工数量平均分配",
       "definition": "默认。组内合格员工基础值为1，再乘员工权重；权重不同时金额不必相等。",
-      "line": 314,
+      "line": 328,
       "interfaceImage": "assets/tips-current-scope-20261027/method.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2061,7 +2079,7 @@
       "section": "2. 小费分配设置",
       "operation": "按工作时长占比分配",
       "definition": "基础值为本规则采用工时，再乘员工权重。显示分配工时设置。",
-      "line": 315,
+      "line": 329,
       "interfaceImage": "assets/tips-current-scope-20261027/method.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2071,7 +2089,7 @@
       "section": "2. 小费分配设置",
       "operation": "按订单占比分配",
       "definition": "基础值为有效归属订单笔数，再乘员工权重；不使用工时设置。",
-      "line": 316,
+      "line": 330,
       "interfaceImage": "assets/tips-current-scope-20261027/method.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2081,7 +2099,7 @@
       "section": "2. 小费分配设置",
       "operation": "分配方式问号",
       "definition": "点击展开对应说明和算例；不改变选值或保存配置。",
-      "line": 317,
+      "line": 331,
       "interfaceImage": "assets/tips-current-scope-20261027/method.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2091,7 +2109,7 @@
       "section": "2. 小费分配设置",
       "operation": "小费分配时间范围",
       "definition": "按整日处理，同一营业日内计算并分配。金额来源和比例由小费池金额计算规则确定。",
-      "line": 318,
+      "line": 332,
       "interfaceImage": "assets/tips-current-scope-20261027/method.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2101,7 +2119,7 @@
       "section": "分配工时设置",
       "operation": "按有效打卡工时",
       "definition": "默认。以有效考勤工时作为采用值。",
-      "line": 330,
+      "line": 344,
       "interfaceImage": "assets/tips-current-scope-20261027/hours.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2111,7 +2129,7 @@
       "section": "分配工时设置",
       "operation": "每日计入工时上限",
       "definition": "选择上限模式时必填，0.1—24小时、最多一位小数。按员工逐日取min(有效工时,上限)。",
-      "line": 331,
+      "line": 345,
       "interfaceImage": "assets/tips-current-scope-20261027/hours.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2121,7 +2139,7 @@
       "section": "分配工时设置",
       "operation": "工时说明问号",
       "definition": "说明采用值与打卡事实的区别及当前条件，不保存数据。",
-      "line": 332,
+      "line": 346,
       "interfaceImage": "assets/tips-current-scope-20261027/hours.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2131,7 +2149,7 @@
       "section": "分配工时设置",
       "operation": "明细手动工时",
       "definition": "当日明细明确录入的采用值优先于规则自动上限；不反写考勤。",
-      "line": 333,
+      "line": 347,
       "interfaceImage": "assets/tips-current-scope-20261027/hours.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2141,7 +2159,7 @@
       "section": "接收员工打卡要求",
       "operation": "需有有效打卡",
       "definition": "默认。有有效打卡或明确补录参与依据的员工才进入对应算法计算。",
-      "line": 345,
+      "line": 359,
       "interfaceImage": "assets/tips-current-scope-20261027/clock.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2151,7 +2169,7 @@
       "section": "接收员工打卡要求",
       "operation": "不限打卡状态",
       "definition": "不自动纳入所有员工。平均方式仍需有效参与名单；工时方式需有效或明确录入工时；订单方式允许未打卡但有有效归属订单的员工参与。",
-      "line": 346,
+      "line": 360,
       "interfaceImage": "assets/tips-current-scope-20261027/clock.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2161,7 +2179,7 @@
       "section": "接收员工打卡要求",
       "operation": "资格问号",
       "definition": "展示当前分配方式下的解释及示例，点击不切换选项。",
-      "line": 347,
+      "line": 361,
       "interfaceImage": "assets/tips-current-scope-20261027/clock.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2171,7 +2189,7 @@
       "section": "3. 小费接收设置",
       "operation": "接收角色",
       "definition": "一行可选多个角色，构成共同接收组；组内按员工ID去重。",
-      "line": 357,
+      "line": 371,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2181,7 +2199,7 @@
       "section": "3. 小费接收设置",
       "operation": "占比百分比",
       "definition": "每行初始0；保存时每组须大于0且不超过100，各组合计100%。组预算＝可分配池金额×本组占比。",
-      "line": 358,
+      "line": 372,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2191,7 +2209,7 @@
       "section": "3. 小费接收设置",
       "operation": "合计",
       "definition": "当前接收组百分比之和；不是员工权重总和。",
-      "line": 359,
+      "line": 373,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2201,7 +2219,7 @@
       "section": "3. 小费接收设置",
       "operation": "设置员工小费权重",
       "definition": "先选择角色，再打开该组员工权重弹框。缺省1、0合法、最大1,000,000；不要求合计100%。",
-      "line": 360,
+      "line": 374,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2211,7 +2229,7 @@
       "section": "3. 小费接收设置",
       "operation": "新增角色",
       "definition": "增加一个接收组，不创建角色目录。",
-      "line": 361,
+      "line": 375,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2221,7 +2239,7 @@
       "section": "3. 小费接收设置",
       "operation": "删除",
       "definition": "删除当前草稿接收组，重新校验角色占比，不删除员工或已确认快照。",
-      "line": 362,
+      "line": 376,
       "interfaceImage": "assets/tips-current-scope-20261027/receivers.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2231,8 +2249,8 @@
       "section": "4. 小费贡献设置",
       "operation": "新增选项",
       "definition": "添加按照销售额占比或按照小费收入占比的贡献项。多项按保存顺序处理。",
-      "line": 372,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 392,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2241,8 +2259,8 @@
       "section": "4. 小费贡献设置",
       "operation": "贡献比例",
       "definition": "初始0，保存时必填且大于0；界面百分数，内部存比率。员工承担路径最多两位百分比小数、不超过100%。",
-      "line": 373,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 393,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2251,8 +2269,8 @@
       "section": "4. 小费贡献设置",
       "operation": "设置取值条件",
       "definition": "确定贡献来源及员工范围；至少一个角色，小费收入贡献另需小费类型。",
-      "line": 374,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 394,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2261,8 +2279,8 @@
       "section": "4. 小费贡献设置",
       "operation": "角色条件",
       "definition": "确定贡献员工，与接收角色和接收员工打卡要求独立。",
-      "line": 375,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 395,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2271,8 +2289,8 @@
       "section": "4. 小费贡献设置",
       "operation": "修改员工承担比例",
       "definition": "本项应用角色条件后才显示整行；未选择门店时提示“请先选择门店”。",
-      "line": 376,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 396,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2281,8 +2299,8 @@
       "section": "4. 小费贡献设置",
       "operation": "员工承担摘要",
       "definition": "平均分担或自定义承担比例，仅说明本项贡献怎样分担，不直接扣款。",
-      "line": 377,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 397,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2291,8 +2309,8 @@
       "section": "4. 小费贡献设置",
       "operation": "删除贡献项",
       "definition": "移除当前草稿项；整页保存后生效，不改已确认日期结果。",
-      "line": 378,
-      "interfaceImage": "assets/tips-current-scope-20261027/contribution.png",
+      "line": 398,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
     {
@@ -2301,7 +2319,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "门店",
       "definition": "任务启动时捕获的门店，执行中不随页面查询变化。",
-      "line": 392,
+      "line": 412,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2311,7 +2329,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "开始日期",
       "definition": "任务启动时选中的起始日，包含当天。",
-      "line": 393,
+      "line": 413,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2321,7 +2339,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "结束日期",
       "definition": "任务启动时选中的结束日，包含当天。",
-      "line": 394,
+      "line": 414,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2331,7 +2349,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "本次待分配天数",
       "definition": "预检后实际入队的合格未分配日期数，不是查询日历天数。",
-      "line": 395,
+      "line": 415,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2341,7 +2359,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "成功天数",
       "definition": "已保存系统快照的任务数。",
-      "line": 396,
+      "line": 416,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2351,7 +2369,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "失败天数",
       "definition": "执行失败的任务数；失败原因逐日列出。",
-      "line": 397,
+      "line": 417,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2361,7 +2379,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "跳过天数",
       "definition": "执行时发现已被其他页面处理或状态变化的任务数。",
-      "line": 398,
+      "line": 418,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2371,7 +2389,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "已处理天数",
       "definition": "成功＋失败＋跳过；正在处理和等待不计入。",
-      "line": 399,
+      "line": 419,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2381,7 +2399,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "任务总天数",
       "definition": "本次入队日期数，运行与重试按当前队列记录展示。",
-      "line": 400,
+      "line": 420,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2391,7 +2409,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "进度条",
       "definition": "已处理天数÷任务总天数，逐日更新。",
-      "line": 401,
+      "line": 421,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2401,7 +2419,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "日期",
       "definition": "每个入队日期单独一行，显示完整年月日。",
-      "line": 402,
+      "line": 422,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2411,7 +2429,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "结果",
       "definition": "等待分配、分配中、分配成功、分配失败或已跳过。",
-      "line": 403,
+      "line": 423,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2421,7 +2439,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "说明",
       "definition": "成功保存说明、失败原因或跳过原因；无说明显示—。",
-      "line": 404,
+      "line": 424,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2431,7 +2449,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "重试失败日期",
       "definition": "全部任务结束且仍有失败时才显示并启用；运行中或失败为0隐藏、不占位、不进入Tab。",
-      "line": 405,
+      "line": 425,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2441,7 +2459,7 @@
       "section": "7.1 自动分配状态与结果",
       "operation": "关闭",
       "definition": "执行和重试期间显示“正在分配”，禁用且降低透明度；全部日期处理结束后显示“关闭”并启用。关闭结果不撤销保存；完成有失败聚焦重试，否则聚焦关闭。",
-      "line": 406,
+      "line": 426,
       "interfaceImage": "assets/tips-current-scope-20261027/auto-running.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2451,7 +2469,7 @@
       "section": "7.2 主动批量分配范围",
       "operation": "门店",
       "definition": "当前操作门店，不能把多店混入一个范围。",
-      "line": 438,
+      "line": 458,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-allocation.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2461,7 +2479,7 @@
       "section": "7.2 主动批量分配范围",
       "operation": "开始日期",
       "definition": "必填合法日期，包含当天；不得晚于结束日。",
-      "line": 439,
+      "line": 459,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-allocation.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2471,7 +2489,7 @@
       "section": "7.2 主动批量分配范围",
       "operation": "结束日期",
       "definition": "必填合法日期，包含当天；非法或倒置阻止提交，保留输入。",
-      "line": 440,
+      "line": 460,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-allocation.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2481,7 +2499,7 @@
       "section": "7.2 主动批量分配范围",
       "operation": "分配小费",
       "definition": "预检范围、跳过未营业／已发放；有人工结果先二次确认。",
-      "line": 441,
+      "line": 461,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-allocation.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2491,7 +2509,7 @@
       "section": "7.2 主动批量分配范围",
       "operation": "取消／关闭",
       "definition": "不写入，恢复来源查询。",
-      "line": 442,
+      "line": 462,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-allocation.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2501,7 +2519,7 @@
       "section": "7.3 覆盖人工结果确认",
       "operation": "提示正文",
       "definition": "按系统小费规则重新分配，并覆盖手动调整结果；列出受影响天数和日期。",
-      "line": 454,
+      "line": 474,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-manual-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2511,7 +2529,7 @@
       "section": "7.3 覆盖人工结果确认",
       "operation": "重新分配",
       "definition": "再次核对范围与快照未被其他页面更改后执行。",
-      "line": 455,
+      "line": 475,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-manual-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2521,7 +2539,7 @@
       "section": "7.3 覆盖人工结果确认",
       "operation": "取消／关闭",
       "definition": "保留人工快照，不执行本轮重分配。",
-      "line": 456,
+      "line": 476,
       "interfaceImage": "assets/tips-current-scope-20261027/batch-manual-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2531,7 +2549,7 @@
       "section": "7.4 确认已发放",
       "operation": "门店",
       "definition": "本次发放登记的单一门店。",
-      "line": 469,
+      "line": 489,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2541,7 +2559,7 @@
       "section": "7.4 确认已发放",
       "operation": "日期",
       "definition": "本次登记的完整营业日，登记范围不因规则筛选缩小。",
-      "line": 470,
+      "line": 490,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2551,7 +2569,7 @@
       "section": "7.4 确认已发放",
       "operation": "已分配金额",
       "definition": "当前有效快照的接收额合计，用于发放核对。",
-      "line": 471,
+      "line": 491,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2561,7 +2579,7 @@
       "section": "7.4 确认已发放",
       "operation": "接收人数",
       "definition": "当前有效快照的接收员工数量，不用在职员工总数代替。",
-      "line": 472,
+      "line": 492,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2571,7 +2589,7 @@
       "section": "7.4 确认已发放",
       "operation": "确认已发放",
       "definition": "保存对应快照ID、版本和哈希的登记，锁定编辑；重复操作不重复生成有效记录。",
-      "line": 473,
+      "line": 493,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2581,7 +2599,7 @@
       "section": "7.4 确认已发放",
       "operation": "取消／关闭",
       "definition": "不登记，保留待发放；运行中防止重复提交。",
-      "line": 474,
+      "line": 494,
       "interfaceImage": "assets/tips-current-scope-20261027/payout-summary.png",
       "outcomeCoverage": "实际打开发放确认后取消；未登记发放"
     },
@@ -2591,7 +2609,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "规则名称",
       "definition": "逐条列出适用规则，不跨规则累加工时。",
-      "line": 504,
+      "line": 524,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2601,7 +2619,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "规则类型",
       "definition": "显示所属池类型。",
-      "line": 505,
+      "line": 525,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2611,7 +2629,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "计算说明",
       "definition": "说明是否使用工时及实际采用依据；不适用时明确说明。",
-      "line": 506,
+      "line": 526,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2621,7 +2639,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "分配计入工时",
       "definition": "同一规则逐日累计；单日入口只显示当天。员工权重不改变计入工时。",
-      "line": 507,
+      "line": 527,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2631,7 +2649,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "有记录／适用天数",
       "definition": "展示有工时记录的天数与规则适用天数，不适用时显示不适用。",
-      "line": 508,
+      "line": 528,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2641,7 +2659,7 @@
       "section": "7.5 分配计入工时明细",
       "operation": "关闭／遮罩／Esc",
       "definition": "关闭只读说明，不改筛选、工时或分配结果，并返回触发位置。",
-      "line": 509,
+      "line": 529,
       "interfaceImage": "assets/tips-current-scope-20261027/hours-period.png",
       "outcomeCoverage": "已实际打开和关闭只读工时弹框；未改变数据"
     },
@@ -2651,7 +2669,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "已分配日期",
       "definition": "有效分配快照累计的贡献金额。",
-      "line": 527,
+      "line": 547,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2661,7 +2679,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "待分配日期（预计）",
       "definition": "待分配日期按当前规则试算的贡献，尚未正式扣除。",
-      "line": 528,
+      "line": 548,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2671,7 +2689,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "合计",
       "definition": "已分配日期贡献与待分配日期预计贡献之和。",
-      "line": 529,
+      "line": 549,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2681,7 +2699,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "提示说明",
       "definition": "待分配金额为试算结果，以实际分配结果为准。",
-      "line": 530,
+      "line": 550,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2691,7 +2709,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "试算失败",
       "definition": "显示无法试算及原因，不把部分金额当完整贡献总额。",
-      "line": 531,
+      "line": 551,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2701,7 +2719,7 @@
       "section": "7.6 贡献金额拆分",
       "operation": "关闭说明",
       "definition": "仅改变展开状态，不执行保存或扣款。",
-      "line": 532,
+      "line": 552,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-help.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2711,7 +2729,7 @@
       "section": "7.7 公式详情",
       "operation": "来源与条件",
       "definition": "本规则计算项的取值范围。",
-      "line": 544,
+      "line": 564,
       "interfaceImage": "assets/tips-current-scope-20261027/formula.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2721,7 +2739,7 @@
       "section": "7.7 公式详情",
       "operation": "基数／比例／金额",
       "definition": "列出每项计算及总和；不把计划金额解释成实际贡献。",
-      "line": 545,
+      "line": 565,
       "interfaceImage": "assets/tips-current-scope-20261027/formula.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2731,7 +2749,7 @@
       "section": "7.7 公式详情",
       "operation": "关闭",
       "definition": "退出只读详情，不修改草稿。",
-      "line": 546,
+      "line": 566,
       "interfaceImage": "assets/tips-current-scope-20261027/formula.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2741,7 +2759,7 @@
       "section": "7.8 保存当前分配确认",
       "operation": "提示",
       "definition": "已手动调整过小费分配数据，将按照手动调整后的分配数据进行统计。",
-      "line": 558,
+      "line": 578,
       "interfaceImage": "assets/tips-live-20261027/save-adjusted.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2751,7 +2769,7 @@
       "section": "7.8 保存当前分配确认",
       "operation": "保存当前分配",
       "definition": "保存整日人工快照，更新正式汇总；校验失败保留草稿。",
-      "line": 559,
+      "line": 579,
       "interfaceImage": "assets/tips-live-20261027/save-adjusted.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2761,7 +2779,7 @@
       "section": "7.8 保存当前分配确认",
       "operation": "取消／关闭",
       "definition": "返回编辑，人工草稿保留。",
-      "line": 560,
+      "line": 580,
       "interfaceImage": "assets/tips-live-20261027/save-adjusted.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2771,7 +2789,7 @@
       "section": "7.9 重新确认分配提示",
       "operation": "提示",
       "definition": "已手动调整过小费分配数据，将按照系统小费规则进行重新分配，分配后会覆盖手动调整的数据。",
-      "line": 572,
+      "line": 592,
       "interfaceImage": "assets/tips-live-20261027/reallocate-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2781,7 +2799,7 @@
       "section": "7.9 重新确认分配提示",
       "operation": "重新确认分配",
       "definition": "重建系统快照，替换手调结果；不重复叠加扣款。",
-      "line": 573,
+      "line": 593,
       "interfaceImage": "assets/tips-live-20261027/reallocate-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2791,7 +2809,7 @@
       "section": "7.9 重新确认分配提示",
       "operation": "取消／关闭",
       "definition": "保留已有正式结果及页面草稿。",
-      "line": 574,
+      "line": 594,
       "interfaceImage": "assets/tips-live-20261027/reallocate-warning.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2801,7 +2819,7 @@
       "section": "7.10 无手动调整提示",
       "operation": "提示",
       "definition": "当前系统分配数据未进行手动调整。",
-      "line": 586,
+      "line": 606,
       "interfaceImage": "assets/tips-current-scope-20261027/save-unchanged.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2811,7 +2829,7 @@
       "section": "7.10 无手动调整提示",
       "operation": "知道了",
       "definition": "仅关闭说明，不写快照。",
-      "line": 587,
+      "line": 607,
       "interfaceImage": "assets/tips-current-scope-20261027/save-unchanged.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2821,7 +2839,7 @@
       "section": "7.11 更新小费数据",
       "operation": "提示与范围",
       "definition": "确认门店、日期、基准快照及覆盖手调影响。",
-      "line": 599,
+      "line": 619,
       "interfaceImage": "assets/tips-current-scope-20261027/detail-update.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2831,7 +2849,7 @@
       "section": "7.11 更新小费数据",
       "operation": "确认更新",
       "definition": "重新读取当日来源并重建默认计算；需要确认的结果不伪称已完成确认。",
-      "line": 600,
+      "line": 620,
       "interfaceImage": "assets/tips-current-scope-20261027/detail-update.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2841,7 +2859,7 @@
       "section": "7.11 更新小费数据",
       "operation": "取消／关闭",
       "definition": "不更新，保留当前内容。",
-      "line": 601,
+      "line": 621,
       "interfaceImage": "assets/tips-current-scope-20261027/detail-update.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2851,7 +2869,7 @@
       "section": "7.12 未保存调整保护",
       "operation": "继续编辑",
       "definition": "取消跳转，保留日期、筛选和草稿。",
-      "line": 619,
+      "line": 639,
       "interfaceImage": "assets/tips-live-20261027/detail-leave.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2861,7 +2879,7 @@
       "section": "7.12 未保存调整保护",
       "operation": "放弃调整",
       "definition": "不保存该草稿，继续目标跳转；正式快照不受影响。",
-      "line": 620,
+      "line": 640,
       "interfaceImage": "assets/tips-live-20261027/detail-leave.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2871,7 +2889,7 @@
       "section": "7.13 选择池类型",
       "operation": "小费池",
       "definition": "创建普通小费来源规则。",
-      "line": 632,
+      "line": 652,
       "interfaceImage": "assets/tips-current-scope-20261027/pool-type.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2881,7 +2899,7 @@
       "section": "7.13 选择池类型",
       "operation": "加收服务费池",
       "definition": "创建加收服务费来源规则，相关标题和条件采用该类别。",
-      "line": 633,
+      "line": 653,
       "interfaceImage": "assets/tips-current-scope-20261027/pool-type.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2891,7 +2909,7 @@
       "section": "7.13 选择池类型",
       "operation": "确认",
       "definition": "携带选中池类型进入新增页。",
-      "line": 634,
+      "line": 654,
       "interfaceImage": "assets/tips-current-scope-20261027/pool-type.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2901,7 +2919,7 @@
       "section": "7.13 选择池类型",
       "operation": "取消／关闭",
       "definition": "退出，不创建规则。",
-      "line": 635,
+      "line": 655,
       "interfaceImage": "assets/tips-current-scope-20261027/pool-type.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2911,7 +2929,7 @@
       "section": "7.14 员工权重",
       "operation": "角色",
       "definition": "本接收组选择的角色，限定员工候选。",
-      "line": 647,
+      "line": 667,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2921,7 +2939,7 @@
       "section": "7.14 员工权重",
       "operation": "员工姓名",
       "definition": "当前门店、所选角色的员工；以稳定身份引用区分同名人员。",
-      "line": 648,
+      "line": 668,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2931,7 +2949,7 @@
       "section": "7.14 员工权重",
       "operation": "员工权重",
       "definition": "缺省1、0合法，输入须为有限非负数，最大1,000,000。",
-      "line": 649,
+      "line": 669,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2941,7 +2959,7 @@
       "section": "7.14 员工权重",
       "operation": "权重换算百分比",
       "definition": "权重×100%，最多两位小数，1.1显示110%；仅供说明。",
-      "line": 650,
+      "line": 670,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2951,7 +2969,7 @@
       "section": "7.14 员工权重",
       "operation": "确定",
       "definition": "应用到当前规则草稿；整页保存后持久化。",
-      "line": 651,
+      "line": 671,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2961,7 +2979,7 @@
       "section": "7.14 员工权重",
       "operation": "取消／关闭",
       "definition": "丢弃本次弹框输入。",
-      "line": 652,
+      "line": 672,
       "interfaceImage": "assets/tips-current-scope-20261027/employee-weight.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2971,7 +2989,7 @@
       "section": "7.15 员工承担比例",
       "operation": "角色",
       "definition": "当前贡献项已应用的角色集合，多角色共同分担同一项金额。",
-      "line": 664,
+      "line": 684,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2981,7 +2999,7 @@
       "section": "7.15 员工承担比例",
       "operation": "员工",
       "definition": "当前门店、选中角色的有效员工，按ID识别；名单为当前配置预览。",
-      "line": 665,
+      "line": 685,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -2991,7 +3009,7 @@
       "section": "7.15 员工承担比例",
       "operation": "按员工人数平均分担",
       "definition": "默认；按当天有效员工人数等分应贡献，比例为近似显示，金额按人数分币。",
-      "line": 666,
+      "line": 686,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3001,7 +3019,7 @@
       "section": "7.15 员工承担比例",
       "operation": "自定义承担比例",
       "definition": "每人必填0—100%，最多两位小数；全部选中角色的员工共同合计100%。",
-      "line": 667,
+      "line": 687,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3011,7 +3029,7 @@
       "section": "7.15 员工承担比例",
       "operation": "合计",
       "definition": "自定义模式显示合计和未达100%提示。",
-      "line": 668,
+      "line": 688,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3021,7 +3039,7 @@
       "section": "7.15 员工承担比例",
       "operation": "示例",
       "definition": "说明应扣、余额封顶和差额不转嫁，不是当天实际金额。",
-      "line": 669,
+      "line": 689,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3031,7 +3049,7 @@
       "section": "7.15 员工承担比例",
       "operation": "确定",
       "definition": "校验门店、角色、员工未变化，应用当前规则草稿；失败留框并说明。",
-      "line": 670,
+      "line": 690,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3041,7 +3059,7 @@
       "section": "7.15 员工承担比例",
       "operation": "取消／关闭",
       "definition": "丢弃本次输入，回到贡献项，不自动保存规则。",
-      "line": 671,
+      "line": 691,
       "interfaceImage": "assets/tips-current-scope-20261027/share-custom.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3051,7 +3069,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "角色",
       "definition": "按归属角色过滤；贡献项至少一个角色。多值为同维并集，不决定接收组。",
-      "line": 695,
+      "line": 715,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3061,7 +3079,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "员工",
       "definition": "按员工引用过滤，候选受门店与角色限制；与角色维度按界面互斥，不能靠同名串账。",
-      "line": 696,
+      "line": 716,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3071,7 +3089,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "营业额类型",
       "definition": "销售额候选为Net Sales（税前营业额）、Gross Sales（总销售额）、Payment Method（支付方式）；是否可计算取决于对应事实，见本节能力边界。",
-      "line": 697,
+      "line": 717,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3081,7 +3099,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "订单类型",
       "definition": "限定堂食、外带等当前候选类型。",
-      "line": 698,
+      "line": 718,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3091,7 +3109,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "支付方式",
       "definition": "限定来源支付类型；不支持的营业额＋菜单组合不能提交为有效条件。",
-      "line": 699,
+      "line": 719,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3101,7 +3119,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "区域",
       "definition": "限定订单发生区域。",
-      "line": 700,
+      "line": 720,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3111,7 +3129,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "菜单／商品范围",
       "definition": "按当前来源支持的产品线、分类、菜单组或商品过滤；商品销售额与包含商品订单不是同一口径。",
-      "line": 701,
+      "line": 721,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3121,7 +3139,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "订单需包含商品",
       "definition": "限定订单命中条件，不自动把整单金额变成某商品金额。",
-      "line": 702,
+      "line": 722,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3131,7 +3149,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "营业时间／订单时间",
       "definition": "起止成对，按来源发生时间过滤；不决定接收员工名单。",
-      "line": 703,
+      "line": 723,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3141,7 +3159,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "小费类型／订单小费状态",
       "definition": "按来源选择允许类型或有／无等状态；小费收入贡献需要小费类型。",
-      "line": 704,
+      "line": 724,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3151,7 +3169,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "加收类型",
       "definition": "服务费来源的允许类型。",
-      "line": 705,
+      "line": 725,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3161,7 +3179,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "新增条件",
       "definition": "添加当前来源支持的条件维度，候选受当前来源限制。",
-      "line": 706,
+      "line": 726,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3171,7 +3189,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "删除条件",
       "definition": "解除本项条件，不改变其他计算项或贡献项。",
-      "line": 707,
+      "line": 727,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3181,7 +3199,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "提交",
       "definition": "校验必填、范围、组合，应用到父规则草稿；整页保存后持久化。",
-      "line": 708,
+      "line": 728,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3191,7 +3209,7 @@
       "section": "7.16 来源／贡献取值条件",
       "operation": "取消／关闭",
       "definition": "退出抽屉，不保存正式规则。",
-      "line": 709,
+      "line": 729,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3201,7 +3219,7 @@
       "section": "7.17 导出与邮件",
       "operation": "CSV",
       "definition": "下载当前视角、门店、合法日期和有效筛选下的数据，日期保留完整信息。",
-      "line": 753,
+      "line": 773,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3211,7 +3229,7 @@
       "section": "7.17 导出与邮件",
       "operation": "PDF",
       "definition": "日期／员工汇总优先使用jsPDF生成下载，加载或生成失败转浏览器打印预览；员工每日页直接打开打印窗口，由用户另存PDF。弹窗被拦截时提示；不修改账本。",
-      "line": 754,
+      "line": 774,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3221,7 +3239,7 @@
       "section": "7.17 导出与邮件",
       "operation": "邮箱地址",
       "definition": "必填，多个地址用英文逗号分隔，逐个校验格式。",
-      "line": 755,
+      "line": 775,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3231,7 +3249,7 @@
       "section": "7.17 导出与邮件",
       "operation": "导出格式",
       "definition": "PDF或CSV单选，默认PDF。",
-      "line": 756,
+      "line": 776,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3241,7 +3259,7 @@
       "section": "7.17 导出与邮件",
       "operation": "发送",
       "definition": "有可导出数据后关闭弹框并显示模拟发送反馈；没有实际邮件服务调用。",
-      "line": 757,
+      "line": 777,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3251,7 +3269,7 @@
       "section": "7.17 导出与邮件",
       "operation": "取消／关闭",
       "definition": "不发送，不修改查询或分配。",
-      "line": 758,
+      "line": 778,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3261,7 +3279,7 @@
       "section": "7.18 删除规则确认",
       "operation": "提示",
       "definition": "确定要删除该规则吗？此操作不可恢复。",
-      "line": 776,
+      "line": 796,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3271,7 +3289,7 @@
       "section": "7.18 删除规则确认",
       "operation": "删除",
       "definition": "删除当前规则配置，不删除已确认的日期快照。",
-      "line": 777,
+      "line": 797,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3281,7 +3299,7 @@
       "section": "7.18 删除规则确认",
       "operation": "取消／关闭",
       "definition": "保留规则，返回列表。",
-      "line": 778,
+      "line": 798,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3291,7 +3309,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "提示",
       "definition": "确定要取消吗？未保存的更改将丢失。",
-      "line": 789,
+      "line": 809,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3301,7 +3319,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "确定离开",
       "definition": "不保存输入，返回规则列表；已保存规则与日期快照不受影响。",
-      "line": 790,
+      "line": 810,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3311,7 +3329,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "取消",
       "definition": "关闭确认框，保留编辑内容。",
-      "line": 791,
+      "line": 811,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3321,7 +3339,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "关闭",
       "definition": "与取消相同，不离开编辑页。",
-      "line": 792,
+      "line": 812,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3331,7 +3349,7 @@
       "section": "",
       "operation": "金额0／无结果—",
       "definition": "真实0显示0.00；尚未确认接收或最终金额显示—；计算异常显示原因，不用0掩盖。",
-      "line": 798,
+      "line": 818,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3341,7 +3359,7 @@
       "section": "",
       "operation": "负号与颜色",
       "definition": "贡献为扣除方向，但计算对象中贡献金额仍为非负数；接收方向为加项。",
-      "line": 799,
+      "line": 819,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3351,7 +3369,7 @@
       "section": "",
       "operation": "空结果",
       "definition": "筛选无匹配时显示空态，不清空来源、规则或确认快照。",
-      "line": 800,
+      "line": 820,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3361,7 +3379,7 @@
       "section": "",
       "operation": "日期上下文",
       "definition": "日期行展示MM/DD与星期，内部查询、快照和导出保留完整日期。",
-      "line": 801,
+      "line": 821,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3371,7 +3389,7 @@
       "section": "",
       "operation": "页面内确认",
       "definition": "保存、覆盖、取消、发放等弹框显示具体范围；确认前不写数据，运行中防重复。",
-      "line": 802,
+      "line": 822,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3381,7 +3399,7 @@
       "section": "",
       "operation": "焦点与关闭",
       "definition": "可关闭的说明／确认框支持返回触发位置；自动分配运行中不能关闭，有失败才显示重试。",
-      "line": 803,
+      "line": 823,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3391,9 +3409,99 @@
       "section": "",
       "operation": "整日操作范围",
       "definition": "规则筛选、角色收起只影响显示，保存与发放仍为当前门店日全部规则。",
-      "line": 804,
+      "line": 824,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
+    },
+    {
+      "id": "OP-274",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "贡献方标签",
+      "definition": "橙色文字、浅橙底，标识本规则的扣除员工及金额。",
+      "line": 213,
+      "interfaceImage": "assets/tips-contributors-20261103/details-parties.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-275",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "接收方标签",
+      "definition": "绿色文字、浅绿底，标识本规则的接收员工及分得金额。",
+      "line": 214,
+      "interfaceImage": "assets/tips-contributors-20261103/details-parties.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-276",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "双重身份",
+      "definition": "同一员工既贡献又接收时分别展示两种身份及金额，不用净额替代。",
+      "line": 215,
+      "interfaceImage": "assets/tips-contributors-20261103/details-parties.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-277",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "商家承担提示",
+      "definition": "无员工贡献，由商家承担；员工扣除为0。",
+      "line": 216,
+      "interfaceImage": "assets/tips-contributors-20261103/details-parties.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-278",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "贡献明细缺失",
+      "definition": "提示无法查看贡献依据；缺失字段显示“—”，不将缺失数据作为0或重算已确认数据。",
+      "line": 217,
+      "interfaceImage": "assets/tips-contributors-20261103/details-parties.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-279",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "贡献方式",
+      "definition": "每条小费规则均展示。单选；新建默认“无员工贡献，由商家承担”。",
+      "line": 388,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-280",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "无员工贡献，由商家承担",
+      "definition": "隐藏贡献条件；保存时员工扣除配置清空，C=0、E=P、D=P。员工不会被扣除小费。",
+      "line": 389,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-281",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "员工贡献",
+      "definition": "展示本规则贡献条件，保存时至少一条；各项完成比例、角色及承担设置后才能保存。",
+      "line": 390,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-282",
+      "page": "规则编辑／当日明细",
+      "section": "贡献设置与身份标签",
+      "operation": "切换贡献方式",
+      "definition": "切换仅更新本页草稿；保存才生效。商家承担时不保存隐藏的员工扣除项，不影响接收配置或已确认日期。",
+      "line": 391,
+      "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
+      "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
     }
   ],
   "coverageStatus": "本次审计列出的缺失说明和主要弹框／失败重试／少扣画面已补齐；全量操作分支证据仍按清单登记",

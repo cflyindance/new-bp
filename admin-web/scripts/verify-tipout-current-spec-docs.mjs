@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.52','V3.52','V2.50'];
-const id='TIPOUT-DOC-COMPLETION-20261027-01';
+const versions=['V4.53','V3.53','V2.51'];
+const id='TIPOUT-CONTRIBUTORS-20261103-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'64ddec8f');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'0e737e4c');
 let links=0;
 for(const [i,text]of texts.entries()){
  assert.doesNotMatch(text,/【未来规划】|测试场景清单|取消分配|小费池计算模式|计提|按班次|按打卡时段|个人销售额|再分配|conditions\.weekdays|shiftWorkHours|tipClaims|order_tip_then_residual|time_window/,names[i]+' current delivery scope only');
@@ -38,9 +38,11 @@ assert.ok(personal.includes('已完成／部分待分配／待分配'));assert.o
 assert.ok(product.includes('成功后失败0、重试按钮隐藏'));assert.ok(personal.includes('全部任务结束且仍有失败时才显示'));
 assert.ok(personal.includes('assets/tips-current-scope-20261027/delete-rule.png'));assert.ok(personal.includes('assets/tips-current-scope-20261027/contribution-help.png'));
 const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf8');assert.ok(coverage.includes(id));assert.ok(coverage.includes('未覆盖的图像'));assert.doesNotMatch(coverage,/【未来规划】|测试场景清单|取消分配|计提|按班次|按打卡时段|个人销售额|再分配/);
-const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8'))];
+const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8'))];
 for(const img of manifest.images){
  const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
+ const current=img.file.startsWith('assets/tips-contributors-20261103/');
+ if(current){assert.equal(capture.baseline,'0e737e4c + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65230/#/team/tips/'));assert.ok(img.width>250&&img.height>80);assert.notEqual(capture.planning,true);continue;}
  const shares=/\/share-(average|custom|invalid)\.png$/.test(img.file);
  assert.equal(capture.baseline,shares?'5b57958c':'64ddec8f');assert.equal(img.baseline,capture.baseline);
  assert.ok(img.route.startsWith('http://127.0.0.1:'+(shares?'65210':'65200')+'/#/team/tips/'),'actual target route '+img.file);

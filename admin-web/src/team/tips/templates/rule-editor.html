@@ -610,6 +610,11 @@
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
+            <div class="contributor-mode-options" role="group" aria-label="贡献方式">
+              <label><input type="radio" name="contributionMode" value="merchant" data-native-onchange="setContributionMode('merchant')"> 无员工贡献，由商家承担</label>
+              <label><input type="radio" name="contributionMode" value="employees" data-native-onchange="setContributionMode('employees')"> 员工贡献</label>
+            </div>
+            <div id="contributorEmployeeSettings">
             <div id="deductRulesContainer"></div>
             <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
             <div class="add-option-dropdown" id="deductAddOptionWrap">
@@ -621,6 +626,7 @@
                 <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">按照个人销售额占比</div>
                 <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
               </div>
+            </div>
             </div>
           </div>
 
