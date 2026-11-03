@@ -1,14 +1,155 @@
 # M 平台内部权限业务规格说明书（研发交付版）
 
-版本：V1.12；日期：2026-11-03；变更编号：PROVIDER-EMP-DEMO-20261103-01。
-共同基线：员工商户访问授权演示绑定；起始本地 main@8505040b。
-配套：[产品权威 V1.12](M平台内部权限产品权威需求文档.md) · [研发交付 V1.12](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.12](M平台内部权限需求文档（个人规范版）.md)。
+版本：V1.13；日期：2026-11-03；变更编号：EMPLOYEE-ACCESS-CONFIG-20261103-01。
+共同基线：员工双维角色与权限统一配置；起始本地 main@a0ed2503。
+配套：[产品权威 V1.13](M平台内部权限产品权威需求文档.md) · [研发交付 V1.13](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.13](M平台内部权限需求文档（个人规范版）.md)。
 状态：按本次确认实现的本地原型；生产服务端鉴权、真实账号服务尚未接入。三份采用同一业务定义。
 
 本文件展开产品权威的字段、计算、状态、存储与测试，不新增业务规则。
 
 
+## 员工统一角色与权限配置（EMPLOYEE-ACCESS-CONFIG-20261103-01）
+
+本节为当前入口与交互定义；旧“分配角色”弹框、独立“商户访问授权”入口及单维员工预览截图为历史。既有两类角色、员工绑定、演示数据及授权校验继续有效，不迁移或合并存储。共同基线 main@a0ed2503，功能分支 codex/employee-role-config-20261103，外部 Chrome 功能验收端口 5317；用户已授权提交并合并本地 main，未授权推送；实际结果以 Git 交付核验为准。
+
+图注统一：2026-11-03 当前功能分支，外部 Chrome 真实截图；独立端口的本地演示数据，不是真实商户授权操作。测试中的临时 M 角色和商户绑定已恢复，保留测试操作的本地审计记录。
+
+### 本次逐操作覆盖清单
+
+| 操作 | 入口 → 操作界面 → 结果 | 验证情况 |
+| --- | --- | --- |
+| 配置角色与权限 | staff → config / final-config | 两维同页、员工与原绑定回填 |
+| 查看权限 / 权限预览 | config → preview / m-admin-preview | 已保存状态，只读，两维独立 |
+| 切换预览对象 | preview → preview-target | 仅员工与当前操作者可访问目标，两家门店切换 |
+| 勾选 / 取消 M 角色 | config → both-dirty | M 草稿独立，清空后无 M 权限 |
+| 保存 M 角色，取消确认 | both-dirty → m-confirm → m-cancel | 不写入，保留两类草稿 |
+| 保存 M 角色，确认 | m-confirm → m-saved-provider-dirty | 仅 M 维度已保存，商户草稿仍在 |
+| 添加商户授权，必填校验 | brand → binding-add → binding-required | 空角色/范围不能加入草稿 |
+| 编辑商户授权，取消 | config → binding-edit → binding-cancel | 回填角色与两门店，取消不修改绑定 |
+| 编辑商户授权，加入草稿 | binding-edit → both-dirty | 待保存，不立即生效 |
+| 移除商户绑定 | brand → binding-remove-draft | 仅草稿移除，保存前原授权继续生效 |
+| 保存商户授权，取消确认 | both-dirty → provider-confirm → provider-cancel | 不写入，保留两类草稿 |
+| 保存商户授权，确认 | provider-confirm → provider-saved-m-dirty | 仅商户维度已保存，M 草稿仍在 |
+| M 保存失败：最后管理员 | m-confirm → last-admin-error | 拒绝保存，保留草稿 |
+| M 保存失败：并发冲突 | m-confirm → concurrent-error → concurrent-draft | 拒绝覆盖，取消弹框后草稿仍在 |
+| 商户草稿离开：取消 / 放弃 | binding-remove-draft → provider-leave → provider-stay / returned-list | 取消留页，放弃丢草稿并返回 |
+| M 草稿离开：取消 | M 角色修改 → 系统确认框 | 已验证不跳转；原生层截图待补 |
+| 返回列表 / 返回配置 | config → returned-list；preview → config | 页面与目标员工保持正确 |
+| 旧商户授权链接 | 旧 merchant-access URL → legacy | 进入同一统一页面 |
+
+覆盖边界：本次没有补齐旧模块全部操作截图。受限员工真实登录、账号停用画面、存储损坏/写入失败、商户保存并发失败、范围搜索与切换确认的异常截图待补；其既有规则保留。原生确认框无法用网页截图代替，未声称全部操作或全部异常截图完整。
+
+### 员工列表：双维摘要与统一入口
+
+![员工列表](images/employee-access-config/staff.png)
+
+| 元素 | 逻辑说明 |
+| --- | --- |
+| 角色摘要 / M 平台 | 来源为 MState.employees.roleIds，通过角色 ID 映射名称；无角色显示未分配，失效引用显示失效角色；不根据商户授权推导 M 角色 |
+| 角色摘要 / 商户访问 | 来源为该员工每条 ProviderBinding，逐条显示访问角色名和 scope.ids.length；brands 单位为个品牌，stores 为家门店，多条用分号连接，不将不同范围合成一个总数量 |
+| 系统员工摘要 | systemEmployeeIds 中的员工显示“系统管理员 · 全部品牌／门店”，仍受商户菜单上限限制 |
+| 空值与异常 | 无绑定显示未配置；无商户角色页权限显示无查看权限，不读取该明细；数据解析失败显示数据读取失败，保留独立 M 维度 |
+| 配置角色与权限 | 替换旧分配角色按钮和独立商户访问授权链接；导航到 /m-platform/permissions/staff/:id/roles；员工页可见即可进入查看，各维写操作另校验 |
+| 查看权限 | 旧 /staff/:id 继续可用，展示双维只读预览，不能编辑或将草稿当作已生效权限 |
+
+### 配置页：M 平台角色与商户访问授权
+
+![统一配置页](images/employee-access-config/final-config.png)
+![品牌范围回填](images/employee-access-config/brand.png)
+![另一品牌回填](images/employee-access-config/finance-brand.png)
+
+| 元素 / 字段 | 逻辑说明 |
+| --- | --- |
+| 返回列表 / 标题 / 权限预览 | 返回在页面标题左，权限预览在右；返回员工列表，预览带当前 employeeId。存在任一维草稿均先执行离开保护 |
+| 员工信息 | 由既有员工账号目录按 ID 查询姓名、邮箱、enabled。不存在则提示员工不存在；停用显示全部权限不生效，不删除原角色与范围 |
+| M 平台角色 | string[] 角色 ID，多选，默认已保存 roleIds 或 []；清空即无 M 角色。仅 staff/assign 可编辑。角色并集、上级菜单约束与最后管理员保护沿用 |
+| 商户授权区域 | provider-roles 页不可见时仅显示无查看权限，不调用商户编辑器或读取该区域明细；可见但无 manage 动作时只读。系统兼容员工不显示可修改绑定 |
+| 商户访问角色 | 每条绑定一个有效商户角色 roleId；配置入口不修改角色本身的菜单定义 |
+| 品牌 / 门店范围 | 保持 scope.mode=brands 或 stores、非空且不重复的 scope.ids，角色与范围必须同时指定。品牌含新增门店，指定门店不自动包含新门店，也不能提升为品牌访问 |
+| 两类保存与状态 | 每区独立按钮、独立已保存/未保存状态。无变更或无对应动作权限时禁用。成功仅更新本区快照、revision、日志并解除本区脏状态；另一维草稿保留 |
+
+### M 平台角色：勾选、保存、取消与失败
+
+![修改角色后的两类草稿](images/employee-access-config/both-dirty.png)
+![确认 M 角色变更](images/employee-access-config/m-confirm.png)
+![取消确认后草稿保留](images/employee-access-config/m-cancel.png)
+
+确认弹框列员工和待保存角色，空选择显示未分配。取消仅关闭弹框，不写存储；确认调用 saveMState，gate=staff/assign，沿用授权上限、有效账号、revision 与最后一名启用管理员检查。保存对象为员工 ID，日志动作沿用分配角色，不含账号凭据。成功无跨维事务，不保存商户草稿。
+
+![仅 M 保存成功，商户仍为草稿](images/employee-access-config/m-saved-provider-dirty.png)
+![最后管理员校验失败](images/employee-access-config/last-admin-error.png)
+![并发版本校验失败](images/employee-access-config/concurrent-error.png)
+![关闭错误弹框后草稿仍在](images/employee-access-config/concurrent-draft.png)
+
+失败不关闭弹框，不更新本区保存状态、不写入成功日志，保留勾选。并发失败须重新打开获取新快照后复核，不自动覆盖其他窗口，不自动合并未确认配置。
+
+### 商户授权：添加、编辑、取消与移除
+
+![添加入口](images/employee-access-config/brand.png)
+![新增授权弹框](images/employee-access-config/binding-add.png)
+![角色与范围必填校验](images/employee-access-config/binding-required.png)
+
+新增默认指定门店、未选择角色/对象；至少选择一个有效角色和一个当前操作者可授权品牌/门店。失败提示“请选择访问角色和至少一个品牌／门店。”，留在弹框，不增加绑定。范围搜索、切换时清空确认沿用原交互，无新增范围语义。
+
+![编辑入口](images/employee-access-config/config.png)
+![角色和两家门店回填](images/employee-access-config/binding-edit.png)
+![取消编辑结果](images/employee-access-config/binding-cancel.png)
+
+编辑复用原绑定 ID；加入待保存配置仅更新商户草稿。取消只关闭，不修改已有绑定，也不清空 M 草稿。
+
+![移除后的待保存状态](images/employee-access-config/binding-remove-draft.png)
+
+移除只影响本区草稿；提交前原保存绑定有效。要恢复可放弃本区草稿并重新进入，不在点击移除时直接写日志。
+
+### 商户授权：保存确认、取消及独立结果
+
+![确认入口的商户草稿](images/employee-access-config/both-dirty.png)
+![商户授权保存确认](images/employee-access-config/provider-confirm.png)
+![取消确认后两类草稿保留](images/employee-access-config/provider-cancel.png)
+![仅商户保存成功，M 仍为草稿](images/employee-access-config/provider-saved-m-dirty.png)
+
+确认仍调用 saveProviderState，校验 provider-roles/manage、当前操作者、expected revision、有效角色和目标、可授权对象与菜单上限、系统兼容 ID 不变。成功更新商户源 revision 和日志，动作沿用更新商户访问范围，触发既有会话重校验。失败保留草稿并展示原错误，不修改 M 状态；写入失败与商户并发错误截图待补。正常保存后的两个状态见下图。
+
+![两类保存完成且演示配置恢复](images/employee-access-config/saved.png)
+
+### 离开保护、返回及旧链接
+
+![商户草稿离开确认](images/employee-access-config/provider-leave.png)
+![取消离开，草稿仍在](images/employee-access-config/provider-stay.png)
+![放弃修改后返回列表，原授权保留](images/employee-access-config/returned-list.png)
+
+任一维未保存都阻止直接跳走。M 草稿使用既有浏览器原生确认，准确文案“M 平台角色有未保存的修改，确定放弃并离开？”；取消留页，确认继续检查另一维。商户草稿沿用自定义放弃弹框，取消留页；确认放弃后仅丢未保存内容并执行原目标导航。已保存内容与记录不回退；刷新/关闭页签仍有 beforeunload 保护。M 原生确认的真实截图待补。
+
+![旧 merchant-access 地址进入统一配置](images/employee-access-config/legacy.png)
+
+旧地址兼容到统一配置实现，不进行数据迁移；旧链接仍保留原路由权限检查。角色定义入口仍在角色与权限菜单，不并入员工账号编辑。
+
+### 权限预览与切换目标
+
+![从统一配置进入预览](images/employee-access-config/config.png)
+![员工双维权限预览](images/employee-access-config/preview.png)
+![M 管理员已保存菜单与操作](images/employee-access-config/m-admin-preview.png)
+![切换到第二家已授权门店](images/employee-access-config/preview-target.png)
+
+| 元素 / 计算 | 逻辑说明 |
+| --- | --- |
+| M 平台访问权限 | 仅取已保存 M 角色并集及账号 enabled，用 mResolve 计算菜单与动作；隐藏菜单不列出，无允许动作显示无，无菜单显示暂无可访问的 M 平台菜单 |
+| 预览品牌／门店 | 对象必须同时匹配员工已保存绑定与当前操作者可访问范围；指定门店绑定不出现品牌层目标，不出现未授权门店；默认第一个有效目标，无目标显示暂无可预览范围 |
+| 商户访问权限 | providerRoleAccess 的角色并集与所选品牌 ceiling、门店 enabledKeys 映射资源集求交；账号停用、范围不匹配或任一上限不含该资源均不可见。不把预览结果自动作为 M 入口或代登录动作授权 |
+| 空态 | 角色有配置但目标菜单未开通时显示当前对象暂无可访问菜单；不为演示强行开放。截图中两店订单角色受实际菜单上限限制出现此状态 |
+| 只读与保存源 | 预览没有保存按钮、不写日志；未保存修改须先保存或明确放弃才能离开配置页。两类配置各自成功后才进入各自已保存预览源 |
+| 返回配置 | 回到同一员工的 /roles，不重置另一员工数据 |
+
+### 实现与验证记录
+
+复用 m-platform-store.ts 与 provider-access-store.ts，不改变存储键、schema、日志来源或系统兼容 ID。新 employee-access-ui.ts 组合两区及离开保护；provider-access-ui.ts 增加嵌入和员工只读预览；employee-access-domain.ts 负责路由解析、摘要与员工权限/上限交集。
+
+类型检查、统一/旧路由、摘要、范围与双上限、停用预览测试通过；M 平台角色与动作回归、商户访问 16 项、预设演示数据保护、集中日志隔离回归通过。外部 Chrome 实测双向保存隔离、确认取消、最后管理员拒绝、双窗口并发拒绝且草稿保留、添加必填、编辑回填、移除草稿与放弃、旧链接、预览目标切换。未验证项见覆盖清单，不宣称生产服务鉴权或全部异常截图完成。
+
+
 ## 员工商户访问授权演示数据（PROVIDER-EMP-DEMO-20261103-01）
+
+演示数据规则继续有效；本节独立授权页截图与入口属于历史，当前统一配置入口见 EMPLOYEE-ACCESS-CONFIG-20261103-01。
 
 基线本地 main@8505040b；分支 codex/provider-employee-demo-20261103；外部 Chrome 功能验收端口 5316。用户已授权提交并合并本地 main；未授权推送，实际提交与合并结果以 Git 交付核验为准。本次在尚无保存授权数据的演示环境补充员工绑定，不覆盖已有角色、员工范围或日志，不修改员工的 M 平台内部角色。
 
@@ -457,7 +598,7 @@ M 角色行入口仅在具备原 M 日志权限时展示，带入 type=m、role=
 
 ## 商户访问授权字段与执行链
 
-业务口径与页面操作参照[产品权威 V1.12](M平台内部权限产品权威需求文档.md#授权业务口径)，不另行决定业务。
+业务口径与页面操作参照[产品权威 V1.13](M平台内部权限产品权威需求文档.md#授权业务口径)，不另行决定业务。
 
 | 字段 | 类型、来源与约束 |
 | --- | --- |
@@ -653,6 +794,8 @@ src/auth/login.ts：企业账号在品牌和演示回退前校验，停用及密
 - TypeScript：tsc --noEmit。商家仅角色授权回归和公共导航回归通过。verify-permission-center.ts 的“Operation page cannot be selected: /team/shift-scheduling”断言失败；在 main@48c9c24b 的独立干净源码快照复现同一失败（第 37 行），属于基线问题，本次未修改商家权限目录，不宣称该脚本全通过。未运行 CI/部署。
 
 ## 6. 版本记录
+
+- V1.13（2026-11-03，EMPLOYEE-ACCESS-CONFIG-20261103-01）：三份配对版本均 V1.13，统一员工配置入口、双维摘要、独立保存与双维已保存权限预览；附当前逐操作截图及边界验证。
 
 - V1.12（2026-11-03，PROVIDER-EMP-DEMO-20261103-01）：三份配对版本均为 V1.12。补充三位员工品牌/门店演示绑定及授权预设记录，保留已有保存快照，附当前操作截图与验证结果。
 
