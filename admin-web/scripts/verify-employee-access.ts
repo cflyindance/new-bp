@@ -1,3 +1,5 @@
+import {mEmployeePermissionPages,employeeWorkbenchSurface} from '../src/permissions/employee-access-domain';
+import type {MState} from '../src/permissions/m-platform-domain';
 import assert from 'node:assert/strict';
 import { employeeAccessRoute,providerEmployeeSummary,employeeMerchantPreviewAccess } from '../src/permissions/employee-access-domain';
 import {createProviderDemoState} from '../src/permissions/provider-access-demo';
@@ -28,3 +30,17 @@ assert.equal(resolve({brandId:'b1',storeId:'s1'},new Set()),'hidden','brand enti
 assert.equal(resolve({brandId:'b1',storeId:'s1'},ceiling,new Set()),'hidden','store entitlement gates preview');
 assert.equal(resolve({brandId:'b1',storeId:'s1'},ceiling,ceiling,false),'hidden','disabled account never has effective preview');
 console.log('PASS: unified/legacy routes, separate summaries, employee scope and brand/store ceilings, disabled-account preview');
+
+assert.equal(employeeWorkbenchSurface('#/m-platform/permissions/staff/ent003/merchant-access'),'merchant');
+assert.equal(employeeWorkbenchSurface('/m-platform/permissions/staff/ent003/roles/preview?surface=merchant'),'merchant');
+assert.equal(employeeWorkbenchSurface('/m-platform/permissions/staff/ent003/roles?surface=unknown'),'m');
+const mSaved:MState={schema:1,revision:3,roles:[{id:'hardware-reader',name:'设备查看员',description:'',grants:{'m:module:hardware':'read','m:page:devices':'read','m:action:devices:export':'edit'}}],employees:[{id:'test',roleIds:['hardware-reader']}],logs:[]};
+const original=JSON.stringify(mSaved),effective=mEmployeePermissionPages(mSaved,'test',true);
+assert.equal(effective.find(p=>p.page.id==='devices')?.access,'read');
+assert.equal(effective.find(p=>p.page.id==='devices')?.actions.find(a=>a.id==='export')?.allowed,true,'independent output action remains allowed on read-only page');
+assert.equal(effective.find(p=>p.page.id==='staff')?.access,'hidden');
+assert.equal(effective.find(p=>p.page.id==='staff')?.actions.every(a=>!a.allowed),true);
+assert.equal(mEmployeePermissionPages(mSaved,'test',false).every(p=>p.access==='hidden'&&p.actions.every(a=>!a.allowed)),true);
+assert.equal(mEmployeePermissionPages(mSaved,'missing',true).every(p=>p.access==='hidden'),true);
+assert.equal(JSON.stringify(mSaved),original,'building the effective menu never modifies the saved snapshot');
+console.log('PASS: workbench surfaces, menu access/action separation, disabled/unknown employee and immutable saved snapshot');

@@ -1,6 +1,7 @@
+import {employeeWorkbenchSurface} from './employee-access-domain';
 import { esc } from './center-editor';
-import { M_MODULES, mActionKey, mPageKey } from './m-platform-catalog';
-import { mResolve } from './m-platform-domain';
+import { mActionKey, mPageKey } from './m-platform-catalog';
+import {bindMEmployeePreview} from './employee-m-preview';
 import { currentMAccess, readMState, saveMState } from './m-platform-store';
 import { listStaffLoginAccounts } from './enterprise-staff-account-store';
 import { bindProviderAccess } from './provider-access-ui';
@@ -11,33 +12,66 @@ export function bindEmployeeAccess(host:HTMLElement,id:string,preview:boolean,se
   const account=listStaffLoginAccounts().find(a=>a.employeeId===id);
   if(!account){host.innerHTML='<p class="pc-empty">员工不存在</p>';return;}
   let saved=readMState(),selected=[...(saved.employees.find(e=>e.id===id)?.roleIds??[])];
-  let merchantGuard:(()=>boolean)|undefined;
+  let merchantGuard:(()=>boolean)|undefined,merchantMounted=false;
+  let mode=preview?'effective':'config',surface:string=employeeWorkbenchSurface(location.hash);
+  let generation=0,mPreviewGeneration=-1,merchantPreviewGeneration=-1,roleQuery='';
   const dirty=()=>JSON.stringify([...selected].sort())!==JSON.stringify([...(saved.employees.find(e=>e.id===id)?.roleIds??[])].sort());
-  const canAssign=()=>!preview&&currentMAccess(mActionKey('staff','assign'))==='edit';
-  const guard=()=>setLeave(dirty()||merchantGuard?()=>{
-    if(dirty()&&!confirm('M 平台角色有未保存的修改，确定放弃并离开？'))return false;
-    return merchantGuard?.()??true;
-  }:undefined);
+  const canAssign=()=>currentMAccess(mActionKey('staff','assign'))==='edit';
+  const guard=()=>{setLeave(dirty()||merchantGuard?()=>{
+    const destination=location.hash;
+    if(document.querySelector('[data-employee-leave-dialog]'))return false;
+    const modal=document.createElement('dialog');modal.className='pc-dialog mp-permission-dialog';modal.setAttribute('data-employee-leave-dialog','');
+    const parts=[dirty()?'M 平台角色':'',merchantGuard?'商户访问授权':''].filter(Boolean);
+    modal.innerHTML=`<form class="pc"><h2>放弃未保存的修改？</h2><p>${esc(parts.join('、'))}有未保存的修改。离开后将丢弃这些草稿，已保存的权限不变。</p><footer><button type="button" data-cancel>继续编辑</button><button type="submit" class="primary">放弃并离开</button></footer></form>`;
+    document.body.append(modal);modal.addEventListener('close',()=>modal.remove());modal.querySelector('[data-cancel]')!.addEventListener('click',()=>modal.close());
+    modal.querySelector('form')!.onsubmit=event=>{event.preventDefault();setLeave(undefined);modal.close();location.hash=destination;};modal.showModal();return false;
+  }:undefined);updateChrome();};
   const route=`${prefix}/${encodeURIComponent(id)}/roles`;
-  host.innerHTML=`<div class="employee-access"><header class="pc-heading"><div class="provider-title"><a class="pc-link" href="#${prefix}">返回列表</a><h1>${preview?'员工权限预览':'配置角色与权限'} · ${esc(account.employeeName)}</h1></div><a class="pc-link" href="#${route}${preview?'':'/preview'}">${preview?'返回配置':'权限预览'}</a></header><p class="pc-muted">${esc(account.loginEmail)} · ${account.enabled?'已启用':'已停用，全部权限不生效'}</p><section class="pc-card employee-m-section" aria-label="M 平台角色"><h2>${preview?'M 平台访问权限':'M 平台角色'}</h2><div data-employee-m></div></section><section class="pc-card employee-provider-section" aria-label="商户访问授权"><div data-employee-provider></div></section></div>`;
+  host.innerHTML=`<div class="employee-access employee-workbench"><header class="employee-workbench-header"><a class="pc-link" href="#${prefix}">返回列表</a><div class="employee-identity"><h1>员工权限 · ${esc(account.employeeName)}</h1><p class="pc-muted">${esc(account.loginEmail)} <span class="pc-tag">${account.enabled?'已启用':'已停用，全部权限不生效'}</span></p></div></header><div class="employee-mode-tabs" role="tablist" aria-label="工作方式"><button type="button" role="tab" id="employee-mode-config" data-employee-mode="config">角色配置</button><button type="button" role="tab" id="employee-mode-effective" data-employee-mode="effective">生效权限</button></div><div class="employee-surface-tabs" role="tablist" aria-label="权限维度"><button type="button" role="tab" id="employee-surface-m" data-employee-surface="m">M 平台<span data-employee-m-dot hidden> · 未保存</span></button><button type="button" role="tab" id="employee-surface-merchant" data-employee-surface="merchant">商户后台<span data-employee-provider-dot hidden> · 未保存</span></button></div><p class="pc-notice" role="status" data-employee-snapshot-note hidden></p><div class="employee-stage"><section class="employee-workbench-panel" role="tabpanel" aria-labelledby="employee-mode-config employee-surface-m" data-workbench-panel="config:m"><h2>M 平台角色</h2><div data-employee-m></div></section><section class="employee-workbench-panel" role="tabpanel" aria-labelledby="employee-mode-config employee-surface-merchant" data-workbench-panel="config:merchant"><div data-employee-provider></div></section><section class="employee-workbench-panel employee-effective-panel" role="tabpanel" aria-labelledby="employee-mode-effective employee-surface-m" data-workbench-panel="effective:m"><div data-employee-m-preview></div></section><section class="employee-workbench-panel employee-effective-panel" role="tabpanel" aria-labelledby="employee-mode-effective employee-surface-merchant" data-workbench-panel="effective:merchant"><div data-employee-provider-preview></div></section></div></div>`;
+  function updateChrome():void {
+    host.querySelectorAll<HTMLElement>('[data-workbench-panel]').forEach(panel=>{panel.hidden=panel.dataset.workbenchPanel!==mode+':'+surface;});
+    for(const attr of ['mode','surface'])host.querySelectorAll<HTMLButtonElement>(`[data-employee-${attr}]`).forEach(button=>{const active=button.getAttribute(`data-employee-${attr}`)===(attr==='mode'?mode:surface);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
+    host.querySelector<HTMLElement>('[data-employee-m-dot]')!.hidden=!dirty();
+    host.querySelector<HTMLElement>('[data-employee-provider-dot]')!.hidden=!merchantGuard;
+    const note=host.querySelector<HTMLElement>('[data-employee-snapshot-note]')!;
+    note.hidden=mode!=='effective'||!dirty()&&!merchantGuard;
+    note.textContent='存在未保存的修改，当前仅展示已保存的生效权限。';
+  }
   const mHost=host.querySelector<HTMLElement>('[data-employee-m]')!;
   function renderM():void {
-    const roleNames=(saved.employees.find(e=>e.id===id)?.roleIds??[]).map(roleId=>saved.roles.find(r=>r.id===roleId)?.name??'失效角色');
-    if(preview){
-      const value=(key:string)=>mResolve(saved,id,key,account!.enabled);
-      mHost.innerHTML=`<p class="pc-muted">${roleNames.map(esc).join('、')||'未分配 M 平台角色'}</p>${M_MODULES.map(module=>{
-        const pages=module.pages.filter(p=>value(mPageKey(p.id))!=='hidden');
-        return pages.length?`<h3>${esc(module.title)}</h3><table><thead><tr><th>菜单</th><th>访问权限</th><th>允许操作</th></tr></thead><tbody>${pages.map(p=>`<tr><td>${esc(p.title)}</td><td>${value(mPageKey(p.id))==='edit'?'可编辑':'可查看'}</td><td>${p.actions.filter(a=>value(mActionKey(p.id,a.id))==='edit').map(a=>esc(a.title)).join('、')||'无'}</td></tr>`).join('')}</tbody></table>`:'';
-      }).join('')||'<p class="pc-empty">暂无可访问的 M 平台菜单</p>'}`;
-      return;
-    }
-    mHost.innerHTML=`<p class="pc-muted">配置员工在 M 平台可以访问的菜单与操作。多角色权限取允许项并集。</p><div class="pc-choice-list">${saved.roles.map(r=>`<label><input type="checkbox" data-employee-role="${esc(r.id)}" ${selected.includes(r.id)?'checked':''} ${canAssign()?'':'disabled'}>${esc(r.name)}</label>`).join('')||'<p>暂无 M 平台角色</p>'}</div><p class="pc-muted">清空选择后，该员工无 M 平台权限。</p><p class="pc-error" role="alert" data-employee-m-error></p><footer class="employee-section-footer"><span role="status" data-employee-m-status>${dirty()?'M 平台角色有未保存的修改':'M 平台角色已保存'}</span><button type="button" class="primary" data-mp-do="save-assignment" ${canAssign()&&dirty()?'':'disabled'}>保存 M 平台角色</button></footer>`;
+    mHost.innerHTML=`<p class="pc-muted">配置员工在 M 平台可以访问的菜单与操作。多角色权限取允许项并集。</p>${saved.roles.length>5?`<label>搜索角色<input data-employee-role-search value="${esc(roleQuery)}" placeholder="输入角色名称"></label>`:''}<p class="pc-muted">已选 ${selected.length} 个角色</p><div class="pc-choice-list">${saved.roles.filter(r=>!roleQuery||r.name.toLowerCase().includes(roleQuery.toLowerCase())).map(r=>`<label><input type="checkbox" data-employee-role="${esc(r.id)}" ${selected.includes(r.id)?'checked':''} ${canAssign()?'':'disabled'}>${esc(r.name)}</label>`).join('')||`<p>${roleQuery?'没有匹配角色':'暂无 M 平台角色'}</p>`}</div><p class="pc-muted">清空选择后，该员工无 M 平台权限。</p><p class="pc-error" role="alert" data-employee-m-error></p><footer class="employee-section-footer"><span role="status" data-employee-m-status>${dirty()?'有未保存的修改':'无未保存修改'}</span>${canAssign()?`<button type="button" class="primary" data-mp-do="save-assignment" ${canAssign()&&dirty()?'':'disabled'}>保存 M 平台角色</button>`:'<span class="pc-muted">只读</span>'}</footer>`;
   }
   renderM();
-  const providerHost=host.querySelector<HTMLElement>('[data-employee-provider]')!;
-  if(currentMAccess(mPageKey('provider-roles'))==='hidden')providerHost.innerHTML='<h2>商户访问授权</h2><p class="pc-muted">暂无商户访问授权的查看权限</p>';
-  else try{bindProviderAccess(providerHost,`${prefix}/${encodeURIComponent(id)}/merchant-access`,g=>{merchantGuard=g;guard();},{embedded:true,employeePreview:preview});}
-  catch(e){providerHost.innerHTML=`<h2>商户访问授权</h2><p class="pc-error" role="alert">${esc((e as Error).message)}</p>`;}
+  function mountMerchant(target:HTMLElement,effective:boolean):void {
+    if(currentMAccess(mPageKey('provider-roles'))==='hidden'){target.innerHTML='<h2>商户访问授权</h2><p class="pc-muted">暂无商户访问授权的查看权限</p>';return;}
+    const child=document.createElement('div');target.replaceChildren(child);
+    try{bindProviderAccess(child,`${prefix}/${encodeURIComponent(id)}/merchant-access`,effective?()=>{}:g=>{merchantGuard=g;guard();},{embedded:true,employeePreview:effective,workbench:true});}
+    catch(e){child.innerHTML=`<p class="pc-error" role="alert">${esc((e as Error).message)}</p>`;}
+  }
+  function ensurePanel():void {
+    if(mode==='config'&&surface==='merchant'&&!merchantMounted){mountMerchant(host.querySelector('[data-employee-provider]')!,false);merchantMounted=true;}
+    if(mode==='effective'&&surface==='m'&&mPreviewGeneration!==generation){
+      const target=host.querySelector<HTMLElement>('[data-employee-m-preview]')!,child=document.createElement('div');target.replaceChildren(child);
+      try{bindMEmployeePreview(child,id,listStaffLoginAccounts().find(a=>a.employeeId===id)?.enabled===true);}catch(e){child.innerHTML=`<p class="pc-error">${esc((e as Error).message)}</p>`;}
+      mPreviewGeneration=generation;
+    }
+    if(mode==='effective'&&surface==='merchant'&&merchantPreviewGeneration!==generation){mountMerchant(host.querySelector('[data-employee-provider-preview]')!,true);merchantPreviewGeneration=generation;}
+  }
+  host.addEventListener('click',event=>{
+    const button=(event.target as Element).closest<HTMLElement>('[data-employee-mode],[data-employee-surface]');if(!button)return;
+    const nextMode=button.dataset.employeeMode??mode,nextSurface=button.dataset.employeeSurface??surface;
+    if(mode===nextMode&&surface===nextSurface)return;
+    if(nextMode==='effective'&&mode!=='effective')generation++;
+    mode=nextMode;surface=nextSurface;
+    history.replaceState(null,'',`#${route}${mode==='effective'?'/preview':''}${surface==='merchant'?'?surface=merchant':''}`);
+    ensurePanel();guard();
+  });
+  host.querySelectorAll<HTMLElement>('[role="tablist"]').forEach(list=>list.addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    const buttons=[...list.querySelectorAll<HTMLButtonElement>('[role="tab"]')],index=buttons.indexOf(event.target as HTMLButtonElement);if(index<0)return;
+    event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:buttons.length-1))%buttons.length;buttons[next].focus();buttons[next].click();
+  }));
+  mHost.addEventListener('input',event=>{const input=event.target as HTMLInputElement;if(!input.matches('[data-employee-role-search]'))return;roleQuery=input.value;const pos=input.selectionStart;renderM();const next=mHost.querySelector<HTMLInputElement>('[data-employee-role-search]');next?.focus();next?.setSelectionRange(pos,pos);});
   mHost.addEventListener('change',event=>{
     const input=event.target as HTMLInputElement;
     if(!input.dataset.employeeRole||!canAssign())return;
@@ -58,5 +92,5 @@ export function bindEmployeeAccess(host:HTMLElement,id:string,preview:boolean,se
       }catch(e){modal.querySelector('.pc-error')!.textContent=(e as Error).message;}
     };modal.showModal();
   });
-  guard();
+  ensurePanel();guard();
 }
