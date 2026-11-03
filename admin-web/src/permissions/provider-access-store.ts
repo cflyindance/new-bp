@@ -2,7 +2,7 @@ import {listStaffLoginAccounts} from './enterprise-staff-account-store';
 import { currentMAccount, currentMAccess, requireMAction } from './m-platform-store';
 import { mActionKey, mPageKey } from './m-platform-catalog';
 import { getEnterpriseMerchantSnapshotForAuthorization } from '../config/enterprise-merchant-store';
-import { readActiveEnterpriseId } from '../config/enterprise-merchant-enterprise-context';
+import { readActiveEnterpriseId, DEFAULT_ENTERPRISE_ID } from '../config/enterprise-merchant-enterprise-context';
 import { buildCenterCatalog } from './center-catalog';
 import { rank, type Access, type Resource } from './center-domain';
 import { installProviderAccessRuntime } from '../auth/provider-access-runtime';
@@ -17,7 +17,11 @@ window.addEventListener('menusifu:enterprise-merchant-snapshot-changed',()=>{dir
 function runtimeState():ProviderAccessState {
   const raw=localStorage.getItem(PROVIDER_ACCESS_KEY);
   if(raw===cachedStateRaw&&cachedState)return cachedState;
-  const state:ProviderAccessState=providerStateFromStorage(raw,()=>buildCenterCatalog().resources);
+  const state:ProviderAccessState=providerStateFromStorage(raw,()=>buildCenterCatalog().resources,()=>{
+    const snapshot=directory(),brands=snapshot.merchants.filter(m=>m.enterpriseId===DEFAULT_ENTERPRISE_ID).sort((a,b)=>(a.bid??a.merchantId).localeCompare(b.bid??b.merchantId));
+    const brandIds=brands.map(m=>m.merchantId);
+    return {brandIds,storeIds:snapshot.stores.filter(s=>brandIds.includes(s.merchantId)).sort((a,b)=>a.storeId.localeCompare(b.storeId)).map(s=>s.storeId),employees:listStaffLoginAccounts().filter(a=>a.isSystem&&a.enabled&&a.id==='acct-'+a.employeeId&&['ent002','ent003','ent004'].includes(a.employeeId)).map(a=>({id:a.employeeId,name:a.employeeName}))};
+  });
   validateProviderState(state);cachedStateRaw=raw;cachedState=state;return state;
 }
 export function readProviderState():ProviderAccessState{return structuredClone(runtimeState());}

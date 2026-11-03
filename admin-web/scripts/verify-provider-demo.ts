@@ -1,3 +1,4 @@
+import {filterAuditRecords} from '../src/permissions/permission-audit-domain';
 import assert from 'node:assert/strict';
 import { createProviderDemoState, providerStateFromStorage } from '../src/permissions/provider-access-demo';
 import { validateProviderState, providerCanTarget, providerRoleAccess } from '../src/permissions/provider-access-domain';
@@ -29,3 +30,25 @@ console.log('PASS: missing storage seeds only; saved empty state preserved; corr
 
 const populated={...existing,roles:createProviderDemoState(resources).roles,employees:[{employeeId:'existing',bindings:[]}],logs:[{id:'existing-log'}]};
 assert.deepEqual(providerStateFromStorage(JSON.stringify(populated),()=>resources),populated);
+
+const targets={brandIds:['b1','b2'],storeIds:['s1','s2'],employees:[{id:'ent002',name:'周'},{id:'ent003',name:'吴'},{id:'ent004',name:'郑'}]};
+const scoped=createProviderDemoState(resources,targets);validateProviderState(scoped);
+assert.equal(scoped.employees.length,3);assert.equal(scoped.logs.length,6);
+assert(providerCanTarget(scoped,'ent002',{brandId:'b1',storeId:'new-store'}));
+assert(!providerCanTarget(scoped,'ent002',{brandId:'b2'}));
+assert(providerCanTarget(scoped,'ent003',{brandId:'b1',storeId:'s1'}));
+assert(!providerCanTarget(scoped,'ent003',{brandId:'b1'}));
+assert(!providerCanTarget(scoped,'ent003',{brandId:'b1',storeId:'s3'}));
+assert(providerCanTarget(scoped,'ent004',{brandId:'b2'}));
+assert(!providerCanTarget(scoped,'ent004',{brandId:'b1'}));
+assert.equal(providerRoleAccess(scoped,'ent003',{brandId:'b1',storeId:'s1'},'page:/orders/all',resources),'read');
+assert.equal(providerRoleAccess(scoped,'ent003',{brandId:'b1',storeId:'s1'},'action:test',resources),'hidden');
+assert.deepEqual(providerStateFromStorage(raw,()=>resources,()=>{throw Error('must not seed saved authorization');}),existing);
+assert.equal(createProviderDemoState(resources,{...targets,employees:[]}).employees.length,0);
+assert.equal(createProviderDemoState(resources,{...targets,brandIds:[],storeIds:[]}).employees.length,0);
+console.log('PASS: 3 scoped demo employees, brand/store boundaries, read-only grants, no missing targets/accounts or saved-state migration');
+
+
+const scopedLogs=scoped.logs.map(l=>({...l,type:'provider' as const}));
+assert.equal(filterAuditRecords(scopedLogs,['provider'],'provider','provider-demo-orders').length,2);
+assert.equal(filterAuditRecords(scopedLogs,['m'],'all').length,0);
