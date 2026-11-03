@@ -7,6 +7,7 @@ import { buildCenterCatalog } from './center-catalog';
 import { rank, type Access, type Resource } from './center-domain';
 import { installProviderAccessRuntime } from '../auth/provider-access-runtime';
 import { providerCanTarget, providerRoleAccess, validateProviderState, type ProviderAccessState, type ProviderTarget } from './provider-access-domain';
+import { providerStateFromStorage } from './provider-access-demo';
 export const PROVIDER_ACCESS_KEY='menusifu:provider-merchant-access:v1';
 export const PROVIDER_ACCESS_EVENT='menusifu:provider-access-changed';
 let cachedStateRaw:string|null|undefined,cachedState:ProviderAccessState|undefined;
@@ -16,7 +17,7 @@ window.addEventListener('menusifu:enterprise-merchant-snapshot-changed',()=>{dir
 function runtimeState():ProviderAccessState {
   const raw=localStorage.getItem(PROVIDER_ACCESS_KEY);
   if(raw===cachedStateRaw&&cachedState)return cachedState;
-  const state:ProviderAccessState=raw===null?{schema:1,revision:0,systemEmployeeIds:['ent001'],roles:[],employees:[],logs:[]}:JSON.parse(raw);
+  const state:ProviderAccessState=providerStateFromStorage(raw,()=>buildCenterCatalog().resources);
   validateProviderState(state);cachedStateRaw=raw;cachedState=state;return state;
 }
 export function readProviderState():ProviderAccessState{return structuredClone(runtimeState());}
