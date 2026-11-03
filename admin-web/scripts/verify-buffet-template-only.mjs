@@ -15,6 +15,14 @@ const draft = {
   partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
 };
 assert.match(api.validateStep(1, draft), /请选择常用模板/);
+const unselected = structuredClone(draft);
+unselected.subject = null;
+assert.equal(api.buffetTemplateFieldLocked(unselected, 'subject'), true, 'both subjects are locked before choosing a template');
+const emptyHtml = api.renderStepOne(unselected);
+assert.equal((emptyHtml.match(/data-choice-field="subject"[^>]* disabled/g) || []).length, 2);
+assert.doesNotMatch(emptyHtml, /class="olf-choice is-selected[^>]*data-choice-field="subject"/);
+assert.match(emptyHtml, /请先选择常用模板，限购主体将自动确定/);
+assert.doesNotMatch(emptyHtml, /data-choice-field="targetType"[^>]* disabled/);
 const templates = window.ORDER_LIMIT_MODULE_PROFILE.periodTemplates.filter(t => !t.hidden && t.id !== 'custom');
 assert.equal(templates.length, 9);
 for (const template of templates) {
