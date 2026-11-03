@@ -1,11 +1,20 @@
 header.standalone-page-header[data-standalone-page-header]{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;width:100%;margin-bottom:20px}
 .standalone-page-header .standalone-page-heading{display:flex;align-items:flex-start;gap:12px;min-width:0;max-width:100%;flex:1 1 auto}
-.standalone-page-header .standalone-page-back{flex:0 0 auto;display:flex;align-items:center;min-height:40px}
+.standalone-page-header .standalone-page-back{flex:0 0 auto;display:flex;align-items:center;min-height:48px}
 .standalone-page-header .standalone-page-title{min-width:0;flex:1}
-.standalone-page-header .standalone-page-title>h1,.standalone-page-header .standalone-page-title>h2{margin:0;font-size:24px;font-weight:700;line-height:40px;overflow-wrap:anywhere}
+.standalone-page-header .standalone-page-title>h1,.standalone-page-header .standalone-page-title>h2{margin:0;font-size:24px;font-weight:700;line-height:48px;overflow-wrap:anywhere}
 .standalone-page-header .standalone-page-subtitle{margin-top:4px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
 .standalone-page-header .standalone-page-subtitle>p{margin:0}
-.standalone-page-header .standalone-page-actions{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-height:40px;margin-left:auto}
+.standalone-page-header .standalone-page-actions{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-height:48px;margin-left:auto}
 @media(max-width:640px){.standalone-page-header .standalone-page-actions{flex-basis:100%;justify-content:flex-end}.standalone-page-header .standalone-page-title>h1,.standalone-page-header .standalone-page-title>h2{font-size:20px}}
 
 header.standalone-page-header [hidden]{display:none!important}
+
+/* Match the buffet rule editor's .olf-icon-button; only the explicit back slot. */
+header.standalone-page-header .standalone-page-back>.standalone-back-control{box-sizing:border-box;display:grid;place-items:center;flex:0 0 48px;width:48px;min-width:48px;max-width:48px;height:48px;min-height:48px;max-height:48px;padding:0;margin:0;border:1px solid transparent;border-radius:12px;background:rgba(0,0,0,.04);color:rgba(0,0,0,.45);box-shadow:none;text-decoration:none;cursor:pointer;transition:background-color 160ms ease,color 160ms ease}
+header.standalone-page-header .standalone-page-back>.standalone-back-control:hover{background:rgba(0,0,0,.08);color:rgba(0,0,0,.65)}
+header.standalone-page-header .standalone-page-back>.standalone-back-control:focus-visible{outline:2px solid #1677ff;outline-offset:3px}
+header.standalone-page-header .standalone-page-back>.standalone-back-control:disabled,header.standalone-page-header .standalone-page-back>.standalone-back-control[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+header.standalone-page-header .standalone-page-back>.standalone-back-control>svg{display:block;width:20px;height:20px;margin:0;pointer-events:none}
+.dark header.standalone-page-header .standalone-page-back>.standalone-back-control{background:rgba(255,255,255,.08);color:rgba(255,255,255,.65)}
+.dark header.standalone-page-header .standalone-page-back>.standalone-back-control:hover{background:rgba(255,255,255,.14);color:rgba(255,255,255,.85)}

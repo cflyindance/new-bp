@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {renderStandalonePageHeader as header} from '../src/ui/standalone-page-header';
+const button=header({titleHtml:'角色',backHtml:'<button type="button" class="pc-btn" data-mp-do="back" disabled>返回列表</button>',actionsHtml:'<button data-save>保存</button>'});
+assert.match(button, /type="button" class="pc-btn standalone-back-control" data-mp-do="back" disabled/);
+assert.match(button, /aria-label="返回列表"/);assert.match(button,/title="返回列表"/);
+assert.match(button,/aria-hidden="true" focusable="false"/);assert.match(button,/width="20" height="20"/);
+assert.doesNotMatch(button,/>返回列表</);assert.match(button,/<button data-save>保存<\/button>/);
+const anchor=header({titleHtml:'详情',backHtml:'<a href="#/list?q=a&amp;b=c" data-back target="_blank" rel="noopener">← 返回详情列表</a>'});
+assert.match(anchor,/<a href="#\/list\?q=a&amp;b=c" data-back target="_blank" rel="noopener"/);
+assert.match(anchor,/aria-label="返回详情列表"/);assert.doesNotMatch(anchor,/<button/);
+const named=header({titleHtml:'创建',backHtml:'<button aria-label="退出向导" title="原提示" data-exit>←</button>'});
+assert.match(named,/aria-label="退出向导" title="原提示"/);assert.equal((named.match(/aria-label=/g)??[]).length,1);
+assert.match(header({titleHtml:'标题',backHtml:'<button aria-label="">←</button>'}),/aria-label="返回"/);
+for(const malformed of ['<span>返回</span>','<button>一</button><button>二</button>'])assert(header({titleHtml:'标题',backHtml:malformed}).includes(malformed));
+const lookalike=header({titleHtml:'标题',backHtml:'<button data-class="keep" data-aria-label="keep" data-title="keep" type="button">返回</button>'});
+assert.match(lookalike,/data-class="keep" data-aria-label="keep" data-title="keep"/);assert.match(lookalike,/ class="standalone-back-control"/);assert.match(lookalike,/ aria-label="返回"/);assert.match(lookalike,/ title="返回"/);
+console.log('PASS: back-slot link/button semantics, original hooks/disabled attributes, accessible naming, decorative SVG, action isolation and malformed-slot fallback');
