@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 硬件管理中心 → 硬件 → 税控机（seq 406–415）。
  */
@@ -290,12 +291,11 @@ function renderFormPage(device: FiscalHardwareDevice, opts: { isNew: boolean }):
 
   return `
     <div class="device-management-fiscal-hardware space-y-6" data-fiscal-page data-fiscal-view="edit" data-device-id="${escapeHtml(device.id)}" data-is-new="${opts.isNew ? "1" : "0"}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-fiscal-edit-back>← 返回税控机列表</a>
-      </div>
-      <form class="space-y-6" data-fiscal-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`${escapeHtml(title)}`,backHtml:`<a href="#${LIST_PATH}" class="${BTN_GHOST}" data-fiscal-edit-back>← 返回税控机列表</a>`,actionsHtml:`<button type="submit" form="standalone-fiscal-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-fiscal-edit-cancel>取消</a>`})}
+      <form id="standalone-fiscal-form" class="space-y-6" data-fiscal-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 class="text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
+
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground" for="fiscal-edit-name">名称</label>
@@ -330,10 +330,7 @@ function renderFormPage(device: FiscalHardwareDevice, opts: { isNew: boolean }):
           ${renderToggleRow("fastFoodMode", "快餐模式", device.fastFoodMode)}
           ${renderToggleRow("printReceiptOnClose", "关闭交易时打印收据", device.printReceiptOnClose)}
         </section>
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-fiscal-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -409,8 +406,7 @@ export function renderDeviceManagementFiscalHardwarePage(path: string): string {
     if (!device) {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-fiscal-page>
-          <p class="text-sm text-muted-foreground">未找到该税控机。</p>
-          <a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回税控机列表</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回税控机列表</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该税控机。</p>`})}
         </div>`;
     }
     return renderFormPage(device, { isNew: false });

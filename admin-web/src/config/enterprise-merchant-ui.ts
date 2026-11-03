@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {renderBrandServiceEntitlements,bindBrandServiceEntitlements} from './service-entitlement-ui';
 import {MERCHANT_SUBSCRIPTIONS_PATH} from './subscription-service-scope';
 import { renderActivityPage, bindActivityPage } from './merchant-activity-ui';
@@ -939,7 +940,7 @@ function renderMerchantDetailChangelog(merchantId: string): string {
 function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): string {
   const merchant = getMerchantById(merchantId);
   if (!merchant) {
-    return card(`<p class="text-sm text-muted-foreground">未找到品牌 <code>${escapeHtml(merchantId)}</code></p>`);
+    return renderStandalonePageHeader({level:2,titleHtml:"品牌不存在",backHtml:`<a class="text-sm text-primary" href="${merchantHref("")}">← 返回品牌管理</a>`})+card(`<p class="text-sm text-muted-foreground">未找到品牌 <code>${escapeHtml(merchantId)}</code></p>`);
   }
   let body = "";
   if (tab === "org" || tab === "capabilities" || tab === "accounts" || tab === "changelog") body = renderBrandWorkspace(merchantId, tab);
@@ -949,11 +950,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="detail">
-      <a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>
-      <div class="shrink-0">
-        <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(merchant.name)}</h2>
-        <p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>
-      </div>
+      ${renderStandalonePageHeader({level:2,className:"shrink-0",titleHtml:`${escapeHtml(merchant.name)}`,backHtml:`<a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>`,subtitleHtml:`<p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>`})}
       ${renderDetailTabs(merchantId, tab)}
       <div class="min-h-0 flex-1 overflow-y-auto pt-2">${body}</div>
     </div>`;
@@ -976,7 +973,7 @@ function renderStoreDetailTabs(storeId: string, tab: StoreDetailTab): string {
 function renderStoreDetailOverview(storeId: string, readOnly = false): string {
   const store = getStoreById(storeId);
   if (!store) {
-    return card(`<p class="text-sm text-muted-foreground">未找到门店 <code>${escapeHtml(storeId)}</code></p>`);
+    return renderStandalonePageHeader({level:2,titleHtml:"门店不存在",backHtml:`<a class="text-sm text-primary" href="${merchantHref("/stores")}">← 返回门店管理</a>`})+card(`<p class="text-sm text-muted-foreground">未找到门店 <code>${escapeHtml(storeId)}</code></p>`);
   }
   const merchant = getMerchantById(store.merchantId);
   const storeCap = getStoreCapability(storeId);
@@ -1097,15 +1094,11 @@ function renderStoreDetailPage(storeId: string, tab: StoreDetailTab): string {
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="store-detail">
-      <a href="${merchantHref("/stores")}" class="shrink-0 text-sm text-primary hover:underline">← 返回门店管理</a>
-      <div class="shrink-0">
-        <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(store.name)}</h2>
-        <p class="text-xs text-muted-foreground">
+      ${renderStandalonePageHeader({level:2,className:"shrink-0",titleHtml:`${escapeHtml(store.name)}`,backHtml:`<a href="${merchantHref("/stores")}" class="shrink-0 text-sm text-primary hover:underline">← 返回门店管理</a>`,subtitleHtml:`<p class="text-xs text-muted-foreground">
           <span class="font-mono">${escapeHtml(store.storeId)}</span>
           ${merchant ? ` · <a href="${merchantDetailHref(merchant.merchantId)}" class="text-primary hover:underline">${escapeHtml(merchant.name)}</a>` : ""}
           ${merchant?.bid ? ` · ${escapeHtml(merchant.bid)}` : ""}
-        </p>
-      </div>
+        </p>`})}
       ${renderStoreDetailTabs(storeId, tab)}
       <div class="min-h-0 flex-1 overflow-y-auto pt-2">${body}</div>
     </div>`;

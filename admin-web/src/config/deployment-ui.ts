@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 模拟下发 · 列表页与详情页
  */
@@ -342,10 +343,7 @@ function renderDetailPage(batch: DeploymentBatch): string {
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-deployment-detail-root data-deployment-batch-id="${escapeHtml(batch.id)}">
       <div class="shrink-0 rounded-xl border border-border bg-card p-5 shadow-sm">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <a href="#${DEPLOYMENT_LOG_PATH}" class="text-sm text-primary hover:underline">← 返回列表</a>
-          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeClass(batch.status)}">${escapeHtml(statusLabel(batch.status))}</span>
-        </div>
+        ${renderStandalonePageHeader({level:2,titleHtml:'下发记录详情',backHtml:`<a href="#${DEPLOYMENT_LOG_PATH}" class="text-sm text-primary hover:underline">← 返回列表</a>`,subtitleHtml:`<span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeClass(batch.status)}">${escapeHtml(statusLabel(batch.status))}</span>`,actionsHtml:canRetry?`<button type="button" data-deployment-retry="${escapeHtml(batch.id)}" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">重试失败项</button>`:''})}
         <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">下发时间</dt>
@@ -369,13 +367,7 @@ function renderDetailPage(batch: DeploymentBatch): string {
           </div>
         </dl>
         ${progressBar}
-        ${
-          canRetry
-            ? `<div class="mt-4 flex flex-wrap gap-2">
-          <button type="button" data-deployment-retry="${escapeHtml(batch.id)}" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">重试失败项</button>
-        </div>`
-            : ""
-        }
+
       </div>
       <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
         <h2 class="mb-3 text-sm font-semibold text-card-foreground">配置变更</h2>
@@ -445,8 +437,9 @@ export function renderDeploymentLogPage(path: string): string {
     if (!batch) {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+          ${renderStandalonePageHeader({level:2,titleHtml:'下发批次不存在',backHtml:`<a href="#${DEPLOYMENT_LOG_PATH}" class="text-sm text-primary hover:underline">返回列表</a>`})}
           <p class="text-sm text-muted-foreground">未找到下发批次 <code class="font-mono text-xs">${escapeHtml(batchId)}</code></p>
-          <a href="#${DEPLOYMENT_LOG_PATH}" class="mt-3 inline-block text-sm text-primary hover:underline">返回列表</a>
+
         </div>`;
     }
     return renderDetailPage(batch);

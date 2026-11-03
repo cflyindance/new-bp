@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 硬件管理中心 → 硬件 → eMenu：设备列表、编辑、删除及 per-device 菜单/限制配置。
  */
@@ -412,11 +413,9 @@ function renderEditPage(device: EmenuHardwareDevice): string {
 
   return `
     <div class="device-management-emenu-hardware space-y-6" data-emenu-hardware-page data-emenu-view="edit" data-device-id="${escapeHtml(device.id)}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${EMENU_LIST_PATH}" class="${BTN_GHOST}" data-emenu-edit-back>← 返回设备列表</a>
-      </div>
-
-      <form class="space-y-6" data-emenu-device-edit-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`编辑设备 · ${escapeHtml(device.deviceName)}`,backHtml:`<a href="#${EMENU_LIST_PATH}" class="${BTN_GHOST}" data-emenu-edit-back>← 返回设备列表</a>`,actionsHtml:`<button type="submit" form="standalone-emenu-device-edit-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${EMENU_LIST_PATH}" class="${BTN_GHOST}" data-emenu-edit-cancel>取消</a>`})}
+      <form id="standalone-emenu-device-edit-form" class="space-y-6" data-emenu-device-edit-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h2 class="text-base font-semibold text-card-foreground">设备信息</h2>
           <p class="mt-1 text-sm text-muted-foreground">以下由终端上报，只读展示。</p>
@@ -478,10 +477,7 @@ function renderEditPage(device: EmenuHardwareDevice): string {
           )}
         </section>
 
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${EMENU_LIST_PATH}" class="${BTN_GHOST}" data-emenu-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -508,8 +504,7 @@ export function renderDeviceManagementEmenuHardwarePage(path: string): string {
     if (!device) {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-emenu-hardware-page>
-          <p class="text-sm text-muted-foreground">未找到该设备。</p>
-          <a href="#${EMENU_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回设备列表</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${EMENU_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回设备列表</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该设备。</p>`})}
         </div>`;
     }
     return renderEditPage(device);

@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {employeeMerchantPreviewAccess} from './employee-access-domain';
 import {brandCatalog,mappedRuntimeKeys} from '../config/brand-access-store';
 import {getStoreCapability} from '../config/enterprise-merchant-store';
@@ -18,7 +19,7 @@ import { providerBindingMatches, providerCanTarget, providerRoleAccess, type Pro
 import './provider-access.css';
 const prefix='/m-platform/permissions/provider-roles';
 const link=(path:string,text:string)=>`<a class="pc-link" href="#${path}">${esc(text)}</a>`;
-export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:(()=>boolean)|undefined)=>void,options:{embedded?:boolean;employeePreview?:boolean;workbench?:boolean}={}):void {
+export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:(()=>boolean)|undefined)=>void,options:{embedded?:boolean;employeePreview?:boolean;workbench?:boolean;actionsHost?:HTMLElement}={}):void {
   let saved=readProviderState(),draft=structuredClone(saved),page='module:dashboard',group='',query='',preview=false,target='',dirty=false;
   const catalog=buildCenterCatalog(),accounts=listStaffLoginAccounts();
   const roleId=path.startsWith(prefix+'/edit/')?decodeURIComponent(path.slice((prefix+'/edit/').length)):'';
@@ -112,10 +113,11 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
     }else{
       body=`<table><thead><tr><th>访问角色</th><th>描述</th><th>关联员工</th><th>操作</th></tr></thead><tbody>${draft.roles.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.description)||'—'}</td><td>${members(r.id)} 人</td><td>${link(prefix+'/edit/'+encodeURIComponent(r.id),'配置权限')} ${link('/m-platform/permissions/change-log?type=provider&role='+encodeURIComponent(r.id),'查看变更记录')} <button type="button" data-provider-info="${esc(r.id)}" ${readOnly?'disabled':''}>编辑</button> <button type="button" data-provider-copy="${esc(r.id)}" ${readOnly?'disabled':''}>复制</button> <button type="button" data-provider-delete="${esc(r.id)}" ${readOnly?'disabled':''}>删除</button></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无商家后台访问角色，请先新建角色。</td></tr>'}</tbody></table>`;
     }
-    host.innerHTML=`<div class="provider-access ${roleId?'provider-editor':''}"><header class="pc-heading"><div class="provider-title">${(!options.embedded&&(employeeId||roleId))?link(employeeId?'/m-platform/permissions/staff':prefix,'返回列表'):''}${options.embedded?`<h2>${options.employeePreview?'商户访问权限':'商户访问授权'}</h2>`:`<h1>${esc(title)}</h1>`}</div>${options.workbench&&employeeId&&!options.employeePreview&&!draft.systemEmployeeIds.includes(employeeId)?`<button type="button" data-provider-add-binding ${readOnly?'disabled':''}>添加授权</button>`:roleId?`<button type="button" data-provider-preview>${preview?'返回编辑':'权限预览'}</button>`:path===prefix?`<button type="button" class="primary" data-provider-new ${readOnly?'disabled':''}>新建访问角色</button>`:''}</header><p class="pc-error" data-provider-error role="alert"></p><div class="provider-body">${body}</div>${(!options.employeePreview&&(employeeId||roleId)&&(!options.workbench||!readOnly&&!draft.systemEmployeeIds.includes(employeeId)))?`<footer class="pc-footer"><span>${options.workbench?(dirty?'有未保存的修改':'无未保存修改'):(dirty?'商户访问授权有未保存的修改':'商户访问授权已保存')}</span><button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>${employeeId?'保存商户访问授权':'保存授权'}</button></footer>`:''}</div>`;
+    if(options.actionsHost)options.actionsHost.innerHTML=!options.employeePreview&&employeeId&&!readOnly&&!draft.systemEmployeeIds.includes(employeeId)?`<button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>${employeeId?'保存商户访问授权':'保存授权'}</button>`:'';
+    host.innerHTML=`<div class="provider-access ${roleId?'provider-editor':''}">${!options.embedded&&(employeeId||roleId)?renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(title),backHtml:link(employeeId?'/m-platform/permissions/staff':prefix,'返回列表'),actionsHtml:`${options.workbench&&employeeId&&!options.employeePreview&&!draft.systemEmployeeIds.includes(employeeId)?`<button type="button" data-provider-add-binding ${readOnly?'disabled':''}>添加授权</button>`:roleId?`<button type="button" data-provider-preview>${preview?'返回编辑':'权限预览'}</button>`:path===prefix?`<button type="button" class="primary" data-provider-new ${readOnly?'disabled':''}>新建访问角色</button>`:''}${!options.employeePreview?`<button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>${employeeId?'保存商户访问授权':'保存授权'}</button>`:''}` }):`<header class="pc-heading"><div class="provider-title">${(!options.embedded&&(employeeId||roleId))?link(employeeId?'/m-platform/permissions/staff':prefix,'返回列表'):''}${options.embedded?`<h2>${options.employeePreview?'商户访问权限':'商户访问授权'}</h2>`:`<h1>${esc(title)}</h1>`}</div>${options.workbench&&employeeId&&!options.employeePreview&&!draft.systemEmployeeIds.includes(employeeId)?`<button type="button" data-provider-add-binding ${readOnly?'disabled':''}>添加授权</button>`:roleId?`<button type="button" data-provider-preview>${preview?'返回编辑':'权限预览'}</button>`:path===prefix?`<button type="button" class="primary" data-provider-new ${readOnly?'disabled':''}>新建访问角色</button>`:''}</header>`}<p class="pc-error" data-provider-error role="alert"></p><div class="provider-body">${body}</div>${(!options.employeePreview&&(employeeId||roleId)&&(!options.workbench||!readOnly&&!draft.systemEmployeeIds.includes(employeeId)))?`<footer class="pc-footer"><span>${options.workbench?(dirty?'有未保存的修改':'无未保存修改'):(dirty?'商户访问授权有未保存的修改':'商户访问授权已保存')}</span>${(!options.embedded&&(employeeId||roleId)||options.actionsHost)?'':`<button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>${employeeId?'保存商户访问授权':'保存授权'}</button>`}</footer>`:''}</div>`;
     for(const [id,top]of positions){const el=host.querySelector<HTMLElement>(`[data-scroll="${id}"]`);if(el)el.scrollTop=top;}
   }
-  host.addEventListener('click',ev=>{
+  const handleClick=(ev:Event)=>{
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
       if(b.dataset.page){page=b.dataset.page;group='';render();return;}
@@ -139,7 +141,9 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
       else return;
       mark();render();
     }catch(e){error(e);}
-  });
+  };
+  host.addEventListener('click',handleClick);
+  options.actionsHost?.addEventListener('click',handleClick);
   host.addEventListener('input',ev=>{const el=ev.target as HTMLInputElement;if(!el.matches('[data-menu-search]'))return;query=el.value;const pos=el.selectionStart;render();const input=host.querySelector<HTMLInputElement>('[data-menu-search]');input?.focus();input?.setSelectionRange(pos,pos);});
   host.addEventListener('change',ev=>{const el=ev.target as HTMLSelectElement;if(el.hasAttribute('data-provider-target')){target=el.value;render();}});
   page=catalog.tree[0]?.key??'';render();

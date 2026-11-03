@@ -1,0 +1,11 @@
+header.standalone-page-header[data-standalone-page-header]{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;width:100%;margin-bottom:20px}
+.standalone-page-header .standalone-page-heading{display:flex;align-items:flex-start;gap:12px;min-width:0;max-width:100%;flex:1 1 auto}
+.standalone-page-header .standalone-page-back{flex:0 0 auto;display:flex;align-items:center;min-height:40px}
+.standalone-page-header .standalone-page-title{min-width:0;flex:1}
+.standalone-page-header .standalone-page-title>h1,.standalone-page-header .standalone-page-title>h2{margin:0;font-size:24px;font-weight:700;line-height:40px;overflow-wrap:anywhere}
+.standalone-page-header .standalone-page-subtitle{margin-top:4px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.standalone-page-header .standalone-page-subtitle>p{margin:0}
+.standalone-page-header .standalone-page-actions{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-height:40px;margin-left:auto}
+@media(max-width:640px){.standalone-page-header .standalone-page-actions{flex-basis:100%;justify-content:flex-end}.standalone-page-header .standalone-page-title>h1,.standalone-page-header .standalone-page-title>h2{font-size:20px}}
+
+header.standalone-page-header [hidden]{display:none!important}

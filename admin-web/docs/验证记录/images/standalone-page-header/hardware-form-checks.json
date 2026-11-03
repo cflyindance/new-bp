@@ -1,0 +1,65 @@
+[
+  {
+    "form": "standalone-payment-tripos-edit-form",
+    "path": "#/device-management/hardware/payments/edit/pay-001",
+    "saveCount": 1,
+    "title": "编辑设备 · 前台主卡机",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-payment-pax-form",
+    "path": "#/device-management/hardware/payments/pax/edit/pax-001",
+    "saveCount": 1,
+    "title": "编辑 PAX 终端",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-fiscal-form",
+    "path": "#/device-management/hardware/fiscal/edit/fiscal-001",
+    "saveCount": 1,
+    "title": "编辑税控机",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-cash-drawer-form",
+    "path": "#/device-management/hardware/cash-drawer/edit/drawer-001",
+    "saveCount": 1,
+    "title": "编辑钱箱",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-caller-id-form",
+    "path": "#/device-management/hardware/caller-id/edit/caller-id-001",
+    "saveCount": 1,
+    "title": "编辑来电显示",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-kiosk-device-edit-form",
+    "path": "#/device-management/hardware/kiosk/edit/kiosk-001",
+    "saveCount": 1,
+    "title": "编辑设备 · AP2718T",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-cds-device-edit-form",
+    "path": "#/device-management/hardware/cds/edit/cds-001",
+    "saveCount": 1,
+    "title": "编辑设备 · 前台客显 1",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-emenu-device-edit-form",
+    "path": "#/device-management/hardware/emenu/edit/emenu-001",
+    "saveCount": 1,
+    "title": "编辑设备 · 大厅 A12",
+    "validOwner": true
+  },
+  {
+    "form": "standalone-printer-form",
+    "path": "#/device-management/hardware/printers/edit/pr-receipt-1",
+    "saveCount": 1,
+    "title": "编辑打印机",
+    "validOwner": true
+  }
+]

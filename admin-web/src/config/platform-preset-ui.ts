@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 平台预设 · 列表页与四列编辑页（支持商家级 / 企业级作用域）
  */
@@ -616,12 +617,12 @@ export function renderPlatformPresetEditPage(
         ${scope.scope === "enterprise" ? ` 当前蓝图：${escapeHtml(formatBlueprintVersionLabel(blueprint))}。` : ""}
         ${escapeHtml(scope.editorHint)}
       </div>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <a href="${listHref}" class="text-sm text-primary hover:underline">← 返回产线列表</a>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" data-pp-restore-defaults class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">恢复业态推荐默认</button>
-        </div>
-      </div>
+      ${renderStandalonePageHeader({level:2,titleHtml:`配置预设 · ${escapeHtml(btLabel)} · ${escapeHtml(plLabel)}`,backHtml:`<a href="${listHref}" class="text-sm text-primary hover:underline">← 返回产线列表</a>`,actionsHtml:`<button type="button" data-pp-restore-defaults class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">恢复业态推荐默认</button>
+        <button type="button" data-pp-publish class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
+          保存并发布 v${snapshot.version + 1}
+        </button>
+        <a href="${listHref}" class="rounded-lg border border-border px-5 py-2.5 text-sm hover:bg-muted">取消</a>
+      `})}
       <div class="min-h-0 flex-1 rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-card-foreground">按导航树配置功能</h2>
@@ -630,12 +631,7 @@ export function renderPlatformPresetEditPage(
         </div>
         ${renderFourColumnMatrixShell(col1, col2, col3, col4, columnHeaders)}
       </div>
-      <div class="flex flex-wrap gap-3 shrink-0">
-        <button type="button" data-pp-publish class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
-          保存并发布 v${snapshot.version + 1}
-        </button>
-        <a href="${listHref}" class="rounded-lg border border-border px-5 py-2.5 text-sm hover:bg-muted">取消</a>
-      </div>
+
     </div>`;
 }
 

@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 硬件管理中心 → 硬件 → 来电显示（原设置 seq 15 / 184 / 185）。
  */
@@ -346,12 +347,11 @@ function renderFormPage(device: CallerIdHardwareDevice, opts: { isNew: boolean }
 
   return `
     <div class="device-management-caller-id-hardware space-y-6" data-caller-id-page data-caller-id-view="edit" data-device-id="${escapeHtml(device.id)}" data-is-new="${opts.isNew ? "1" : "0"}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-caller-id-edit-back>← 返回来电显示列表</a>
-      </div>
-      <form class="space-y-6" data-caller-id-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`${escapeHtml(title)}`,backHtml:`<a href="#${LIST_PATH}" class="${BTN_GHOST}" data-caller-id-edit-back>← 返回来电显示列表</a>`,actionsHtml:`<button type="submit" form="standalone-caller-id-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-caller-id-edit-cancel>取消</a>`})}
+      <form id="standalone-caller-id-form" class="space-y-6" data-caller-id-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 class="text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
+
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground" for="caller-id-edit-name">名称</label>
@@ -369,10 +369,7 @@ function renderFormPage(device: CallerIdHardwareDevice, opts: { isNew: boolean }
           <div class="mt-4">${renderToggleRow("enabled", "启用来电显示", device.enabled, "本设备是否参与来电点单显示")}</div>
         </section>
         <div data-caller-id-serial-wrap class="${showSerial ? "" : "hidden"}">${renderSerialModemSection(device)}</div>
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-caller-id-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -460,8 +457,7 @@ export function renderDeviceManagementCallerIdHardwarePage(path: string): string
     if (!device) {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-caller-id-page>
-          <p class="text-sm text-muted-foreground">未找到该来电显示设备。</p>
-          <a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回列表</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回列表</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该来电显示设备。</p>`})}
         </div>`;
     }
     return renderFormPage(device, { isNew: false });

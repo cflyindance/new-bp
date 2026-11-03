@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 硬件管理中心 → 硬件 → 钱箱：钱箱台账（seq 364–369）+ 门店策略（seq 1 / 254 / 255）。
  */
@@ -401,12 +402,11 @@ function renderFormPage(device: CashDrawerHardwareDevice, opts: { isNew: boolean
 
   return `
     <div class="device-management-cash-drawer-hardware space-y-6" data-cash-drawer-page data-cash-drawer-view="edit" data-device-id="${escapeHtml(device.id)}" data-is-new="${opts.isNew ? "1" : "0"}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-cash-drawer-edit-back>← 返回钱箱列表</a>
-      </div>
-      <form class="space-y-6" data-cash-drawer-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`${escapeHtml(title)}`,backHtml:`<a href="#${LIST_PATH}" class="${BTN_GHOST}" data-cash-drawer-edit-back>← 返回钱箱列表</a>`,actionsHtml:`<button type="submit" form="standalone-cash-drawer-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-cash-drawer-edit-cancel>取消</a>`})}
+      <form id="standalone-cash-drawer-form" class="space-y-6" data-cash-drawer-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 class="text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
+
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground" for="cd-edit-name">名称</label>
@@ -436,10 +436,7 @@ function renderFormPage(device: CashDrawerHardwareDevice, opts: { isNew: boolean
           </p>
           <div class="mt-3">${renderEmployeeCheckboxes(device.allowedEmployeeIds)}</div>
         </section>
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${LIST_PATH}" class="${BTN_GHOST}" data-cash-drawer-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -511,8 +508,7 @@ export function renderDeviceManagementCashDrawerHardwarePage(path: string): stri
     if (!device) {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-cash-drawer-page>
-          <p class="text-sm text-muted-foreground">未找到该钱箱。</p>
-          <a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回钱箱列表</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回钱箱列表</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该钱箱。</p>`})}
         </div>`;
     }
     return renderFormPage(device, { isNew: false });

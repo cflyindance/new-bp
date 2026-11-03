@@ -1,3 +1,4 @@
+import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 /**
  * 硬件管理中心 → 硬件 → 支付设备：支付设备台账。
  * - Tripos：终端上报的运行环境（对齐 Kiosk / eMenu 列；可改设备名称）。
@@ -450,13 +451,12 @@ function renderPaxFormPage(device: PaymentPaxDevice, opts: { isNew: boolean }): 
   const title = opts.isNew ? "新增 PAX 终端" : "编辑 PAX 终端";
   return `
     <div class="device-management-payment-hardware space-y-6" data-payment-hardware-page data-payment-view="pax-edit" data-device-id="${escapeHtml(device.id)}" data-is-new="${opts.isNew ? "1" : "0"}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-back>← 返回支付设备</a>
-      </div>
-      <form class="space-y-6" data-payment-pax-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`${escapeHtml(title)}`,backHtml:`<a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-back>← 返回支付设备</a>`,actionsHtml:`<button type="submit" form="standalone-payment-pax-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-cancel>取消</a>`})}
+      <form id="standalone-payment-pax-form" class="space-y-6" data-payment-pax-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div class="flex flex-wrap items-center gap-2">
-            <h2 class="text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
+
             <span class="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">PAX</span>
           </div>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -491,10 +491,7 @@ function renderPaxFormPage(device: PaymentPaxDevice, opts: { isNew: boolean }): 
             </div>
           </div>
         </section>
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -518,10 +515,9 @@ function renderTriposEditPage(device: PaymentTriposDevice): string {
 
   return `
     <div class="device-management-payment-hardware space-y-6" data-payment-hardware-page data-payment-view="tripos-edit" data-device-id="${escapeHtml(device.id)}">
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-back>← 返回支付设备</a>
-      </div>
-      <form class="space-y-6" data-payment-tripos-edit-form novalidate>
+      ${renderStandalonePageHeader({level:2,titleHtml:`编辑设备 · ${escapeHtml(device.deviceName)}`,backHtml:`<a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-back>← 返回支付设备</a>`,actionsHtml:`<button type="submit" form="standalone-payment-tripos-edit-form" class="${BTN_PRIMARY}">保存</button>
+          <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-cancel>取消</a>`})}
+      <form id="standalone-payment-tripos-edit-form" class="space-y-6" data-payment-tripos-edit-form novalidate>
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-base font-semibold text-card-foreground">Tripos 设备信息</h2>
@@ -535,10 +531,7 @@ function renderTriposEditPage(device: PaymentTriposDevice): string {
             ${readonlyRows.map(([l, v, m]) => renderDisplayRow(l, v, m)).join("")}
           </dl>
         </section>
-        <div class="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-          <button type="submit" class="${BTN_PRIMARY}">保存</button>
-          <a href="#${PAYMENTS_LIST_PATH}" class="${BTN_GHOST}" data-payment-edit-cancel>取消</a>
-        </div>
+
       </form>
     </div>`;
 }
@@ -638,8 +631,7 @@ export function renderDeviceManagementPaymentHardwarePage(path: string): string 
     if (!device || device.hardwareType !== "pax") {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-payment-hardware-page>
-          <p class="text-sm text-muted-foreground">未找到该 PAX 支付终端。</p>
-          <a href="#${PAYMENTS_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回支付设备</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${PAYMENTS_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回支付设备</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该 PAX 支付终端。</p>`})}
         </div>`;
     }
     return renderPaxFormPage(device, { isNew: false });
@@ -651,8 +643,7 @@ export function renderDeviceManagementPaymentHardwarePage(path: string): string 
     if (!device || device.hardwareType !== "tripos") {
       return `
         <div class="rounded-xl border border-border bg-card p-6 shadow-sm" data-payment-hardware-page>
-          <p class="text-sm text-muted-foreground">未找到该 Tripos 支付设备。</p>
-          <a href="#${PAYMENTS_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回支付设备</a>
+          ${renderStandalonePageHeader({level:2,titleHtml:"设备不存在",backHtml:`<a href="#${PAYMENTS_LIST_PATH}" class="mt-4 inline-flex ${BTN_PRIMARY}">返回支付设备</a>`,subtitleHtml:`<p class="text-sm text-muted-foreground">未找到该 Tripos 支付设备。</p>`})}
         </div>`;
     }
     return renderTriposEditPage(device);
