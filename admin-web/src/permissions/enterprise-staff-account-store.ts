@@ -1,3 +1,4 @@
+import {permissionDemoExtraAccounts} from './permission-demo-identities';
 /**
  * M 平台 · 企业级员工登录账号
  */
@@ -11,6 +12,8 @@ const enterpriseStaffAccounts = createStaffAccountStore({
   refreshOnRead: true,
   seedAccounts: () => {
     const now = new Date().toISOString();
+    let existing:{id?:string;employeeId?:string;loginEmail?:string}[]=[];
+    try{const raw=JSON.parse(localStorage.getItem('menusifu:enterprise-staff-login-accounts:v1')??'[]');if(Array.isArray(raw))existing=raw;}catch{/* Preserve the existing account-store fallback behavior. */}
     return [
       {
         id: "acct-ent001",
@@ -56,6 +59,7 @@ const enterpriseStaffAccounts = createStaffAccountStore({
         orgTier: "enterprise",
         updatedAt: now,
       },
+      ...permissionDemoExtraAccounts(existing).map(account=>({...account,id:'acct-'+account.employeeId,password:'Menusifu666',isSystem:true,orgTier:'enterprise' as const,updatedAt:now})),
     ];
   },
 });

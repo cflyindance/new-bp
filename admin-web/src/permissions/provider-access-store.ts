@@ -1,3 +1,4 @@
+import {permissionDemoAccounts} from './permission-demo-identities';
 import {listStaffLoginAccounts} from './enterprise-staff-account-store';
 import { currentMAccount, currentMAccess, requireMAction } from './m-platform-store';
 import { mActionKey, mPageKey } from './m-platform-catalog';
@@ -20,7 +21,7 @@ function runtimeState():ProviderAccessState {
   const state:ProviderAccessState=providerStateFromStorage(raw,()=>buildCenterCatalog().resources,()=>{
     const snapshot=directory(),brands=snapshot.merchants.filter(m=>m.enterpriseId===DEFAULT_ENTERPRISE_ID).sort((a,b)=>(a.bid??a.merchantId).localeCompare(b.bid??b.merchantId));
     const brandIds=brands.map(m=>m.merchantId);
-    return {brandIds,storeIds:snapshot.stores.filter(s=>brandIds.includes(s.merchantId)).sort((a,b)=>a.storeId.localeCompare(b.storeId)).map(s=>s.storeId),employees:listStaffLoginAccounts().filter(a=>a.isSystem&&a.enabled&&a.id==='acct-'+a.employeeId&&['ent002','ent003','ent004'].includes(a.employeeId)).map(a=>({id:a.employeeId,name:a.employeeName}))};
+    return {brandIds,storeIds:snapshot.stores.filter(s=>brandIds.includes(s.merchantId)).sort((a,b)=>a.storeId.localeCompare(b.storeId)).map(s=>s.storeId),employees:permissionDemoAccounts(listStaffLoginAccounts()).filter(a=>a.enabled||a.employeeId==='demo-permission-disabled').map(a=>({id:a.employeeId,name:a.employeeName}))};
   });
   validateProviderState(state);cachedStateRaw=raw;cachedState=state;return state;
 }

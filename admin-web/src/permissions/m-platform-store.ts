@@ -1,21 +1,18 @@
+import {createMDemoState,mStateFromStorage} from './m-platform-demo';
 import { DEMO_LOGIN_ACCOUNT, getAuthenticatedEmail } from '../auth/login';
 import { getStaffLoginAccountByEmail, listStaffLoginAccounts } from './enterprise-staff-account-store';
-import { M_RESOURCES, mActionKey } from './m-platform-catalog';
+import { mActionKey } from './m-platform-catalog';
 import { assertMGrantCeiling, mIsAdministrator, mResolve, migrateMActivityModule, validateMState, type MState } from './m-platform-domain';
 export const M_PERMISSION_STORAGE = 'menusifu:m-platform-permissions:v1';
 export function createMState(): MState {
-  // Explicit initial system role. No old merchant/enterprise selection is converted.
-  return { schema: 1, catalogVersion: 3, revision: 0, roles: [{ id: 'm-system-admin', name: '服务商管理员', description: 'M 平台初始系统管理员', system: true,
-    grants: Object.fromEntries([...M_RESOURCES].map(([key, resource]) => [key, resource.kind === 'module' || resource.kind === 'page' && !resource.editable ? 'read' : 'edit'])) }],
-    employees: [{ id: 'ent001', roleIds: ['m-system-admin'] }], logs: [] };
+  return createMDemoState(listStaffLoginAccounts());
 }
 export function readMState(): MState {
-  const raw = localStorage.getItem(M_PERMISSION_STORAGE);
-  if (!raw) return createMState();
-  const state = JSON.parse(raw) as MState;
+  const state=mStateFromStorage(localStorage.getItem(M_PERMISSION_STORAGE),listStaffLoginAccounts);
   validateMState(state);
   return migrateMActivityModule(state);
 }
+
 export function currentMAccount() {
   const email = getAuthenticatedEmail()?.trim().toLowerCase() ?? '';
   const account = getStaffLoginAccountByEmail(email);
