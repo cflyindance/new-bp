@@ -1,3 +1,5 @@
+import {M_MODULES,mPageKey,mActionKey} from './m-platform-catalog';
+import {mResolve,type MState} from './m-platform-domain';
 import { providerRoleAccess, type ProviderAccessState, type ProviderTarget } from './provider-access-domain';
 import type { Access,Resource } from './center-domain';
 
@@ -16,4 +18,16 @@ export function providerEmployeeSummary(state:ProviderAccessState,id:string):str
 export function employeeMerchantPreviewAccess(state:ProviderAccessState,id:string,target:ProviderTarget,key:string,resources:Map<string,Resource>,brandCeiling:Set<string>,storeCeiling:Set<string>|undefined,enabled:boolean):Access {
   if(!enabled||!brandCeiling.has(key)||storeCeiling&&!storeCeiling.has(key))return 'hidden';
   return providerRoleAccess(state,id,target,key,resources);
+}
+
+export function mEmployeePermissionPages(state:MState,id:string,enabled:boolean){
+  return M_MODULES.flatMap(module=>module.pages.map(page=>({
+    page,module:module.title,access:mResolve(state,id,mPageKey(page.id),enabled),
+    actions:page.actions.map(action=>({id:action.id,title:action.title,allowed:mResolve(state,id,mActionKey(page.id,action.id),enabled)==='edit'}))
+  })));
+}
+
+export function employeeWorkbenchSurface(path:string):'m'|'merchant' {
+  const [pathname,query]=path.replace(/^#/,'').split('?');
+  return new URLSearchParams(query??'').get('surface')==='merchant'||pathname.endsWith('/merchant-access')?'merchant':'m';
 }

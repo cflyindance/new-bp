@@ -1,16 +1,150 @@
 # M 平台内部权限产品权威需求文档
 
-版本：V1.13；日期：2026-11-03；变更编号：EMPLOYEE-ACCESS-CONFIG-20261103-01。
-共同基线：员工双维角色与权限统一配置；起始本地 main@a0ed2503。
-配套：[产品权威 V1.13](M平台内部权限产品权威需求文档.md) · [研发交付 V1.13](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.13](M平台内部权限需求文档（个人规范版）.md)。
+版本：V1.14；日期：2026-11-03；变更编号：EMPLOYEE-WORKBENCH-20261103-01。
+共同基线：员工权限工作台双层页签与保存态生效预览；起始本地 main@750b4cb3。
+配套：[产品权威 V1.14](M平台内部权限产品权威需求文档.md) · [研发交付 V1.14](M平台内部权限业务规格说明书（研发交付版）.md) · [个人规范 V1.14](M平台内部权限需求文档（个人规范版）.md)。
 状态：按本次确认实现的本地原型；生产服务端鉴权、真实账号服务尚未接入。三份采用同一业务定义。
 
 本文件负责产品范围、已确认规则与验收依据；商家后台权限中心文档继续负责商家权限，不由本文件覆盖。
 
 
-## 员工统一角色与权限配置（EMPLOYEE-ACCESS-CONFIG-20261103-01）
+## 员工权限工作台（EMPLOYEE-WORKBENCH-20261103-01）
 
-本节为当前入口与交互定义；旧“分配角色”弹框、独立“商户访问授权”入口及单维员工预览截图为历史。既有两类角色、员工绑定、演示数据及授权校验继续有效，不迁移或合并存储。共同基线 main@a0ed2503，功能分支 codex/employee-role-config-20261103，外部 Chrome 功能验收端口 5317；用户已授权提交并合并本地 main，未授权推送；实际结果以 Git 交付核验为准。
+共同基线：本地 main@750b4cb3，功能分支 codex/employee-access-tabs-20261103，外部 Chrome 功能预览 5318。用户已授权提交并合并本地 main，未授权推送；实际提交和合并结果以 Git 核验为准。本节替代 V1.13 上下双区及独立预览跳转的交互定义；两类角色、范围、保存校验和演示数据不迁移。
+
+截图来源统一为 2026-11-03 当前功能分支、外部 Chrome、5318 端口的隔离本地演示数据。临时角色和范围修改用于验收，已恢复原配置，保留本地测试日志，不代表真实商户授权历史。
+
+### 逐操作覆盖清单
+
+| 页面 / 操作 | 入口 → 界面 / 结果截图 | 当前结果 |
+| --- | --- | --- |
+| 员工工作台入口 | returned-list → config-m / legacy-merchant | 身份、状态、两组页签定位正确 |
+| 切换角色配置 / 生效权限 | both-drafts → merchant-saved-snapshot / m-saved-snapshot → m-draft-retained / merchant-draft-retained | 两类草稿保留，预览只取保存快照 |
+| 切换 M / 商户维度 | cross-dimension-draft / both-drafts / effective-m / effective-merchant | 四种组合，保留当前工作方式 |
+| 键盘右箭头切换维度 | M 草稿 → remove-draft | 已实测；Home / End / 左箭头未单独截图 |
+| M 角色勾选及取消 | config-m → m-draft-retained；returned-list 显示恢复结果 | 已选数量、未保存标记正确 |
+| M 角色保存确认 | m-draft-retained → m-save-confirm → m-saved-refreshed | 只更新 M；商户草稿仍在 |
+| 商户添加授权 | config-merchant → add-binding → required-binding | 标题右侧入口，空角色/范围不能加入草稿 |
+| 商户编辑授权 | config-merchant → edit-binding → both-drafts | 原角色、两门店回填；加入待保存配置后才成为草稿 |
+| 商户移除 | config-merchant → remove-draft | 只移除草稿，保存快照仍可预览 |
+| 商户保存确认 | merchant-draft-retained → merchant-save-confirm → merchant-saved-refreshed | 保存后再次切入预览取新角色 |
+| 系统管理员商户区 | config-m → system-merchant | 只读说明，不显示添加/保存按钮 |
+| 点击菜单 | effective-m → menu-detail | 详情随所选菜单更新 |
+| 搜索菜单 | effective-m → menu-search / menu-search-empty | 定位菜单与无匹配空态；清空恢复列表 |
+| 显示全部权限 | m-saved-snapshot → all-permissions | 含不可见菜单和禁止操作 |
+| 展开 / 收起操作组 | effective-m → action-groups / all-permissions | 允许默认展开，禁止默认收起，状态可切换 |
+| 切换商户目标 | merchant-saved-snapshot → target-switch | 仅所授权两店，目标角色与菜单上限联动 |
+| 返回列表 / 继续编辑 | remove-draft → leave-confirm → leave-cancel | 单一双维提示，取消留页保留草稿 |
+| 返回列表 / 放弃并离开 | leave-confirm → returned-list | 一次确认后离开，已保存授权未变 |
+| 旧链接 | merchant-access → legacy-merchant；旧 staff/:id → final-workbench | 商户配置 / M 生效的默认定位正确 |
+
+本次没有全量重跑历史模块的每项异常操作；缺少本版本的多角色（超过 5 个）搜索截图、受限员工真实登录、停用画面、保存取消/并发/写入失败和原生刷新关闭确认截图，保留原规则并登记为截图缺口，不声明全部操作或异常截图完整。
+
+### 工作台身份与双层页签
+
+![角色配置 M 平台](images/employee-workbench/config-m.png)
+![角色配置商户后台](images/employee-workbench/config-merchant.png)
+
+| 元素 | 逻辑说明 |
+| --- | --- |
+| 返回列表 | 位于标题左；真正离开当前员工时检查全部维度草稿，不因为当前面板没有修改就忽略隐藏维度 |
+| 标题 / 邮箱 / 启停 | 标题为员工权限及姓名；账号目录提供邮箱、enabled。不存在提示员工不存在；停用角色配置保留，但生效权限不可访问 |
+| 工作方式 | 角色配置、生效权限。仅切换当前内容，不提交、不丢草稿、不弹离开提示；维持当前 M / 商户维度 |
+| 权限维度 | M 平台、商户后台。独立保存；有草稿的维度标注未保存，切换后标记仍保留；支持左右箭头及 Home / End 焦点和选择 |
+| 生效提示 | 任一维草稿存在且正在看生效权限时显示“存在未保存的修改，当前仅展示已保存的生效权限。”；没有草稿或返回配置时不展示 |
+| 内容与滚动 | 一次只展示当前组合；生效页左树和右详情各自滚动，避免把所有菜单/操作纵向平铺到页面底部 |
+
+### M 平台角色配置与独立保存
+
+![角色修改并跨页签保留](images/employee-workbench/m-draft-retained.png)
+![独立保存确认](images/employee-workbench/m-save-confirm.png)
+![保存后生效页刷新，商户草稿仍在](images/employee-workbench/m-saved-refreshed.png)
+
+| 字段 / 操作 | 逻辑说明 |
+| --- | --- |
+| 角色多选 | 回填已保存 M roleIds，默认 []；已选数为当前草稿 ID 数。清空后该员工无 M 平台权限，不删除商户绑定 |
+| 搜索角色 | 角色数超过 5 个才展示，按名称匹配；筛选不清除未显示的已选角色。无匹配显示没有匹配角色。本版本没有构造超过 5 个角色的浏览器截图 |
+| 保存与状态 | 每维一个保存按钮；无变更显示无未保存修改并禁用。无 staff/assign 时只读、不显示可保存按钮。确认弹框沿用员工、待保存角色及保存范围说明 |
+| 成功 | saveMState 仍校验当前操作者、revision、授权上限及最后管理员；仅更新 M 保存快照、revision、日志、脏状态。切回生效页读取新保存结果 |
+| 取消 / 失败 | 原取消、并发冲突、最后管理员、持久化错误规则保留，草稿不丢、不把失败标成已保存；其弹框本版本截图待补，不将上一版截图冒充本版 |
+
+### 商户角色、品牌 / 门店范围与独立保存
+
+![商户配置入口](images/employee-workbench/config-merchant.png)
+![添加授权弹框](images/employee-workbench/add-binding.png)
+![必填失败结果](images/employee-workbench/required-binding.png)
+![编辑现有角色与两店回填](images/employee-workbench/edit-binding.png)
+![加入商户草稿，另一维草稿保留](images/employee-workbench/both-drafts.png)
+
+添加授权位于区域标题右。继续要求一个有效访问角色和至少一个当前操作者可授权的品牌/门店；空选提示请选择访问角色和至少一个品牌／门店。编辑保持原绑定 ID、scope.mode、scope.ids 的回填；加入待保存配置不直接生效。范围搜索、切换清空确认和取消弹框沿用原规则。
+
+![移除仅改变草稿](images/employee-workbench/remove-draft.png)
+![保存确认](images/employee-workbench/merchant-save-confirm.png)
+![保存后角色刷新且无未保存提示](images/employee-workbench/merchant-saved-refreshed.png)
+
+移除仍只修改本维草稿；在保存前，生效页继续取原绑定。保存沿用 saveProviderState 的 manage 动作、revision、目标和菜单上限、系统兼容 ID 及有效角色校验，原会话重校验与日志写入不变。只影响商户源，不能清除 M 草稿。已保存后再次切入生效页显示新角色；失败/取消保留草稿，当前版本异常截图待补。
+
+![系统管理员的商户授权只读](images/employee-workbench/system-merchant.png)
+
+系统兼容员工显示全部品牌/门店、按商户菜单上限访问；不显示添加或保存商户授权按钮。普通只读用户也不显示可保存按钮；没有 provider-roles 查看权限不读取/挂载商户明细，只显示无查看权限说明。不因选择 M 管理员角色自动获得系统兼容商户身份。
+
+### 生效权限：保存快照与草稿隔离
+
+![未保存商户改成财务角色，生效页仍为已保存订单角色](images/employee-workbench/merchant-saved-snapshot.png)
+![M 勾选管理员但未保存，生效页仍未分配](images/employee-workbench/m-saved-snapshot.png)
+![返回配置仍保留原 M 勾选](images/employee-workbench/m-draft-retained.png)
+![返回商户配置仍保留财务角色草稿](images/employee-workbench/merchant-draft-retained.png)
+
+角色配置的两个 DOM 和草稿在页签间保留；生效页不接收配置草稿。每次从角色配置切入生效权限，重新取已保存快照；同一轮生效页内换维度不重建已挂载预览，不丢其搜索/选择。生效页读取新版本不能覆盖配置区的并发基线，返回配置后仍按原 revision 保存，冲突时仍拒绝覆盖。
+
+### M 生效权限：菜单树、搜索与详情
+
+![M 菜单树与操作分组](images/employee-workbench/effective-m.png)
+![点击服务包管理切换详情](images/employee-workbench/menu-detail.png)
+![搜索定位全量设备](images/employee-workbench/menu-search.png)
+![搜索无匹配](images/employee-workbench/menu-search-empty.png)
+![不可见菜单与禁止操作](images/employee-workbench/all-permissions.png)
+![分组展开收起](images/employee-workbench/action-groups.png)
+
+| 元素 | 逻辑说明 |
+| --- | --- |
+| 角色摘要 | 仅取已保存员工 M 角色名称；没有显示未分配角色，不读取勾选草稿 |
+| 搜索菜单 | 按模块名、菜单名匹配，不改变授权；没有匹配显示空态，清空恢复当前显示范围的菜单 |
+| 显示范围 | 默认可访问菜单，即 mResolve 页面结果非 hidden；全部权限包含不可见菜单。切换不新增授权 |
+| 菜单树 | 按 M 模块分组，点击叶子在右侧显示菜单，当前项高亮；过滤导致原选择消失时选择第一个匹配菜单 |
+| 详情状态 | 用已保存角色并集、上级门槛与 enabled 计算可编辑/可查看/不可见。隐藏菜单说明下级操作不生效，无独立操作时给出说明 |
+| 允许 / 禁止操作 | 每项按 mResolve(action) 是否 edit 分组，允许默认展开，禁止默认收起；显示组内数量，可展开/收起，空组显示无。仍允许页面只读但获独立输出动作（如导出）的既有规则 |
+
+### 商户生效权限：范围和目标菜单上限
+
+![商户菜单树预览](images/employee-workbench/effective-merchant.png)
+![切换第二家授权门店](images/employee-workbench/target-switch.png)
+
+复用商户权限菜单树与详情。预览目标同时满足员工已保存范围和当前操作者可访问范围；展示当前目标匹配的已保存角色（去重），系统兼容身份显示系统管理员。切换目标重新计算角色并集与品牌 ceiling、门店 enabledKeys 映射资源集的交集。停用、无匹配范围、未开通菜单均不能产生可访问结果；截图中演示订单/财务角色受目标菜单上限限制为空态，不为演示开放权限。
+
+### 真正离开员工：一次确认、保留保存结果
+
+![统一列出两维草稿的离开确认](images/employee-workbench/leave-confirm.png)
+![继续编辑结果](images/employee-workbench/leave-cancel.png)
+![放弃后返回列表，原授权保留](images/employee-workbench/returned-list.png)
+
+普通页签切换不提示。返回列表、进入其他员工或其他实际 hash 路由时，如存在任一维草稿，统一工作台弹框列出受影响维度。继续编辑留在原页签和地址、保留全部草稿；放弃并离开清除离开拦截后执行原目标导航，只丢未保存内容，不回退已保存的角色、范围或日志，也不再连弹第二个维度确认。刷新/关闭仍使用浏览器 beforeunload，当前原生层截图待补。
+
+### 旧入口与当前地址
+
+![旧 merchant-access 默认商户配置](images/employee-workbench/legacy-merchant.png)
+![旧 staff/:id 默认 M 生效权限](images/employee-workbench/final-workbench.png)
+
+/roles 默认角色配置＋M；/roles/preview 与旧 /staff/:id 默认生效权限＋M；旧 /merchant-access 默认角色配置＋商户；surface=merchant 定位商户维度。内部页签通过 replaceState 更新同员工地址，不触发 hashchange 或重挂配置区；更新离开保护的返回地址。真实导航、刷新与关闭继续受草稿保护，旧链接原路由可见性检查不放宽。
+
+### 当前验证状态与边界
+
+类型检查与员工路由/摘要、M 菜单及动作分组（含只读页独立输出动作）、停用/未知员工、快照不可变测试通过；原演示数据保护、M 角色、商户访问 16 项及集中日志隔离回归通过。外部 Chrome 实测四种组合、键盘维度切换、两类草稿跨页签、生效只取保存数据、保存刷新、两维标记、系统只读无保存、树搜索/空态/全部过滤、操作折叠、目标切换、统一离开取消/放弃与旧入口。当前测试未覆盖项见清单；不把前端演示验证等同于生产服务端鉴权或部署验证。
+
+
+## 历史布局：员工统一角色与权限配置（EMPLOYEE-ACCESS-CONFIG-20261103-01）
+
+本节记录 V1.13 历史布局；当前页签、保存态预览和离开提示以 EMPLOYEE-WORKBENCH-20261103-01 为准。原角色与范围规则保留。既有两类角色、员工绑定、演示数据及授权校验继续有效，不迁移或合并存储。共同基线 main@a0ed2503，功能分支 codex/employee-role-config-20261103，外部 Chrome 功能验收端口 5317；用户已授权提交并合并本地 main，未授权推送；实际结果以 Git 交付核验为准。
 
 图注统一：2026-11-03 当前功能分支，外部 Chrome 真实截图；独立端口的本地演示数据，不是真实商户授权操作。测试中的临时 M 角色和商户绑定已恢复，保留测试操作的本地审计记录。
 
@@ -624,7 +758,7 @@ M 平台角色管理软件服务商员工的平台功能；商户访问绑定管
 
 每条授权同时选择角色与范围；品牌范围含新增门店，指定门店仅限勾选 MID。保存前显示影响并确认，撤销绑定后有效会话重新校验。新员工和普通旧员工默认无商户访问；系统兼容身份受账号启停、M 进入动作与商户上限共同限制。
 
-逐字段、弹框和取消行为见[个人规范 V1.13](M平台内部权限需求文档（个人规范版）.md#服务商员工商户访问授权)；字段、执行链和测试见[研发交付 V1.13](M平台内部权限业务规格说明书（研发交付版）.md#商户访问授权字段与执行链)。
+逐字段、弹框和取消行为见[个人规范 V1.14](M平台内部权限需求文档（个人规范版）.md#服务商员工商户访问授权)；字段、执行链和测试见[研发交付 V1.14](M平台内部权限业务规格说明书（研发交付版）.md#商户访问授权字段与执行链)。
 
 
 ## 系统使用分析独立权限目录
@@ -750,6 +884,8 @@ M 平台资源目录及独立动作以 src/permissions/m-platform-catalog.ts 为
 验证：TypeScript、纯领域回归、真实浏览器角色新增/编辑/绑定/预览、受限菜单与只读设置，以及持久化失败/并发版本/最后管理员/停用登录回归。具体结果见研发版。V1.1 及之前的功能已提交并合并本地 main；V1.2 导航样式调整也已提交并合并本地 main；本次 V1.3/V1.4 按用户授权提交、合并并推送；未将推送视为 CI 或部署通过。
 
 ## 6. 版本记录
+
+- V1.14（2026-11-03，EMPLOYEE-WORKBENCH-20261103-01）：三份配对版本均为 V1.14。改为同员工双层页签，保留草稿、保存快照预览、M 菜单树及分组操作、系统只读无保存、统一离开确认；附逐操作截图和未覆盖项。
 
 - V1.13（2026-11-03，EMPLOYEE-ACCESS-CONFIG-20261103-01）：三份配对版本均 V1.13，统一员工配置入口、双维摘要、独立保存与双维已保存权限预览；附当前逐操作截图及边界验证。
 
