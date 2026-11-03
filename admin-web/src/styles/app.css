@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../ui/standalone-page-header.css";
+@import "../permissions/role-list.css";
 
 /* 勿扫描独立嵌入应用源码/产物，避免 Vite CSS 分析误解析其静态资源路径 */
 @source not "../../vendor";

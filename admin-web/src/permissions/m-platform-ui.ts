@@ -1,3 +1,4 @@
+import {ROLE_LIST_CREATE_LABEL, ROLE_ACTION_LABELS, renderRoleActions, renderRoleListTable, renderRoleMemberCount, uniqueRoleEmployeeIds, openRoleMembersDialog} from './role-list-ui';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {bindEmployeeAccess} from './employee-access-ui';
 import {employeeAccessRoute,providerEmployeeSummary} from './employee-access-domain';
@@ -95,7 +96,17 @@ export function bindMCenter(onMount: () => void): void {
       const name = roleId ? role()!.name : account()!.employeeName;
       host.innerHTML = `<div class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:`${roleId ? '编辑权限' : '员工权限'} · ${mEsc(name)}`,backHtml:button('返回', 'data-mp-do="back"'),subtitleHtml:`<p class="pc-muted">${roleId ? '设置角色可以访问、查看和设置的 M 平台菜单。' : '最终权限由已分配角色合并计算。'}</p>`,actionsHtml:roleId ? button(preview ? '返回编辑' : '效果预览', 'data-mp-do="preview"')+button('保存', 'data-mp-do="save-grants"', allowed('roles', 'edit') && dirty, true) : button('分配角色', `data-mp-assign="${mEsc(employeeId)}"`, allowed('staff', 'assign'))})}${message}${employeeId ? `<div class="mp-role-summary">${(draft.employees.find(e => e.id === employeeId)?.roleIds ?? []).map(id => `<span class="pc-tag">${mEsc(draft.roles.find(r => r.id === id)?.name ?? '失效角色')}</span>`).join('') || '尚未分配角色'}${account()?.enabled ? '' : '<span class="pc-tag">账号已停用，全部权限不生效</span>'}</div>` : ''}<div class="pc-content">${editor()}</div><footer class="pc-footer"><span>${dirty ? '有未保存的修改' : ''}</span></footer></div>`;
     } else if (path.endsWith('/roles') || path.endsWith('/roles/new')) {
-      host.innerHTML = `<header class="pc-heading"><h1>M 平台角色与权限</h1>${button('新建角色', 'data-mp-do="new-role"', allowed('roles', 'create'), true)}</header>${message}<div class="pc-card"><table><thead><tr><th>角色名称</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.map(r => `<tr><td>${mEsc(r.name)}${r.system ? '<span class="pc-tag">系统角色</span>' : ''}</td><td>${mEsc(r.description) || '—'}</td><td>${button(String(members(r.id).length), `data-mp-members="${mEsc(r.id)}"`)}</td><td><div class="pc-actions">${button('编辑角色', `data-mp-edit="${mEsc(r.id)}"`, allowed('roles', 'edit'))}<a class="pc-link" href="#${prefix}/roles/edit/${encodeURIComponent(r.id)}">编辑权限</a>${button('复制', `data-mp-copy="${mEsc(r.id)}"`, allowed('roles', 'create'))}${currentMAccess(mPageKey('permission-log'))!=='hidden'?`<a class="pc-link" href="#${prefix}/change-log?type=m&role=${encodeURIComponent(r.id)}">查看变更记录</a>`:''}${button('删除', `data-mp-delete="${mEsc(r.id)}"`, allowed('roles', 'delete') && !r.system)}</div></td></tr>`).join('')}</tbody></table></div>`;
+      const rows = state.roles.map(r => {
+        const employeeIds = uniqueRoleEmployeeIds(members(r.id).map(e => e.id));
+        return `<tr><td>${mEsc(r.name)}${r.system ? '<span class="pc-tag">系统角色</span>' : ''}</td><td>${mEsc(r.description) || '—'}</td><td>${renderRoleMemberCount(employeeIds.length, `data-mp-members="${mEsc(r.id)}"`, r.name)}</td><td>${renderRoleActions({
+          permissions: `<a class="pc-link" href="#${prefix}/roles/edit/${encodeURIComponent(r.id)}">${ROLE_ACTION_LABELS.permissions}</a>`,
+          edit: button(ROLE_ACTION_LABELS.edit, `data-mp-edit="${mEsc(r.id)}"`, allowed('roles', 'edit')),
+          copy: button(ROLE_ACTION_LABELS.copy, `data-mp-copy="${mEsc(r.id)}"`, allowed('roles', 'create')),
+          changes: currentMAccess(mPageKey('permission-log')) !== 'hidden' ? `<a class="pc-link" href="#${prefix}/change-log?type=m&role=${encodeURIComponent(r.id)}">${ROLE_ACTION_LABELS.changes}</a>` : '',
+          delete: button(ROLE_ACTION_LABELS.delete, `data-mp-delete="${mEsc(r.id)}"`, allowed('roles', 'delete') && !r.system),
+        })}</td></tr>`;
+      }).join('');
+      host.innerHTML = `<header class="pc-heading permission-role-list-heading"><h1>M 平台角色与权限</h1>${button(ROLE_LIST_CREATE_LABEL, 'data-mp-do="new-role"', allowed('roles', 'create'), true)}</header>${message}${renderRoleListTable(rows)}`;
     } else if (staffView) {
       let providerState:ReturnType<typeof readProviderState>|undefined;
       const providerVisible=currentMAccess(mPageKey('provider-roles'))!=='hidden';
@@ -169,8 +180,8 @@ export function bindMCenter(onMount: () => void): void {
         if (confirm(`确定${a.enabled ? '停用' : '启用'} ${a.employeeName} 的账号？`)) { saveMAccountChange(state, a, { enabled: !a.enabled }); state = readMState(); draft = structuredClone(state); onMount(); }
       }
       if (target.dataset.mpMembers) {
-        const list = members(target.dataset.mpMembers).map(e => accounts.listStaffLoginAccounts().find(a => a.employeeId === e.id)?.employeeName ?? e.id);
-        dialog('角色成员', `<p>${list.map(mEsc).join('、') || '暂无成员'}</p>`, () => {});
+        const r = state.roles.find(r => r.id === target.dataset.mpMembers);
+        if (r) openRoleMembersDialog(r.name, members(r.id).map(e => e.id), accounts.listStaffLoginAccounts(), target);
       }
       if (target.dataset.mpDelete) {
         requireMAction('roles', 'delete');

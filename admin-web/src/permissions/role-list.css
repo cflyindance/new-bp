@@ -1,0 +1,20 @@
+.pc .permission-role-list-heading{min-height:40px;margin:0;gap:12px}
+.pc .permission-role-list-heading h1{margin:0;font-size:24px;line-height:34px}
+.pc .pc-card.permission-role-list-card{padding:20px;margin:18px 0;overflow:visible;min-width:0}
+.permission-role-table-scroll{max-width:100%;overflow-x:auto}
+.pc table.permission-role-table{width:100%;min-width:1280px;table-layout:fixed}
+.pc .permission-role-table th,.pc .permission-role-table td{padding:14px 18px;vertical-align:middle;overflow-wrap:anywhere}
+.pc .permission-role-table tbody tr{height:68px}
+.pc .permission-role-table th,.pc .permission-role-table td:nth-child(3){white-space:nowrap}
+.pc .permission-role-table .permission-role-actions{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:8px}
+.pc .permission-role-actions>*{flex-shrink:0;white-space:nowrap}
+.pc .permission-role-member-count{white-space:nowrap}
+.pc .provider-access.provider-role-list{height:auto;min-height:0;padding:0;gap:0}
+.pc .provider-role-list>.provider-body{flex:initial;overflow:visible;min-width:0;gap:0}
+.pc-dialog.permission-role-members-dialog{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 48px)}
+.permission-role-members-dialog>.pc{padding:0}
+.permission-role-members-dialog h2{overflow-wrap:anywhere}
+.permission-role-members-scroll{max-height:50dvh;overflow:auto}
+.pc .permission-role-members-table{width:100%;table-layout:fixed}
+.pc .permission-role-members-table th,.pc .permission-role-members-table td{overflow-wrap:anywhere}
+.permission-role-members-dialog footer{display:flex;justify-content:flex-end;margin-top:20px}
