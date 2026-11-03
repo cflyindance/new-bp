@@ -12,7 +12,7 @@ try{
  await page.goto(base+'/#/login');
  await page.waitForFunction(()=>!!document.querySelector('input'),null,{timeout:60000});
  await page.evaluate(async()=>{const a=await import('/src/auth/login.ts');a.setAuthenticated(a.DEMO_LOGIN_ACCOUNT);(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();location.hash='/m-platform/permissions/provider-roles';});
- await page.getByRole('heading',{name:'商家后台访问角色',exact:true}).first().waitFor({timeout:60000});
+ await page.getByRole('heading',{name:'商家后台访问角色与权限',exact:true}).first().waitFor({timeout:60000});
  await page.getByRole('button',{name:'新建访问角色',exact:true}).click();
  await page.locator('dialog input[name=name]').fill('订单支持');
  await page.locator('dialog button[type=submit]').click();
