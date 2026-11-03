@@ -2781,6 +2781,7 @@
   }
 
   function buffetTemplateFieldLocked(draft, field) {
+    if (buffetPresetOnly(draft) && field === "subject") return true;
     var template = buffetPresetTemplate(draft);
     return !!(template && ((field === "subject" && template.presetSubject) ||
       (field === "targetType" && template.presetTargetType) || field === "period"));
@@ -2948,7 +2949,7 @@
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
       buffetTemplateBlock +
       '<section class="olf-section"><h3>限购主体</h3><div class="olf-choice-grid olf-choice-grid--two">' +
-      subjectChoices + '</div>' + (subjectOptions.disabled ? '<p class="olf-hint">限购主体由所选模板确定，如需修改请选择其他模板。</p>' : '') + '</section>' +
+      subjectChoices + '</div>' + (subjectOptions.disabled ? '<p class="olf-hint">' + (buffetPresetTemplate(draft) ? '限购主体由所选模板确定，如需修改请选择其他模板。' : '请先选择常用模板，限购主体将自动确定。') + '</p>' : '') + '</section>' +
       (modernBuffet ? buffetPeriodBlock : periodBlock) +
       '<section class="olf-section"><h3>限购对象</h3><div class="' + targetGridClass + '">' +
       targetChoices + '</div></section>' +
