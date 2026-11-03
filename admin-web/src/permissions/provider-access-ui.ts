@@ -1,3 +1,4 @@
+import {employeeMerchantPreviewAccess} from './employee-access-domain';
 import {brandCatalog,mappedRuntimeKeys} from '../config/brand-access-store';
 import {getStoreCapability} from '../config/enterprise-merchant-store';
 import { esc, renderPermissionEditor } from './center-editor';
@@ -13,18 +14,18 @@ import { currentMAccess } from './m-platform-store';
 import { mActionKey } from './m-platform-catalog';
 import { getEnterpriseMerchantSnapshot } from '../config/enterprise-merchant-store';
 import { listStaffLoginAccounts } from './enterprise-staff-account-store';
-import { providerRoleAccess, type ProviderBinding } from './provider-access-domain';
+import { providerCanTarget, providerRoleAccess, type ProviderBinding } from './provider-access-domain';
 import './provider-access.css';
 const prefix='/m-platform/permissions/provider-roles';
 const link=(path:string,text:string)=>`<a class="pc-link" href="#${path}">${esc(text)}</a>`;
-export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:(()=>boolean)|undefined)=>void):void {
+export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:(()=>boolean)|undefined)=>void,options:{embedded?:boolean;employeePreview?:boolean}={}):void {
   let saved=readProviderState(),draft=structuredClone(saved),page='module:dashboard',group='',query='',preview=false,target='',dirty=false;
   const catalog=buildCenterCatalog(),accounts=listStaffLoginAccounts();
   const roleId=path.startsWith(prefix+'/edit/')?decodeURIComponent(path.slice((prefix+'/edit/').length)):'';
   const staffMatch=/\/staff\/([^/]+)\/merchant-access$/.exec(path);
   const employeeId=staffMatch?decodeURIComponent(staffMatch[1]):'';
   const account=accounts.find(a=>a.employeeId===employeeId);
-  const canEdit=()=>currentMAccess(mActionKey('provider-roles','manage'))==='edit';
+  const canEdit=()=>!options.employeePreview&&currentMAccess(mActionKey('provider-roles','manage'))==='edit';
   const role=()=>draft.roles.find(r=>r.id===roleId);
   const snap=getEnterpriseMerchantSnapshot();
   const brandOptions=snap.merchants.filter(m=>currentProviderCanTarget(m.merchantId)).map(m=>({id:m.merchantId,title:m.name+' · '+m.bid}));
@@ -81,10 +82,20 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
     if(path===prefix+'/change-log'){
       title='变更记录';
       body=`<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th></tr></thead><tbody>${saved.logs.map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td><td>${esc(l.action)}</td><td>${esc(l.object)}</td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无商家后台访问角色变更记录</td></tr>'}</tbody></table>`;
+    }else if(employeeId&&options.employeePreview){
+      title='商户访问权限';
+      if(!account){host.innerHTML='<p class="pc-empty">员工不存在</p>';return;}
+      const targets=[...brandOptions.filter(o=>providerCanTarget(saved,employeeId,{brandId:o.id})).map(o=>({id:o.id,title:o.title})),...snap.stores.filter(s=>currentProviderCanTarget(s.merchantId,s.storeId)&&providerCanTarget(saved,employeeId,{brandId:s.merchantId,storeId:s.storeId})).map(s=>({id:s.merchantId+'|'+s.storeId,title:s.name+' · '+s.storeId}))];
+      if(!targets.some(o=>o.id===target))target=targets[0]?.id??'';
+      const [brandId,storeId]=target.split('|');
+      const ceiling=brandId?brandCatalog(brandId,catalog).ceiling:new Set<string>();
+      const storeCeiling=storeId?mappedRuntimeKeys(new Set(getStoreCapability(storeId)?.enabledKeys??[]),catalog):undefined;
+      const value=(key:string):Access=>employeeMerchantPreviewAccess(saved,employeeId,{brandId:brandId??'',storeId},key,catalog.resources,ceiling,storeCeiling,account.enabled);
+      body=targets.length?`<label>预览品牌／门店<select data-provider-target>${targets.map(o=>`<option value="${esc(o.id)}" ${target===o.id?'selected':''}>${esc(o.title)}</option>`).join('')}</select></label><p class="pc-muted">展示已保存角色在所选对象的生效权限；受品牌和门店已开通菜单限制。</p>${renderPermissionEditor({catalog,page,group,preview:true,readonly:true,staff:true,effectiveOnly:true,search:query,own:value,value,emptyMessage:account.enabled?'当前对象暂无可访问菜单':'账号已停用，商户访问权限不生效'})}`:'<p class="pc-empty">该员工暂无可预览的商户访问范围</p>';
     }else if(employeeId){
       title='商户访问授权 · '+(account?.employeeName??employeeId);
       if(!account){host.innerHTML='<p class="pc-empty">员工不存在</p>';return;}
-      body=`<p class="pc-muted">${esc(account.loginEmail)} · ${account.enabled?'已启用':'已停用，授权不生效'}</p>${draft.systemEmployeeIds.includes(employeeId)?'<p class="pc-notice">系统管理员：全部品牌／门店，按商户菜单上限访问。</p>':`<button type="button" data-provider-add-binding ${readOnly?'disabled':''}>添加访问授权</button><table><thead><tr><th>访问角色</th><th>适用范围</th><th>操作</th></tr></thead><tbody>${bindings().map(b=>`<tr><td>${esc(draft.roles.find(r=>r.id===b.roleId)?.name??'角色失效')}</td><td>${b.scope.mode==='brands'?'品牌（含新增门店）':'指定门店'}<br>${b.scope.ids.map(id=>esc((b.scope.mode==='brands'?snap.merchants.map(m=>({id:m.merchantId,name:m.name})):snap.stores.map(s=>({id:s.storeId,name:s.name}))).find(o=>o.id===id)?.name??id)).join('、')}</td><td><button type="button" data-provider-binding="${esc(b.id)}" ${readOnly?'disabled':''}>编辑</button> <button type="button" data-provider-remove="${esc(b.id)}" ${readOnly?'disabled':''}>移除</button></td></tr>`).join('')||'<tr><td colspan="3">未配置商户访问权限</td></tr>'}</tbody></table>`}`;
+      body=`${options.embedded?'':`<p class="pc-muted">${esc(account.loginEmail)} · ${account.enabled?'已启用':'已停用，授权不生效'}</p>`}${draft.systemEmployeeIds.includes(employeeId)?'<p class="pc-notice">系统管理员：全部品牌／门店，按商户菜单上限访问。</p>':`<button type="button" data-provider-add-binding ${readOnly?'disabled':''}>添加访问授权</button><table><thead><tr><th>访问角色</th><th>适用范围</th><th>操作</th></tr></thead><tbody>${bindings().map(b=>`<tr><td>${esc(draft.roles.find(r=>r.id===b.roleId)?.name??'角色失效')}</td><td>${b.scope.mode==='brands'?'品牌（含新增门店）':'指定门店'}<br>${b.scope.ids.map(id=>esc((b.scope.mode==='brands'?snap.merchants.map(m=>({id:m.merchantId,name:m.name})):snap.stores.map(s=>({id:s.storeId,name:s.name}))).find(o=>o.id===id)?.name??id)).join('、')}</td><td><button type="button" data-provider-binding="${esc(b.id)}" ${readOnly?'disabled':''}>编辑</button> <button type="button" data-provider-remove="${esc(b.id)}" ${readOnly?'disabled':''}>移除</button></td></tr>`).join('')||'<tr><td colspan="3">未配置商户访问权限</td></tr>'}</tbody></table>`}`;
     }else if(roleId){
       const r=role();if(!r){host.innerHTML='<p class="pc-empty">访问角色不存在</p>';return;}title=r.name;
       const targetParts=target.split('|'),previewTarget={brandId:targetParts[0]??'',storeId:targetParts[1]||undefined};
@@ -100,7 +111,7 @@ export function bindProviderAccess(host:HTMLElement,path:string,setLeave:(guard:
     }else{
       body=`<table><thead><tr><th>访问角色</th><th>描述</th><th>关联员工</th><th>操作</th></tr></thead><tbody>${draft.roles.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.description)||'—'}</td><td>${members(r.id)} 人</td><td>${link(prefix+'/edit/'+encodeURIComponent(r.id),'配置权限')} ${link('/m-platform/permissions/change-log?type=provider&role='+encodeURIComponent(r.id),'查看变更记录')} <button type="button" data-provider-info="${esc(r.id)}" ${readOnly?'disabled':''}>编辑</button> <button type="button" data-provider-copy="${esc(r.id)}" ${readOnly?'disabled':''}>复制</button> <button type="button" data-provider-delete="${esc(r.id)}" ${readOnly?'disabled':''}>删除</button></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无商家后台访问角色，请先新建角色。</td></tr>'}</tbody></table>`;
     }
-    host.innerHTML=`<div class="provider-access ${roleId?'provider-editor':''}"><header class="pc-heading"><div class="provider-title">${(employeeId||roleId)?link(employeeId?'/m-platform/permissions/staff':prefix,'返回列表'):''}<h1>${esc(title)}</h1></div>${roleId?`<button type="button" data-provider-preview>${preview?'返回编辑':'权限预览'}</button>`:path===prefix?`<button type="button" class="primary" data-provider-new ${readOnly?'disabled':''}>新建访问角色</button>`:''}</header><p class="pc-error" data-provider-error role="alert"></p><div class="provider-body">${body}</div>${(employeeId||roleId)?`<footer class="pc-footer"><span>${dirty?'有未保存的修改':'已保存'}</span><button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>保存授权</button></footer>`:''}</div>`;
+    host.innerHTML=`<div class="provider-access ${roleId?'provider-editor':''}"><header class="pc-heading"><div class="provider-title">${(!options.embedded&&(employeeId||roleId))?link(employeeId?'/m-platform/permissions/staff':prefix,'返回列表'):''}${options.embedded?`<h2>${options.employeePreview?'商户访问权限':'商户访问授权'}</h2>`:`<h1>${esc(title)}</h1>`}</div>${roleId?`<button type="button" data-provider-preview>${preview?'返回编辑':'权限预览'}</button>`:path===prefix?`<button type="button" class="primary" data-provider-new ${readOnly?'disabled':''}>新建访问角色</button>`:''}</header><p class="pc-error" data-provider-error role="alert"></p><div class="provider-body">${body}</div>${(!options.employeePreview&&(employeeId||roleId))?`<footer class="pc-footer"><span>${dirty?'商户访问授权有未保存的修改':'商户访问授权已保存'}</span><button type="button" class="primary" data-provider-save ${!dirty||readOnly?'disabled':''}>${employeeId?'保存商户访问授权':'保存授权'}</button></footer>`:''}</div>`;
     for(const [id,top]of positions){const el=host.querySelector<HTMLElement>(`[data-scroll="${id}"]`);if(el)el.scrollTop=top;}
   }
   host.addEventListener('click',ev=>{

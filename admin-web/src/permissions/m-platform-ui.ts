@@ -1,3 +1,6 @@
+import {bindEmployeeAccess} from './employee-access-ui';
+import {employeeAccessRoute,providerEmployeeSummary} from './employee-access-domain';
+import {readProviderState} from './provider-access-store';
 import { bindPermissionAudit } from './permission-audit-ui';
 import {bindProviderAccess} from './provider-access-ui';
 import './center.css';
@@ -23,6 +26,8 @@ export function bindMCenter(onMount: () => void): void {
   const root = document.getElementById('m-permission-center');
   if (!root) return;
   const host: HTMLElement = root;
+  const employeeRoute=employeeAccessRoute(root.dataset.path??'');
+  if(employeeRoute){try{bindEmployeeAccess(root,employeeRoute.id,employeeRoute.preview,guard=>{canLeave=guard;editorHash=location.hash;});}catch(e){root.textContent=(e as Error).message;}return;}
   if((root.dataset.path??'').split('?')[0].endsWith('/change-log')){bindPermissionAudit(root);return;}
   if((root.dataset.path??'').includes('/provider-roles')||(root.dataset.path??'').endsWith('/merchant-access')){try{bindProviderAccess(root,root.dataset.path??'',guard=>{canLeave=guard;editorHash=location.hash;});}catch(e){root.textContent=(e as Error).message;}return;}
   let state: MState;
@@ -91,8 +96,11 @@ export function bindMCenter(onMount: () => void): void {
     } else if (path.endsWith('/roles') || path.endsWith('/roles/new')) {
       host.innerHTML = `<header class="pc-heading"><h1>M 平台角色与权限</h1>${button('新建角色', 'data-mp-do="new-role"', allowed('roles', 'create'), true)}</header>${message}<div class="pc-card"><table><thead><tr><th>角色名称</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.map(r => `<tr><td>${mEsc(r.name)}${r.system ? '<span class="pc-tag">系统角色</span>' : ''}</td><td>${mEsc(r.description) || '—'}</td><td>${button(String(members(r.id).length), `data-mp-members="${mEsc(r.id)}"`)}</td><td><div class="pc-actions">${button('编辑角色', `data-mp-edit="${mEsc(r.id)}"`, allowed('roles', 'edit'))}<a class="pc-link" href="#${prefix}/roles/edit/${encodeURIComponent(r.id)}">编辑权限</a>${button('复制', `data-mp-copy="${mEsc(r.id)}"`, allowed('roles', 'create'))}${currentMAccess(mPageKey('permission-log'))!=='hidden'?`<a class="pc-link" href="#${prefix}/change-log?type=m&role=${encodeURIComponent(r.id)}">查看变更记录</a>`:''}${button('删除', `data-mp-delete="${mEsc(r.id)}"`, allowed('roles', 'delete') && !r.system)}</div></td></tr>`).join('')}</tbody></table></div>`;
     } else if (staffView) {
+      let providerState:ReturnType<typeof readProviderState>|undefined;
+      const providerVisible=currentMAccess(mPageKey('provider-roles'))!=='hidden';
+      if(providerVisible)try{providerState=readProviderState();}catch{/* Keep the independent M dimension available. */}
       const rows = accounts.listStaffLoginAccounts().filter(a => `${a.employeeId} ${a.employeeName} ${a.loginEmail}`.toLowerCase().includes(query.toLowerCase()));
-      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${a.enabled ? '已启用' : '已停用'}</td><td>${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a>${currentMAccess(mPageKey("provider-roles"))!=="hidden"?`<a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/merchant-access">商户访问授权</a>`:""}${button('分配角色', `data-mp-assign="${mEsc(a.employeeId)}"`, allowed('staff', 'assign'))}${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
+      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${a.enabled ? '已启用' : '已停用'}</td><td><div class="employee-role-summary"><span>M 平台：${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</span><span>商户访问：${!providerVisible?'无查看权限':providerState?mEsc(providerEmployeeSummary(providerState,a.employeeId)):'数据读取失败'}</span></div></td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/roles">配置角色与权限</a>${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
     } else if (path.endsWith('/change-log')) {
       host.innerHTML = `<h1>M 平台权限变更记录</h1>${message}<div class="pc-card">${logs()}</div>`;
     } else {
@@ -126,15 +134,9 @@ export function bindMCenter(onMount: () => void): void {
     });
   }
   function assign(id: string): void {
-    requireMAction('staff', 'assign');
-    const employee = state.employees.find(e => e.id === id);
-    dialog('分配角色', `<p>员工：${mEsc(accounts.listStaffLoginAccounts().find(a => a.employeeId === id)?.employeeName ?? id)}</p><div class="pc-choice-list">${state.roles.map(r => `<label><input type="checkbox" name="roles" value="${mEsc(r.id)}" ${employee?.roleIds.includes(r.id) ? 'checked' : ''}>${mEsc(r.name)}</label>`).join('')}</div><p class="pc-muted">多角色权限取允许项的并集；清空选择后，该员工无 M 平台权限。</p>`, form => {
-      const next = structuredClone(state), roleIds = new FormData(form).getAll('roles').map(String);
-      const target = next.employees.find(e => e.id === id);
-      if (target) target.roleIds = roleIds; else next.employees.push({ id, roleIds });
-      persist('分配角色', id, ['staff', 'assign'], next);
-    });
+    location.hash=`${prefix}/staff/${encodeURIComponent(id)}/roles`;
   }
+
   function editAccount(id?: string): void {
     requireMAction('staff', 'account');
     const source = accounts.getStaffLoginAccountById(id ?? '');
