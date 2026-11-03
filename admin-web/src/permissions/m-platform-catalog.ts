@@ -71,7 +71,7 @@ export const M_MODULES: MModule[] = [
       action('assign', '分配角色', '[data-mp-assign],[data-mp-do="save-assignment"]'),
       action('account', '管理员工账号', '[data-mp-do="new-account"],[data-mp-account],[data-mp-toggle]'),
     ]),
-    page('permission-log', '变更记录', `${permissions}/change-log`, false),
+    page('permission-log', 'M 平台权限变更记录', `${permissions}/change-log`, false),
   ] },
 ];
 export const mModuleKey = (id: string): string => `m:module:${id}`;
@@ -88,6 +88,7 @@ export const M_RESOURCES = new Map<string, { kind: 'module' | 'page' | 'action';
 export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
   // Independent navigation entry, reusing the existing preset permission resource.
   if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
+  if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':'角色访问设置'};}
   const exact = M_PAGES.find(p => p.path === path);
   if (exact) return exact;
   if (path === permissions) return M_PAGES.find(p => p.id === 'permission-overview');
