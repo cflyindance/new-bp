@@ -1,0 +1,46 @@
+[
+  {
+    "file": "assets/tips-pool-type-inline-20261104/type-readonly.png",
+    "sha256": "ff2baf79015482f4422ae90d462a49f4a54bae0db8c987fb6569b4194adf9eaf",
+    "baseline": "deecdd96 + TIPOUT-INLINE-POOL-KIND-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口及背景",
+    "route": "http://127.0.0.1:65237/#/team/tips/rules/editor?mode=edit",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-pool-type-inline-20261104/type-surcharge.png",
+    "sha256": "63ce8d6e0a9d819fcbfa4338c54dcd2398a3329db85245b1e15c2c5e6260a095",
+    "baseline": "deecdd96 + TIPOUT-INLINE-POOL-KIND-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口及背景",
+    "route": "http://127.0.0.1:65237/#/team/tips/rules/editor",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-pool-type-inline-20261104/type-switch-confirm.png",
+    "sha256": "13db65bde3198bfce69603df3f18e3ec73ac3cb191078ca105b90c3ebe68536e",
+    "baseline": "deecdd96 + TIPOUT-INLINE-POOL-KIND-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口及背景",
+    "route": "http://127.0.0.1:65237/#/team/tips/rules/editor",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-dialog"
+  },
+  {
+    "file": "assets/tips-pool-type-inline-20261104/type-tip.png",
+    "sha256": "d757b3a229d2ff2ee0e56ef1ae9c62642f78d84635b4044d12ba125a9156f9bb",
+    "baseline": "deecdd96 + TIPOUT-INLINE-POOL-KIND-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口及背景",
+    "route": "http://127.0.0.1:65237/#/team/tips/rules/editor",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  }
+]
