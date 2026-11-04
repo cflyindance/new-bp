@@ -1,0 +1,8 @@
+(function(root){
+ 'use strict';
+ function key(store,date){return JSON.stringify([store,date]);}
+ function counts(items){var c={success:0,failed:0,skipped:0,pending:0,running:0,total:items.length,processed:0};items.forEach(function(x){if(c[x.status]!==undefined)c[x.status]++;});c.processed=c.success+c.failed+c.skipped;return c;}
+ function plan(stores){var seen={},items=[];stores.forEach(function(s){if(!s.ruleCount)return;(s.days||[]).forEach(function(d){var k=key(s.store,d.date);if(seen[k]||d.allocated||d.paid||!d.allocatable)return;seen[k]=true;items.push({store:s.store,storeLabel:s.label,date:d.date,status:'pending',message:''});});});return items;}
+ function status(store,items){var need=(store.days||[]).filter(function(d){return d.allocatable;});var done=need.filter(function(d){return d.allocated||d.paid;}).length;var mine=items.filter(function(i){return i.store===store.store;});var state=store.error?'error':!store.ruleCount?'missing':mine.some(function(i){return i.status==='running';})?'running':mine.some(function(i){return i.status==='failed';})?'failed':!need.length?'not-required':done===need.length?'complete':'pending';return {state:state,total:need.length,done:done};}
+ root.TipOutDashboardModel={key:key,counts:counts,plan:plan,status:status};
+})(window);

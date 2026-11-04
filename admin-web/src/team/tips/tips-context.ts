@@ -63,13 +63,15 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
     },
     navigate(href, state) {
       const current = parseTipsRoute(location.hash);
-      const target = parseTipsRoute(href);
+      const previous = history.state?.menusifuTeamTips;
+      const summaryReturn = href === "/team/tips/distribution" && (current.view === "details" || current.view === "employee-reconciliation") && isTrustedTipsHistoryState(previous,current.href) ? previous.summaryHref : href;
+      const target = parseTipsRoute(summaryReturn);
       const scrollTop = document.querySelector<HTMLElement>("[data-team-tips-scroll]")?.scrollTop ?? 0;
       const existing = history.state?.menusifuTeamTips;
       const trusted = isTrustedTipsHistoryState(existing, current.href) ? existing : null;
       const flowId = trusted?.flowId ?? `tips-${Date.now().toString(36)}`;
       const summaryScrollTop = current.view === "distribution" ? scrollTop : trusted?.summaryScrollTop ?? 0;
-      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: "/team/tips/distribution", summaryScrollTop };
+      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: current.view === "distribution" ? current.href : trusted?.summaryHref ?? "/team/tips/distribution", summaryScrollTop };
       if (trusted) history.replaceState({ ...history.state, menusifuTeamTips: { ...trusted, scrollTop } }, "");
       if ((current.view === "rule-editor" && target.view === "rules") || (current.view === "rules" && target.view === "distribution") || isTipsSummaryReturnTransition(current, target)) {
         commitHash(target.href, "replace", { ...next, parentHref: target.view === "rules" ? "/team/tips/distribution" : target.href });
@@ -79,13 +81,15 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
     },
     replace(href, state) {
       const current = parseTipsRoute(location.hash);
-      const target = parseTipsRoute(href);
+      const previous = history.state?.menusifuTeamTips;
+      const summaryReturn = href === "/team/tips/distribution" && (current.view === "details" || current.view === "employee-reconciliation") && isTrustedTipsHistoryState(previous,current.href) ? previous.summaryHref : href;
+      const target = parseTipsRoute(summaryReturn);
       const scrollTop = document.querySelector<HTMLElement>("[data-team-tips-scroll]")?.scrollTop ?? 0;
       const existing = history.state?.menusifuTeamTips;
       const trusted = isTrustedTipsHistoryState(existing, current.href) ? existing : null;
       const flowId = trusted?.flowId ?? `tips-${Date.now().toString(36)}`;
       const summaryScrollTop = current.view === "distribution" ? scrollTop : trusted?.summaryScrollTop ?? 0;
-      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: "/team/tips/distribution", summaryScrollTop };
+      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: current.view === "distribution" ? current.href : trusted?.summaryHref ?? "/team/tips/distribution", summaryScrollTop };
       commitHash(target.href, "replace", next);
     },
     getNavigationState() {

@@ -685,18 +685,18 @@ var ALLOC_KEY = 'tipout_allocated';
       activeSummaryView = nextView;
       syncSummaryViewUi();
       var nativeRoute = /^#\/team\/tips\/distribution(?:\?|$)/.test(window.location.hash || '');
-      var href = nativeRoute
-        ? '#/team/tips/distribution' + (nextView === 'employee' ? '?view=employee' : '')
-        : TipOutSummaryUi.buildSummaryViewHref(nextView);
+      var params=new URLSearchParams(window.location.search);if(nextView==='employee')params.set('view','employee');else params.delete('view');
+      var href = nativeRoute ? '#/team/tips/distribution?'+params.toString() : TipOutSummaryUi.buildSummaryViewHref(nextView);
       var nextState = Object.assign({}, history.state || {});
       if (nativeRoute && nextState.menusifuTeamTips) {
         nextState.menusifuTeamTips = Object.assign({}, nextState.menusifuTeamTips, {
-          viewHref: '/team/tips/distribution' + (nextView === 'employee' ? '?view=employee' : '')
+          viewHref: href.replace(/^#/, '')
         });
       }
       history[historyMode === 'replace' ? 'replaceState' : 'pushState'](nextState, '', href);
       captureSummaryUiState('', '');
       renderSummaryViews();
+      if(typeof syncStoreSummaryHeader==='function')syncStoreSummaryHeader();
     }
 
     function syncSummaryDateSortUi() {
@@ -763,6 +763,7 @@ var ALLOC_KEY = 'tipout_allocated';
         applyDefaultSummaryDateRange();
       }
       document.getElementById('storeSelect').value = saved.store || '';
+      if(isStoreSummaryRoute())initializeDashboardPage();
       dateSummaryFilters = {
         allocationStatus: saved.dateAllocationStatus || '',
         businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : '',
@@ -1042,13 +1043,13 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-daily-status ' + (row.businessStatusResult.status === 'open' ? 'allocated' : 'closed') + '">' +
           (row.businessStatusResult.status === 'open' ? '正常营业' : '未营业') + '</span></td>' +
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
-          (row.allocated ? row.poolSummary.aggregateStatus : (row.businessStatusResult.status === 'closed' ? '无需分配' : row.poolSummary.aggregateStatus)) + '</span></td>' +
-          '<td><span class="tipout-daily-status ' + payout.className + '">' + payout.label + '</span></td>' +
+          (row.allocated ? row.poolSummary.aggregateStatus : (row.businessStatusResult.status === 'closed' ? '无需分配' : row.poolSummary.aggregateStatus)) + '</span> ' +
+          '<span class="tipout-daily-status ' + payout.className + '">' + payout.label + '</span></td>' +
           '<td>' + money(row.poolSummary.originalTips) + '</td>' +
           '<td><strong>' + money(row.poolSummary.poolAmount) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + money(row.allocated ? row.poolSummary.allocatedAmount || 0 : 0) + '</strong></td>' +
           '<td><strong>' + money(row.allocated ? row.poolSummary.unallocatedAmount || 0 : row.poolSummary.poolAmount || 0) + '</strong></td>' +
-          '<td class="tipout-detail-link"><span>查看明细</span>' + quickAllocationButton(row, payout) + (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '') + '</td></tr>';
+          '<td class="tipout-detail-link"><details class="store-day-actions" onclick="event.stopPropagation()"><summary onclick="event.stopPropagation();var d=this.parentElement;window.setTimeout(function(){positionStoreDayActions(d)},0)" aria-label="'+dateKey+'操作">'+dashboardIcon('ellipsis')+'</summary><div><button onclick="event.stopPropagation();openDailyDetail(\''+dateKey+'\')">查看明细</button>'+quickAllocationButton(row,payout)+(payout.action?'<button onclick="openConfirmPayoutModal(\''+dateKey+'\',event)">确认已发放</button>':'')+'</div></details></td></tr>';
       }).join('');
     }
 
@@ -1393,6 +1394,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
+      if (isAllocationDashboard()) return false;
       syncSummaryDatePresetUi();
       if (!validateSummaryDateRange(false)) return false;
       lastValidSummaryDateRange = {
@@ -1779,7 +1781,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var list = employees;
       var storeSelect = document.getElementById('storeSelect');
       var selectedStore = canonicalEmployeeStore(storeSelect ? storeSelect.value : '');
-      if (selectedStore) list = list.filter(function(e) { return !e.store || canonicalEmployeeStore(e.store) === selectedStore; });
+      if (selectedStore) list = list.filter(function(e) { return canonicalEmployeeStore(e.store) === selectedStore; });
       if (roles.length > 0) list = list.filter(function(e) { return roles.indexOf(e.role) >= 0; });
       if (empNames.length > 0) list = list.filter(function(e) { return empNames.indexOf(e.name) >= 0; });
       return list;
@@ -1790,7 +1792,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var selectedStore = canonicalEmployeeStore(storeSelect ? storeSelect.value : '');
       if (!selectedStore) return employees.slice();
       var storeEmployees = employees.filter(function(employee) {
-        return !employee.store || canonicalEmployeeStore(employee.store) === selectedStore;
+        return canonicalEmployeeStore(employee.store) === selectedStore;
       });
       if (!window.TipOutRosterDirectory || !TipOutRosterDirectory.resolveReceiverEmployees || !window.ruleData) return storeEmployees;
       var rawStore = storeSelect ? storeSelect.value : '';
@@ -1912,38 +1914,30 @@ var ALLOC_KEY = 'tipout_allocated';
     });
 
     function initializeSummaryPage() {
-      if (window.TipOutDemoRules) {
-        try { window.TipOutDemoRules.ensure(); } catch (_) {}
-      }
-      initStoreSelect();
-      applyDefaultSummaryDateRange();
-      syncSummaryDateSortUi();
-      var queryView = new URLSearchParams(window.location.search).get('view');
-      activeSummaryView = TipOutSummaryUi.resolveSummaryView(
-        history.state,
-        queryView
-      );
-      if (queryView && queryView !== 'employee') {
-        setSummaryView('date', { historyMode: 'replace' });
-        scheduleSummaryAutoAllocation();
-        return;
-      }
-      syncSummaryViewUi();
-      if (!restoreSummaryUiState()) {
-        updateEmployeeFilter(true);
-        renderDailySummaryList();
-      }
-      scheduleSummaryAutoAllocation();
+      if(window.TipOutDemoRules){try{window.TipOutDemoRules.ensure();}catch(_){}}
+      initStoreSelect();applyDefaultSummaryDateRange();syncSummaryDateSortUi();
+      var queryView=new URLSearchParams(window.location.search).get('view');activeSummaryView=TipOutSummaryUi.resolveSummaryView(history.state,queryView);
+      if(!initializeDashboardPage())return;
+      if(isAllocationDashboard()){scheduleSummaryAutoAllocation();return;}
+      restoreSummaryUiState();initializeDashboardPage();syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();
     }
 
     document.addEventListener('DOMContentLoaded', initializeSummaryPage);
     window.addEventListener('resize', syncSummaryActionBarBounds);
     window.addEventListener('pageshow', function() {
+      if(isAllocationDashboard())return;
       restoreSummaryUiState();
       syncSummaryViewUi();
     });
-    window.addEventListener('tipout-date-state-changed', function() { renderDailySummaryList(); });
+    window.addEventListener('tipout-date-state-changed', function() { if(isStoreSummaryRoute())renderDailySummaryList(); });
     if (window.BroadcastChannel) {
       var tipoutDateStateChannel = new window.BroadcastChannel('tipout-date-state-changed');
-      tipoutDateStateChannel.addEventListener('message', function() { renderDailySummaryList(); });
+      tipoutDateStateChannel.addEventListener('message', function() { if(isStoreSummaryRoute())renderDailySummaryList(); });
     }
+
+function positionStoreDayActions(details){
+ if(!details.open)return;var menu=details.querySelector('div'),box=details.querySelector('summary').getBoundingClientRect();
+ menu.style.position='fixed';menu.style.right=Math.max(12,window.innerWidth-box.right)+'px';menu.style.top=Math.max(12,Math.min(box.bottom+6,window.innerHeight-menu.offsetHeight-12))+'px';
+}
+document.addEventListener('click',function(event){if(!event.target.closest('.store-day-actions'))document.querySelectorAll('.store-day-actions[open]').forEach(function(d){d.open=false;});});
+document.addEventListener('keydown',function(event){if(event.key==='Escape')document.querySelectorAll('.store-day-actions[open]').forEach(function(d){d.open=false;d.querySelector('summary').focus();});});

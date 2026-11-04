@@ -32,6 +32,7 @@ import paymentMethods from "./legacy/paymentMethodApportion.js.txt?raw";
 import exportCode from "./legacy/export.js.txt?raw";
 import distribution from "./programs/distribution.js.txt?raw";
 import autoAllocation from "./legacy/tipout-auto-allocation.js.txt?raw";
+import dashboardModel from "./legacy/tipout-dashboard-model.js.txt?raw";
 import summaryAutoAllocation from "./programs/summary-auto-allocation.js.txt?raw";
 import details from "./programs/details.js.txt?raw";
 import rules from "./programs/rules.js.txt?raw";
@@ -73,7 +74,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
-    programs[view], view === "distribution" ? autoAllocation + "\n" + summaryAutoAllocation : "", view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
+    programs[view], view === "distribution" ? autoAllocation + "\n" + dashboardModel + "\n" + summaryAutoAllocation : "", view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
     "return {prepareQuickSnapshot:function(system){return system?prepareSystemAllocationSnapshot():prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
@@ -117,6 +118,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }
     } : undefined,
     tipoutQuickPreparation: quickPreparation,
+    tipoutDashboardAssetBase: `${import.meta.env.BASE_URL}tipout/dashboard/`,
     prepareTipoutQuickSnapshot: (store: string, dateKey: string, systemReallocation = false) => {
       const host = realDocument.createElement('div');
       const isolatedShadow = host.attachShadow({ mode: 'open' });
