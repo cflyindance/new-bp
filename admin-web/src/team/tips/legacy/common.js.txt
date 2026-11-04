@@ -76,6 +76,12 @@ function openDrawer(id) {
 }
 
 function closeDrawer(id) {
+  if (id === 'tipsDrawer' && typeof editingDeductTipsCardId !== 'undefined' && editingDeductTipsCardId) {
+    editingDeductTipsCardId = null;
+    if (typeof currentEditingDeductBasis !== 'undefined') currentEditingDeductBasis = null;
+    var tipsTitle = document.querySelector('#tipsDrawer .drawer-header h3');
+    if (tipsTitle) tipsTitle.textContent = '设置取值条件';
+  }
   if (id === 'salesDrawer' && typeof editingPersonalSalesPctConditions !== 'undefined') {
     editingPersonalSalesPctConditions = false;
   }

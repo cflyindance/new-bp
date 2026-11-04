@@ -118,9 +118,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       return type === 'sales' || type === 'personal_sales';
     }
 
-    /** 当前销售额抽屉是否处于「角色必选」上下文（扣除方 / 池·按个人销售额） */
+    /** 池·按个人销售额要求角色；贡献项另按角色／员工二选一校验。 */
     function isSalesRoleRequiredContext() {
-      if (editingDeductValueBasis) return true;
+      if (editingDeductValueBasis) return false;
       if (!currentEditingRuleId || editingPersonalSalesPctConditions) return false;
       var card = document.getElementById('rule-' + currentEditingRuleId);
       var type = (card && card.dataset.ruleType) || parsePoolRuleType(currentEditingRuleId);
@@ -843,12 +843,43 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       }
       updateTipClaimSalesConditionMenu();
     }
+    function hasContributorScope(cond) {
+      var roles=Array.isArray(cond.role)&&cond.role.length>0, employees=Array.isArray(cond.employee)&&cond.employee.length>0;
+      return roles !== employees;
+    }
+    function syncContributorScopeHint(drawerId, enabled) {
+      var id=drawerId+'ContributorScopeHint', old=document.getElementById(id);if(old)old.remove();
+      if(!enabled)return;
+      var container=document.getElementById(drawerId==='tipsDrawer'?'tipsConditionsContainer':'salesConditionsContainer');
+      if(!container)return;
+      var hint=document.createElement('p');hint.id=id;hint.textContent='角色和员工条件必须选择其中一项，且不能同时添加。';
+      hint.style.cssText='margin:12px 0;color:var(--text-secondary);font-size:13px';container.insertAdjacentElement('afterend',hint);
+    }
+    var editingDeductTipsCardId = null;
+    var tipsDrawerSavedTipTypes = [];
+    var tipsDrawerRetainedConditions = {};
+
     function loadTipsConditionsForRule(ruleId) {
+      loadTipsConditionsObject(poolRuleConditions[ruleId]);
+    }
+    function loadTipsConditionsObject(value) {
       var container = document.getElementById('tipsConditionsContainer');
       if (!container) return;
       container.innerHTML = '';
       existingTipsConditions = {};
-      var cond = poolRuleConditions[ruleId];
+      var cond = JSON.parse(JSON.stringify(value || {}));
+      tipsDrawerSavedTipTypes = [];
+      tipsDrawerRetainedConditions = {};
+      if (editingDeductTipsCardId) {
+        tipsDrawerSavedTipTypes = Array.isArray(cond.tipTypes) ? cond.tipTypes.slice() : [];
+        if (tipsDrawerSavedTipTypes.length) cond.tipType = tipsDrawerSavedTipTypes.length === 1 ? tipsDrawerSavedTipTypes[0] : '__saved_tip_types__';
+        delete cond.tipTypes;
+        Object.keys(cond).forEach(function(key) {
+          if (['role','employee','employeeRoles','area','orderType','hours','tipType','containsProduct','shift','weekdays'].indexOf(key) < 0) {
+            tipsDrawerRetainedConditions[key] = cond[key]; delete cond[key];
+          }
+        });
+      }
       if (cond && typeof cond === 'object') {
         normalizeConditionsRoleEmployeeExclusive(cond);
         sortPoolConditionLoadKeys(Object.keys(cond)).forEach(function(type) {
@@ -861,10 +892,27 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           addTipsCondition(type, true);
           if (type === 'role') setTipsConditionValue(type, { role: cond.role || [] });
           else if (type === 'employee') setTipsConditionValue(type, { employeeRoles: cond.employeeRoles, employees: cond.employee });
-          else setTipsConditionValue(type, cond[type]);
+          else {
+            if (type === 'tipType') {
+              var select = document.querySelector('#tips-cond-tipType select');
+              if (select && cond.tipType && !Array.from(select.options).some(function(option) { return option.value === cond.tipType; })) {
+                var option = document.createElement('option'); option.value = cond.tipType;
+                option.textContent = cond.tipType === '__saved_tip_types__' ? tipsDrawerSavedTipTypes.join('、') : cond.tipType;
+                select.appendChild(option);
+              }
+            }
+            setTipsConditionValue(type, cond[type]);
+          }
         });
       }
+      var previousNote = document.getElementById('tipsRetainedConditions'); if (previousNote) previousNote.remove();
+      if (Object.keys(tipsDrawerRetainedConditions).length) {
+        var note = document.createElement('p'); note.id = 'tipsRetainedConditions'; note.className = 'tipout-condition-retained';
+        note.textContent = '其他已保存条件：' + formatSalesCondForDisplay(tipsDrawerRetainedConditions, true) + '。提交将保留这些条件。';
+        container.appendChild(note);
+      }
       updateTipsConditionMenu();
+      syncContributorScopeHint('tipsDrawer', !!editingDeductTipsCardId);
     }
     function loadSurchargeConditionsForRule(ruleId) {
       var container = document.getElementById('surchargeConditionsContainer');
@@ -1855,9 +1903,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
 
     var SALES_REVENUE_TYPE_PAYMENT_METHOD = 'Payment Method (支付方式)';
 
-    /** 「支付方式」营业额类型仅用于小费池贡献规则的销售额基数 */
+    /** 销售额来源的小费池计算项与贡献项共用营业额口径 */
     function isPoolSalesRevenueTypeContext() {
-      if (editingDeductValueBasis) return false;
+      if (editingDeductValueBasis) return parseDeductCardBasis(editingDeductValueBasis) === 'sales_pct';
       if (editingPersonalSalesPctConditions) return false;
       if (!currentEditingRuleId) return false;
       return getPoolRuleTypeById(currentEditingRuleId) === 'sales';
@@ -2147,7 +2195,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var card = document.createElement('div');
       card.className = 'condition-card';
       card.id = cardId;
-      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span><button class="btn btn-sm btn-text-danger" onclick="removeTipsCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button></div><div class="condition-card-body">' + body + '</div>';
+      var deleteBtn = '<button class="btn btn-sm btn-text-danger" onclick="removeTipsCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button>';
+      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span>' + deleteBtn + '</div><div class="condition-card-body">' + body + '</div>';
       document.getElementById('tipsConditionsContainer').appendChild(card);
       existingTipsConditions[type] = true;
       document.getElementById('tipsConditionMenu').classList.remove('show');
@@ -2527,6 +2576,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
 
     var currentEditingRuleId = null;
     function openDrawerForRule(drawerName, ruleId) {
+      editingDeductTipsCardId = null; editingDeductValueBasis = null; currentEditingDeductBasis = null;
       currentEditingRuleId = ruleId;
       if (drawerName === 'salesDrawer') {
         loadSalesConditionsForRule(ruleId);
@@ -2693,8 +2743,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     function getDefaultDeductValueConditions(basis) {
-      if (basis === 'tip_income') return { role: [] };
-      return { revenueType: 'Net Sales (税前营业额)', role: [] };
+      if (basis === 'tip_income') return {};
+      return { revenueType: 'Net Sales (税前营业额)' };
     }
 
     function ensureRequiredRoleConditionVisible(cond) {
@@ -2737,9 +2787,6 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       container.innerHTML = '';
       existingSalesConditions = {};
       cond = cond && typeof cond === 'object' ? cond : {};
-      if (editingDeductValueBasis && !Object.prototype.hasOwnProperty.call(cond, 'role') && !Array.isArray(cond.employee)) {
-        cond = Object.assign({}, cond, { role: [] });
-      }
       normalizeConditionsRoleEmployeeExclusive(cond);
       sortPoolConditionLoadKeys(Object.keys(cond)).forEach(function(type) {
         if (type === 'tipTypes') return;
@@ -2761,6 +2808,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         setSalesConditionValue('revenueType', (cond && cond.revenueType) || 'Net Sales (税前营业额)');
       }
       ensureRequiredRoleConditionVisible(cond);
+      syncContributorScopeHint('salesDrawer', !!editingDeductValueBasis);
       syncSalesMenuConditionWithRevenueType(true);
       updateSalesConditionMenu();
     }
@@ -2831,24 +2879,24 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     function conditionsFromDeductEntry(entry, basis) {
       var cond = {};
       if (!entry) return getDefaultDeductValueConditions(basis);
-      if (entry.salesConditions && typeof entry.salesConditions === 'object') {
-        try { cond = JSON.parse(JSON.stringify(entry.salesConditions)); } catch (e) { cond = {}; }
+      var storedConditions = entry.conditions || entry.salesConditions;
+      if (storedConditions && typeof storedConditions === 'object') {
+        try { cond = JSON.parse(JSON.stringify(storedConditions)); } catch (e) { cond = {}; }
       }
       if (entry.scopeType === 'role' && entry.roles && entry.roles.length) {
         cond.role = entry.roles.slice();
         delete cond.employee;
         delete cond.employeeRoles;
       } else if (entry.scopeType === 'employee') {
-        // 扣除方现改为角色必选：打开抽屉时以空角色引导重选
-        delete cond.employee;
-        delete cond.employeeRoles;
-        cond.role = Array.isArray(cond.role) ? cond.role : [];
-      } else if (!Array.isArray(cond.role)) {
-        cond.role = [];
+        delete cond.role;
+        cond.employee = Array.isArray(entry.employee) ? entry.employee.slice() : (cond.employee || []);
+        cond.employeeRoles = Array.isArray(entry.employeeRoles) ? entry.employeeRoles.slice() : (cond.employeeRoles || []);
+      } else if (!Array.isArray(cond.role) || !cond.role.length) {
+        delete cond.role;
       }
       if (basis === 'tip_income') {
         delete cond.revenueType;
-        if (entry.tipTypes && entry.tipTypes.length) cond.tipTypes = normalizeDeductTipTypesForLoad(entry.tipTypes);
+        if (entry.tipTypes && entry.tipTypes.length) cond.tipTypes = entry.tipTypes.slice();
       } else if (!cond.revenueType) {
         cond.revenueType = 'Net Sales (税前营业额)';
       }
@@ -3037,7 +3085,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       if (basis === 'tip_income' && Array.isArray(cond.tipTypes) && cond.tipTypes.length) {
         parts.push(tipTerm('小费类型: ') + cond.tipTypes.join(', '));
       }
-      var scText = formatSalesCondForDisplay(cond || {}, true);
+      var scText = basis === 'tip_income' ? formatTipsCondForDisplay(cond || {}) : formatSalesCondForDisplay(cond || {}, true);
       if (scText) parts.push(scText);
       return parts.join(' | ');
     }
@@ -3064,6 +3112,15 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       if (!document.getElementById('deduct-card-' + cardId)) return;
       currentEditingRuleId = null;
       editingPersonalSalesPctConditions = false;
+      editingDeductTipsCardId = null;
+      if (basis === 'tip_income') {
+        editingDeductValueBasis = null;
+        editingDeductTipsCardId = cardId; currentEditingDeductBasis = cardId;
+        var tipsTitle = document.querySelector('#tipsDrawer .drawer-header h3');
+        if (tipsTitle) tipsTitle.textContent = DEDUCT_BASIS_LABELS[basis] + ' · 取值条件';
+        loadTipsConditionsObject(deductValueConditions[cardId] || getDefaultDeductValueConditions(basis));
+        openDrawer('tipsDrawer'); return;
+      }
       editingDeductValueBasis = cardId;
       currentEditingDeductBasis = cardId;
       var titleEl = document.querySelector('#salesDrawer .drawer-header h3');
@@ -4403,9 +4460,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         var cardId = editingDeductValueBasis;
         var basis = parseDeductCardBasis(cardId);
         var sc = collectSalesConditions();
-        normalizeConditionsRoleEmployeeExclusive(sc);
-        if (!Array.isArray(sc.role) || !sc.role.length) {
-          showNotification('请选择扣除方角色（必选）', 'error');
+        if (!hasContributorScope(sc)) {
+          showNotification('角色和员工必须选择其中一项，并至少选择一个角色或员工', 'error');
           return;
         }
         if (basis === 'tip_income') {
@@ -4418,6 +4474,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         } else if (!sc.revenueType) {
           sc.revenueType = 'Net Sales (税前营业额)';
         }
+        if ((sc.employee || []).length) delete deductEmployeeShares[cardId];
         deductValueConditions[cardId] = sc;
         if (basis === 'personal_sales_pct') {
           personalSalesPctConditions = sc;
@@ -4478,6 +4535,18 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     function saveTipsCondition() {
+      if (editingDeductTipsCardId) {
+        var cardId = editingDeductTipsCardId;
+        var condition = Object.assign({}, tipsDrawerRetainedConditions, collectTipsConditions());
+        if (!hasContributorScope(condition)) { showNotification('角色和员工必须选择其中一项，并至少选择一个角色或员工', 'error'); return; }
+        if (condition.tipType === '__saved_tip_types__') condition.tipTypes = tipsDrawerSavedTipTypes.slice();
+        else condition.tipTypes = condition.tipType ? [condition.tipType] : [];
+        delete condition.tipType; delete condition.revenueType;
+        if ((condition.employee || []).length) delete deductEmployeeShares[cardId];
+        deductValueConditions[cardId] = condition;
+        updateDeductCardConditionDisplay(cardId);
+        closeDrawer('tipsDrawer'); showNotification('取值条件已保存'); return;
+      }
       if (currentEditingRuleId) {
         var tc = collectTipsConditions();
         normalizeConditionsRoleEmployeeExclusive(tc);
@@ -4842,9 +4911,10 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       });
       var distRadio = document.querySelector('input[name="distribution"]:checked');
       var clockRadio = document.querySelector('input[name="clockin"]:checked');
-      var salesConditions = collectSalesConditions();
-      var tipsConditions = collectTipsConditions();
-      var surchargeConditions = collectSurchargeConditions();
+      // Compatibility summaries must come from pool cards, never from a contributor drawer's current DOM.
+      var salesConditions = JSON.parse(JSON.stringify(((poolRules.find(function(p) { return p.type === 'sales' || p.type === 'personal_sales'; }) || {}).conditions) || {}));
+      var tipsConditions = JSON.parse(JSON.stringify(((poolRules.find(function(p) { return p.type === 'tips'; }) || {}).conditions) || {}));
+      var surchargeConditions = JSON.parse(JSON.stringify(((poolRules.find(function(p) { return p.type === 'surcharge'; }) || {}).conditions) || {}));
       var allocationMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       var data = {
         ruleName: ruleName,
@@ -4946,13 +5016,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
             return;
           }
           var entry = collectDeductScopeEntry(cardId);
-          if (!entry || entry.scopeType !== 'role' || !entry.roles || !entry.roles.length) {
+          if (!entry || !hasContributorScope({role:entry.roles,employee:entry.employee})) {
             deductCondErr = DEDUCT_BASIS_LABELS[basis] || basis;
             return;
-          }
-          if (basis === 'tip_income') {
-            var tips = (entry.tipTypes && entry.tipTypes.length) ? entry.tipTypes : [];
-            if (!tips.length) deductCondErr = DEDUCT_BASIS_LABELS[basis];
           }
         });
         if (deductRateErr) {
@@ -4960,7 +5026,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           return;
         }
         if (deductCondErr) {
-          showNotification('请为扣除方「' + deductCondErr + '」设置取值条件（必填：至少选择一个角色' + (String(deductCondErr).indexOf('小费') >= 0 ? '、小费类型' : '') + '）', 'error');
+          showNotification('请为扣除方「' + deductCondErr + '」设置取值条件（角色或员工必须选择一项）', 'error');
           return;
         }
       } else {
