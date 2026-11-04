@@ -1,0 +1,46 @@
+[
+  {
+    "file": "assets/tips-sales-proportion-20261104/details.png",
+    "sha256": "0a628f72e09cf0d9fde566980c75fb5a17224ab77edfa7f2e13f1145cac1ea9b",
+    "baseline": "4394bf3c + TIPOUT-SALES-PROPORTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口与背景",
+    "route": "http://127.0.0.1:65235/#/team/tips/details?date=2026-11-03",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-proportion-20261104/editor-configured.png",
+    "sha256": "b1ad02167bcb32f40a8968071eac83d0683faa6a5f53bc5c8b3effbc836300db",
+    "baseline": "4394bf3c + TIPOUT-SALES-PROPORTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口与背景",
+    "route": "http://127.0.0.1:65235/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-proportion-20261104/editor-default.png",
+    "sha256": "55ff2fab0826f86593c78b025374f83d8f8d37e22f950158c0ccde4e3b7217e8",
+    "baseline": "4394bf3c + TIPOUT-SALES-PROPORTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口与背景",
+    "route": "http://127.0.0.1:65235/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-proportion-20261104/sales-source.png",
+    "sha256": "3759617b40e7025d1d43eb5721bcf89414c1a77412ad6f4249157b76d966671d",
+    "baseline": "4394bf3c + TIPOUT-SALES-PROPORTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口与背景",
+    "route": "http://127.0.0.1:65235/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  }
+]
