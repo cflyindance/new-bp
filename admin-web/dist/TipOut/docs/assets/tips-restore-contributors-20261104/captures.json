@@ -1,0 +1,35 @@
+[
+  {
+    "file": "assets/tips-restore-contributors-20261104/contributor-conditions.png",
+    "sha256": "7416584b1e070c1c33a7e768e4db08911d9b9fb8b3ca56d33a8feb7f570de93c",
+    "baseline": "fadde445 + TIPOUT-RESTORE-CONTRIBUTORS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口和背景",
+    "route": "http://127.0.0.1:65236/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-restore-contributors-20261104/contributor-configured.png",
+    "sha256": "a30d3e590295f177147090489a4dd7747b86074adaa7e2e9da2e9002c7dbd574",
+    "baseline": "fadde445 + TIPOUT-RESTORE-CONTRIBUTORS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口和背景",
+    "route": "http://127.0.0.1:65236/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-restore-contributors-20261104/contributor-default.png",
+    "sha256": "b0bfa30b6c4862c9a02dea2bbd50fb3c9236cf58938fcf72c6e43077dda17bf2",
+    "baseline": "fadde445 + TIPOUT-RESTORE-CONTRIBUTORS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，完整视口和背景",
+    "route": "http://127.0.0.1:65236/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  }
+]

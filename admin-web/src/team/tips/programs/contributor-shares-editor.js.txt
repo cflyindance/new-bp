@@ -208,15 +208,16 @@
         var row=document.createElement('div');row.className='contributor-share-entry';row.id='pool-sales-deduction-'+id;
         row.innerHTML='<label for="pool-sales-role-'+escapeHtmlAttr(id)+'">扣除方</label><select class="form-control" id="pool-sales-role-'+escapeHtmlAttr(id)+'" style="width:180px"'+(!store?' disabled':'')+'><option value="">'+(!store?'请先选择门店':'不扣除（可选）')+'</option>'+roles.map(function(role){return '<option value="'+escapeHtmlAttr(role)+'"'+(cfg.role===role?' selected':'')+'>'+escapeHtmlText(role)+'</option>';}).join('')+'</select>';
         var condition=document.getElementById('rule-'+id+'-conditions');if(condition)card.insertBefore(row,condition);else card.appendChild(row);
-        document.getElementById('pool-sales-role-'+id).addEventListener('change',function(event){poolSalesDeductions[id]={version:1,store:store,role:event.target.value,employees:[]};renderPoolSalesDeductions();});
+        document.getElementById('pool-sales-role-'+id).addEventListener('change',function(event){poolSalesDeductions[id]={version:1,store:store,role:event.target.value,employees:[]};if(event.target.value){contributionMode='employees';syncContributionModeUi();}renderPoolSalesDeductions();});
       });
     }
     function validatePoolSalesDeductions() {
-      try{var roles=window.TipOutRosterDirectory.listRoles(getRuleEditorStoreName());document.querySelectorAll('#poolRulesContainer .pool-rule-card[data-rule-type="sales"]').forEach(function(card){var cfg=poolSalesDeductions[card.dataset.ruleId];if(!cfg||!cfg.role)return;if(typeof cfg.role!=='string'||roles.indexOf(cfg.role)<0)throw new Error('请重新选择当前门店有效的扣除方角色');});return true;}
+      try{if(contributionMode==='employees'&&document.querySelector('#deductRulesContainer .deduct-basis-card')&&Object.keys(poolSalesDeductions).some(function(id){return poolSalesDeductions[id].role;}))throw new Error('独立贡献规则与营业额项扣除方不能同时启用，请先清空其中一类配置');var roles=window.TipOutRosterDirectory.listRoles(getRuleEditorStoreName());document.querySelectorAll('#poolRulesContainer .pool-rule-card[data-rule-type="sales"]').forEach(function(card){var cfg=poolSalesDeductions[card.dataset.ruleId];if(!cfg||!cfg.role)return;if(typeof cfg.role!=='string'||roles.indexOf(cfg.role)<0)throw new Error('请重新选择当前门店有效的扣除方角色');});return true;}
       catch(error){showNotification(error.message,'error');return false;}
     }
     function applyPoolSalesDeductionData(data) {
       if(data.poolKind!=='tip'||data.allocationMode!=='legacy_pool')return;
+      if(data.contributionMode==='employees'&&Object.keys(data.deductConfig||{}).length){data.poolRules.forEach(function(p){delete p.deduction;});return;}
       var roles=[];data.poolRules.forEach(function(p){if(p.type!=='sales')return;var cfg=poolSalesDeductions[p.id]||{role:'',employees:[]};p.deduction={version:1,role:cfg.role||'',store:data.store,employees:[]};if(cfg.role&&roles.indexOf(cfg.role)<0)roles.push(cfg.role);});
       data.deductConfig={};data.deductRoles=roles;data.deductEmployees=null;data.contributionMode=roles.length?'employees':'merchant';
     }

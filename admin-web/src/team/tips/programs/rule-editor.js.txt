@@ -481,6 +481,7 @@ var poolSalesDeductions = {};
     function setContributionMode(mode) {
       if (mode !== 'merchant' && mode !== 'employees') return;
       contributionMode = mode;
+      if(mode==='merchant'){Object.keys(poolSalesDeductions).forEach(function(id){poolSalesDeductions[id].role='';});if(typeof renderPoolSalesDeductions==='function')renderPoolSalesDeductions();}
       syncContributionModeUi();
     }
     function syncContributionModeUi() {
@@ -491,7 +492,7 @@ var poolSalesDeductions = {};
     function loadRuleForEdit(rule) {
       poolSalesDeductions = {};
       var cfg = rule.deductConfig || {};
-      contributionMode = 'merchant';
+      contributionMode = rule.contributionMode || ((cfg.salesPct || cfg.personalSalesPct || cfg.tipIncome) ? 'employees' : 'merchant');
       syncContributionModeUi();
       currentPoolKind = rule.poolKind === 'surcharge' ? 'surcharge' : 'tip';
       applyPoolKindUi(true);
@@ -610,7 +611,7 @@ var poolSalesDeductions = {};
       updateWorkHoursConfigUi();
       clearDeductRulesContainer();
       if (allocMode !== 'order_tip_then_residual') {
-        clearDeductRulesContainer();
+        loadDeductRulesFromRule(rule);
         var receivers = rule.receivers || [];
         receivers.forEach(function(rec) {
           addReceiverRow({ pct: rec.pct, subReceivers: rec.subReceivers || [] });
@@ -3027,13 +3028,11 @@ var poolSalesDeductions = {};
         '<button type="button" class="btn btn-sm" onclick="openDeductConditionsDrawer(\'' + cardId + '\')">设置取值条件 <span style="color:var(--danger)">*</span></button>' +
         '<button type="button" class="btn btn-sm btn-text-danger" onclick="removeDeductRule(\'' + cardId + '\')" style="font-size:18px;padding:0 4px">×</button>' +
         '</div></div>' +
-        '<div class="contributor-share-entry contributor-weight-entry" id="deduct-weight-entry-' + cardId + '"><span id="deduct-weight-summary-' + cardId + '">员工权重：未设置</span><button type="button" class="btn btn-sm" id="deduct-weight-button-' + cardId + '" onclick="openContributorWeightsDrawer(\'' + cardId + '\')">设置员工权重</button></div>' +
         '<div class="pool-rule-conditions empty" id="deduct-card-' + cardId + '-conditions">' +
         '<span class="cond-label">取值条件<span style="color:var(--danger);margin-left:2px">*</span>：</span>' +
         '<span class="cond-text">未设置</span></div>' +
         '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" style="display:none" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
-      if(!silent)deductEmployeeShares[cardId]={version:1,mode:'weights',employees:[],store:getRuleEditorStoreName(),roles:((deductValueConditions[cardId]||{}).role||[]).slice()};
       var rateInpEl = getDeductRateInput(cardId);
       if (rateInpEl) {
         rateInpEl.addEventListener('input', function() {
@@ -3310,7 +3309,7 @@ var poolSalesDeductions = {};
     function applyDeductScopeEntry(cardId, entry) {
       if (!entry) return;
       var basis = parseDeductCardBasis(cardId);
-      if (entry.employeeShares) deductEmployeeShares[cardId] = JSON.parse(JSON.stringify(entry.employeeShares));
+      if (entry.employeeShares && entry.employeeShares.mode !== 'weights') deductEmployeeShares[cardId] = JSON.parse(JSON.stringify(entry.employeeShares));
       deductValueConditions[cardId] = conditionsFromDeductEntry(entry, basis);
       if (basis === 'personal_sales_pct') {
         personalSalesPctConditions = deductValueConditions[cardId];
@@ -3456,7 +3455,7 @@ var poolSalesDeductions = {};
     }
 
     function syncContributorGroupVisibility() {
-      var group=document.getElementById('contributorRulesGroup');if(group)group.style.display='none';
+      var group=document.getElementById('contributorRulesGroup');var mode=(document.querySelector('input[name="allocationMode"]:checked')||{}).value||'legacy_pool';if(group)group.style.display=!isSurchargePoolKind()&&mode==='legacy_pool'?'':'none';
     }
 
     function updateDeductRulesVisibility() {
@@ -5011,7 +5010,7 @@ var poolSalesDeductions = {};
           return;
         }
         if (!isSurchargePoolKind() && !contributionMode) { showNotification('请选择贡献方式', 'error'); return; }
-        if (!isSurchargePoolKind() && contributionMode === 'employees' && !document.querySelector('#deductRulesContainer .deduct-basis-card')) { showNotification('请至少添加一条员工贡献规则', 'error'); return; }
+        if (!isSurchargePoolKind() && contributionMode === 'employees' && !document.querySelector('#deductRulesContainer .deduct-basis-card') && !Object.keys(poolSalesDeductions).some(function(id){return poolSalesDeductions[id].role;})) { showNotification('请至少添加一条员工贡献规则', 'error'); return; }
         var deductCondErr = null;
         var deductRateErr = null;
         document.querySelectorAll('#deductRulesContainer .deduct-basis-card').forEach(function(card) {
