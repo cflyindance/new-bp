@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.58','V3.58','V2.56'];
-const id='TIPOUT-SALES-PROPORTION-20261104-01';
+const versions=['V4.59','V3.59','V2.57'];
+const id='TIPOUT-RESTORE-CONTRIBUTORS-20261104-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'4394bf3c');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'fadde445');
 let links=0;
 for(const [i,text]of texts.entries()){
  assert.doesNotMatch(text,/【未来规划】|测试场景清单|取消分配|小费池计算模式|计提|按班次|按打卡时段|个人销售额|再分配|conditions\.weekdays|shiftWorkHours|tipClaims|order_tip_then_residual|time_window/,names[i]+' current delivery scope only');
@@ -38,10 +38,11 @@ assert.ok(personal.includes('已完成／部分待分配／待分配'));assert.o
 assert.ok(product.includes('成功后失败0、重试按钮隐藏'));assert.ok(personal.includes('全部任务结束且仍有失败时才显示'));
 assert.ok(personal.includes('assets/tips-current-scope-20261027/delete-rule.png'));assert.ok(personal.includes('assets/tips-current-scope-20261027/contribution-help.png'));
 const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf8');assert.ok(coverage.includes(id));assert.ok(coverage.includes('未覆盖的图像'));assert.doesNotMatch(coverage,/【未来规划】|测试场景清单|取消分配|计提|按班次|按打卡时段|个人销售额|再分配/);
-const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-proportion-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-source-conditions-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributor-weights-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-deduction-20261104/captures.json','utf8'))];
+const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-restore-contributors-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-proportion-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-source-conditions-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributor-weights-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-deduction-20261104/captures.json','utf8'))];
 for(const img of manifest.images){
  const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
- if(img.file.startsWith('assets/tips-sales-proportion-20261104/')){assert.equal(capture.baseline,'4394bf3c + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65235/'));continue;}
+ if(img.file.startsWith('assets/tips-restore-contributors-20261104/')){assert.equal(capture.baseline,'fadde445 + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65236/'));continue;}
+ if(img.file.startsWith('assets/tips-sales-proportion-20261104/')){assert.equal(capture.baseline,'4394bf3c + TIPOUT-SALES-PROPORTION-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65235/'));continue;}
  if(img.file.startsWith('assets/tips-sales-deduction-20261104/')){assert.equal(capture.baseline,'bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65234/#/team/tips/'));assert.equal(img.width,1600);assert.equal(img.height,1000);continue;}
  if(img.file.startsWith('assets/tips-contributor-weights-20261104/')){assert.equal(capture.baseline,'5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65233/#/team/tips/'));assert.equal(img.width,1600);assert.equal(img.height,1000);continue;}
  if(img.file.startsWith('assets/tips-source-conditions-20261104/')){assert.equal(capture.baseline,'d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65232/#/team/tips/'));assert.ok(img.width>=1280&&img.height>=900);continue;}
@@ -70,7 +71,9 @@ for(const name of ['sales-source','tips-source','manual-source','surcharge-sourc
 }
 console.log('PASS source drawers: full viewport, backdrop and editor context retained for all four source types');
 
-assert.doesNotMatch(personal,/### 4. 小费贡献设置|修改员工承担比例|自定义承担比例|员工贡献取值|贡献角色必选/);
+assert.doesNotMatch(personal,/修改员工承担比例|自定义承担比例|员工贡献取值|贡献角色必选/);
 for(const field of ['扣除方','个人营业额','扣除占比','应扣总额'])assert.ok(personal.includes('| '+field+' |'),'sales deduction field '+field);
 assert.doesNotMatch(texts.join('\n'),/人工权重|加权营业额|设置员工权重/);
 console.log('PASS current sales deduction contract: optional single role, source-linked total, personal sales proportions, snapshots and actual screenshots');
+
+assert.ok(personal.includes('### 4. 小费贡献设置'));assert.ok(personal.includes('不能同时启用'));console.log('PASS independent contribution section, persisted configuration, conflict guard and actual drawer screenshot');
