@@ -418,13 +418,22 @@
   }
   function validateEmployeeShares(shares, roles, facts) {
     if(!shares||shares.version!==1||!Array.isArray(shares.roles))throw new Error('员工承担比例配置无效，请重新设置');
-    var mode=shares.mode||'custom';if(['average','custom'].indexOf(mode)<0)throw new Error('员工承担方式无效');
+    var mode=shares.mode||'custom';if(['average','custom','weights'].indexOf(mode)<0)throw new Error('员工承担方式无效');
     if(mode==='custom'&&!Array.isArray(shares.employees))throw new Error('员工承担比例配置无效，请重新设置');
     var selected=Array.from(new Set(roles||[])).sort();
     if(!selected.length||JSON.stringify(selected)!==JSON.stringify(Array.from(new Set(shares.roles)).sort()))throw new Error('角色范围已变化，请重新设置员工承担比例');
     var members=[],seen={};
     (facts||[]).forEach(function(f){if(selected.indexOf(f.role)<0)return;var id=String(f.employeeId||f.id||'');if(!id)throw new Error('员工ID缺失');if(!seen[id]){seen[id]=true;members.push({employeeId:id,fact:f});}});
     if(!members.length)throw new Error('贡献角色没有有效员工');
+    if(mode==='weights'){
+      if(!Array.isArray(shares.employees))throw new Error('员工权重配置无效');
+      var weights={},assignedWeights={};
+      shares.employees.forEach(function(row){var id=String(row.employeeId||''),w=row.weight;if(!id||assignedWeights[id])throw new Error('员工权重身份重复或缺失');assignedWeights[id]=true;
+        if(typeof w!=='number'||!Number.isFinite(w)||w<0||w>1000000||Math.abs(w*100-Math.round(w*100))>1e-7)throw new Error('员工权重须为0至1000000，最多两位小数');weights[id]=w;
+      });
+      if(members.reduce(function(n,m){return n+(Object.prototype.hasOwnProperty.call(weights,m.employeeId)?weights[m.employeeId]:1);},0)<=0)throw new Error('至少一名员工的权重必须大于0');
+      return members.sort(function(a,b){return a.employeeId.localeCompare(b.employeeId);});
+    }
     if(mode==='average')return members.sort(function(a,b){return a.employeeId.localeCompare(b.employeeId);});
     var total=0,assigned={};
     shares.employees.forEach(function(row){
@@ -448,13 +457,14 @@
         if(seen[e.employeeId])throw new Error('贡献员工重复');seen[e.employeeId]=true;
         var d=cents(e.due),a=cents(e.amount),available=cents(e.available);
         if(a!==Math.min(d,available)||cents(e.shortfall)!==d-a)throw new Error('员工应扣、实扣或少扣不一致');
-        if(rule.custom&&rule.shareMode!=='average'){if(typeof e.pct!=='number'||!Number.isFinite(e.pct)||e.pct<0||e.pct>100)throw new Error('承担比例无效');pct+=Math.round(e.pct*100);}
+        if(rule.custom&&rule.shareMode==='custom'){if(typeof e.pct!=='number'||!Number.isFinite(e.pct)||e.pct<0||e.pct>100)throw new Error('承担比例无效');pct+=Math.round(e.pct*100);}
         due+=d;amount+=a;totals[e.employeeId]=(totals[e.employeeId]||0)+a;
       });
-      if(rule.shareMode&&['average','custom'].indexOf(rule.shareMode)<0)throw new Error('贡献承担方式无效');
-      if(rule.custom&&rule.shareMode!=='average'&&pct!==10000)throw new Error('贡献承担比例合计无效');
+      if(rule.shareMode&&['average','custom','weights'].indexOf(rule.shareMode)<0)throw new Error('贡献承担方式无效');
+      if(rule.custom&&rule.shareMode==='custom'&&pct!==10000)throw new Error('贡献承担比例合计无效');
       if(rule.custom){
-        var expected=split(cents(rule.plannedContribution),rule.employees.map(function(e){return rule.shareMode==='average'?1:e.pct;}));
+        var expected=split(cents(rule.plannedContribution),rule.employees.map(function(e){return rule.shareMode==='average'?1:rule.shareMode==='weights'?e.weight:e.pct;}));
+        if(rule.shareMode==='weights'){var wt=rule.employees.reduce(function(n,e){if(typeof e.weight!=='number'||!Number.isFinite(e.weight)||e.weight<0||e.weight>1000000||Math.abs(e.weight*100-Math.round(e.weight*100))>1e-7)throw new Error('贡献权重无效');return n+e.weight;},0);if(wt<=0||rule.employees.some(function(e){return !Number.isFinite(e.pct)||Math.abs(e.pct-e.weight/wt*100)>1e-7;}))throw new Error('贡献权重比例不一致');}
         if(rule.shareMode==='average'&&rule.employees.some(function(e){return e.pct!==100/rule.employees.length;}))throw new Error('平均承担比例无效');
         rule.employees.forEach(function(e,i){if(cents(e.due)!==expected[i])throw new Error('员工应扣与承担比例不一致');});
       }
@@ -486,14 +496,17 @@
       if(!members.length)throw new Error('贡献范围没有有效员工');
       var pieces,bases=members.map(function(f){return contributionBase(item,f,dateKey);}),planned;
       if(e.employeeShares!=null){
-        if((e.scopeType&&e.scopeType!=='role')||names.length)throw new Error('员工承担比例仅适用于角色取值');
-        var ordered=validateEmployeeShares(e.employeeShares,roles,facts);
+        if(e.employeeShares.mode!=='weights'&&((e.scopeType&&e.scopeType!=='role')||names.length))throw new Error('员工承担比例仅适用于角色取值');
+        var weightMode=e.employeeShares.mode==='weights';
+        var selectedRoles=weightMode&&names.length?Array.from(new Set(members.map(function(f){return f.role;}))):roles;
+        var ordered=validateEmployeeShares(e.employeeShares,selectedRoles,weightMode?members:facts);
         members=ordered.map(function(m){return m.fact;});
         planned=Math.round(bases.reduce(function(a,b){return a+b;},0)*rate);
-        pieces=split(planned,members.map(function(f){return e.employeeShares.mode==='average'?1:e.employeeShares.employees.find(function(x){return x.employeeId===f.employeeId;}).pct;}));
+        var weightsForMembers=members.map(function(f){var row=(e.employeeShares.employees||[]).find(function(x){return x.employeeId===f.employeeId;});return e.employeeShares.mode==='average'?1:weightMode?(row?row.weight:1):row.pct;});
+        pieces=split(planned,weightsForMembers);
       }else {pieces=bases.map(function(n){return Math.round(n*rate);});planned=pieces.reduce(function(a,b){return a+b;},0);}
       var rows=members.map(function(f,i){var available=capacities[f.employeeId],due=pieces[i],amount=Math.min(due,available);capacities[f.employeeId]-=amount;dues[f.employeeId]+=due;deducted[f.employeeId]+=amount;
-        return {employeeId:f.employeeId,name:f.name,role:f.role,pct:e.employeeShares?(e.employeeShares.mode==='average'?100/members.length:e.employeeShares.employees.find(function(x){return x.employeeId===f.employeeId;}).pct):null,due:due/100,available:available/100,amount:amount/100,shortfall:(due-amount)/100};});
+        return {employeeId:f.employeeId,name:f.name,role:f.role,weight:e.employeeShares&&e.employeeShares.mode==='weights'?weightsForMembers[i]:null,pct:e.employeeShares?(e.employeeShares.mode==='average'?100/members.length:e.employeeShares.mode==='weights'?weightsForMembers[i]/weightsForMembers.reduce(function(a,b){return a+b;},0)*100:e.employeeShares.employees.find(function(x){return x.employeeId===f.employeeId;}).pct):null,due:due/100,available:available/100,amount:amount/100,shortfall:(due-amount)/100};});
       var actual=rows.reduce(function(n,row){return n+cents(row.amount);},0);
       rules.push({entryId:e.id||item.key+'_'+(item.index+1),basis:item.key,label:labels[item.key],rate:rate,roles:roles.slice(),custom:!!e.employeeShares,shareMode:e.employeeShares?(e.employeeShares.mode||'custom'):null,plannedContribution:planned/100,actualContribution:actual/100,shortfall:(planned-actual)/100,employees:rows});
     });

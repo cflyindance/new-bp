@@ -1,0 +1,20 @@
+import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';import assert from 'node:assert/strict';
+const base=process.argv[2]||process.cwd(),source=name=>fs.readFileSync(path.join(base,'src/team/tips',name),'utf8');
+for(const file of ['programs/rule-editor.js.txt','programs/contributor-shares-editor.js.txt','programs/details.js.txt','legacy/tipout-funding.js.txt'])new vm.Script(source(file),{filename:file});
+const window={};vm.runInNewContext(source('legacy/tipout-funding.js.txt'),{window});const api=window.TipOutFunding;
+const facts=[{employeeId:'A',name:'A',role:'Server',originalTips:20,orders:[{salesAmount:400,tipAmount:20}]},{employeeId:'B',name:'B',role:'Bar',originalTips:100,orders:[{salesAmount:600,tipAmount:100}]}];
+const shares={version:1,mode:'weights',store:'S',roles:['Server','Bar'],employees:[{employeeId:'A',weight:1},{employeeId:'B',weight:2}]};
+const entry={scopeType:'role',roles:['Server','Bar'],rate:.1,employeeShares:shares};const rule={id:1,store:'S',allocationMode:'legacy_pool',deductConfig:{salesPct:entry},poolRules:[{type:'sales',pct:10}]};
+const calc=r=>api.previewIndependent(r,facts,'2026-11-04',100),clone=x=>JSON.parse(JSON.stringify(x));
+const p=calc(rule),r=p.contributionRules[0];assert.equal(r.shareMode,'weights');assert.deepEqual(Array.from(r.employees,e=>e.due),[33.33,66.67]);assert.deepEqual(Array.from(r.employees,e=>e.amount),[20,66.67]);assert.equal(p.contributed,86.67);assert.equal(p.ownerContribution,13.33);assert.deepEqual(Array.from(r.employees,e=>e.weight),[1,2]);
+const selected=clone(rule);selected.deductConfig.salesPct.scopeType='employee';selected.deductConfig.salesPct.roles=[];selected.deductConfig.salesPct.employee=['B'];selected.deductConfig.salesPct.employeeShares.roles=['Bar'];assert.equal(calc(selected).contributed,60);assert.equal(calc(selected).contributions.length,1);
+const zero=clone(rule);zero.deductConfig.salesPct.employeeShares.employees[0].weight=0;assert.deepEqual(Array.from(calc(zero).contributionRules[0].employees,e=>e.due),[0,100]);
+for(const value of [-1,NaN,Infinity,1000001,.001,null]){const bad=clone(shares);bad.employees[0].weight=value;assert.throws(()=>api.validateEmployeeShares(bad,shares.roles,facts),/权重/);}
+const allZero=clone(shares);allZero.employees.forEach(e=>e.weight=0);assert.throws(()=>api.validateEmployeeShares(allZero,shares.roles,facts),/大于0/);
+const duplicate=clone(shares);duplicate.employees.push(duplicate.employees[0]);assert.throws(()=>api.validateEmployeeShares(duplicate,shares.roles,facts),/重复/);
+const defaults=clone(rule);defaults.deductConfig.salesPct.employeeShares.employees=[];assert.deepEqual(Array.from(calc(defaults).contributionRules[0].employees,e=>e.due),[50,50]);
+const three=facts.concat({employeeId:'C',name:'C',role:'Bar',originalTips:100,orders:[]});const third=api.previewIndependent(defaults,three,'2026-11-04',100);assert.deepEqual(Array.from(third.contributionRules[0].employees,e=>e.due),[33.34,33.33,33.33]);
+const snap={dateKey:'2026-11-04',scenarioFacts:facts,pools:[{ruleId:1,poolAmount:100,employees:[{employeeId:'B',amount:100}]}]};const saved=api.reconcileExisting(snap,[rule]);api.validateSnapshot(saved);
+const tampered=clone(saved);tampered.pools[0].funding.contributionRules[0].employees[0].weight=9;assert.throws(()=>api.validateSnapshot(tampered),/权重|承担|分配|贡献/);
+const html=source('templates/rule-editor.html'),editor=source('programs/rule-editor.js.txt');assert.match(html,/id="contributorWeightsDrawer"/);assert.match(editor,/deduct-share-entry-.*style="display:none"/);assert.ok(editor.indexOf('id="deduct-weight-entry-')<editor.indexOf('id="deduct-card-\' + cardId + \'-conditions"'));
+console.log('PASS contributor weights: role/employee scope, default one, zero and invalid weights, exact cents, no shortage transfer, snapshot integrity and entry placement');

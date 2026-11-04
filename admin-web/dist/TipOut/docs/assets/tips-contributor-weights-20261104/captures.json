@@ -1,0 +1,57 @@
+[
+  {
+    "file": "assets/tips-contributor-weights-20261104/details.png",
+    "sha256": "efc91f81787a5b52b72d243ddbeb56fe34a3e319241b74a9a3c54dc117d37f0b",
+    "baseline": "5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "功能分支实际页面，保留完整视口及抽屉背景；隔离演示数据",
+    "route": "http://127.0.0.1:65233/#/team/tips/details?date=2026-11-03",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-contributor-weights-20261104/editor.png",
+    "sha256": "474fe10a9305bf425f100794553633de2ab4bbcd0f64a3236397b8da4888d3f9",
+    "baseline": "5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "功能分支实际页面，保留完整视口及抽屉背景；隔离演示数据",
+    "route": "http://127.0.0.1:65233/#/team/tips/rules/editor?mode=edit&id=95001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-contributor-weights-20261104/employee-weights.png",
+    "sha256": "b80a3df1ee0a6bb3651c36132226b4fe98a01c9c2ee28ba9f01a81579df052af",
+    "baseline": "5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "功能分支实际页面，保留完整视口及抽屉背景；隔离演示数据",
+    "route": "http://127.0.0.1:65233/#/team/tips/rules/editor?mode=edit&id=95001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-contributor-weights-20261104/invalid.png",
+    "sha256": "1e333e5b1b192378c01683f0ce29584295ef85b4d2d36561076e8ba4cc5d88f9",
+    "baseline": "5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "功能分支实际页面，保留完整视口及抽屉背景；隔离演示数据",
+    "route": "http://127.0.0.1:65233/#/team/tips/rules/editor?mode=edit&id=95001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-contributor-weights-20261104/role-weights.png",
+    "sha256": "67eea5494591e1a0f3e7574f6b26896d40a2cca9ac73924866ec57c3628b5653",
+    "baseline": "5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "功能分支实际页面，保留完整视口及抽屉背景；隔离演示数据",
+    "route": "http://127.0.0.1:65233/#/team/tips/rules/editor?mode=edit&id=95001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  }
+]

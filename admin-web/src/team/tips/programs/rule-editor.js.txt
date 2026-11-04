@@ -3024,12 +3024,13 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         '<button type="button" class="btn btn-sm" onclick="openDeductConditionsDrawer(\'' + cardId + '\')">设置取值条件 <span style="color:var(--danger)">*</span></button>' +
         '<button type="button" class="btn btn-sm btn-text-danger" onclick="removeDeductRule(\'' + cardId + '\')" style="font-size:18px;padding:0 4px">×</button>' +
         '</div></div>' +
+        '<div class="contributor-share-entry contributor-weight-entry" id="deduct-weight-entry-' + cardId + '"><span id="deduct-weight-summary-' + cardId + '">员工权重：未设置</span><button type="button" class="btn btn-sm" id="deduct-weight-button-' + cardId + '" onclick="openContributorWeightsDrawer(\'' + cardId + '\')">设置员工权重</button></div>' +
         '<div class="pool-rule-conditions empty" id="deduct-card-' + cardId + '-conditions">' +
         '<span class="cond-label">取值条件<span style="color:var(--danger);margin-left:2px">*</span>：</span>' +
         '<span class="cond-text">未设置</span></div>' +
-        '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
+        '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" style="display:none" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
-      if(!silent)deductEmployeeShares[cardId]={version:1,mode:'average',store:getRuleEditorStoreName(),roles:((deductValueConditions[cardId]||{}).role||[]).slice()};
+      if(!silent)deductEmployeeShares[cardId]={version:1,mode:'weights',employees:[],store:getRuleEditorStoreName(),roles:((deductValueConditions[cardId]||{}).role||[]).slice()};
       var rateInpEl = getDeductRateInput(cardId);
       if (rateInpEl) {
         rateInpEl.addEventListener('input', function() {
@@ -3097,6 +3098,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var textEl = el.querySelector('.cond-text');
       if (textEl) textEl.textContent = text || '未设置';
       el.classList.toggle('empty', !text);
+      if (typeof updateContributorWeightsSummary === 'function') updateContributorWeightsSummary(cardId);
       if (typeof updateContributorSharesSummary === 'function') updateContributorSharesSummary(cardId);
     }
 
@@ -4474,7 +4476,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         } else if (!sc.revenueType) {
           sc.revenueType = 'Net Sales (税前营业额)';
         }
-        if ((sc.employee || []).length) delete deductEmployeeShares[cardId];
+        if ((sc.employee || []).length && (!deductEmployeeShares[cardId] || deductEmployeeShares[cardId].mode !== 'weights')) delete deductEmployeeShares[cardId];
         deductValueConditions[cardId] = sc;
         if (basis === 'personal_sales_pct') {
           personalSalesPctConditions = sc;
@@ -4542,7 +4544,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         if (condition.tipType === '__saved_tip_types__') condition.tipTypes = tipsDrawerSavedTipTypes.slice();
         else condition.tipTypes = condition.tipType ? [condition.tipType] : [];
         delete condition.tipType; delete condition.revenueType;
-        if ((condition.employee || []).length) delete deductEmployeeShares[cardId];
+        if ((condition.employee || []).length && (!deductEmployeeShares[cardId] || deductEmployeeShares[cardId].mode !== 'weights')) delete deductEmployeeShares[cardId];
         deductValueConditions[cardId] = condition;
         updateDeductCardConditionDisplay(cardId);
         closeDrawer('tipsDrawer'); showNotification('取值条件已保存'); return;
