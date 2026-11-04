@@ -4333,13 +4333,24 @@
     return prefix + "每轮最多";
   }
 
-  function buffetQuotaPeriodLabels(combo) {
+  function buffetQuotaPeriodLabels(combo, draft) {
     if (combo && combo.period === "order_lifetime") return { person: "每人每单最多", table: "整桌整单最多", order: "每单最多" };
+    if (combo && combo.period === "multi_round" && draft) {
+      var range = (draft.roundRanges || [])[combo.roundIndex];
+      var min = range && Number(range.min);
+      var max = range && range.max != null ? Number(range.max) : null;
+      if (Number.isInteger(min) && min >= 1 && (max == null || (Number.isInteger(max) && max >= min))) {
+        var single = max === min;
+        var scope = max == null ? "第" + min + "轮起" : single ? "第" + min + "轮" : "第" + min + "-" + max + "轮";
+        var frequency = single ? "" : "每轮";
+        return { person: scope + "每人" + frequency + "最多", table: scope + "整桌" + frequency + "最多", order: scope + frequency + "最多" };
+      }
+    }
     return { person: "每人每轮最多", table: "整桌每轮最多", order: "每轮最多" };
   }
 
   function buffetProductQuotaColumns(draft, combo) {
-    var labels = buffetQuotaPeriodLabels(combo);
+    var labels = buffetQuotaPeriodLabels(combo, draft);
     var unit = draft.measureUnit === "kind" ? "种（SPU）" : "份";
     if (isBuffetComboDraft(draft)) {
       return comboUsesPartyMultiplier(draft)
@@ -4363,10 +4374,14 @@
     ];
     if (draft.targetType !== "category") columns.push({ key: "category", label: "分类" });
     columns.push({ key: "store", label: "门店" });
-    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: combo.period === "order_lifetime" ? "每种整单最多份数" : "每轮每种最多份数", map: "exceptionDishLimits", unit: "份" }, { key: "status", label: "状态" });
+    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: buffetSameDishLimitLabel(draft, combo), map: "exceptionDishLimits", unit: "份" }, { key: "status", label: "状态" });
     else columns = columns.concat(buffetProductQuotaColumns(draft, combo));
     columns.push({ key: "action", label: "操作", className: "olf-v4-product-action" });
     return columns;
+  }
+
+  function buffetSameDishLimitLabel(draft, combo) {
+    return combo.period === "order_lifetime" ? "每种整单最多份数" : buffetQuotaPeriodLabels(combo, draft).order.replace(/最多$/, "每种最多份数");
   }
 
   function buffetProductMeta(config, target) {
@@ -4615,7 +4630,7 @@
     data.allRows.forEach(function (row) { storeCount[row.storeId] = true; });
     var pageSelected = data.pageRows.length > 0 && data.pageRows.every(function (row) { return state.selectedIds.indexOf(row.rowKey) >= 0; });
     var pageSelect = '<input type="checkbox" aria-label="全选当前页商品" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' />';
-    var quotaColumns = draft.targetType === "dish_set" ? [{ label: combo.period === "order_lifetime" ? "每种整单最多份数" : "每轮每种最多份数" }] : buffetProductQuotaColumns(draft, combo);
+    var quotaColumns = draft.targetType === "dish_set" ? [{ label: buffetSameDishLimitLabel(draft, combo) }] : buffetProductQuotaColumns(draft, combo);
     var columnCount = (draft.targetType === "category" ? 6 : 7) + quotaColumns.length;
     var identityHeadings = draft.targetType === "category" ? '<th>分类</th><th>产线</th><th>门店</th>' : '<th>商品</th><th>产线</th><th>分类</th><th>门店</th>';
     var quotaHeadings = quotaColumns.map(function (column) {
@@ -4646,6 +4661,10 @@
       per_round: { person: "每人每轮最多", table: "整桌每轮最多" },
       multi_round: { person: "每人本轮最多", table: "整桌本轮最多" }
     }[combo.period] || { person: "每人最多", table: "整桌最多" };
+    if (combo.period === "multi_round") {
+      var scopedLabels = buffetQuotaPeriodLabels(combo, draft);
+      labels = { person: scopedLabels.person, table: scopedLabels.table };
+    }
     return { primary: draft.subject === "party_size" ? labels.person : labels.table, table: labels.table };
   }
 
