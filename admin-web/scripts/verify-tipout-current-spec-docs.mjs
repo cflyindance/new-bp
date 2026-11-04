@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.56','V3.56','V2.54'];
-const id='TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01';
+const versions=['V4.57','V3.57','V2.55'];
+const id='TIPOUT-SALES-DEDUCTION-20261104-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'5e05a59c');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'bb11e4a0');
 let links=0;
 for(const [i,text]of texts.entries()){
  assert.doesNotMatch(text,/【未来规划】|测试场景清单|取消分配|小费池计算模式|计提|按班次|按打卡时段|个人销售额|再分配|conditions\.weekdays|shiftWorkHours|tipClaims|order_tip_then_residual|time_window/,names[i]+' current delivery scope only');
@@ -31,17 +31,18 @@ for(const image of manifest.images)assert.equal(sha(fs.readFileSync(path.join(ba
 for(const [file,hash]of Object.entries(manifest.sourceHashes))assert.equal(sha(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n')),hash,file+' current implementation evidence');
 const personal=texts[2],engineer=texts[1],product=texts[0];
 for(const page of ['日期分配汇总','员工分配汇总','员工每日考勤分配','当日小费分配明细','分配规则列表','新增／编辑分配规则'])assert.ok(personal.includes('. '+page),page);
-for(const field of ['门店','今天','昨天','本周','上周','本月','上月','开始日期','结束日期','营业状态','发放状态','入池总金额','已分配总额','未分配总额','分配计入工时','贡献入池总额','小费池计算金额','员工贡献金额','老板补足金额','应扣金额','可扣余额','实际扣除','少扣金额','权重换算比例','员工权重','权重换算百分比','员工分配比例','角色分配比例','每日计入工时上限','员工权重入口','权重合计','确认已发放','重新确认分配','保存当前分配','重试失败日期'])assert.ok(personal.includes('| '+field+' |'),field+' individually defined');
+for(const field of ['门店','今天','昨天','本周','上周','本月','上月','开始日期','结束日期','营业状态','发放状态','入池总金额','已分配总额','未分配总额','分配计入工时','贡献入池总额','小费池计算金额','员工贡献金额','老板补足金额','应扣金额','可扣余额','实际扣除','少扣金额','扣除占比','员工权重','权重换算百分比','员工分配比例','角色分配比例','每日计入工时上限','扣除方','人工权重','确认已发放','重新确认分配','保存当前分配','重试失败日期'])assert.ok(personal.includes('| '+field+' |'),field+' individually defined');
 for(const token of ['snapshotId','snapshotVersion','snapshotHash','allocationSource','onlyIfUnallocated','employeeShares','completedPaymentAt','occurredAt','Web Locks','tipout_allocation_results_v1','tipout_allocated'])assert.ok(engineer.includes(token),'engineering '+token);
 for(const token of ['max(P,C)','C+E=D=ΣA+U','B−员工贡献+A','150/300/150','240/240/120','不实际投递','逐日','失败'])assert.ok(product.includes(token),'product '+token);
 assert.ok(personal.includes('已完成／部分待分配／待分配'));assert.ok(product.includes('已完成／部分待分配／待分配'));
 assert.ok(product.includes('成功后失败0、重试按钮隐藏'));assert.ok(personal.includes('全部任务结束且仍有失败时才显示'));
 assert.ok(personal.includes('assets/tips-current-scope-20261027/delete-rule.png'));assert.ok(personal.includes('assets/tips-current-scope-20261027/contribution-help.png'));
 const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf8');assert.ok(coverage.includes(id));assert.ok(coverage.includes('未覆盖的图像'));assert.doesNotMatch(coverage,/【未来规划】|测试场景清单|取消分配|计提|按班次|按打卡时段|个人销售额|再分配/);
-const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-source-conditions-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributor-weights-20261104/captures.json','utf8'))];
+const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-source-conditions-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributor-weights-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-deduction-20261104/captures.json','utf8'))];
 for(const img of manifest.images){
  const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
- if(img.file.startsWith('assets/tips-contributor-weights-20261104/')){assert.equal(capture.baseline,'5e05a59c + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65233/#/team/tips/'));assert.equal(img.width,1600);assert.equal(img.height,1000);continue;}
+ if(img.file.startsWith('assets/tips-sales-deduction-20261104/')){assert.equal(capture.baseline,'bb11e4a0 + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65234/#/team/tips/'));assert.equal(img.width,1600);assert.equal(img.height,1000);continue;}
+ if(img.file.startsWith('assets/tips-contributor-weights-20261104/')){assert.equal(capture.baseline,'5e05a59c + TIPOUT-CONTRIBUTOR-WEIGHTS-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65233/#/team/tips/'));assert.equal(img.width,1600);assert.equal(img.height,1000);continue;}
  if(img.file.startsWith('assets/tips-source-conditions-20261104/')){assert.equal(capture.baseline,'d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65232/#/team/tips/'));assert.ok(img.width>=1280&&img.height>=900);continue;}
  const current=img.file.startsWith('assets/tips-contributors-20261103/');
  if(current){assert.equal(capture.baseline,'0e737e4c + TIPOUT-CONTRIBUTORS-20261103-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65230/#/team/tips/'));assert.ok(img.width>250&&img.height>80);assert.notEqual(capture.planning,true);continue;}
@@ -68,6 +69,7 @@ for(const name of ['sales-source','tips-source','manual-source','surcharge-sourc
 }
 console.log('PASS source drawers: full viewport, backdrop and editor context retained for all four source types');
 
-for(const stem of ['role-weights','employee-weights','invalid']){const img=manifest.images.find(x=>x.file.endsWith('/'+stem+'.png')&&x.file.includes('tips-contributor-weights-'));assert.ok(img&&img.framing==='viewport-drawer','current weight drawer with backdrop '+stem);}
-assert.doesNotMatch(personal,/修改员工承担比例|### 7.15 员工承担比例|自定义承担比例/);
-console.log('PASS current contributor weights: drawer context, hidden setup excluded, snapshot fields and calculation contract');
+for(const stem of ['weights','invalid','sales-source']){const img=manifest.images.find(x=>x.file.endsWith('/'+stem+'.png')&&x.file.includes('tips-sales-deduction-'));assert.ok(img&&img.framing==='viewport-drawer','source-linked sales drawer '+stem);}
+assert.doesNotMatch(personal,/### 4. 小费贡献设置|修改员工承担比例|自定义承担比例|员工贡献取值|贡献角色必选/);
+for(const field of ['扣除方','个人营业额','人工权重','加权营业额','扣除占比','应扣总额'])assert.ok(personal.includes('| '+field+' |'),'sales deduction field '+field);
+console.log('PASS current sales deduction contract: optional single role, source-linked total, personal sales times manual weight, snapshots and actual screenshots');

@@ -1,0 +1,79 @@
+[
+  {
+    "file": "assets/tips-sales-deduction-20261104/details-default.png",
+    "sha256": "9a7e37a5329ea0f92aed3bf71ecc36e54d9a6b97a8e0686507c9b6d5eddc913d",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/details?date=2026-11-03",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/details-weighted.png",
+    "sha256": "c764311d979e8b220fbef758a44d754a8c0e1ae53155ea294a9f46a2858fcac6",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/details?date=2026-11-04",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/editor-configured.png",
+    "sha256": "6b222c08c8dfffbba6001990de60a4fb7406d4facb6498fe69c8e22fc1040844",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/editor-default.png",
+    "sha256": "ff3a45a8932a6f90d5d0c0423387ab521cbfe8918aecc5ae6ac29b92f2163cd1",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/invalid.png",
+    "sha256": "6b417d407101ea66d561558e5f3861f678eb5bf92479dddf1c99d899584a2c8d",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/sales-source.png",
+    "sha256": "a88f4aaccdc34a2ca65d8cb9c52b4a02902579ca3c166213a01e79b8a66b0653",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-sales-deduction-20261104/weights.png",
+    "sha256": "05574023b2473d643e1d2ca776cb696e6f1c7c4ccab3e7c93c9ee3d9dbd4ef39",
+    "baseline": "bb11e4a0 + TIPOUT-SALES-DEDUCTION-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "隔离功能分支真实页面，保留完整视口、抽屉与背景",
+    "route": "http://127.0.0.1:65234/#/team/tips/rules/editor?mode=edit&id=96001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  }
+]

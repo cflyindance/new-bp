@@ -1,4 +1,5 @@
 var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
+var poolSalesDeductions = {};
     var poolRuleConditions = {};
     const existingRules = { sales: false, tips: false, surcharge: false, personal_sales: false, manual: false, custom: false };
     /** tip = 小费池；surcharge = 加收服务费池 */
@@ -488,8 +489,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       if (settings) settings.hidden = contributionMode === 'merchant';
     }
     function loadRuleForEdit(rule) {
+      poolSalesDeductions = {};
       var cfg = rule.deductConfig || {};
-      contributionMode = rule.contributionMode || ((cfg.salesPct || cfg.personalSalesPct || cfg.tipIncome || (rule.deductRoles || []).length || rule.deductEmployees) ? 'employees' : null);
+      contributionMode = 'merchant';
       syncContributionModeUi();
       currentPoolKind = rule.poolKind === 'surcharge' ? 'surcharge' : 'tip';
       applyPoolKindUi(true);
@@ -531,7 +533,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
             poolRuleCounter[pr.type] = Math.max(poolRuleCounter[pr.type] || 0, p);
           }
         }
-        var opt = { id: rid, name: pr.name, pct: pr.pct, amount: pr.amount };
+        var opt = { id: rid, name: pr.name, pct: pr.pct, amount: pr.amount, deduction: pr.deduction };
         addPoolRule(pr.type, opt);
         if (!firstPoolId) firstPoolId = rid;
         if (pr.conditions && typeof pr.conditions === 'object') {
@@ -608,7 +610,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       updateWorkHoursConfigUi();
       clearDeductRulesContainer();
       if (allocMode !== 'order_tip_then_residual') {
-        loadDeductRulesFromRule(rule);
+        clearDeductRulesContainer();
         var receivers = rule.receivers || [];
         receivers.forEach(function(rec) {
           addReceiverRow({ pct: rec.pct, subReceivers: rec.subReceivers || [] });
@@ -2560,6 +2562,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         setTimeout(() => {
           el.remove();
           delete poolRuleConditions[ruleId];
+          delete poolSalesDeductions[ruleId];
           if (isMultiInstancePoolType(baseType)) {
             var remaining = document.querySelectorAll('.pool-rule-card[data-rule-type="' + baseType + '"]');
             if (remaining.length === 0) existingRules[baseType] = false;
@@ -3453,9 +3456,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     }
 
     function syncContributorGroupVisibility() {
-      var group=document.getElementById('contributorRulesGroup');
-      var mode=(document.querySelector('input[name="allocationMode"]:checked')||{}).value||'legacy_pool';
-      if(group)group.style.display=!isSurchargePoolKind()&&mode==='legacy_pool'?'':'none';
+      var group=document.getElementById('contributorRulesGroup');if(group)group.style.display='none';
     }
 
     function updateDeductRulesVisibility() {
@@ -3713,6 +3714,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         (hasConditionRow ? '<div class="pool-rule-conditions empty' + (type === 'manual' ? ' manual-pool-conditions' : '') + '" id="rule-' + ruleId + '-conditions" data-rule-id="' + ruleId + '"><span class="cond-label">取值条件' + (type === 'manual' ? '：</span>' : '<span style="color:var(--danger);margin-left:2px">*</span>：</span>') + '<span class="cond-text">未设置</span></div>' : '');
 
       document.getElementById('poolRulesContainer').appendChild(card);
+      if(type==='sales')poolSalesDeductions[ruleId]=JSON.parse(JSON.stringify(opt.deduction||{version:1,role:'',employees:[],store:getRuleEditorStoreName()}));
+      if(typeof renderPoolSalesDeductions==='function')renderPoolSalesDeductions();
       document.getElementById('addOptionMenu').classList.remove('show');
       if (type === 'personal_sales' && !poolRuleConditions[ruleId]) {
         poolRuleConditions[ruleId] = { revenueType: 'Net Sales (税前营业额)', role: [] };
@@ -4950,6 +4953,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         delete data.tipsConditions;
         delete data.surchargeConditions;
       }
+      if(typeof applyPoolSalesDeductionData==='function')applyPoolSalesDeductionData(data);
       return data;
     }
 
@@ -4970,6 +4974,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         showNotification('请选择门店', 'error');
         return;
       }
+      if(typeof validatePoolSalesDeductions==='function'&&!validatePoolSalesDeductions())return;
       if (!validateWorkHoursConfig()) return;
       if (contributionMode !== 'merchant' && typeof validateContributorSharesBeforeSave === 'function' && !validateContributorSharesBeforeSave()) return;
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';

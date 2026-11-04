@@ -199,6 +199,7 @@
   function ruleHasDeductors(rule) {
     if (!rule) return false;
     if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual') return false;
+    if((rule.poolRules||[]).some(function(p){return p.deduction!=null;}))return rule.poolRules.some(function(p){return p.type==='sales'&&p.deduction&&p.deduction.role;});
     var cfg = rule.deductConfig;
     // A1 个人销售额扣除：不依赖销售额池
     if (cfg && anyDeductEntryHasScope(cfg.personalSalesPct)) return true;
@@ -224,6 +225,7 @@
     (rules || []).forEach(function(rule) {
       if (!ruleHasDeductors(rule)) return;
       hasDeductors = true;
+      if((rule.poolRules||[]).some(function(p){return p.deduction!=null;})){rule.poolRules.forEach(function(p){if(p.type==='sales'&&p.deduction&&p.deduction.role)roles[p.deduction.role]=true;});return;}
       var cfg = rule.deductConfig;
       if (cfg) {
         mergeDeductConfigField(cfg.personalSalesPct, roles, names);
@@ -308,6 +310,7 @@
         return p.pct != null ? name + ' × ' + p.pct + '%' : name;
       }).join(' + ');
       parts.push('Tip Pool = ' + poolStr);
+      rule.poolRules.forEach(function(p){if(p.type==='sales'&&p.deduction&&p.deduction.role)parts.push('扣除方 '+p.deduction.role+'（个人营业额×人工权重）');});
     }
     var cfg = rule.deductConfig;
     if (cfg && (cfg.personalSalesPct || cfg.salesPct || cfg.tipIncome)) {
