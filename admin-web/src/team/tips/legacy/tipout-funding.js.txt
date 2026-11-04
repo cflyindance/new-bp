@@ -429,17 +429,15 @@
       if(cfg.role!=null&&typeof cfg.role!=='string')throw new Error('扣除方只支持单个角色');
       if(!cfg.role)return;
       if(cfg.store&&rule.store&&cfg.store!==rule.store)throw new Error('扣除方门店配置不一致');
-      if(cfg.employees!=null&&!Array.isArray(cfg.employees))throw new Error('人工权重配置无效');
-      var weights={},seen={};(cfg.employees||[]).forEach(function(e){var w=e.weight,id=String(e.employeeId||'');if(!id||seen[id])throw new Error('人工权重身份重复或缺失');seen[id]=true;if(typeof w!=='number'||!Number.isFinite(w)||w<0||w>1000000||Math.abs(w*100-Math.round(w*100))>1e-7)throw new Error('人工权重须为0至1000000，最多两位小数');weights[id]=w;});
       var rate=Number(p.pct);if(!Number.isFinite(rate)||rate<0||rate>100)throw new Error('营业额计算比例无效');
       var planned=sourceTargets?cents(sourceTargets[index]):cents(sourceBase(p,facts,dateKey)*rate/100),members=facts.filter(function(f){return f.role===cfg.role;}).sort(function(a,b){return String(a.employeeId).localeCompare(String(b.employeeId));});
       if(!members.length){if(planned>0)throw new Error('扣除方角色没有有效员工');return;}
-      var basis=members.map(function(f){var sales=sourceBase(p,[f],dateKey),weight=Object.prototype.hasOwnProperty.call(weights,f.employeeId)?weights[f.employeeId]:1;return {sales:sales,weight:weight,value:sales*weight};}),sum=basis.reduce(function(n,e){return n+e.value;},0);
-      if(planned>0&&sum<=0)throw new Error('扣除方营业额×人工权重合计为0，无法分摊');
+      var basis=members.map(function(f){var sales=sourceBase(p,[f],dateKey);return {sales:sales,value:sales};}),sum=basis.reduce(function(n,e){return n+e.value;},0);
+      if(planned>0&&sum<=0)throw new Error('扣除方个人营业额合计为0，无法分摊');
       var pieces=split(planned,basis.map(function(e){return e.value;}));
-      var rows=members.map(function(f,i){var available=capacities[f.employeeId],due=pieces[i],amount=Math.min(due,available);capacities[f.employeeId]-=amount;totals[f.employeeId].due+=due;totals[f.employeeId].amount+=amount;return {employeeId:f.employeeId,name:f.name,role:f.role,salesAmount:basis[i].sales,weight:basis[i].weight,allocationWeight:basis[i].value,pct:sum?basis[i].value/sum*100:0,due:due/100,available:available/100,amount:amount/100,shortfall:(due-amount)/100};});
+      var rows=members.map(function(f,i){var available=capacities[f.employeeId],due=pieces[i],amount=Math.min(due,available);capacities[f.employeeId]-=amount;totals[f.employeeId].due+=due;totals[f.employeeId].amount+=amount;return {employeeId:f.employeeId,name:f.name,role:f.role,salesAmount:basis[i].sales,pct:sum?basis[i].value/sum*100:0,due:due/100,available:available/100,amount:amount/100,shortfall:(due-amount)/100};});
       var actual=rows.reduce(function(n,e){return n+cents(e.amount);},0);
-      rules.push({entryId:'sales:'+String(p.id||index),poolRuleId:String(p.id||index),basis:'poolSales',label:(p.name||'营业额')+' · 扣除方 '+cfg.role,rate:rate/100,roles:[cfg.role],custom:true,shareMode:'sales_weighted',sourceAmount:planned/100,plannedContribution:planned/100,actualContribution:actual/100,shortfall:(planned-actual)/100,employees:rows});
+      rules.push({entryId:'sales:'+String(p.id||index),poolRuleId:String(p.id||index),basis:'poolSales',label:(p.name||'营业额')+' · 扣除方 '+cfg.role,rate:rate/100,roles:[cfg.role],custom:true,shareMode:'sales_proportional',sourceAmount:planned/100,plannedContribution:planned/100,actualContribution:actual/100,shortfall:(planned-actual)/100,employees:rows});
     });
     var contributions=facts.filter(function(f){return rules.some(function(r){return r.employees.some(function(e){return e.employeeId===f.employeeId;});});}).map(function(f){return {employeeId:f.employeeId,name:f.name,role:f.role,before:f.originalTips,available:(remaining?remaining[f.employeeId]:cents(f.originalTips))/100,due:totals[f.employeeId].due/100,amount:totals[f.employeeId].amount/100,sources:{original:totals[f.employeeId].amount/100}};});
     var c=contributions.reduce(function(n,e){return n+cents(e.amount);},0),p=cents(target);
@@ -489,10 +487,15 @@
         if(rule.custom&&rule.shareMode==='custom'){if(typeof e.pct!=='number'||!Number.isFinite(e.pct)||e.pct<0||e.pct>100)throw new Error('承担比例无效');pct+=Math.round(e.pct*100);}
         due+=d;amount+=a;totals[e.employeeId]=(totals[e.employeeId]||0)+a;
       });
-      if(rule.shareMode&&['average','custom','weights','sales_weighted'].indexOf(rule.shareMode)<0)throw new Error('贡献承担方式无效');
+      if(rule.shareMode&&['average','custom','weights','sales_weighted','sales_proportional'].indexOf(rule.shareMode)<0)throw new Error('贡献承担方式无效');
       if(rule.custom&&rule.shareMode==='custom'&&pct!==10000)throw new Error('贡献承担比例合计无效');
       if(rule.custom){
-        var expected=split(cents(rule.plannedContribution),rule.employees.map(function(e){return rule.shareMode==='average'?1:rule.shareMode==='weights'?e.weight:rule.shareMode==='sales_weighted'?e.allocationWeight:e.pct;}));
+        var expected=split(cents(rule.plannedContribution),rule.employees.map(function(e){return rule.shareMode==='average'?1:rule.shareMode==='weights'?e.weight:rule.shareMode==='sales_weighted'?e.allocationWeight:rule.shareMode==='sales_proportional'?e.salesAmount:e.pct;}));
+        if(rule.shareMode==='sales_proportional'){
+          if(cents(rule.sourceAmount)!==cents(rule.plannedContribution))throw new Error('营业额项应扣总额不一致');
+          var salesTotal=rule.employees.reduce(function(n,e){if(typeof e.salesAmount!=='number'||!Number.isFinite(e.salesAmount)||e.salesAmount<0)throw new Error('个人营业额依据无效');return n+e.salesAmount;},0);
+          if((cents(rule.plannedContribution)>0&&salesTotal<=0)||rule.employees.some(function(e){return !Number.isFinite(e.pct)||Math.abs(e.pct-(salesTotal?e.salesAmount/salesTotal*100:0))>1e-7;}))throw new Error('个人营业额占比不一致');
+        }
         if(rule.shareMode==='sales_weighted'){
           if(cents(rule.sourceAmount)!==cents(rule.plannedContribution))throw new Error('营业额项应扣总额不一致');
           var totalBasis=rule.employees.reduce(function(n,e){if(typeof e.salesAmount!=='number'||!Number.isFinite(e.salesAmount)||e.salesAmount<0||typeof e.weight!=='number'||!Number.isFinite(e.weight)||e.weight<0||e.weight>1000000||Math.abs(e.weight*100-Math.round(e.weight*100))>1e-7||!Number.isFinite(e.allocationWeight)||Math.abs(e.allocationWeight-e.salesAmount*e.weight)>1e-7)throw new Error('营业额加权依据无效');return n+e.allocationWeight;},0);

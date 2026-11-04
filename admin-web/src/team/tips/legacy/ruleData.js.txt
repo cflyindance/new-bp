@@ -310,7 +310,7 @@
         return p.pct != null ? name + ' × ' + p.pct + '%' : name;
       }).join(' + ');
       parts.push('Tip Pool = ' + poolStr);
-      rule.poolRules.forEach(function(p){if(p.type==='sales'&&p.deduction&&p.deduction.role)parts.push('扣除方 '+p.deduction.role+'（个人营业额×人工权重）');});
+      rule.poolRules.forEach(function(p){if(p.type==='sales'&&p.deduction&&p.deduction.role)parts.push('扣除方 '+p.deduction.role+'（个人营业额占比）');});
     }
     var cfg = rule.deductConfig;
     if (cfg && (cfg.personalSalesPct || cfg.salesPct || cfg.tipIncome)) {
