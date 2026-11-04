@@ -4,6 +4,32 @@ var poolSalesDeductions = {};
     const existingRules = { sales: false, tips: false, surcharge: false, personal_sales: false, manual: false, custom: false };
     /** tip = 小费池；surcharge = 加收服务费池 */
     var currentPoolKind = 'tip';
+    var rulePoolKindReadOnly=false;
+    var pendingRulePoolKind=null;
+    function syncRulePoolKindOptions(isEdit) {
+      rulePoolKindReadOnly=!!isEdit;
+      document.querySelectorAll('input[name="rulePoolKind"]').forEach(function(input){input.checked=input.value===currentPoolKind;input.disabled=rulePoolKindReadOnly;input.closest('label').classList.toggle('selected',input.checked);});
+    }
+    function requestRulePoolKindChange(kind) {
+      syncRulePoolKindOptions(rulePoolKindReadOnly);
+      if(rulePoolKindReadOnly||['tip','surcharge'].indexOf(kind)<0||kind===currentPoolKind)return;
+      var specific=document.querySelector('#poolRulesContainer .pool-rule-card, #deductRulesContainer .deduct-basis-card, #tipClaimsTableBody .tip-claim-row');
+      if(specific){pendingRulePoolKind=kind;openModal('rulePoolKindChangeModal');return;}
+      applyRulePoolKindChange(kind);
+    }
+    function cancelRulePoolKindChange(){pendingRulePoolKind=null;closeModal('rulePoolKindChangeModal');syncRulePoolKindOptions(rulePoolKindReadOnly);}
+    function confirmRulePoolKindChange(){var kind=pendingRulePoolKind;cancelRulePoolKindChange();if(kind)applyRulePoolKindChange(kind);}
+    function applyRulePoolKindChange(kind) {
+      if(rulePoolKindReadOnly)return;
+      document.getElementById('poolRulesContainer').innerHTML='';poolRuleConditions={};poolSalesDeductions={};
+      Object.keys(existingRules).forEach(function(k){existingRules[k]=false;});poolRuleCounter={sales:0,tips:0,surcharge:0,personal_sales:0};
+      clearDeductRulesContainer();contributionMode='merchant';
+      ['tipClaimsTableBody','orderResidualReceiverTableBody'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML='';});tipClaimConditions={};
+      var normal=document.querySelector('input[name="allocationMode"][value="legacy_pool"]');if(normal)normal.checked=true;
+      currentPoolKind=kind;applyPoolKindUi(false);onAllocationModeChange(true);syncContributionModeUi();
+      document.querySelectorAll('.add-option-menu.show').forEach(function(menu){menu.classList.remove('show');});
+    }
+
 
     function isSurchargePoolKind() {
       return currentPoolKind === 'surcharge';
@@ -148,6 +174,7 @@ var poolSalesDeductions = {};
       var pt = document.getElementById('pageTitle');
       if (pt) pt.textContent = getPoolKindPageTitle(!!isEdit);
       document.title = getPoolKindPageTitle(!!isEdit) + ' - TipOut';
+      syncRulePoolKindOptions(!!isEdit);
       applyPoolKindStaticLabels();
       var customItem = document.querySelector('#addOptionMenu .add-option-menu-item[data-type="custom"]');
       if (customItem) customItem.textContent = getPoolRuleBaseNames().custom;

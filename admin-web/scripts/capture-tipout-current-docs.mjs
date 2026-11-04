@@ -26,8 +26,8 @@ ui("r.querySelector('#allocationModeSection').open=true;r.querySelector('input[n
 // Subsequent commands may use this script's helpers without copying browser storage.
 if(process.env.TIPOUT_CAPTURE_INITIAL_ONLY!=='1'){
  route('/team/tips/rules','#rulesTableBody');shot('rules','规则列表／隔离演示');
- ui("r.querySelector('[data-native-onclick=\"openAddRuleModal()\"]').click();return true;");shot('pool-type','新增规则／选择池类型');
- ui("r.querySelector('#poolTypeModal .modal-close').click();return true;");
+ ui("r.querySelector('[data-native-onclick=\"openAddRuleModal()\"]').click();return true;");route('/team/tips/rules/editor','#ruleSectionPoolKind');shot('pool-type','新增规则／页内小费池类型');
+ ui("r.querySelector('#ruleSectionPoolKind').scrollIntoView({block:'start'});return true;");
  route('/team/tips/rules/editor?poolKind=tip&mode=edit&id=19','#contributorRulesGroup');
  ui("r.querySelector('#contributorRulesGroup').scrollIntoView({block:'end'});return true;");shot('contribution-configured','既有规则／有角色，展示承担摘要与修改入口');
  ui("r.querySelector('[id^=deduct-share-button-]').click();return true;");shot('share-custom','自定义员工承担／回填40/60');

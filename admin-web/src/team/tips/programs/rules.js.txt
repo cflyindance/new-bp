@@ -129,35 +129,7 @@ function initStoreFilter() {
       }, { title: '删除规则', okText: '删除', okClass: 'btn btn-danger' });
     }
 
-    function openAddRuleModal() {
-      resetPoolTypeSelection();
-      openModal('poolTypeModal');
-    }
-
-    function closePoolTypeModal() {
-      closeModal('poolTypeModal');
-    }
-
-    function resetPoolTypeSelection() {
-      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
-        var isTip = el.getAttribute('data-pool-type') === 'tip';
-        el.classList.toggle('selected', isTip);
-        var radio = el.querySelector('input[type="radio"]');
-        if (radio) radio.checked = isTip;
-      });
-    }
-
-    function syncPoolTypeOptionStyles() {
-      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
-        var radio = el.querySelector('input[type="radio"]');
-        el.classList.toggle('selected', !!(radio && radio.checked));
-      });
-    }
-
-    function getSelectedPoolType() {
-      var checked = document.querySelector('#poolTypeModal input[name="poolType"]:checked');
-      return checked ? checked.value : 'tip';
-    }
+    function openAddRuleModal() { location.href = buildRuleAddUrl(); }
 
     function buildRuleAddUrl(poolType) {
       var params = [];
@@ -168,27 +140,6 @@ function initStoreFilter() {
       } catch (e) {}
       return params.length ? ('rule-add.html?' + params.join('&')) : 'rule-add.html';
     }
-
-    function confirmPoolTypeSelection() {
-      var type = getSelectedPoolType();
-      if (type === 'tip' || type === 'surcharge') {
-        location.href = buildRuleAddUrl(type);
-        return;
-      }
-    }
-
-    document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
-      el.addEventListener('click', function(e) {
-        if (e.target.tagName === 'INPUT') return;
-        var radio = el.querySelector('input[type="radio"]');
-        if (radio) radio.checked = true;
-        syncPoolTypeOptionStyles();
-      });
-      var radio = el.querySelector('input[type="radio"]');
-      if (radio) {
-        radio.addEventListener('change', syncPoolTypeOptionStyles);
-      }
-    });
 
     function copyRule(el) {
       var row = el.closest('[data-rule-id]');

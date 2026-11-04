@@ -387,6 +387,7 @@
       display: flex; align-items: center; gap: 8px;
     }
     .drawer-form-row label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; min-width: 80px; }
+.rule-pool-kind-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.rule-pool-kind-option{display:flex;align-items:flex-start;gap:10px;padding:18px;border:1px solid var(--border-light);border-radius:10px;cursor:pointer}.rule-pool-kind-option.selected{border-color:var(--text-primary);background:var(--bg-secondary,#f0f4fa)}.rule-pool-kind-option input{margin-top:3px;accent-color:var(--text-primary)}.rule-pool-kind-option strong{display:block;font-size:14px}.rule-pool-kind-option small{display:block;margin-top:6px;color:var(--text-secondary);font-size:12px}.rule-pool-kind-option:has(input:disabled){cursor:default}@media(max-width:640px){.rule-pool-kind-options{grid-template-columns:1fr}}
 </style>
 <section class="team-tips-page tipout-fidelity tipout-page-rule-editor" data-team-tips-view="rule-editor">
 <div class="content-area tipout-rule-editor-layout">
@@ -423,6 +424,14 @@
             </div>
             </div>
           </div>
+
+          <section class="form-section tipout-form-card" id="ruleSectionPoolKind" aria-labelledby="rulePoolKindTitle">
+            <h2 class="tipout-rule-group-title" id="rulePoolKindTitle">小费池类型</h2>
+            <div class="rule-pool-kind-options" role="radiogroup" aria-labelledby="rulePoolKindTitle">
+              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="tip" checked data-native-onchange="requestRulePoolKindChange('tip')"><span><strong>小费池</strong><small>配置小费、销售额等来源的小费分配规则</small></span></label>
+              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="surcharge" data-native-onchange="requestRulePoolKindChange('surcharge')"><span><strong>加收服务费池</strong><small>配置现金／信用卡加收服务费的分配规则</small></span></label>
+            </div>
+          </section>
 
           <section class="tipout-editor-rule-group tipout-settings-group" id="poolSettingsGroup" aria-labelledby="poolSettingsTitle">
             <h2 class="tipout-rule-group-title" id="poolSettingsTitle" data-pool-label="1. 小费池设置">1. 小费池设置</h2>
@@ -941,3 +950,10 @@
     </div>
   </div>
 </section>
+<div class="modal-overlay" id="rulePoolKindChangeModal">
+ <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rulePoolKindChangeTitle" style="width:min(480px,92vw)">
+  <div class="modal-header"><h3 id="rulePoolKindChangeTitle">切换小费池类型？</h3><button type="button" class="modal-close" aria-label="取消切换" data-native-onclick="cancelRulePoolKindChange()">×</button></div>
+  <div class="modal-body">切换将清空金额来源和贡献配置；规则名称、门店及接收设置将保留。</div>
+  <div class="modal-footer"><button type="button" class="btn" data-native-onclick="cancelRulePoolKindChange()">取消</button><button type="button" class="btn btn-primary" data-native-onclick="confirmRulePoolKindChange()">确认切换</button></div>
+ </div>
+</div>
