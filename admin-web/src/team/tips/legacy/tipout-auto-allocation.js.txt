@@ -2,7 +2,7 @@
   'use strict';
   function create(dates, execute, changed) {
     var stopped=false, pending=null;
-    var queue={items:dates.map(function(date){return {date:date,status:'pending',message:''};}),running:false,
+    var queue={items:dates.map(function(date){return typeof date==='object'?Object.assign({},date):{date:date,status:'pending',message:''};}),running:false,
       stop:function(){stopped=true;},
       run:function(retry){
         if(pending)return pending;
@@ -15,7 +15,7 @@
           for(var i=0;i<targets.length&&!stopped;i++){
             var item=targets[i]; item.status='running'; changed(queue);
             try {
-              var result=await execute(item.date);
+              var result=await execute(item.date,item);
               item.status=result.status==='skipped'?'skipped':'success'; item.message=result.message||'';
             } catch(error){item.status='failed';item.message=error.message||'分配失败，请重试';}
             if(!stopped)changed(queue);

@@ -11,7 +11,7 @@ export interface TipsHistoryEntryState {
   viewHref: string;
   scrollTop: number;
   parentHref: string;
-  summaryHref: "/team/tips/distribution";
+  summaryHref: string;
   summaryScrollTop: number;
 }
 
@@ -35,7 +35,7 @@ export function parseTipsRoute(hash: string): TipsRoute {
 
 export function isTipsFullscreenRoute(route: TipsRoute): boolean {
   const path = normalizePath(route.href.split("?")[0]);
-  return path === "/team/tips/details" || path === "/team/tips/employee-reconciliation" || path === "/team/tips/rules/editor";
+  return (path === "/team/tips/distribution" && (new URLSearchParams(route.query).get("screen") === "store" || new URLSearchParams(route.query).get("view") === "employee")) || path === "/team/tips/details" || path === "/team/tips/employee-reconciliation" || path === "/team/tips/rules/editor";
 }
 
 export function isTipsSummaryReturnTransition(current: TipsRoute, target: TipsRoute): boolean {
@@ -50,7 +50,7 @@ export function isTrustedTipsHistoryState(value: unknown, currentHref: string): 
   return typeof state.flowId === "string" && state.flowId.length > 0 &&
     normalizePath(String(state.viewHref ?? "").split("?")[0]) === normalizePath(currentHref.split("?")[0]) &&
     allowed.has(normalizePath(String(state.parentHref ?? "").split("?")[0])) &&
-    state.summaryHref === "/team/tips/distribution" && finite(state.scrollTop) && finite(state.summaryScrollTop);
+    normalizePath(String(state.summaryHref ?? "").split("?")[0]) === "/team/tips/distribution" && finite(state.scrollTop) && finite(state.summaryScrollTop);
 }
 
 export function rewriteLegacyTipsUrl(value: string): string | null {

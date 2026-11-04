@@ -28,7 +28,7 @@ await assert.rejects(scope.commit({store:'s',dateKey:'d'},{onlyIfUnallocated:tru
 assert.equal(writes,0,'leaving during hashing must prevent commit');
 console.log('PASS lifecycle guard prevents writes after navigation during snapshot preparation');
 const ui=fs.readFileSync('src/team/tips/programs/summary-auto-allocation.js.txt','utf8');
-const existing=ui.slice(ui.indexOf('    function summaryAutoExisting('),ui.indexOf('    async function executeSummaryAutoDate('));
+const existing=ui.slice(ui.indexOf('function summaryAutoExisting('),ui.indexOf('async function dashboardInspectStores('));
 let state={error:'',payoutStatus:'pending',snapshot:{allocationSource:'manual'}};
 const safety={TipOutDateState:{inspect:()=>state},TipOutAllocationResults:{isAllocated:()=>false}};
 vm.createContext(safety);vm.runInContext(existing,safety);
@@ -36,11 +36,11 @@ assert.equal(safety.summaryAutoExisting('s','d').status,'skipped','saved manual 
 state={error:'',payoutStatus:'paid',snapshot:{}};assert.match(safety.summaryAutoExisting('s','d').message,/已发放/);
 state={error:'损坏',payoutStatus:'error'};assert.throws(()=>safety.summaryAutoExisting('s','d'),/损坏/);
 console.log('PASS manual/paid protection and corrupt-state failure');
-// Exercise the real progress renderer across pending, running, completed and retry states.
-const nodes={};const element=id=>nodes[id]??=( {textContent:'',classList:{remove(){},add(){},contains(){return true}},setAttribute(){},focus(){}} );
-const view={summaryAutoDisposed:false,summaryAutoScope:{store:'s',startDate:'01',endDate:'02'},document:{getElementById:element},escapeSummaryHtml:x=>x,invalidateDayPipelineCache(){},renderSummaryViews(){}};
-vm.createContext(view);vm.runInContext(ui.slice(ui.indexOf('    function renderSummaryAutoProgress('),ui.indexOf('    function startSummaryAutoAllocation(')),view);
-for(const running of [true,false,true,false]){view.renderSummaryAutoProgress({running,items:[{date:'01',status:running?'running':'success'},{date:'02',status:running?'pending':'failed'}]});assert.equal(nodes.summaryAutoClose.disabled,running);assert.equal(nodes.summaryAutoClose.textContent,running?'正在分配':'关闭');assert.equal(nodes.summaryAutoRetry.hidden,running);}
-let removed=0;view.summaryAutoQueue={running:true};view.summaryAutoInert=[];view.summaryAutoFocus=null;element('summaryAutoModal').classList.remove=()=>removed++;
-vm.runInContext(ui.slice(ui.indexOf('    function closeSummaryAutoAllocation('),ui.indexOf("    document.addEventListener('focusout'")),view);view.closeSummaryAutoAllocation();assert.equal(removed,0);view.summaryAutoQueue.running=false;view.closeSummaryAutoAllocation();assert.equal(removed,1);
-console.log('PASS close button label/disabled across initial run, completion and retry; running close is guarded');
+// The dashboard locks every operation during inspection and allocation.
+const controls=[{disabled:false},{disabled:false}],nodes={};
+const rootNode={setAttribute(k,v){this[k]=v;},classList:{toggle(){}},querySelectorAll(){return controls;}};
+const safetyView={dashboardBusy:false,document:{getElementById(id){return id==='allocationDashboard'?rootNode:(nodes[id]??={inert:false});}}};
+vm.createContext(safetyView);vm.runInContext(ui.slice(ui.indexOf('function dashboardSetBusy('),ui.indexOf('function dashboardSyncDates(')),safetyView);
+safetyView.dashboardSetBusy(true);assert.ok(controls.every(e=>e.disabled));assert.ok(Object.values(nodes).every(e=>e.inert));assert.equal(rootNode['aria-busy'],'true');
+safetyView.dashboardSetBusy(false);assert.ok(controls.every(e=>!e.disabled));assert.ok(Object.values(nodes).every(e=>!e.inert));
+console.log('PASS dashboard locks and restores filters, rules, failures, stores and task controls');

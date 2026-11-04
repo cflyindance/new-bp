@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const window={};
+for(const f of ['tipout-dashboard-model','tipout-auto-allocation'])vm.runInNewContext(fs.readFileSync('src/team/tips/legacy/'+f+'.js.txt','utf8'),{window});
+const model=window.TipOutDashboardModel;
+const stores=[{store:'A',ruleCount:1,days:[{date:'2026-11-02',allocatable:true},{date:'2026-11-03',allocatable:true,allocated:true},{date:'2026-11-04',allocatable:false},{date:'2026-11-05',allocatable:true,paid:true}]},{store:'B',ruleCount:1,days:[{date:'2026-11-02',allocatable:true}]},{store:'C',ruleCount:0,days:[{date:'2026-11-02',allocatable:true}]}];
+const plan=model.plan(stores);assert.equal(plan.length,2);assert.notEqual(model.key('A','2026-11-02'),model.key('B','2026-11-02'));assert.equal(model.status(stores[2],[]).state,'missing');
+let failB=true;const calls=[],states=[];const queue=window.TipOutAutoAllocation.create(plan,async(date,item)=>{calls.push([item.store,date]);if(item.store==='B'&&failB)throw Error('rules invalid');return {status:'success',message:'saved'};},q=>states.push(q.running));
+await queue.run();assert.equal(model.counts(queue.items).failed,1);assert.equal(model.counts(queue.items).success,1);assert.equal(model.status(stores[1],queue.items).state,'failed');assert.ok(states.includes(true));assert.equal(queue.running,false);
+failB=false;await queue.run(true);assert.deepEqual(calls.map(x=>x[0]),['A','B','B']);assert.equal(model.counts(queue.items).failed,0);assert.equal(model.counts(queue.items).processed,2);
+stores[0].days[0].allocated=true;stores[1].days[0].allocated=true;assert.equal(model.plan(stores).length,0);assert.equal(model.status(stores[0],[]).state,'complete');
+let legacyCalled='';const legacy=window.TipOutAutoAllocation.create(['2026-11-02'],async date=>{legacyCalled=date;return {status:'skipped'};},()=>{});await legacy.run();assert.equal(legacyCalled,'2026-11-02');assert.equal(legacy.items[0].status,'skipped');
+console.log('PASS dashboard: store/date task identity; skip paid, allocated, closed and missing rules; sequential failures; failed-only retry; completion and legacy queue compatibility');
