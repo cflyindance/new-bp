@@ -1,0 +1,57 @@
+[
+  {
+    "file": "assets/tips-source-conditions-20261104/contributor-sales.png",
+    "sha256": "a525d5110d51acb9eb01848a0ad2a966e717549c9fde5fdf976c4d42157397ae",
+    "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+    "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-source-conditions-20261104/contributor-tips.png",
+    "sha256": "4431b4259a2bec2f45a82e011d3aa18911e457a70c48903019575efea0b72c4f",
+    "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+    "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-source-conditions-20261104/employee-sales.png",
+    "sha256": "4213a3028252a8641822ca931a2cca5e9eb19c78d2069894b6b44a340a5a7bc3",
+    "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+    "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-source-conditions-20261104/employee-tips.png",
+    "sha256": "2ea8ed1a19ce486af6a0033080d467605ac7df9058c74bd858318ebdd726e52e",
+    "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+    "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  },
+  {
+    "file": "assets/tips-source-conditions-20261104/scope-empty.png",
+    "sha256": "b21f87a5cead5bc20c9ae4f229594d2247a941e73a125a41e35cb06ad10f711c",
+    "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+    "capturedAt": "2026-11-04",
+    "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+    "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+    "width": 1600,
+    "height": 1000,
+    "framing": "viewport-drawer"
+  }
+]

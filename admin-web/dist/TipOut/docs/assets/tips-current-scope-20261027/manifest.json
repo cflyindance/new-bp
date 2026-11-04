@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-CONTRIBUTORS-20261103-01",
-  "baseline": "0e737e4c",
+  "documentId": "TIPOUT-SOURCE-SCOPE-20261104-01",
+  "baseline": "d0e115f8",
   "versions": {
-    "PRD_产品需求文档.md": "V4.53",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.53",
-    "小费管理需求文档（个人规范版）.md": "V2.51"
+    "PRD_产品需求文档.md": "V4.55",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.55",
+    "小费管理需求文档（个人规范版）.md": "V2.53"
   },
   "scope": "当前产品交付范围",
   "images": [
@@ -632,11 +632,66 @@
       "route": "http://127.0.0.1:65230/#/team/tips/rules/editor",
       "width": 1280,
       "height": 220
+    },
+    {
+      "file": "assets/tips-source-conditions-20261104/contributor-sales.png",
+      "sha256": "a525d5110d51acb9eb01848a0ad2a966e717549c9fde5fdf976c4d42157397ae",
+      "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+      "capturedAt": "2026-11-04",
+      "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+      "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+      "width": 1600,
+      "height": 1000,
+      "framing": "viewport-drawer"
+    },
+    {
+      "file": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "sha256": "4431b4259a2bec2f45a82e011d3aa18911e457a70c48903019575efea0b72c4f",
+      "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+      "capturedAt": "2026-11-04",
+      "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+      "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+      "width": 1600,
+      "height": 1000,
+      "framing": "viewport-drawer"
+    },
+    {
+      "file": "assets/tips-source-conditions-20261104/employee-sales.png",
+      "sha256": "4213a3028252a8641822ca931a2cca5e9eb19c78d2069894b6b44a340a5a7bc3",
+      "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+      "capturedAt": "2026-11-04",
+      "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+      "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+      "width": 1600,
+      "height": 1000,
+      "framing": "viewport-drawer"
+    },
+    {
+      "file": "assets/tips-source-conditions-20261104/employee-tips.png",
+      "sha256": "2ea8ed1a19ce486af6a0033080d467605ac7df9058c74bd858318ebdd726e52e",
+      "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+      "capturedAt": "2026-11-04",
+      "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+      "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+      "width": 1600,
+      "height": 1000,
+      "framing": "viewport-drawer"
+    },
+    {
+      "file": "assets/tips-source-conditions-20261104/scope-empty.png",
+      "sha256": "b21f87a5cead5bc20c9ae4f229594d2247a941e73a125a41e35cb06ad10f711c",
+      "baseline": "d0e115f8 + TIPOUT-SOURCE-SCOPE-20261104-01",
+      "capturedAt": "2026-11-04",
+      "source": "真实抽屉与规则编辑页背景，隔离功能分支",
+      "route": "http://127.0.0.1:65232/#/team/tips/rules/editor?mode=edit&id=94001",
+      "width": 1600,
+      "height": 1000,
+      "framing": "viewport-drawer"
     }
   ],
   "sourceHashes": {
     "src/team/tips/legacy/attendanceMock.js.txt": "ce2f9a0cfdffc4554c7610dbf5ec160aa4c6c5fcf6a332efa28fe37eff2f63a6",
-    "src/team/tips/legacy/common.js.txt": "10624802e7c9fb0b9483a5cf08db02afb307a460e22feb559abc20341c2f2a82",
+    "src/team/tips/legacy/common.js.txt": "75df91c1d757189dc8dde5c00e3e6de7a87899fc2d9956fdbbbbe83fb4cd0474",
     "src/team/tips/legacy/export.js.txt": "fa95160dc1208e5408135b2416ce5f86c1e83b2502e5741f79bb252af7d5d7e8",
     "src/team/tips/legacy/global-scope-filter.js.txt": "3b72276d2596ca40242765d1174dd1db0ad864c6698f681cba7c0cfceb74b2cb",
     "src/team/tips/legacy/orderTipStatus.js.txt": "55c28d55e85db28de213528f5b14100833f1f8b01135b2509015392580de36af",
@@ -655,18 +710,18 @@
     "src/team/tips/legacy/tipout-detail-rule-filter.js.txt": "36bd5627ecff093e020e8670774bd0ddee5860f84e7ca3396f980ca5a422465b",
     "src/team/tips/legacy/tipout-detail-snapshot.js.txt": "28cf373063a7330a6cc9fa01f2229304b105bcc804e906753e951dc98099ee78",
     "src/team/tips/legacy/tipout-employee-weights.js.txt": "2701eefec3c7e05be5b92ce138779443e03e5ac21e745917cc1012b721dbc511",
-    "src/team/tips/legacy/tipout-funding.js.txt": "65dd4bd7be081c7a95d6b643faee0acc4012a2b0a33c7c17cfa39143bdb4241f",
+    "src/team/tips/legacy/tipout-funding.js.txt": "3b61edbfe82b7d552bf9458a79b4c84c332c84df339061e6ccdb4ca95cb03604",
     "src/team/tips/legacy/tipout-manual-hours-store.js.txt": "832231d2e16613d1a05c7e0c64f65e848b3865d7dc03e2ddda982c2039d4df21",
     "src/team/tips/legacy/tipout-payout-record-ui.js.txt": "fce7100debdf877f824de831345f0d6b29a5a34ca4bd834c79dbb93358d87c66",
     "src/team/tips/legacy/tipout-payroll-bridge.js.txt": "d3f3b1933d95fc1d7a9df16e410b106d92e617e1b84d5bd0cfb1ec4f86366f84",
     "src/team/tips/legacy/tipout-roster-directory.js.txt": "4c374cdcb832682d634009fe46b0cf6ec38e46775ff37b13b3026fd60cb8adb5",
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "3ad00818e7312764055a58855cb10e478e13634ea97aa73c9cdff69bc4bd7972",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
-    "src/team/tips/programs/contributor-shares-editor.js.txt": "a4abf9846aa96e87ed6eec41345c74abc52265f1ac811510aa388f9f606b6080",
+    "src/team/tips/programs/contributor-shares-editor.js.txt": "5ee5cb5533458de4acc3fd74ddbc31ba4bf11d7607d78b74e492acc7e8ca7ee3",
     "src/team/tips/programs/details.js.txt": "0c68c7205878f229577ee0781f8276bc06690d442b20f2c10b5fd00784fe99d3",
     "src/team/tips/programs/distribution.js.txt": "5a7f53c63af7c2ee14b6d02294f3435db8b79cac6737d982b9c0314cdc3c1730",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
-    "src/team/tips/programs/rule-editor.js.txt": "2bebe96ac6784bfd16f9bc9e58e4e421754848da5ec0d591db18c0a08537958a",
+    "src/team/tips/programs/rule-editor.js.txt": "da321c64861ed6ba1b6db2c8de4258e4d9ab03e3cd27b1e14333e60c486210f9",
     "src/team/tips/programs/rules.js.txt": "8380a58f4724f98a7511ee0a77847cbdb64a54a8dba68763e51bc1ff0fd9d5db",
     "src/team/tips/programs/summary-auto-allocation.js.txt": "3d9f43297a7977ff1cc064d31c7085d705e4c881707860160c96db92d7a0a36e",
     "src/team/tips/templates/details.html": "aee2a4b54d81b480ac3b892d29a677f65cf00b14d7836604233e764c40142bd7",
@@ -1578,7 +1633,7 @@
       "page": "4. 当日小费分配明细",
       "section": "规则金额与贡献",
       "operation": "贡献员工",
-      "definition": "显示命中贡献角色的员工、承担比例及对应金额，不受接收资格限制。",
+      "definition": "显示命中本项角色或员工取值范围的员工、应扣与实际扣除；角色承担配置存在时显示承担比例。不受接收资格限制。",
       "line": 198,
       "interfaceImage": "assets/tips-live-20261027/funding-excess.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
@@ -2268,8 +2323,8 @@
       "page": "6. 新增／编辑分配规则",
       "section": "4. 小费贡献设置",
       "operation": "设置取值条件",
-      "definition": "确定贡献来源及员工范围；至少一个角色，小费收入贡献另需小费类型。",
-      "line": 394,
+      "definition": "打开本项独立抽屉，提交应用到当前规则草稿；必填条件不全时不能保存规则。",
+      "line": 317,
       "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3068,8 +3123,8 @@
       "page": "7. 弹框、抽屉及操作结果",
       "section": "7.16 来源／贡献取值条件",
       "operation": "角色",
-      "definition": "按归属角色过滤；贡献项至少一个角色。多值为同维并集，不决定接收组。",
-      "line": 715,
+      "definition": "默认全部，限定当前门店的角色集合；与日期、员工和状态取交集。",
+      "line": 88,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3158,7 +3213,7 @@
       "page": "7. 弹框、抽屉及操作结果",
       "section": "7.16 来源／贡献取值条件",
       "operation": "小费类型／订单小费状态",
-      "definition": "按来源选择允许类型或有／无等状态；小费收入贡献需要小费类型。",
+      "definition": "按来源选择允许类型或有／无等状态；小费收入贡献可不限定类型。",
       "line": 724,
       "interfaceImage": "assets/tips-current-scope-20261027/tips-source.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
@@ -3219,7 +3274,7 @@
       "section": "7.17 导出与邮件",
       "operation": "CSV",
       "definition": "下载当前视角、门店、合法日期和有效筛选下的数据，日期保留完整信息。",
-      "line": 773,
+      "line": 820,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3229,7 +3284,7 @@
       "section": "7.17 导出与邮件",
       "operation": "PDF",
       "definition": "日期／员工汇总优先使用jsPDF生成下载，加载或生成失败转浏览器打印预览；员工每日页直接打开打印窗口，由用户另存PDF。弹窗被拦截时提示；不修改账本。",
-      "line": 774,
+      "line": 821,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3239,7 +3294,7 @@
       "section": "7.17 导出与邮件",
       "operation": "邮箱地址",
       "definition": "必填，多个地址用英文逗号分隔，逐个校验格式。",
-      "line": 775,
+      "line": 822,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3249,7 +3304,7 @@
       "section": "7.17 导出与邮件",
       "operation": "导出格式",
       "definition": "PDF或CSV单选，默认PDF。",
-      "line": 776,
+      "line": 823,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3259,7 +3314,7 @@
       "section": "7.17 导出与邮件",
       "operation": "发送",
       "definition": "有可导出数据后关闭弹框并显示模拟发送反馈；没有实际邮件服务调用。",
-      "line": 777,
+      "line": 824,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3269,7 +3324,7 @@
       "section": "7.17 导出与邮件",
       "operation": "取消／关闭",
       "definition": "不发送，不修改查询或分配。",
-      "line": 778,
+      "line": 825,
       "interfaceImage": "assets/tips-current-scope-20261027/export-email.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3279,7 +3334,7 @@
       "section": "7.18 删除规则确认",
       "operation": "提示",
       "definition": "确定要删除该规则吗？此操作不可恢复。",
-      "line": 796,
+      "line": 843,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3289,7 +3344,7 @@
       "section": "7.18 删除规则确认",
       "operation": "删除",
       "definition": "删除当前规则配置，不删除已确认的日期快照。",
-      "line": 797,
+      "line": 844,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3299,7 +3354,7 @@
       "section": "7.18 删除规则确认",
       "operation": "取消／关闭",
       "definition": "保留规则，返回列表。",
-      "line": 798,
+      "line": 845,
       "interfaceImage": "assets/tips-current-scope-20261027/delete-rule.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3309,7 +3364,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "提示",
       "definition": "确定要取消吗？未保存的更改将丢失。",
-      "line": 809,
+      "line": 856,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3319,7 +3374,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "确定离开",
       "definition": "不保存输入，返回规则列表；已保存规则与日期快照不受影响。",
-      "line": 810,
+      "line": 857,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3329,7 +3384,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "取消",
       "definition": "关闭确认框，保留编辑内容。",
-      "line": 811,
+      "line": 858,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3339,7 +3394,7 @@
       "section": "7.19 规则编辑取消确认",
       "operation": "关闭",
       "definition": "与取消相同，不离开编辑页。",
-      "line": 812,
+      "line": 859,
       "interfaceImage": "assets/tips-current-scope-20261027/rule-cancel.png",
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3349,7 +3404,7 @@
       "section": "",
       "operation": "金额0／无结果—",
       "definition": "真实0显示0.00；尚未确认接收或最终金额显示—；计算异常显示原因，不用0掩盖。",
-      "line": 818,
+      "line": 865,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3359,7 +3414,7 @@
       "section": "",
       "operation": "负号与颜色",
       "definition": "贡献为扣除方向，但计算对象中贡献金额仍为非负数；接收方向为加项。",
-      "line": 819,
+      "line": 866,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3369,7 +3424,7 @@
       "section": "",
       "operation": "空结果",
       "definition": "筛选无匹配时显示空态，不清空来源、规则或确认快照。",
-      "line": 820,
+      "line": 867,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3379,7 +3434,7 @@
       "section": "",
       "operation": "日期上下文",
       "definition": "日期行展示MM/DD与星期，内部查询、快照和导出保留完整日期。",
-      "line": 821,
+      "line": 868,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3389,7 +3444,7 @@
       "section": "",
       "operation": "页面内确认",
       "definition": "保存、覆盖、取消、发放等弹框显示具体范围；确认前不写数据，运行中防重复。",
-      "line": 822,
+      "line": 869,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3399,7 +3454,7 @@
       "section": "",
       "operation": "焦点与关闭",
       "definition": "可关闭的说明／确认框支持返回触发位置；自动分配运行中不能关闭，有失败才显示重试。",
-      "line": 823,
+      "line": 870,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3409,7 +3464,7 @@
       "section": "",
       "operation": "整日操作范围",
       "definition": "规则筛选、角色收起只影响显示，保存与发放仍为当前门店日全部规则。",
-      "line": 824,
+      "line": 871,
       "interfaceImage": null,
       "outcomeCoverage": "当前界面见图；独立成功／失败／取消分支未逐项验收"
     },
@@ -3488,7 +3543,7 @@
       "page": "规则编辑／当日明细",
       "section": "贡献设置与身份标签",
       "operation": "员工贡献",
-      "definition": "展示本规则贡献条件，保存时至少一条；各项完成比例、角色及承担设置后才能保存。",
+      "definition": "展示本规则贡献条件，保存时至少一条；各项完成比例、角色或员工取值范围后才能保存；角色承担配置按其约束校验。",
       "line": 390,
       "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
@@ -3502,6 +3557,126 @@
       "line": 391,
       "interfaceImage": "assets/tips-contributors-20261103/employee-settings.png",
       "outcomeCoverage": "实际页面切换、保存及明细展示已核对；缺失快照及扣除封顶另由回归算例校验"
+    },
+    {
+      "id": "OP-283",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "贡献方销售额条件",
+      "definition": "使用销售额来源的营业额、区域、订单类型、菜单、订单小费状态、支付方式及营业时间控件。",
+      "line": 773,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-sales.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-284",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "贡献范围（角色／员工）",
+      "definition": "默认不添加角色或员工条件；必须添加其中一项，二者互斥。角色模式至少选一个角色；员工模式先筛选角色，再至少选一位员工。条件可以删除，空范围不能提交。",
+      "line": 774,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-sales.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-285",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "营业额候选",
+      "definition": "与小费池相同；Net Sales、Gross Sales、Payment Method。选择Payment Method时与菜单条件互斥。",
+      "line": 775,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-sales.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-286",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "贡献方小费条件",
+      "definition": "使用小费来源的区域、订单类型、订单时间段、小费类型及订单需包含商品控件；不展示营业额类型。",
+      "line": 785,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-287",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "小费类型候选",
+      "definition": "与小费池相同；单选全部、信用卡小费、现金小费、自动服务费或Gift Card Tips。不添加此条件表示不按类型过滤。",
+      "line": 786,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-288",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "已保存组合值",
+      "definition": "完整显示所选类型；未更换时提交保留全部类型，选择标准单一选项后替换。",
+      "line": 787,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-289",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "已保存扩展条件",
+      "definition": "抽屉明确展示其他已保存条件，提交时保留，不因共用控件而丢失。",
+      "line": 788,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-290",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "条件独立保存",
+      "definition": "每个小费池计算项和贡献项独立；多个同类贡献项互不覆盖。",
+      "line": 789,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-291",
+      "page": "规则编辑",
+      "section": "贡献取值条件",
+      "operation": "取消条件修改",
+      "definition": "取消、关闭或点击遮罩不更新当前项草稿；再次打开读取已提交的条件。",
+      "line": 790,
+      "interfaceImage": "assets/tips-source-conditions-20261104/contributor-tips.png",
+      "outcomeCoverage": "实际抽屉、角色校验、取消、项间隔离和保存回填已验证"
+    },
+    {
+      "id": "OP-292",
+      "page": "规则编辑",
+      "section": "贡献取值范围",
+      "operation": "新增条件提示",
+      "definition": "角色和员工条件必须选择其中一项，且不能同时添加；两者默认均不添加。",
+      "line": 753,
+      "interfaceImage": "assets/tips-source-conditions-20261104/scope-empty.png",
+      "outcomeCoverage": "角色／员工互斥、空范围校验、员工选择、保存回填与计算已验证"
+    },
+    {
+      "id": "OP-293",
+      "page": "规则编辑",
+      "section": "贡献取值范围",
+      "operation": "员工贡献取值",
+      "definition": "先按角色筛选员工，再选择具体员工；至少一人。按各员工自身基数乘贡献比例，受个人余额上限约束。",
+      "line": 754,
+      "interfaceImage": "assets/tips-source-conditions-20261104/scope-empty.png",
+      "outcomeCoverage": "角色／员工互斥、空范围校验、员工选择、保存回填与计算已验证"
+    },
+    {
+      "id": "OP-294",
+      "page": "规则编辑",
+      "section": "贡献取值范围",
+      "operation": "切换为员工范围",
+      "definition": "提交抽屉时清除本项角色承担配置；取消不修改范围或承担配置。",
+      "line": 755,
+      "interfaceImage": "assets/tips-source-conditions-20261104/scope-empty.png",
+      "outcomeCoverage": "角色／员工互斥、空范围校验、员工选择、保存回填与计算已验证"
     }
   ],
   "coverageStatus": "本次审计列出的缺失说明和主要弹框／失败重试／少扣画面已补齐；全量操作分支证据仍按清单登记",
