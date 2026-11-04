@@ -5,5 +5,7 @@ export function resolveMenuDocumentRepositoryMode(
   hostname: string,
 ): MenuDocumentRepositoryMode {
   if (isDevelopment) return "demo";
-  return hostname.toLowerCase().endsWith(".github.io") ? "demo" : "http";
+  const host = hostname.toLowerCase();
+  const isLoopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
+  return isLoopback || host.endsWith(".github.io") ? "demo" : "http";
 }

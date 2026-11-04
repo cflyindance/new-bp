@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "Static loopback preview selected HTTP repository because DEV=false and only github.io was recognized; API returned 404.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "not_required",
+  "changedFiles": [
+    "src/config/json-menu-document-repository-mode.ts",
+    "scripts/verify-json-menu-repository-mode.ts",
+    "docs/项目文档/M平台-菜单路由可视化配置设计方案.md",
+    "docs/项目文档/M平台-菜单路由业务规格说明书（研发交付版）.md",
+    "docs/项目文档/M平台-菜单路由需求文档（个人规范版）.md",
+    "docs/verification/m-platform-static-menu-20261104/analysis-scope.json",
+    "docs/verification/m-platform-static-menu-20261104/README.md",
+    "docs/verification/m-platform-static-menu-20261104/bug-result.json"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "Static loopback preview must use demo: localhost; actual http, expected demo"
+    ],
+    "greenEvidence": [
+      "verify-json-menu-repository-mode.ts passed with loopback, production, LAN and misleading-host cases",
+      "verify-json-menu-merchant-parity.ts passed with 29 roots and 277 nodes"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "User-visible menu configuration loading and shared published-menu consumer",
+    "evidence": [
+      "External Chrome port 5303 production static: login and nav-blueprint renders 277 tree items",
+      "Reload nav-blueprint: 277 nodes and zero load-failure headings",
+      "Service packages basic menu capability opens populated menu dialog",
+      "Main development preview 5197 also renders 277 items"
+    ]
+  },
+  "build": {
+    "required": true,
+    "status": "passed",
+    "reason": "Bug exists in production static preview; npm run build exit 0 including tsc and vite build, actual generated output served by static server"
+  },
+  "unverifiedScopes": [
+    "Existing standalone subscription Node test fails before assertions with window is not defined in both baseline main and feature; actual menu preview consumer verified in browser.",
+    "Kiosklite embedded snapshot not present; unrelated embedded page not validated.",
+    "Production API and CI not tested."
+  ]
+}

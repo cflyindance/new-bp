@@ -1,0 +1,118 @@
+{
+  "entryPoints": [
+    "src/config/json-menu-editor-ui.ts"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/config/json-menu-editor-store.ts",
+      "to": "src/config/json-menu-document-repository.ts",
+      "evidence": "load reads draft and published through selected repository"
+    },
+    {
+      "from": "src/config/json-menu-document-repository.ts",
+      "to": "src/config/json-menu-document-repository-mode.ts",
+      "evidence": "mode selection uses import.meta.env.DEV and location.hostname"
+    },
+    {
+      "from": "src/config/subscription-published-menu-tree.ts",
+      "to": "src/config/json-menu-document-repository.ts",
+      "evidence": "shared published document reader"
+    }
+  ],
+  "references": [
+    {
+      "path": "src/config/json-menu-document-repository-mode.ts",
+      "symbol": "resolveMenuDocumentRepositoryMode",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/json-menu-document-repository.ts",
+      "symbol": "getMenuDocumentRepository",
+      "relation": "direct_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/json-menu-editor-store.ts",
+      "symbol": "JsonMenuEditorStore.load",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/json-menu-editor-ui.ts",
+      "symbol": "菜单配置加载失败",
+      "relation": "entry_point",
+      "impact": "affected",
+      "deepRead": false
+    },
+    {
+      "path": "src/config/subscription-published-menu-tree.ts",
+      "symbol": "ensurePublishedSubscriptionMenuTree",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "scripts/verify-json-menu-repository-mode.ts",
+      "symbol": "static loopback cases",
+      "relation": "test",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "scripts/verify-json-menu-merchant-parity.ts",
+      "symbol": "default data and custom draft",
+      "relation": "test",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "scripts/verify-subscription-published-menu-tree.ts",
+      "symbol": "published menu adapter",
+      "relation": "test",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "deepReadPaths": [
+    "src/config/json-menu-document-repository-mode.ts",
+    "src/config/json-menu-document-repository.ts",
+    "src/config/json-menu-editor-store.ts",
+    "src/config/subscription-published-menu-tree.ts",
+    "scripts/verify-json-menu-repository-mode.ts",
+    "scripts/verify-json-menu-merchant-parity.ts",
+    "scripts/verify-subscription-published-menu-tree.ts"
+  ],
+  "sharedCallers": [
+    "src/config/json-menu-editor-store.ts",
+    "src/config/subscription-published-menu-tree.ts"
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "clean",
+    "evidence": [
+      "new isolated worktree baseline 2de36aed; status empty before test creation"
+    ]
+  },
+  "expansions": [
+    {
+      "question": "Which other pages consume the selected repository?",
+      "trigger": "shared_contract",
+      "addedPaths": [
+        "src/config/subscription-published-menu-tree.ts"
+      ],
+      "expectedEvidence": "enumerated getMenuDocumentRepository callers"
+    }
+  ],
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "wikiQueries": [
+    {
+      "question": "What selects the M menu document repository and handles local previews?",
+      "result": "wiki_bypass: wiki_not_configured"
+    }
+  ]
+}
