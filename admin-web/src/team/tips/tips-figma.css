@@ -76,3 +76,6 @@
 
 /* Rule configuration badges: keep text labels alongside semantic colors. */
 .allocation-dashboard .dashboard-rule-dot{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid transparent;border-radius:8px;line-height:20px;white-space:nowrap}.allocation-dashboard .dashboard-rule-dot.is-configured{color:#237804;background:#f6ffed;border-color:#b7eb8f}.allocation-dashboard .dashboard-rule-dot.is-unconfigured{color:#874d00;background:#fff7e6;border-color:#ffd591}
+
+/* Keep the update action aligned with the button row above the scope hint. */
+.team-tips-page.tipout-page-detail .tipout-figma-header .standalone-page-actions>.tipout-heading-actions{align-self:flex-start}

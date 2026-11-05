@@ -18,7 +18,7 @@
       "capturedAt": "2026-10-27T10:03:47",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#tipAllocationModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -31,7 +31,7 @@
       "capturedAt": "2026-10-27T10:03:49",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#tipAllocationModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -81,7 +81,7 @@
       "capturedAt": "2026-10-27T10:03:18",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#tipoutConfirmModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -106,7 +106,7 @@
       "capturedAt": "2026-10-27T10:02:58",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#tipDataUpdateModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -119,7 +119,7 @@
       "capturedAt": "2026-10-27T10:03:22",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#weightModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -132,7 +132,7 @@
       "capturedAt": "2026-10-27T10:03:51",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#emailModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -145,7 +145,7 @@
       "capturedAt": "2026-10-27T10:03:50",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#emailModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -158,7 +158,7 @@
       "capturedAt": "2026-10-27T10:02:59",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#formulaModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -167,7 +167,7 @@
       "capturedAt": "2026-10-27T10:36:15",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#employeeDetailHoursModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal",
       "file": "assets/tips-current-scope-20261027/hours-day.png",
       "sha256": "a03dfa65303b5a52f81d82451b2f85d1e5d1227812df1199cbe25e9eb86463bc",
@@ -180,7 +180,7 @@
       "capturedAt": "2026-10-27T10:36:14",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#employeeDetailHoursModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal",
       "file": "assets/tips-current-scope-20261027/hours-period.png",
       "sha256": "25dbf53532168e26cc6f135e82fbee82e8931301f888e8d3242fb8e435b3cf70",
@@ -193,7 +193,7 @@
       "capturedAt": "2026-10-27T10:35:52",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#allocationHoursDetailModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal",
       "file": "assets/tips-current-scope-20261027/hours-summary.png",
       "sha256": "d6ef55b5b9f67c0c629ad66c0b92659f2f6fc1d42c399a1a02b6c1d109c26409",
@@ -243,7 +243,7 @@
       "capturedAt": "2026-10-27T10:37:21",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#detailConfirmPayoutModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal",
       "file": "assets/tips-current-scope-20261027/payout-detail.png",
       "sha256": "b6d0d5874798d03a1799269c2ed1d55fce9d1f70d3ce689ce03eed9894167d2f",
@@ -256,7 +256,7 @@
       "capturedAt": "2026-10-27T10:37:03",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#confirmPayoutModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal",
       "file": "assets/tips-current-scope-20261027/payout-summary.png",
       "sha256": "0d4b0645a798dd3aa889732975cea051a35ce541ca29c1485b2b6fcb79f41072",
@@ -297,7 +297,7 @@
       "capturedAt": "2026-10-27T10:03:23",
       "source": "完整应用实际操作后的全视口截图；保留完整弹框、遮罩与入口背景，未修改可见UI",
       "selector": "#tipoutConfirmModal .modal",
-      "note": "参照重新确认分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
+      "note": "参照重新系统分配提示的截图形式；弹框是说明主体，遮罩背景仅定位入口",
       "framing": "viewport-modal"
     },
     {
@@ -689,7 +689,7 @@
     "src/team/tips/legacy/tipout-auto-allocation.js.txt": "0bba88fdcfcf9634df0bca316044180829b86caa860c8851ff1b8728982e84ab",
     "src/team/tips/legacy/tipout-business-status.js.txt": "f0a8d8b81bdafff427c67b4b33a12728c0e7b30985a90222c184325fd7bd836e",
     "src/team/tips/legacy/tipout-date-pool-view.js.txt": "c4acb5b0f1715994b5db682eff93ae6a4acd54e9142319a3feca4e600fa1fe91",
-    "src/team/tips/legacy/tipout-date-state-store.js.txt": "a1974e59d48fe5a708e899ea299f5df316a4fb6ac7b38ff7cb91af0e10a96ea8",
+    "src/team/tips/legacy/tipout-date-state-store.js.txt": "6d96bc6ea468ccd31d3e773a3965e6c748ecca24008be68eb28e4bf5d98c46a5",
     "src/team/tips/legacy/tipout-demo-rules.js.txt": "9677b26fb7441fd9f21715bda95c0b7e8ba42b17e814d272d1830bead4ec87b7",
     "src/team/tips/legacy/tipout-detail-manual-allocation.js.txt": "34e752b089eca62e0489b456af450cb398db112c716ed0bfa1080f1c9da1634a",
     "src/team/tips/legacy/tipout-detail-rule-filter.js.txt": "36bd5627ecff093e020e8670774bd0ddee5860f84e7ca3396f980ca5a422465b",
@@ -703,7 +703,7 @@
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "149ea96895594f1e2e8682e639d784be2f2d6a49813973cf9af364abf2021c03",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "3be64f314d5af2ef43e36d12afd7bfd783d3e9a91acf25101ed8fb05179403fa",
-    "src/team/tips/programs/details.js.txt": "505ed19d1794f27bf0a16ddc0cc2de7e6d40a67c6d7813c0e195662541bb075c",
+    "src/team/tips/programs/details.js.txt": "0043d01b9cfc308d05b32fde2f7fcf47dc80fc83f4f5d8096830e4559fc1d2a6",
     "src/team/tips/programs/distribution.js.txt": "f8346105d459a8d54600c6912b1eb126126bef184913bd254935655ff254ea47",
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
     "src/team/tips/programs/rule-editor.js.txt": "338e82c7adc62217a2952db1eacbe0ab4ff0bb947ec839bca1312b104604e3c1",
@@ -723,7 +723,7 @@
     "src/team/tips/tips-templates.ts": "3cb9e46bdaa34a8aa58d05fb3b7010a41b3e2aa1f88492bc11f4c8f2ceb47dfa",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "17109c18e41a5495380e7f250c8478e82125746b9256c311ae4196339baa3622",
     "src/team/tips/legacy/tipout-dashboard-model.js.txt": "e1c956b3b3fa12272945b76e11a2a43d808e11662c2a7a55537b093e286af0ee",
-    "src/team/tips/tips-figma.css": "d7724054c48be4ddad186bbc287d0ca62de4bcacf16a486e2d5887d18012b13a",
+    "src/team/tips/tips-figma.css": "eead60180343897178971edd0e591c2d9d3ec67c597173d12d80e9f1b257c581",
     "src/team/tips-page.ts": "0cac2364d9ce4e09f9a18d20922a0d87d220ff3bb342674948cd2cc86724496d"
   },
   "operationCoverage": [
@@ -2241,7 +2241,7 @@
       "id": "OP-152",
       "page": "5. 当日小费分配明细",
       "section": "页面操作",
-      "operation": "重新确认分配",
+      "operation": "重新系统分配",
       "definition": "已有分配时按系统规则重新生成；人工结果须确认覆盖。",
       "line": 343,
       "interfaceImage": "assets/tips-current-scope-20261027/contribution-shortage.png",
@@ -3260,7 +3260,7 @@
     {
       "id": "OP-254",
       "page": "8. 弹框、抽屉及操作结果",
-      "section": "8.8 重新确认分配提示",
+      "section": "8.8 重新系统分配提示",
       "operation": "提示",
       "definition": "已手动调整过小费分配数据，将按照系统小费规则进行重新分配，分配后会覆盖手动调整的数据。",
       "line": 704,
@@ -3270,8 +3270,8 @@
     {
       "id": "OP-255",
       "page": "8. 弹框、抽屉及操作结果",
-      "section": "8.8 重新确认分配提示",
-      "operation": "重新确认分配",
+      "section": "8.8 重新系统分配提示",
+      "operation": "重新系统分配",
       "definition": "重建系统快照，替换手调结果；不重复叠加扣款。",
       "line": 705,
       "interfaceImage": "assets/tips-live-20261027/reallocate-warning.png",
@@ -3280,7 +3280,7 @@
     {
       "id": "OP-256",
       "page": "8. 弹框、抽屉及操作结果",
-      "section": "8.8 重新确认分配提示",
+      "section": "8.8 重新系统分配提示",
       "operation": "取消／关闭",
       "definition": "保留已有正式结果及页面草稿。",
       "line": 706,

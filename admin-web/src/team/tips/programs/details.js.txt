@@ -500,7 +500,7 @@ var ALLOC_KEY = 'tipout_allocated';
       button.hidden = !visible;
       button.style.display = visible ? '' : 'none';
       button.disabled = detailPayoutSubmitting || hasUnconfirmedUpdate;
-      button.title = hasUnconfirmedUpdate ? '请先重新确认分配后再确认发放' : '';
+      button.title = hasUnconfirmedUpdate ? '请先重新系统分配后再确认发放' : '';
     }
 
     function setDetailPayoutModalSubmitting(submitting) {
@@ -546,7 +546,7 @@ var ALLOC_KEY = 'tipout_allocated';
       try {
         var state = TipOutDateState.inspect(scope.store, scope.dateKey);
         if (state.allocationStatus !== 'allocated' || state.payoutStatus !== 'pending' || state.locked) throw new Error('当前日期无法确认发放');
-        if (TipOutDateState.hasUnconfirmedUpdate(scope.store, scope.dateKey)) throw new Error('请先重新确认分配后再确认发放');
+        if (TipOutDateState.hasUnconfirmedUpdate(scope.store, scope.dateKey)) throw new Error('请先重新系统分配后再确认发放');
         var snapshot = await TipOutDateState.ensureSnapshot(scope.store, scope.dateKey);
         var intentVersion = ++detailPayoutIntentVersion;
         detailPayoutDraft = {
@@ -2100,7 +2100,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(storeInput.value, dateInput.value);
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(storeInput.value) : [];
       var business = getDetailBusinessStatus(dateInput.value, rules);
-      button.textContent = allocated ? '重新确认分配' : '确认分配';
+      button.textContent = allocated ? '重新系统分配' : '确认分配';
       var locked = TipOutDateState.inspect(storeInput.value, dateInput.value).locked;
       button.disabled = detailAllocationSubmitting || !business.allocatable || locked;
       var saveButton = document.getElementById('saveCurrentDetailAllocationBtn');
@@ -2110,7 +2110,7 @@ var ALLOC_KEY = 'tipout_allocated';
         saveButton.style.opacity = saveButton.disabled || !detailManualDirty ? '.45' : '';
       }
       var hint = document.getElementById('detailAllocationScopeHint');
-      if (hint && detailDirty) hint.textContent = '存在未保存修改，可保存当前分配，或按系统规则重新确认分配';
+      if (hint && detailDirty) hint.textContent = '存在未保存修改，可保存当前分配，或按系统规则重新系统分配';
       button.title = business.allocatable ? '' : '当天未营业，无法进行小费分配';
       syncDetailPayoutAction();
     }
@@ -2163,7 +2163,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var snapshot = options.snapshot || collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
       snapshot.allocationSource = options.manual ? 'manual' : 'system';
       if (!TipOutDetailRuleFilter.sameRuleSet(snapshot.pools, options.rules)) {
-        throw new Error('规则数据已变化，请刷新页面后重新确认分配');
+        throw new Error('规则数据已变化，请刷新页面后重新系统分配');
       }
       var validationError = TipOutAllocationResults.validate(snapshot);
       if (validationError) throw new Error(validationError);
@@ -2225,14 +2225,14 @@ var ALLOC_KEY = 'tipout_allocated';
       if (detailAllocationDialogPending) return Promise.resolve(false);
       var modal = document.getElementById('detailAllocationDialog');
       var scope = getDetailPayoutScope();
-      var titles = { notice: '提示', save: '保存当前分配？', reallocate: '重新确认分配？', leave: '放弃未保存修改？' };
+      var titles = { notice: '提示', save: '保存当前分配？', reallocate: '重新系统分配？', leave: '放弃未保存修改？' };
       document.getElementById('detailAllocationDialogTitle').textContent = titles[kind] || '提示';
       document.getElementById('detailAllocationDialogMessage').textContent = message;
       var cancelButton = document.getElementById('cancelDetailAllocationDialogBtn');
       cancelButton.hidden = kind === 'notice';
       cancelButton.textContent = kind === 'leave' ? '继续编辑' : '取消';
       var confirmButton = document.getElementById('confirmDetailAllocationDialogBtn');
-      confirmButton.textContent = kind === 'leave' ? '放弃修改' : (kind === 'notice' ? '知道了' : (kind === 'save' ? '保存当前分配' : '重新确认分配'));
+      confirmButton.textContent = kind === 'leave' ? '放弃修改' : (kind === 'notice' ? '知道了' : (kind === 'save' ? '保存当前分配' : '重新系统分配'));
       return new Promise(function(resolve) {
         detailAllocationDialogPending = { resolve: resolve, scope: scope, baseHash: detailBaseHash,
           trigger: kind === 'leave' ? document.activeElement : document.getElementById(kind === 'reallocate' ? 'confirmDetailAllocationBtn' : 'saveCurrentDetailAllocationBtn') };
