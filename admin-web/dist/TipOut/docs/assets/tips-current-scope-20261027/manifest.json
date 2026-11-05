@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-STORE-QUICK-DATES-20261105-01",
-  "baseline": "d41239c7",
+  "documentId": "TIPOUT-QUICK-DATE-BLUE-20261105-01",
+  "baseline": "d49705da",
   "versions": {
-    "PRD_产品需求文档.md": "V4.64",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.64",
-    "小费管理需求文档（个人规范版）.md": "V2.62"
+    "PRD_产品需求文档.md": "V4.65",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.65",
+    "小费管理需求文档（个人规范版）.md": "V2.63"
   },
   "scope": "当前产品交付范围",
   "images": [
@@ -586,17 +586,6 @@
       "framing": "viewport-page"
     },
     {
-      "file": "assets/tips-figma-ui-20261104/dashboard.png",
-      "sha256": "3bac7afcb961bf8e08856b8fde414220e82aa74f93d3758d29611f4f003eb565",
-      "baseline": "79e13f27 + TIPOUT-FIGMA-UI-20261104-01",
-      "route": "http://127.0.0.1:65239/#/team/tips/distribution",
-      "capturedAt": "2026-11-04",
-      "width": 1440,
-      "height": 1000,
-      "source": "Chrome隔离功能分支实际页面；完整视口，未改截图中的可见UI或业务数据",
-      "framing": "viewport-page"
-    },
-    {
       "file": "assets/tips-figma-ui-20261104/details.png",
       "sha256": "267df8460d2593523f2c9c4f843756e6e52e482be3ee5b688b64a92b995b0252",
       "baseline": "79e13f27 + TIPOUT-FIGMA-UI-20261104-01",
@@ -652,25 +641,36 @@
       "framing": "viewport-modal"
     },
     {
-      "file": "assets/tips-store-quick-dates-20261105/date.png",
-      "sha256": "81c0d68aa7dae90737d8d0aa069a99b911fe40056b2f2984f9a5311c9a3dbe07",
-      "baseline": "d41239c7 + TIPOUT-STORE-QUICK-DATES-20261105-01",
-      "route": "http://127.0.0.1:65241/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-11-02&endDate=2026-11-05",
+      "file": "assets/tips-quick-date-blue-20261105/dashboard.png",
+      "sha256": "90bf1775ce92778d22c4220fa4b8c08ad4e89ca82cf6c5a3bb836dc216be2591",
+      "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+      "route": "http://127.0.0.1:65242/#/team/tips/distribution?startDate=2026-10-26&endDate=2026-11-01",
       "capturedAt": "2026-11-05",
       "width": 1440,
       "height": 1000,
-      "source": "隔离Chrome正常登录后的完整实际页面，未改截图中的UI或金额",
+      "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
       "framing": "viewport-page"
     },
     {
-      "file": "assets/tips-store-quick-dates-20261105/employee.png",
-      "sha256": "606169b4c1eda35baa39f0af319ceefb4396a3383f019d970c766e030720b1d4",
-      "baseline": "d41239c7 + TIPOUT-STORE-QUICK-DATES-20261105-01",
-      "route": "http://127.0.0.1:65241/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-11-02&endDate=2026-11-05&view=employee",
+      "file": "assets/tips-quick-date-blue-20261105/date.png",
+      "sha256": "4a1bdf95ef6638a3c6e199882e54600fb49b116a3a33420fa9e7e85be31bc186",
+      "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+      "route": "http://127.0.0.1:65242/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-11-01&endDate=2026-11-05",
       "capturedAt": "2026-11-05",
       "width": 1440,
       "height": 1000,
-      "source": "隔离Chrome正常登录后的完整实际页面，未改截图中的UI或金额",
+      "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
+      "framing": "viewport-page"
+    },
+    {
+      "file": "assets/tips-quick-date-blue-20261105/employee.png",
+      "sha256": "82cb75dcb629bbc802a49e4a560b520dbcd085ed342ee072b4ac3fcb9e6fc21e",
+      "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+      "route": "http://127.0.0.1:65242/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-10-26&endDate=2026-11-01&view=employee",
+      "capturedAt": "2026-11-05",
+      "width": 1440,
+      "height": 1000,
+      "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
       "framing": "viewport-page"
     }
   ],
@@ -719,11 +719,11 @@
     "src/team/tips/tips-legacy-runtime.ts": "9a4e066c59ff06901f14b7f8f5492cfae7563a83cff4d9f0fbedd6e5ebb96b95",
     "src/team/tips/tips-navigation.ts": "17af55fd98c788801dc6c1c817af6c3f3d25529bcc753230d4152aafbec0195e",
     "src/team/tips/tips-page.css": "75814c0994f6f903dee9d609458b4ccdf276f1a50b0db442830f1f993dd7807e",
-    "src/team/tips/tips-shell.css": "e20b96be5644da55824b8fca8d16351fa23ecb8443ef000c44f72f2d053ff074",
+    "src/team/tips/tips-shell.css": "d546c9818a10560c98e1c5ca120758376d58ecbd547989687068cf095c047d3b",
     "src/team/tips/tips-templates.ts": "3cb9e46bdaa34a8aa58d05fb3b7010a41b3e2aa1f88492bc11f4c8f2ceb47dfa",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "17109c18e41a5495380e7f250c8478e82125746b9256c311ae4196339baa3622",
     "src/team/tips/legacy/tipout-dashboard-model.js.txt": "e1c956b3b3fa12272945b76e11a2a43d808e11662c2a7a55537b093e286af0ee",
-    "src/team/tips/tips-figma.css": "6bcc01c855e65844d311c30650eef08171be63834f2297ea6bd0a5ca480737ec",
+    "src/team/tips/tips-figma.css": "1e7b3f4fc3e859d520c2f442351223f296ab2caaefbb2ea07e91d8a216fae9b5",
     "src/team/tips-page.ts": "0cac2364d9ce4e09f9a18d20922a0d87d220ff3bb342674948cd2cc86724496d"
   },
   "operationCoverage": [
@@ -1054,7 +1054,7 @@
       "operation": "门店",
       "definition": "标题下展示进入时所选门店，限定规则、员工和来源，不跨门店合并同名员工。",
       "line": 118,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1064,7 +1064,7 @@
       "operation": "返回看板",
       "definition": "标题左侧返回并保留当前日期范围，不撤销已保存结果。",
       "line": 119,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1074,7 +1074,7 @@
       "operation": "重置",
       "definition": "清空状态与员工筛选，将日期恢复本周，仅刷新查询。",
       "line": 120,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1084,7 +1084,7 @@
       "operation": "本周",
       "definition": "浏览器本地日期的周一至今天，包含首尾；同步起止日期并刷新当前视图，仅查询、不启动分配。",
       "line": 121,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1094,7 +1094,7 @@
       "operation": "上周",
       "definition": "上周一至上周日，包含首尾；同步起止日期并刷新当前视图，仅查询、不启动分配。",
       "line": 122,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1104,7 +1104,7 @@
       "operation": "本月",
       "definition": "当月1日至今天，包含首尾；同步起止日期并刷新当前视图，仅查询、不启动分配。",
       "line": 123,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1112,9 +1112,9 @@
       "page": "2. 日期分配汇总",
       "section": "查询条件",
       "operation": "快捷项选中态",
-      "definition": "点击的快捷项高亮；手动修改日期清除高亮。角色、员工与状态条件保留，URL与明细返回上下文同步日期；切换视图保留日期。",
+      "definition": "点击的快捷项采用蓝底白字（背景#1677ff、文字#ffffff），未选中项为灰底；手动修改日期清除高亮。角色、员工与状态条件保留，URL与明细返回上下文同步日期；切换视图保留日期。",
       "line": 124,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1124,7 +1124,7 @@
       "operation": "开始日期",
       "definition": "必填完整日期；不得晚于结束日。无效、空值或倒置时标错，保留上次有效结果，不启动分配。",
       "line": 125,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1134,7 +1134,7 @@
       "operation": "结束日期",
       "definition": "必填，默认今天。合法修改后只刷新查询，不启动自动任务。",
       "line": 126,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1144,7 +1144,7 @@
       "operation": "日期分配汇总页签",
       "definition": "切换日期任务视角，保留共用门店日期，不重分配。",
       "line": 127,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1154,7 +1154,7 @@
       "operation": "员工分配汇总页签",
       "definition": "切换角色和员工视角，保留共用门店日期，不重分配。",
       "line": 128,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1164,7 +1164,7 @@
       "operation": "营业状态",
       "definition": "全部／正常营业／未营业，与其他条件取交集。",
       "line": 129,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1174,7 +1174,7 @@
       "operation": "分配状态",
       "definition": "全部／已分配／未分配，筛选日期行及对应概览。",
       "line": 130,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1184,7 +1184,7 @@
       "operation": "发放状态",
       "definition": "全部／待发放／已发放／无需发放，不代替分配状态。",
       "line": 131,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1194,7 +1194,7 @@
       "operation": "日期排序",
       "definition": "点击日期表头切换倒序与顺序，不改变执行规则和金额。",
       "line": 132,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1204,7 +1204,7 @@
       "operation": "更多操作",
       "definition": "日期行展开查看明细、符合条件的分配及确认已发放；后果分别见各操作定义。",
       "line": 133,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1214,7 +1214,7 @@
       "operation": "原始总小费",
       "definition": "当前可见日期原始小费合计。",
       "line": 139,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1224,7 +1224,7 @@
       "operation": "入池总金额",
       "definition": "未确认日期采用预计可分配池；已确认日期采用快照池金额。",
       "line": 140,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1234,7 +1234,7 @@
       "operation": "已分配总额",
       "definition": "当前可见日期的正式接收金额合计，未确认日计0。",
       "line": 141,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1244,7 +1244,7 @@
       "operation": "未分配总额",
       "definition": "未确认日等于预计入池；确认日等于池余额，按可见日期求和。",
       "line": 142,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1254,7 +1254,7 @@
       "operation": "日期",
       "definition": "MM/DD＋星期几；内部保留完整年月日。",
       "line": 148,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1264,7 +1264,7 @@
       "operation": "营业状态",
       "definition": "正常营业或未营业。",
       "line": 149,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1274,7 +1274,7 @@
       "operation": "分配状态",
       "definition": "已分配、未分配或无需分配。",
       "line": 150,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1284,7 +1284,7 @@
       "operation": "发放状态",
       "definition": "待发放、已发放或无需发放。",
       "line": 151,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1294,7 +1294,7 @@
       "operation": "原始总小费",
       "definition": "当日原始金额；未营业为0。",
       "line": 152,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1304,7 +1304,7 @@
       "operation": "入池总金额",
       "definition": "当日预计或快照可分配池金额。",
       "line": 153,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1314,7 +1314,7 @@
       "operation": "已分配总额",
       "definition": "当日确认接收额；确认前为0。",
       "line": 154,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1324,7 +1324,7 @@
       "operation": "未分配总额",
       "definition": "当日尚未分给员工的池金额。",
       "line": 155,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1334,7 +1334,7 @@
       "operation": "查看明细",
       "definition": "携带门店、日期打开当日明细；返回保留查询上下文。未营业日点击提示原因并留在汇总。",
       "line": 156,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1344,7 +1344,7 @@
       "operation": "分配",
       "definition": "符合行内条件时显示，执行整日系统分配。",
       "line": 157,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1354,7 +1354,7 @@
       "operation": "确认已发放",
       "definition": "符合发放条件时显示，打开整日登记确认。",
       "line": 158,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1364,7 +1364,7 @@
       "operation": "导出结果",
       "definition": "选择CSV、PDF或邮箱；使用当前视角和有效筛选。",
       "line": 164,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1374,7 +1374,7 @@
       "operation": "批量分配小费／重新分配小费",
       "definition": "打开主动分配日期范围，不等同无覆盖的自动补分配。",
       "line": 165,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/date.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/date.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1384,7 +1384,7 @@
       "operation": "本周",
       "definition": "共用第2节的本周定义与查询行为，刷新员工结果与统计。",
       "line": 179,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1394,7 +1394,7 @@
       "operation": "上周",
       "definition": "共用第2节的上周定义与查询行为，刷新员工结果与统计。",
       "line": 180,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1404,7 +1404,7 @@
       "operation": "本月",
       "definition": "共用第2节的本月定义与查询行为，刷新员工结果与统计。",
       "line": 181,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1414,7 +1414,7 @@
       "operation": "角色",
       "definition": "默认全部，限定当前门店的角色集合；与日期、员工和状态取交集。",
       "line": 182,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1424,7 +1424,7 @@
       "operation": "员工",
       "definition": "当前角色下的有效员工多选，按稳定ID匹配；全选或全部取消均表示全部员工。切换角色后剔除不在候选集中的选择；有效选择为空时恢复全部。",
       "line": 183,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1434,7 +1434,7 @@
       "operation": "分配状态",
       "definition": "已完成／部分待分配／待分配等周期条件，约束员工列表。",
       "line": 184,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1444,7 +1444,7 @@
       "operation": "贡献金额旁“？”",
       "definition": "以“贡献金额明细”为标题，展示“已分配日期”“待分配日期（预计）”和“合计”；预计失败说明无法试算，不把部分数显示成完整总数。",
       "line": 185,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1454,7 +1454,7 @@
       "operation": "员工",
       "definition": "姓名、身份信息；可按姓名排序，同名不同ID不合并。",
       "line": 195,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1464,7 +1464,7 @@
       "operation": "角色",
       "definition": "当前参与的角色展示，不作为唯一身份键。",
       "line": 196,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1474,7 +1474,7 @@
       "operation": "打卡总工时",
       "definition": "周期原始打卡工时累计，不受小费人工工时调整影响；无有效记录显示—。可排序，缺失排末。",
       "line": 197,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1484,7 +1484,7 @@
       "operation": "分配计入工时",
       "definition": "按每条工时规则逐日累计，不跨不同规则相加；单一口径显示小时，不同口径显示可点击摘要。",
       "line": 198,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1494,7 +1494,7 @@
       "operation": "分配前总小费",
       "definition": "周期全部有效日原始小费，包含未分配日。",
       "line": 199,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1504,7 +1504,7 @@
       "operation": "贡献入池总额",
       "definition": "已确认贡献＋未确认预计贡献；问号以“贡献金额明细”为标题，展示“已分配日期”“待分配日期（预计）”“合计”；提示“待分配金额为试算结果，以实际分配结果为准。”",
       "line": 200,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1514,7 +1514,7 @@
       "operation": "从池分得总额",
       "definition": "仅累计已确认接收。",
       "line": 201,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1524,7 +1524,7 @@
       "operation": "分配后总小费",
       "definition": "仅累计已确认结果，默认按此倒序；无有效确认显示—。",
       "line": 202,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1534,7 +1534,7 @@
       "operation": "分配状态",
       "definition": "按员工适用日的确认情况显示已完成／部分待分配／待分配。",
       "line": 203,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1544,7 +1544,7 @@
       "operation": "员工明细入口",
       "definition": "携带员工ID、门店、周期和返回上下文，打开每日明细。",
       "line": 204,
-      "interfaceImage": "assets/tips-store-quick-dates-20261105/employee.png",
+      "interfaceImage": "assets/tips-quick-date-blue-20261105/employee.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
