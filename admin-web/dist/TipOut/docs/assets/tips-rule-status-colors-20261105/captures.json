@@ -1,0 +1,13 @@
+[
+  {
+    "file": "assets/tips-rule-status-colors-20261105/dashboard.png",
+    "sha256": "128f1e5341f23c6733d153be22b17fd79eacbae93d055758ddeafba8cafa491a",
+    "baseline": "214d6638 + TIPOUT-RULE-STATUS-COLORS-20261105-01",
+    "route": "http://127.0.0.1:65246/#/team/tips/distribution",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常操作后的完整真实看板",
+    "framing": "viewport-page"
+  }
+]

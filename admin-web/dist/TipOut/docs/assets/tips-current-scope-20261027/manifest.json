@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-UNCONFIGURED-STATUS-20261105-01",
-  "baseline": "a7f36067",
+  "documentId": "TIPOUT-RULE-STATUS-COLORS-20261105-01",
+  "baseline": "214d6638",
   "versions": {
-    "PRD_产品需求文档.md": "V4.68",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.68",
-    "小费管理需求文档（个人规范版）.md": "V2.66"
+    "PRD_产品需求文档.md": "V4.69",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.69",
+    "小费管理需求文档（个人规范版）.md": "V2.67"
   },
   "scope": "当前产品交付范围",
   "images": [
@@ -663,10 +663,10 @@
       "framing": "viewport-page"
     },
     {
-      "file": "assets/tips-unconfigured-status-20261105/dashboard.png",
-      "sha256": "ceec65199a3fb627d2d5c78ef7225ee7f3adf2ec719f15739a10c4d59055c97d",
-      "baseline": "a7f36067 + TIPOUT-UNCONFIGURED-STATUS-20261105-01",
-      "route": "http://127.0.0.1:65245/#/team/tips/distribution",
+      "file": "assets/tips-rule-status-colors-20261105/dashboard.png",
+      "sha256": "128f1e5341f23c6733d153be22b17fd79eacbae93d055758ddeafba8cafa491a",
+      "baseline": "214d6638 + TIPOUT-RULE-STATUS-COLORS-20261105-01",
+      "route": "http://127.0.0.1:65246/#/team/tips/distribution",
       "capturedAt": "2026-11-05",
       "width": 1440,
       "height": 1000,
@@ -708,7 +708,7 @@
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
     "src/team/tips/programs/rule-editor.js.txt": "338e82c7adc62217a2952db1eacbe0ab4ff0bb947ec839bca1312b104604e3c1",
     "src/team/tips/programs/rules.js.txt": "a80bf39b7bd9283eb99107141d55ead29db2f7a7f83a455f67a4dfa5b0833db1",
-    "src/team/tips/programs/summary-auto-allocation.js.txt": "1e2dadeb3d0eea1f4d549690ea6f53cc4b7968352de63ebab44b39a5cae79857",
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "4b198c371a361af0ff2c0dbb65766da51f4f7644f2847bb3f1328c0d707bf5cd",
     "src/team/tips/templates/details.html": "8d211c9b99821eadc55ef48259085ddcd32a50ad6ca7ec6731062ce629fe9252",
     "src/team/tips/templates/distribution.html": "5691b78aa2bc585e3227551de68f4b716f512e81f1eddad99ba970deb5850213",
     "src/team/tips/templates/employee-reconciliation.html": "538919b83975c85e3f05bd5bd665cb240d8b83dd83cab17b4d2a283b8d04d572",
@@ -723,7 +723,7 @@
     "src/team/tips/tips-templates.ts": "3cb9e46bdaa34a8aa58d05fb3b7010a41b3e2aa1f88492bc11f4c8f2ceb47dfa",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "17109c18e41a5495380e7f250c8478e82125746b9256c311ae4196339baa3622",
     "src/team/tips/legacy/tipout-dashboard-model.js.txt": "e1c956b3b3fa12272945b76e11a2a43d808e11662c2a7a55537b093e286af0ee",
-    "src/team/tips/tips-figma.css": "1e7b3f4fc3e859d520c2f442351223f296ab2caaefbb2ea07e91d8a216fae9b5",
+    "src/team/tips/tips-figma.css": "d7724054c48be4ddad186bbc287d0ca62de4bcacf16a486e2d5887d18012b13a",
     "src/team/tips-page.ts": "0cac2364d9ce4e09f9a18d20922a0d87d220ff3bb342674948cd2cc86724496d"
   },
   "operationCoverage": [
@@ -1012,7 +1012,7 @@
       "page": "1. 小费分配看板",
       "section": "完成状态与门店列表",
       "operation": "规则配置状态",
-      "definition": "已配置／未配置，由门店适用规则数量判定。",
+      "definition": "已配置使用绿色文字与浅绿底；未配置使用橙色文字与浅橙底。均保留文字和状态圆点，由门店适用规则数量判定，不替代分配状态。",
       "line": 99,
       "interfaceImage": "assets/tips-dashboard-20261104/dashboard-empty.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
