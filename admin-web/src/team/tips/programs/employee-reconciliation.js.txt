@@ -550,7 +550,19 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function returnToEmployeeReconciliation() {
-      window.location.href = 'index.html?view=employee';
+      var context = new URLSearchParams(window.location.search);
+      var snapshot = employeeDetailViewState && employeeDetailViewState.snapshot;
+      var store = context.get('store') || (snapshot && snapshot.store) || '';
+      var entry = history.state && history.state.menusifuTeamTips;
+      var source = entry && typeof entry.summaryHref === 'string' && entry.summaryHref.indexOf('/team/tips/distribution?') === 0
+        ? new URLSearchParams(entry.summaryHref.split('?')[1]) : new URLSearchParams();
+      if (source.get('store') !== store) source = new URLSearchParams();
+      source.set('screen', 'store');
+      source.set('view', 'employee');
+      source.set('store', store);
+      if (!source.get('startDate')) source.set('startDate', context.get('start') || (snapshot && snapshot.dateStart) || '');
+      if (!source.get('endDate')) source.set('endDate', context.get('end') || (snapshot && snapshot.dateEnd) || '');
+      window.location.href = 'index.html?' + source.toString();
     }
 
     function initializeEmployeeReconciliationDetail() {
