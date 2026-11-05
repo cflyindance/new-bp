@@ -1,0 +1,13 @@
+[
+  {
+    "file": "assets/tips-unconfigured-status-20261105/dashboard.png",
+    "sha256": "ceec65199a3fb627d2d5c78ef7225ee7f3adf2ec719f15739a10c4d59055c97d",
+    "baseline": "a7f36067 + TIPOUT-UNCONFIGURED-STATUS-20261105-01",
+    "route": "http://127.0.0.1:65245/#/team/tips/distribution",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常操作后的完整真实看板",
+    "framing": "viewport-page"
+  }
+]
