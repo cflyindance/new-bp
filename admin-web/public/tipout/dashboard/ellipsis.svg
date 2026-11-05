@@ -1,15 +1,9 @@
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <circle cx="12" cy="12" r="1" />
-  <circle cx="19" cy="12" r="1" />
-  <circle cx="5" cy="12" r="1" />
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon Start">
+<g id="Vector">
+<path d="M3.33333 9.13333C3.95926 9.13333 4.46667 8.62592 4.46667 8C4.46667 7.37408 3.95926 6.86667 3.33333 6.86667C2.70741 6.86667 2.2 7.37408 2.2 8C2.2 8.62592 2.70741 9.13333 3.33333 9.13333Z" fill="#1677FF"/>
+<path d="M8 9.13333C8.62592 9.13333 9.13333 8.62592 9.13333 8C9.13333 7.37408 8.62592 6.86667 8 6.86667C7.37408 6.86667 6.86667 7.37408 6.86667 8C6.86667 8.62592 7.37408 9.13333 8 9.13333Z" fill="#1677FF"/>
+<path d="M12.6667 9.13333C13.2926 9.13333 13.8 8.62592 13.8 8C13.8 7.37408 13.2926 6.86667 12.6667 6.86667C12.0407 6.86667 11.5333 7.37408 11.5333 8C11.5333 8.62592 12.0407 9.13333 12.6667 9.13333Z" fill="#1677FF"/>
+</g>
+</g>
 </svg>

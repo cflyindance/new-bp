@@ -147,15 +147,7 @@
 </style>
 <section class="team-tips-page tipout-fidelity tipout-page-detail" data-team-tips-view="details">
 <div class="content-area">
-        <div class="tipout-page-heading tipout-page-heading--with-back">
-          <button type="button" class="btn" data-native-onclick="returnToSummary()">返回汇总</button>
-          <div>
-            <h1>小费分配明细</h1>
-          </div>
-          <div class="tipout-heading-actions">
-            <button type="button" id="updateTipDataBtn" class="btn" data-native-onclick="updateTipData()">更新小费数据</button>
-          </div>
-        </div>
+        <!--TIPOUT_STANDALONE_HEADER-->
 
         <div class="tipout-detail-context-bar">
           <div class="filter-field tipout-detail-store-field">
@@ -195,14 +187,7 @@
           <main id="detailMain"><div id="detailRulesContainer"></div></main>
         </div>
 
-        <div class="tipout-sticky-actions" id="detailActionBar">
-          <span id="detailAllocationScopeHint">确认后将生成当天正式小费分配结果</span>
-          <div>
-            <button id="confirmDetailPayoutBtn" class="btn" hidden data-native-onclick="openDetailPayoutModal(event)">确认已发放</button>
-            <button id="confirmDetailAllocationBtn" class="btn btn-primary" data-native-onclick="confirmDetailAllocation()">确认分配</button>
-            <button id="saveCurrentDetailAllocationBtn" class="btn btn-primary" aria-disabled="true" style="opacity:.45" data-native-onclick="saveCurrentDetailAllocation()">保存当前分配</button>
-          </div>
-        </div>
+
       </div>
 <div class="modal-overlay" id="detailAllocationDialog" aria-hidden="true" data-native-onclick="handleDetailAllocationDialogOverlay(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailAllocationDialogTitle" aria-describedby="detailAllocationDialogMessage" style="width:520px;max-width:calc(100vw - 32px)">

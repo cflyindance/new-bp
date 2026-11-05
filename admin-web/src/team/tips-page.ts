@@ -1,5 +1,7 @@
 import pageCss from "./tips/tips-page.css?raw";
 import shellCss from "./tips/tips-shell.css?raw";
+import standaloneHeaderCss from "../ui/standalone-page-header.css?raw";
+import figmaCss from "./tips/tips-figma.css?raw";
 import { createTipsPageContext, type TipsPageContext } from "./tips/tips-context";
 import { mountLegacyTipsRuntime, type TipsRuntimeHandle } from "./tips/tips-legacy-runtime";
 import { renderTipsTemplate } from "./tips/tips-templates";
@@ -13,7 +15,7 @@ function canScroll(el: HTMLElement, delta: number){return el.scrollHeight>el.cli
 export function mountTipsPage(container:HTMLElement, route:TipsRoute, context:TipsPageContext=createTipsPageContext()):TipsPageHandle{
   mounted.get(container)?.destroy();
   const shadow=container.shadowRoot??container.attachShadow({mode:"open"});
-  shadow.innerHTML=`<style>${pageCss}</style><style>${shellCss}</style><div data-team-tips-page>${renderTipsTemplate(route.view)}</div>`;
+  shadow.innerHTML=`<style>${pageCss}</style><style>${shellCss}</style><style>${standaloneHeaderCss}</style><style>${figmaCss}</style><div data-team-tips-page>${renderTipsTemplate(route.view)}</div>`;
   const root=shadow.querySelector<HTMLElement>("[data-team-tips-page]")!;
   const owner=container.closest<HTMLElement>("[data-team-tips-scroll]");
   const fullscreen=isTipsFullscreenRoute(route);
