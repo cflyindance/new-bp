@@ -31,7 +31,7 @@ for(const image of manifest.images)assert.equal(sha(fs.readFileSync(path.join(ba
 for(const [file,hash]of Object.entries(manifest.sourceHashes))assert.equal(sha(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n')),hash,file+' current implementation evidence');
 const personal=texts[2],engineer=texts[1],product=texts[0];
 for(const page of ['日期分配汇总','员工分配汇总','员工每日考勤分配','当日小费分配明细','分配规则列表','新增／编辑分配规则'])assert.ok(personal.includes('. '+page),page);
-for(const field of ['门店','本周','上周','本月','开始日期','结束日期','营业状态','发放状态','入池总金额','已分配总额','未分配总额','分配计入工时','贡献入池总额','小费池计算金额','员工贡献金额','老板补足金额','应扣金额','可扣余额','实际扣除','少扣金额','扣除占比','员工权重','权重换算百分比','员工分配比例','角色分配比例','每日计入工时上限','扣除方','确认已发放','重新确认分配','保存当前分配','重新自动分配'])assert.ok(personal.includes('| '+field+' |'),field+' individually defined');
+for(const field of ['门店','本周','上周','本月','开始日期','结束日期','营业状态','发放状态','入池总金额','已分配总额','未分配总额','分配计入工时','贡献入池总额','小费池计算金额','员工贡献金额','老板补足金额','应扣金额','可扣余额','实际扣除','少扣金额','扣除占比','员工权重','权重换算百分比','员工分配比例','角色分配比例','每日计入工时上限','扣除方','确认已发放','重新系统分配','保存当前分配','重新自动分配'])assert.ok(personal.includes('| '+field+' |'),field+' individually defined');
 for(const token of ['snapshotId','snapshotVersion','snapshotHash','allocationSource','onlyIfUnallocated','employeeShares','completedPaymentAt','occurredAt','Web Locks','tipout_allocation_results_v1','tipout_allocated'])assert.ok(engineer.includes(token),'engineering '+token);
 for(const token of ['max(P,C)','C+E=D=ΣA+U','B−员工贡献+A','150/300/150','240/240/120','不实际投递','逐日','失败'])assert.ok(product.includes(token),'product '+token);
 assert.ok(personal.includes('已完成／部分待分配／待分配'));assert.ok(product.includes('已完成／部分待分配／待分配'));

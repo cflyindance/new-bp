@@ -103,7 +103,7 @@
   }
   async function ensureSnapshot(storeId, businessDate) {
     return withLock(storeId, businessDate, async function () {
-      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新确认分配后再确认发放');
+      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新系统分配后再确认发放');
       assertDateWritable(storeId, businessDate);
       var snapshot = readAllocation(storeId, businessDate);
       if (!snapshot) throw new Error('请先完成当天小费分配');
@@ -121,7 +121,7 @@
     var storeId = String(input.storeId || '');
     var businessDate = String(input.businessDate || '');
     return withLock(storeId, businessDate, async function () {
-      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新确认分配后再确认发放');
+      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新系统分配后再确认发放');
       var payouts = readPayoutDocument();
       var key = pairKey(storeId, businessDate);
       var existing = payouts[key];
