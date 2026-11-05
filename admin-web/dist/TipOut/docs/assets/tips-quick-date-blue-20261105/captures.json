@@ -1,0 +1,35 @@
+[
+  {
+    "file": "assets/tips-quick-date-blue-20261105/dashboard.png",
+    "sha256": "90bf1775ce92778d22c4220fa4b8c08ad4e89ca82cf6c5a3bb836dc216be2591",
+    "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+    "route": "http://127.0.0.1:65242/#/team/tips/distribution?startDate=2026-10-26&endDate=2026-11-01",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-quick-date-blue-20261105/date.png",
+    "sha256": "4a1bdf95ef6638a3c6e199882e54600fb49b116a3a33420fa9e7e85be31bc186",
+    "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+    "route": "http://127.0.0.1:65242/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-11-01&endDate=2026-11-05",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
+    "framing": "viewport-page"
+  },
+  {
+    "file": "assets/tips-quick-date-blue-20261105/employee.png",
+    "sha256": "82cb75dcb629bbc802a49e4a560b520dbcd085ed342ee072b4ac3fcb9e6fc21e",
+    "baseline": "d49705da + TIPOUT-QUICK-DATE-BLUE-20261105-01",
+    "route": "http://127.0.0.1:65242/#/team/tips/distribution?screen=store&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231&startDate=2026-10-26&endDate=2026-11-01&view=employee",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常操作后完整视口，未修改截图中的UI或金额",
+    "framing": "viewport-page"
+  }
+]
