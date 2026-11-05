@@ -1,21 +1,7 @@
 <section class="team-tips-page tipout-fidelity tipout-page-employee-reconciliation-detail" data-team-tips-view="employee-reconciliation">
   <main class="content-area">
     <section class="tipout-page-section" aria-labelledby="employeeDetailName">
-      <div class="tipout-page-heading tipout-page-heading--with-back">
-        <button type="button" class="btn" data-native-onclick="returnToEmployeeReconciliation()">← 返回员工分配汇总</button>
-        <div class="tipout-employee-detail-title">
-          <h1 id="employeeDetailName">—</h1>
-          <span id="employeeDetailRole" class="tipout-role-tag">未设置角色</span>
-        </div>
-        <div class="tipout-detail-export export-dropdown">
-          <button id="employeeDetailExportButton" type="button" class="btn" aria-haspopup="menu" aria-expanded="false" data-native-onclick="toggleEmployeeDetailExportMenu(event)">导出结果⌄</button>
-          <div id="employeeDetailExportMenu" class="export-menu" role="menu">
-            <button type="button" class="export-menu-item" role="menuitem" data-native-onclick="runEmployeeDetailExport('pdf')">导出 PDF</button>
-            <button type="button" class="export-menu-item" role="menuitem" data-native-onclick="runEmployeeDetailExport('csv')">导出 CSV</button>
-            <button type="button" class="export-menu-item" role="menuitem" data-native-onclick="openEmployeeDetailEmailModal()">发送至邮箱</button>
-          </div>
-        </div>
-      </div>
+      <!--TIPOUT_STANDALONE_HEADER-->
       <div id="employeeDetailContent">
         <div class="tipout-detail-date-range" aria-label="分配汇总日期范围">
           <input id="employeeDetailStartDate" type="date" aria-label="开始日期" aria-describedby="employeeDetailDateRangeError">

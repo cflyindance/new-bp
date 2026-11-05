@@ -43,21 +43,21 @@
 <section class="team-tips-page tipout-fidelity tipout-page-rules" data-team-tips-view="rules">
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="rulesTitle">
-          <div class="tipout-page-heading">
+          <div class="tipout-page-heading">          <div class="tipout-compact-toolbar tipout-rules-toolbar">
+            <label class="filter-field-label" for="storeFilter">门店</label>
+            <select class="form-control" id="storeFilter" data-native-onchange="renderRulesTable()">
+              <option value="">全部门店</option>
+            </select>
+          </div>
             <div>
-              <h1 id="rulesTitle">分配规则</h1>
+              <h1 id="rulesTitle" class="sr-only">分配规则</h1>
             </div>
             <div class="tipout-heading-actions">
               <button type="button" class="btn btn-primary" data-native-onclick="openAddRuleModal()">新增规则</button>
             </div>
           </div>
 
-          <div class="tipout-compact-toolbar tipout-rules-toolbar">
-            <label class="filter-field-label" for="storeFilter">门店</label>
-            <select class="form-control" id="storeFilter" data-native-onchange="renderRulesTable()">
-              <option value="">全部门店</option>
-            </select>
-          </div>
+
 
           <div class="tipout-metric-strip tipout-metric-strip--three" aria-label="规则概览">
             <div><span>规则总数</span><strong id="ruleCount">0</strong></div>

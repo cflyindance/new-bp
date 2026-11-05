@@ -391,16 +391,7 @@
 </style>
 <section class="team-tips-page tipout-fidelity tipout-page-rule-editor" data-team-tips-view="rule-editor">
 <div class="content-area tipout-rule-editor-layout">
-        <div class="tipout-page-heading tipout-page-heading--with-back">
-          <a class="btn" data-native-onclick="window.location.href='rules.html'" href="#">返回规则列表</a>
-          <div>
-            <h1 id="pageTitle">小费分配规则</h1>
-          </div>
-          <div class="tipout-rule-heading-actions" id="ruleEditorActions">
-            <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
-            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">保存规则</button>
-          </div>
-        </div>
+        <!--TIPOUT_STANDALONE_HEADER-->
 
         <div class="tipout-workspace" id="ruleEditorWorkspace">
           <main class="tipout-editor-main" id="ruleEditorMain">
@@ -786,7 +777,7 @@
   <div class="drawer-footer"><button type="button" class="btn" data-native-onclick="closeContributorSharesDrawer()">取消</button><button type="button" class="btn btn-primary" data-native-onclick="saveContributorSharesDrawer()">确定</button></div>
 </div>
 <div class="drawer-overlay" id="salesDrawer-overlay"></div>
-<div class="drawer" id="salesDrawer">
+<div class="drawer" id="salesDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3>设置取值条件</h3>
       <button class="modal-close" data-native-onclick="closeDrawer('salesDrawer')">×</button>
@@ -819,7 +810,7 @@
     </div>
   </div>
 <div class="drawer-overlay" id="deductCondDrawer-overlay"></div>
-<div class="drawer" id="deductCondDrawer">
+<div class="drawer" id="deductCondDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3 id="deductCondDrawerTitle">设置取值条件</h3>
       <button class="modal-close" data-native-onclick="cancelDeductConditionsDrawer()">×</button>
@@ -833,7 +824,7 @@
     </div>
   </div>
 <div class="drawer-overlay" id="tipClaimSalesDrawer-overlay"></div>
-<div class="drawer" id="tipClaimSalesDrawer">
+<div class="drawer" id="tipClaimSalesDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3 data-pool-label="计提小费接受方规则 · 取值条件">计提小费接受方规则 · 取值条件</h3>
       <button class="modal-close" data-native-onclick="closeDrawer('tipClaimSalesDrawer')">×</button>
@@ -864,7 +855,7 @@
     </div>
   </div>
 <div class="drawer-overlay" id="surchargeDrawer-overlay"></div>
-<div class="drawer" id="surchargeDrawer">
+<div class="drawer" id="surchargeDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3>加收服务费取值条件</h3>
       <button class="modal-close" data-native-onclick="closeDrawer('surchargeDrawer')">×</button>
@@ -894,7 +885,7 @@
     </div>
   </div>
 <div class="drawer-overlay" id="tipsDrawer-overlay"></div>
-<div class="drawer" id="tipsDrawer">
+<div class="drawer" id="tipsDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3>设置取值条件</h3>
       <button class="modal-close" data-native-onclick="closeDrawer('tipsDrawer')">×</button>
@@ -924,7 +915,7 @@
     </div>
   </div>
 <div class="drawer-overlay" id="manualDrawer-overlay"></div>
-<div class="drawer" id="manualDrawer">
+<div class="drawer" id="manualDrawer" role="dialog" aria-modal="true" aria-label="设置取值条件">
     <div class="drawer-header">
       <h3 data-pool-label="手动上报小费 · 取值条件">手动上报小费 · 取值条件</h3>
       <button class="modal-close" data-native-onclick="closeDrawer('manualDrawer')">×</button>
