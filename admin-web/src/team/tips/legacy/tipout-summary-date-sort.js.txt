@@ -42,6 +42,16 @@
     return { startDate: toLocalDateKey(start), endDate: toLocalDateKey(end) };
   }
 
+  function resolveQuickDatePreset(startDate, endDate, preferred, now) {
+    var keys = ['this-week', 'last-week', 'this-month'];
+    function matches(key) {
+      var range = quickDateRange(key, now);
+      return range && range.startDate === startDate && range.endDate === endDate;
+    }
+    if (preferred != null) return keys.indexOf(preferred) >= 0 && matches(preferred) ? preferred : '';
+    return keys.find(matches) || '';
+  }
+
   function isValidDateRange(startDate, endDate) {
     var pattern = /^\d{4}-\d{2}-\d{2}$/;
     if (!pattern.test(String(startDate || '')) || !pattern.test(String(endDate || ''))) return false;
@@ -84,6 +94,7 @@
     STORAGE_KEY: STORAGE_KEY,
     defaultDateRange: defaultDateRange,
     quickDateRange: quickDateRange,
+    resolveQuickDatePreset: resolveQuickDatePreset,
     isValidDateRange: isValidDateRange,
     normalizeDirection: normalizeDirection,
     readDirection: readDirection,

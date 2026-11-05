@@ -32,3 +32,11 @@ const template=fs.readFileSync('src/team/tips/templates/distribution.html','utf8
 assert.ok(template.indexOf('id="summaryDatePresets"')<template.indexOf('id="dateRangeFilterField"'));
 for(const key of ['this-week','last-week','this-month'])assert.match(template,new RegExp('type="button"[^>]*data-date-preset="'+key+'"[^>]*aria-pressed="false"'));
 console.log('PASS quick dates: six ranges, leap/year/week boundaries, initial default, one refresh, manual clear, invalid recovery and accessible buttons');
+
+assert.equal(api.resolveQuickDatePreset('2026-06-01','2026-06-01','this-month',new Date(2026,5,1)),'this-month','same range retains explicitly chosen month');
+assert.equal(api.resolveQuickDatePreset('2026-06-01','2026-06-01','this-week',new Date(2026,5,1)),'this-week');
+assert.equal(api.resolveQuickDatePreset('2026-06-01','2026-06-01','custom',new Date(2026,5,1)),'','manual range has no shortcut');
+assert.equal(api.resolveQuickDatePreset('2026-10-19','2026-10-25',null,now),'last-week','date-only link infers matching shortcut');
+assert.equal(api.resolveQuickDatePreset('2026-10-19','2026-10-25','this-month',now),'','stale key cannot highlight a different range');
+assert.equal(api.resolveQuickDatePreset('2026-10-20','2026-10-25',null,now),'','custom range cannot highlight');
+console.log('PASS preset context: explicit ambiguous choice, manual, date-only inference and stale-range rejection');
