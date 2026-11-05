@@ -1,10 +1,10 @@
 {
-  "documentId": "TIPOUT-DATE-PRESET-CONTEXT-20261105-01",
-  "baseline": "d78a5de7",
+  "documentId": "TIPOUT-UNCONFIGURED-STATUS-20261105-01",
+  "baseline": "a7f36067",
   "versions": {
-    "PRD_产品需求文档.md": "V4.67",
-    "小费分配业务规格说明书（研发交付版）.md": "V3.67",
-    "小费管理需求文档（个人规范版）.md": "V2.65"
+    "PRD_产品需求文档.md": "V4.68",
+    "小费分配业务规格说明书（研发交付版）.md": "V3.68",
+    "小费管理需求文档（个人规范版）.md": "V2.66"
   },
   "scope": "当前产品交付范围",
   "images": [
@@ -663,14 +663,14 @@
       "framing": "viewport-page"
     },
     {
-      "file": "assets/tips-rule-config-labels-20261105/dashboard.png",
-      "sha256": "977c23ec88101ee2433cb21a6231087f6ea3e1773969a9986225626586b55381",
-      "baseline": "d78a5de7 + TIPOUT-RULE-CONFIG-LABELS-20261105-01",
-      "route": "http://127.0.0.1:65243/#/team/tips/distribution",
+      "file": "assets/tips-unconfigured-status-20261105/dashboard.png",
+      "sha256": "ceec65199a3fb627d2d5c78ef7225ee7f3adf2ec719f15739a10c4d59055c97d",
+      "baseline": "a7f36067 + TIPOUT-UNCONFIGURED-STATUS-20261105-01",
+      "route": "http://127.0.0.1:65245/#/team/tips/distribution",
       "capturedAt": "2026-11-05",
       "width": 1440,
       "height": 1000,
-      "source": "隔离Chrome正常登录后的完整实际看板，未修改可见UI或金额",
+      "source": "隔离Chrome正常操作后的完整真实看板",
       "framing": "viewport-page"
     }
   ],
@@ -708,7 +708,7 @@
     "src/team/tips/programs/employee-reconciliation.js.txt": "fada587a33d94a64fae580c78da230b13705bffd25c20f06da1642f9e661cbdf",
     "src/team/tips/programs/rule-editor.js.txt": "338e82c7adc62217a2952db1eacbe0ab4ff0bb947ec839bca1312b104604e3c1",
     "src/team/tips/programs/rules.js.txt": "a80bf39b7bd9283eb99107141d55ead29db2f7a7f83a455f67a4dfa5b0833db1",
-    "src/team/tips/programs/summary-auto-allocation.js.txt": "50ee83be0edc3805f6c0bf18e3f196c56836e34552f2ac2a38a069983e3b2e0c",
+    "src/team/tips/programs/summary-auto-allocation.js.txt": "1e2dadeb3d0eea1f4d549690ea6f53cc4b7968352de63ebab44b39a5cae79857",
     "src/team/tips/templates/details.html": "8d211c9b99821eadc55ef48259085ddcd32a50ad6ca7ec6731062ce629fe9252",
     "src/team/tips/templates/distribution.html": "5691b78aa2bc585e3227551de68f4b716f512e81f1eddad99ba970deb5850213",
     "src/team/tips/templates/employee-reconciliation.html": "538919b83975c85e3f05bd5bd665cb240d8b83dd83cab17b4d2a283b8d04d572",
@@ -1022,7 +1022,7 @@
       "page": "1. 小费分配看板",
       "section": "完成状态与门店列表",
       "operation": "分配状态",
-      "definition": "无规则为未关联规则；读取异常为读取失败；执行中为分配中；有失败为部分失败；全部可分配日期已确认则分配完成；没有可分配日期为无需分配；其余待分配。",
+      "definition": "无规则为未分配；读取异常为读取失败；执行中为分配中；有失败为部分失败；全部可分配日期已确认则分配完成；没有可分配日期为无需分配；其余待分配。",
       "line": 100,
       "interfaceImage": "assets/tips-dashboard-20261104/dashboard-empty.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
