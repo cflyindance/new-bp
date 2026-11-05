@@ -30,7 +30,7 @@ nodes.dateStart.value='2026-10-26';assert.equal(context.handleSummaryDateRangeCh
 context.activeSummaryDatePreset='yesterday';context.syncSummaryDatePresetUi();assert.ok(buttons.every(b=>b.attrs['aria-pressed']==='false'),'stale range cannot stay selected');
 const template=fs.readFileSync('src/team/tips/templates/distribution.html','utf8');
 assert.ok(template.indexOf('id="summaryDatePresets"')<template.indexOf('id="dateRangeFilterField"'));
-for(const key of ['this-week','last-week','this-month'])assert.match(template,new RegExp('type="button"[^>]*data-date-preset="'+key+'"[^>]*aria-pressed="false"'));
+for(const key of ['this-week','last-week','this-month','last-month'])assert.match(template,new RegExp('type="button"[^>]*data-date-preset="'+key+'"[^>]*aria-pressed="false"'));
 console.log('PASS quick dates: six ranges, leap/year/week boundaries, initial default, one refresh, manual clear, invalid recovery and accessible buttons');
 
 assert.equal(api.resolveQuickDatePreset('2026-06-01','2026-06-01','this-month',new Date(2026,5,1)),'this-month','same range retains explicitly chosen month');
@@ -40,3 +40,6 @@ assert.equal(api.resolveQuickDatePreset('2026-10-19','2026-10-25',null,now),'las
 assert.equal(api.resolveQuickDatePreset('2026-10-19','2026-10-25','this-month',now),'','stale key cannot highlight a different range');
 assert.equal(api.resolveQuickDatePreset('2026-10-20','2026-10-25',null,now),'','custom range cannot highlight');
 console.log('PASS preset context: explicit ambiguous choice, manual, date-only inference and stale-range rejection');
+
+assert.equal(api.resolveQuickDatePreset('2026-09-01','2026-09-30','last-month',now),'last-month');assert.equal(api.resolveQuickDatePreset('2025-12-01','2025-12-31',null,new Date(2026,0,1)),'last-month');
+assert.ok(template.includes('dashboardDatePreset(\'last-month\')'));

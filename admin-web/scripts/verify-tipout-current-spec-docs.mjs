@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 
 const base='dist/TipOut/docs';
 const names=['PRD_产品需求文档.md','小费分配业务规格说明书（研发交付版）.md','小费管理需求文档（个人规范版）.md'];
-const versions=['V4.69','V3.69','V2.67'];
-const id='TIPOUT-RULE-STATUS-COLORS-20261105-01';
+const versions=['V4.71','V3.71','V2.69'];
+const id='TIPOUT-LAST-MONTH-SHORTCUT-20261105-01';
 const texts=names.map(name=>fs.readFileSync(path.join(base,name),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/manifest.json','utf8'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'214d6638');
+assert.equal(manifest.documentId,id);assert.equal(manifest.baseline,'aa3db7f7');
 let links=0;
 for(const [i,text]of texts.entries()){
  assert.doesNotMatch(text,/【未来规划】|测试场景清单|取消分配|小费池计算模式|计提|按班次|按打卡时段|个人销售额|再分配|conditions\.weekdays|shiftWorkHours|tipClaims|order_tip_then_residual|time_window/,names[i]+' current delivery scope only');
@@ -41,7 +41,7 @@ const coverage=fs.readFileSync(base+'/小费管理逐操作覆盖清单.md','utf
 const captures=[...JSON.parse(fs.readFileSync(base+'/assets/tips-rule-status-colors-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-unconfigured-status-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-rule-config-labels-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-date-preset-context-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-quick-date-blue-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-store-quick-dates-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-employee-list-20261105/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-figma-ui-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-dashboard-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-pool-type-inline-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-restore-contributors-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-proportion-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-current-scope-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-live-20261027/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributors-20261103/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-source-conditions-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-contributor-weights-20261104/captures.json','utf8')),...JSON.parse(fs.readFileSync(base+'/assets/tips-sales-deduction-20261104/captures.json','utf8'))];
 for(const img of manifest.images){
  const capture=captures.find(c=>c.file===img.file);assert.ok(capture,'actual capture '+img.file);
- if(img.file.startsWith('assets/tips-rule-status-colors-20261105/')){assert.equal(capture.baseline,'214d6638 + '+id);assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65246/'));continue;}
+ if(img.file.startsWith('assets/tips-rule-status-colors-20261105/')){assert.equal(capture.baseline,'214d6638 + TIPOUT-RULE-STATUS-COLORS-20261105-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65246/'));continue;}
  if(img.file.startsWith('assets/tips-unconfigured-status-20261105/')){assert.equal(capture.baseline,'a7f36067 + TIPOUT-UNCONFIGURED-STATUS-20261105-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65245/'));continue;}
  if(img.file.startsWith('assets/tips-rule-config-labels-20261105/')){assert.equal(capture.baseline,'d78a5de7 + TIPOUT-RULE-CONFIG-LABELS-20261105-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65243/'));continue;}
  if(img.file.startsWith('assets/tips-date-preset-context-20261105/')){assert.equal(capture.baseline,'d78a5de7 + TIPOUT-DATE-PRESET-CONTEXT-20261105-01');assert.equal(img.baseline,capture.baseline);assert.ok(img.route.startsWith('http://127.0.0.1:65244/'));assert.equal(img.width,1440);continue;}
