@@ -748,7 +748,7 @@ var ALLOC_KEY = 'tipout_allocated';
       syncSelectAllState(filterId);
     }
 
-    function restoreSummaryUiState() {
+    function restoreSummaryUiState(deferRender) {
       var saved = TipOutSummaryUi.readSummaryHistoryState(history.state);
       var signature = saved ? JSON.stringify(saved) : '__no_summary_state__';
       if (signature === restoredSummaryStateSignature) return false;
@@ -792,7 +792,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (datePayoutStatus) datePayoutStatus.value = dateSummaryFilters.payoutStatus;
       invalidateDayPipelineCache();
       syncSummaryViewUi();
-      renderDailySummaryList();
+      if (!deferRender) renderDailySummaryList();
 
       requestAnimationFrame(function() {
         window.scrollTo(0, Number(saved.scrollY) || 0);
@@ -1429,8 +1429,10 @@ var ALLOC_KEY = 'tipout_allocated';
         if (employeeSummaryFilters.employeeScope.mode === 'subset' || employeeSummaryFilters.statuses.length) {
           roleAggregateOptions.employeeIds = eligibleIds;
         }
-        var roleAggregates = TipOutSummaryUi.aggregateRoleDailyDatasets(dailyRows, roleAggregateOptions);
-        renderEmployeeRoleSummaryCards(roleAggregates);
+        if (document.getElementById('employeeRoleSummaryCards') && document.getElementById('employeeRoleSummaryEmpty')) {
+          var roleAggregates = TipOutSummaryUi.aggregateRoleDailyDatasets(dailyRows, roleAggregateOptions);
+          renderEmployeeRoleSummaryCards(roleAggregates);
+        }
         updateEmployeeSummarySortHeaders();
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {
@@ -1920,7 +1922,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var queryView=new URLSearchParams(window.location.search).get('view');activeSummaryView=TipOutSummaryUi.resolveSummaryView(history.state,queryView);
       if(!initializeDashboardPage())return;
       if(isAllocationDashboard()){scheduleSummaryAutoAllocation();return;}
-      restoreSummaryUiState();initializeDashboardPage();syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();
+      restoreSummaryUiState(true);syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();
     }
 
     document.addEventListener('DOMContentLoaded', initializeSummaryPage);

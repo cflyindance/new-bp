@@ -37,8 +37,13 @@ let renders=0;
 const initContext={window:{TipOutDemoRules:{ensure(){}}},document:{getElementById:()=>({})},URLSearchParams,history:{state:null},
   initStoreSelect(){},applyDefaultSummaryDateRange(){},syncSummaryDateSortUi(){},syncSummaryViewUi(){},
   TipOutSummaryUi:{resolveSummaryView:()=> 'date'},restoreSummaryUiState:()=>false,
-  updateEmployeeFilter(skipRender){if(!skipRender)renders++;},renderDailySummaryList(){renders++;}};
+  initializeDashboardPage:()=>true,isAllocationDashboard:()=>false,scheduleSummaryAutoAllocation(){},syncStoreSummaryHeader(){},
+  updateEmployeeFilter(skipRender){if(!skipRender)renders++;},renderSummaryViews(){renders++;},renderDailySummaryList(){renders++;}};
 initContext.window.location={search:''};
 vm.runInNewContext(init+';initializeSummaryPage();',initContext);
 assert.equal(renders,1,'first entry must render the summary once');
+renders=0;
+initContext.restoreSummaryUiState=defer=>{assert.equal(defer,true,'restore query without an intermediate render');if(!defer)renders++;return true;};
+vm.runInNewContext(init+';initializeSummaryPage();',initContext);
+assert.equal(renders,1,'return entry renders the restored summary once');
 console.log('Summary entry performance, fresh reads and cleanup passed');

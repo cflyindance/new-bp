@@ -12,6 +12,7 @@ function exercise(initialView, nextView, mode = 'push') {
     location: {
       hash: `#/team/tips/distribution${initialView === 'employee' ? '?view=employee' : ''}`,
       href: 'http://localhost/#/team/tips/distribution',
+      search: initialView === 'employee' ? '?view=employee' : '',
       replace() { calls.push('reload'); },
     },
   };
@@ -22,7 +23,7 @@ function exercise(initialView, nextView, mode = 'push') {
   };
   const context = {
     validateSummaryDateRange: () => true,
-    activeSummaryView: initialView, window: browser, history,
+    activeSummaryView: initialView, window: browser, history, URLSearchParams,
     TipOutSummaryUi: { normalizeSummaryView: (value) => value === 'employee' ? 'employee' : 'date', buildSummaryViewHref: (value) => value === 'employee' ? 'index.html?view=employee' : 'index.html' },
     syncSummaryViewUi: () => calls.push('sync'),
     captureSummaryUiState: () => { calls.push('capture'); history.replaceState({ ...history.state, tipoutSummaryUiState: { activeView: context.activeSummaryView } }, ''); },
@@ -41,7 +42,7 @@ assert.equal(employee.history.state.menusifuTeamTips.viewHref, '/team/tips/distr
 assert.equal(employee.context.activeSummaryView, 'employee');
 
 const date = exercise('employee', 'date');
-assert.equal(date.browser.location.hash, '#/team/tips/distribution');
+assert.equal(date.browser.location.hash, '#/team/tips/distribution?');
 assert.deepEqual(date.calls, ['capture', 'replace', 'sync', 'push', 'capture', 'replace', 'render']);
 
 const same = exercise('date', 'date');
