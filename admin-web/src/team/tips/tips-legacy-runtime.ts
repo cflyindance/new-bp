@@ -79,6 +79,17 @@ function runtimeSource(view: TipsView): string {
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
 
+// Factories have no page state: every invocation receives fresh scoped objects.
+const runtimeFactories = new Map<TipsView, Function>();
+function runtimeFactory(view: TipsView): Function {
+  let factory = runtimeFactories.get(view);
+  if (!factory) {
+    factory = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(view));
+    runtimeFactories.set(view, factory);
+  }
+  return factory;
+}
+
 function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>) {
   return {
     readTipOutSchedule,
@@ -161,7 +172,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   observers.add(observer);
   let api: { prepareQuickSnapshot(systemReallocation?: boolean): unknown; runHandler(code:string,event:Event,element:HTMLElement): unknown };
   try {
-    api = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(route.view))(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
+    api = runtimeFactory(route.view)(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
     root.dispatchEvent(new Event("DOMContentLoaded"));
   } catch (cause) { observer.disconnect(); controller.abort(); throw new Error("Native tips runtime failed to initialize",{cause}); }
   ["click","change","input","submit","mouseover","mouseout","keydown"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));
