@@ -1,0 +1,13 @@
+[
+  {
+    "file": "assets/tips-rule-config-labels-20261105/dashboard.png",
+    "sha256": "977c23ec88101ee2433cb21a6231087f6ea3e1773969a9986225626586b55381",
+    "baseline": "d78a5de7 + TIPOUT-RULE-CONFIG-LABELS-20261105-01",
+    "route": "http://127.0.0.1:65243/#/team/tips/distribution",
+    "capturedAt": "2026-11-05",
+    "width": 1440,
+    "height": 1000,
+    "source": "隔离Chrome正常登录后的完整实际看板，未修改可见UI或金额",
+    "framing": "viewport-page"
+  }
+]
