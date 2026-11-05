@@ -554,6 +554,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!handleSummaryDateRangeChange()) return false;
       activeSummaryDatePreset = key;
       syncSummaryDatePresetUi();
+      if (typeof syncStoreSummaryHeader === 'function') syncStoreSummaryHeader();
       return true;
     }
 
