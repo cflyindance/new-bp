@@ -43,7 +43,7 @@
   }
 
   function resolveQuickDatePreset(startDate, endDate, preferred, now) {
-    var keys = ['this-week', 'last-week', 'this-month'];
+    var keys = ['this-week', 'last-week', 'this-month', 'last-month'];
     function matches(key) {
       var range = quickDateRange(key, now);
       return range && range.startDate === startDate && range.endDate === endDate;
