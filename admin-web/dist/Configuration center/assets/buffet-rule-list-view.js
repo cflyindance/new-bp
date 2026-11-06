@@ -9,7 +9,7 @@
     { id: "type", label: "规则类型", columns: [["subject", "限购主体"], ["period", "额度周期"], ["targetType", "限购对象"], ["measurement", "计量方式"]] },
     { id: "scenario", label: "场景与数量", columns: [["partyRanges", "人数区间"], ["roundRanges", "轮次区间"], ["roundTotal", "每轮总量"], ["targetLimit", "对象限额"], ["sameDishLimit", "相同菜品限额"]] },
     { id: "product", label: "商品配置", columns: [["participatingStores", "参与门店"], ["productLines", "适用产线"], ["targetCount", "目标商品数"], ["quantityCompletion", "数量完成度"]] },
-    { id: "authorization", label: "超限授权", columns: [["authorizationScopes", "授权范围"], ["defaultAuthorizationScope", "默认授权范围"], ["requiredPermission", "所需权限"], ["authorizationReason", "授权原因"]] },
+    { id: "authorization", label: "超限授权", columns: [["authorizationScopes", "授权范围"], ["requiredPermission", "所需权限"]] },
     { id: "effective", label: "生效范围", columns: [["effectiveDate", "有效日期"], ["activityPeriod", "活动周期"], ["businessHours", "营业时段"], ["memberScope", "会员范围"]] },
     { id: "extra", label: "补充字段", columns: [["description", "规则描述"]] }
   ];
@@ -22,7 +22,7 @@
     { id: "status", label: "状态", fixed: true, defaultVisible: true, width: 90 },
     { id: "actions", label: "操作", fixed: true, defaultVisible: true, width: 260 }
   ];
-  var COLUMN_WIDTHS = { legacyCapabilities: 280, coverage: 120, subject: 110, period: 140, targetType: 100, measurement: 100, partyRanges: 170, roundRanges: 170, roundTotal: 210, targetLimit: 210, sameDishLimit: 210, participatingStores: 170, productLines: 150, targetCount: 110, quantityCompletion: 120, authorizationScopes: 170, defaultAuthorizationScope: 130, requiredPermission: 150, authorizationReason: 110, effectiveDate: 190, activityPeriod: 150, businessHours: 210, memberScope: 150, description: 240 };
+  var COLUMN_WIDTHS = { legacyCapabilities: 280, coverage: 120, subject: 110, period: 140, targetType: 100, measurement: 100, partyRanges: 170, roundRanges: 170, roundTotal: 210, targetLimit: 210, sameDishLimit: 210, participatingStores: 170, productLines: 150, targetCount: 110, quantityCompletion: 120, authorizationScopes: 170, requiredPermission: 150, effectiveDate: 190, activityPeriod: 150, businessHours: 210, memberScope: 150, description: 240 };
 
   function copyArray(value) { return Array.isArray(value) ? value.slice() : []; }
   function unique(values) { return values.filter(function (value, index) { return value && values.indexOf(value) === index; }); }
@@ -192,7 +192,7 @@
       legacyCapabilities: textCell(row.legacyCapabilities.map(function (item) { return item.id + " " + item.label; }).join("；") || "—"), coverage: textCell(row.coverage || "—"), subject: textCell(subject), period: textCell(periods.join("＋") || "—"), targetType: textCell(target), measurement: textCell("按" + measure), partyRanges: textCell(party), roundRanges: textCell(row.roundRanges.map(function (range) { return rangeLabel(range, "轮"); }).join("、") || "—"),
       roundTotal: textCell(periods.some(function (p) { return p === "每轮" || p === "多轮"; }) || row.group === "per_round_combo" ? quantitySummary(c.tableTotalBounds || c.totalBounds, c.totalRequiredCount || required, "最少/最多 ") : "—"), targetLimit: textCell(quantitySummary(c.tableTargetCaps || c.targetLimits, c.targetRequiredCount || required, "最多 ") ), sameDishLimit: textCell(periods.some(function (p) { return p === "每轮" || p === "多轮"; }) || row.group === "per_round_combo" ? quantitySummary(c.defaultDishLimits || c.exceptionDishLimits, c.sameDishRequiredCount || required, "最多 ") : "—"),
       participatingStores: textCell(storesLabel(row.participatingStoreIds, row.stores)), productLines: textCell(lineSummary(c, row.storeIds)), targetCount: textCell(targetCounts(row.record, c).reduce(function (sum, value) { return sum + value; }, 0) || "—"), quantityCompletion: textCell(c.quantityCompletionLabel || (c.quantityConfiguredCount != null && required ? c.quantityConfiguredCount + " / " + required : "—")),
-      authorizationScopes: textCell(copyArray(auth.allowedScopes).map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : scope === "order" ? "当前订单" : scope; }).join("、") || "—"), defaultAuthorizationScope: textCell(auth.defaultScope === "operation" ? "本次操作" : auth.defaultScope === "round" ? "当前轮" : auth.defaultScope === "order" ? "当前订单" : "—"), requiredPermission: textCell(auth.permissionName || auth.permission || "—"), authorizationReason: textCell(auth.reasonRequired ? "必填" : "非必填"),
+      authorizationScopes: textCell(copyArray(auth.allowedScopes).map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : scope === "order" ? "当前订单" : scope; }).join("、") || "—"), requiredPermission: textCell(auth.permissionName || auth.permission || "—"),
       effectiveDate: textCell(c.effectiveDateLabel || c.dateRangeLabel || "—"), activityPeriod: textCell(c.activityPeriodLabel || c.activityCycleLabel || "—"), businessHours: textCell(row.effectiveTimeLabel), memberScope: textCell(c.memberScopeLabel || c.memberScope || "全部"), description: textCell(row.description || "—")
     };
   }

@@ -96,6 +96,18 @@ assert.equal(records.length, 18);
 for (const record of records) {
   const check = profile.lifecycle.validateActivation(record, []);
   assert.equal(check.valid, true, `${record.defaultScenarioKey}: ${check.message}`);
+  for (const defaultScope of [undefined, "", "operation", "round", "order"]) {
+    const legacyRecord = structuredClone(record);
+    legacyRecord.authoringConfig.authorization.defaultScope = defaultScope;
+    delete legacyRecord.authoringConfig.authorization.reasonRequired;
+    assert.equal(profile.lifecycle.validateActivation(legacyRecord, []).valid, true, "隐藏默认值和原因字段不阻断发布");
+  }
+  const missingScope = structuredClone(record);
+  missingScope.authoringConfig.authorization.allowedScopes = [];
+  assert.equal(profile.lifecycle.validateActivation(missingScope, []).valid, false, "范围仍必填");
+  const missingRole = structuredClone(record);
+  missingRole.authoringConfig.authorization.scopePermissions = {};
+  assert.equal(profile.lifecycle.validateActivation(missingRole, []).valid, false, "权限仍必填");
   profile.lifecycle.prepareActivation(record);
   record.status = "active";
   assert.deepEqual(Object.keys(record.publishedConfig.storeConfigs), ["store-a"]);
