@@ -802,7 +802,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var hint = document.getElementById('detailAllocationScopeHint');
       if (hint) hint.textContent = !selectedRules.length && detailAllRules.length
         ? '确认分配仍将处理当天全部 ' + detailAllRules.length + ' 条规则'
-        : '确认后将生成当天全部 ' + detailAllRules.length + ' 条规则的正式分配结果';
+        : '';
     }
 
     function readDatePoolSnapshot(dateKey, store) {
@@ -1481,7 +1481,7 @@ var ALLOC_KEY = 'tipout_allocated';
         '<div><span>'+prefix+'老板补足金额</span><strong>'+money(funding.ownerContribution)+'</strong></div>'+
         (excess?'<details class="tipout-funding-excess"><summary><span>贡献超出计划 '+money(funding.excess)+'</span><span aria-label="查看超额分配说明">?</span></summary><p>员工实际贡献超过小费池计算金额，本次按实际贡献 '+money(funding.actual)+' 分配，超出部分全部参与分配，老板无需补足。</p></details>':
           '<details class="tipout-funding-excess tipout-funding-shortfall"><summary><span>老板补足 '+money(funding.ownerContribution)+'</span><span aria-label="查看贡献不足说明">?</span></summary><p>员工贡献小于小费池计算金额，本次按计划 '+money(funding.target)+' 分配，差额 '+money(funding.ownerContribution)+' 由老板补足。员工仅扣实际贡献 '+money(funding.contributed)+'；补足金额是资金承担记录，不代表已经付款。</p></details>')+
-        '<p class="tipout-funding-source">'+(confirmed?'已确认快照；资金承担记录不代表已付款。':'预计试算，尚未形成正式扣款。')+'</p></div>';
+        '<p class="tipout-funding-source">'+(confirmed?'':'预计试算，尚未形成正式扣款。')+'</p></div>';
     }
     function renderDetailContributionSummary(funding, confirmed, configuredRule) {
       var label = '<span class="tag tipout-party-tag tipout-party-contributor">贡献方</span>';
@@ -1494,7 +1494,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!funding || !Array.isArray(funding.contributionRules) || !funding.contributionRules.length) {
         var entries = funding && funding.contributions;
         if (Array.isArray(entries) && entries.length) {
-          return '<section class="detail-contribution-section"><h4>' + label + ' 员工贡献</h4>' + table(entries) + '<p>' + (confirmed ? '已确认贡献快照' : '预计试算，尚未形成正式扣除。') + '</p></section>';
+          return '<section class="detail-contribution-section"><h4>' + label + ' 员工贡献</h4>' + table(entries) + '<p>' + (confirmed ? '' : '预计试算，尚未形成正式扣除。') + '</p></section>';
         }
         var merchant = configuredRule && configuredRule.contributionMode === 'merchant';
         if (funding && Array.isArray(entries) && !entries.length && Number(funding.ownerContribution) === Number(funding.actual)) merchant = true;
@@ -1506,7 +1506,7 @@ var ALLOC_KEY = 'tipout_allocated';
         return '<div class="detail-contribution-rule"><h4>' + label + ' 小费贡献方规则 · ' + escHtml(rule.label || '贡献规则') + ' · ' + (Number(rule.rate) * 100).toFixed(2) + '%</h4>' +
           '<p class="contributor-shares-note">' + prefix + '实际扣除 <strong>' + money(rule.actualContribution) + '</strong></p>' + table(rule.employees || []) +
           (shortage ? '<details class="tipout-funding-excess contribution-shortage"><summary><span>可扣余额不足，少扣 ' + money(rule.shortfall) + '</span><span aria-label="查看少扣明细">?</span></summary><p>' + explanation + '。差额不转由其他员工承担。实际贡献按实际扣除计算，最终分配及老板补足仍按P/C规则计算；少扣金额不等于老板补足金额。</p></details>' : '') + '</div>';
-      }).join('') + '<p class="tipout-funding-source">' + (confirmed ? '已确认贡献快照，不代表实际付款。' : '预计试算，尚未形成正式扣除。') + '</p></section>';
+      }).join('') + '<p class="tipout-funding-source">' + (confirmed ? '' : '预计试算，尚未形成正式扣除。') + '</p></section>';
     }
 
     function renderSavedDetailFunding(snapshot) {
