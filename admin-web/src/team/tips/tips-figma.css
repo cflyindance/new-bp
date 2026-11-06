@@ -79,3 +79,5 @@
 
 /* Keep the update action aligned with the button row above the scope hint. */
 .team-tips-page.tipout-page-detail .tipout-figma-header .standalone-page-actions>.tipout-heading-actions{align-self:flex-start}
+
+.tipout-page-detail .tipout-detail-store-subtitle{display:inline-flex;align-items:center;gap:8px;font-size:12px;line-height:20px;color:#8c8c8c}.tipout-page-detail .tipout-detail-store-subtitle img{width:16px;height:16px;flex-shrink:0}
