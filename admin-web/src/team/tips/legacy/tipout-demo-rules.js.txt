@@ -119,6 +119,7 @@
       markers.push(fixtureKey);
     }
     stores.forEach(function(store) {
+      if(global.TipOutTestPresets&&global.TipOutTestPresets.owned(store))return;
       // Do not inject legacy demo semantics into a deliberately configured funded store.
       if (rules.some(function(rule) { return rule.funding && directory.canonicalRosterStoreName(rule.store) === directory.canonicalRosterStoreName(store); })) return;
       if (rules.some(function(rule) { return rule && !rule.demoScenarioKey && Number(rule.id) !== 5 && directory.canonicalRosterStoreName(rule.store) === directory.canonicalRosterStoreName(store); })) return;

@@ -1,5 +1,6 @@
 (function(root) {
-  function isDemoClosedDate(dateKey) {
+  function isDemoClosedDate(dateKey, store) {
+    if (root.TipOutTestPresets && root.TipOutTestPresets.entry(store)) return root.TipOutTestPresets.closed(store,dateKey);
     var date = new Date(String(dateKey || '') + 'T00:00:00Z');
     if (isNaN(date.getTime())) return false;
     return Math.floor(date.getTime() / 86400000) % 7 === 0;

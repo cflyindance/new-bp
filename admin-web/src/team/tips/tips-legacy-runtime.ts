@@ -1,5 +1,8 @@
 import { bindTipsPlanningHints } from "./tips-planning-hints";
 import { readTipOutSchedule } from "./tips-schedule-source";
+import { TIPOUT_TEST_CATALOG, readTestPresetStores, testPresetStoreName } from './tips-test-preset-scope';
+import testPresets from './legacy/tipout-test-presets.js.txt?raw';
+import testPresetUi from './legacy/tipout-test-preset-ui.js.txt?raw';
 import common from "./legacy/common.js.txt?raw";
 import funding from "./legacy/tipout-funding.js.txt?raw";
 import scope from "./legacy/global-scope-filter.js.txt?raw";
@@ -57,7 +60,7 @@ const dependencies: Record<TipsView, string[]> = {
 };
 
 function runtimeSource(view: TipsView): string {
-  return [scope, ...dependencies[view], scenarioData, scenarioSource, employeeWeights, timeWindow, scenarioList, payoutRecordUi, funding,
+  return [scope, ...dependencies[view], testPresets, testPresetUi, scenarioData, scenarioSource, employeeWeights, timeWindow, scenarioList, payoutRecordUi, funding,
     "window.TipOutSchedule={read:__scopeAdapter.readTipOutSchedule};",
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
@@ -90,12 +93,12 @@ function runtimeFactory(view: TipsView): Function {
   return factory;
 }
 
-function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>) {
+function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>, route: TipsRoute) {
   return {
     readTipOutSchedule,
     readGlobalScopeFilter: () => context.getScope(), readScopeMeta: () => context.getScope(),
     usesInPageStorePicker: () => true,
-    listScopedStoreOptions: () => context.getScope().stores.map((s) => ({ value: s.id, labelZh: s.labelZh, labelEn: s.labelEn })),
+    listScopedStoreOptions: () => readTestPresetStores(route.query) ?? context.getScope().stores.filter(s=>!TIPOUT_TEST_CATALOG.some(c=>testPresetStoreName(c.id)===(s.labelZh||s.labelEn||s.id))).map((s) => ({ value: s.id, labelZh: s.labelZh, labelEn: s.labelEn })),
     writeGlobalStoreFilter: (id: unknown) => context.setStoreScope(String(id ?? "")),
     bindGlobalScopeFilterListener: (fn: (scope: unknown) => void) => { const off = context.subscribeScopeChange(fn); cleanups.add(off); return context.getScope(); },
   };
@@ -129,6 +132,8 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }
     } : undefined,
     tipoutQuickPreparation: quickPreparation,
+    tipoutTestPresetCatalog: TIPOUT_TEST_CATALOG,
+    tipoutTestPresetView: readTestPresetStores(route.query)!==null,
     tipoutDashboardAssetBase: `${import.meta.env.BASE_URL}tipout/dashboard/`,
     prepareTipoutQuickSnapshot: (store: string, dateKey: string, systemReallocation = false) => {
       const host = realDocument.createElement('div');
@@ -172,7 +177,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   observers.add(observer);
   let api: { prepareQuickSnapshot(systemReallocation?: boolean): unknown; runHandler(code:string,event:Event,element:HTMLElement): unknown };
   try {
-    api = runtimeFactory(route.view)(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
+    api = runtimeFactory(route.view)(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups,route));
     root.dispatchEvent(new Event("DOMContentLoaded"));
   } catch (cause) { observer.disconnect(); controller.abort(); throw new Error("Native tips runtime failed to initialize",{cause}); }
   ["click","change","input","submit","mouseover","mouseout","keydown"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));

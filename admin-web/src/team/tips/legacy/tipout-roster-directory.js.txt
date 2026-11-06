@@ -41,6 +41,7 @@
     }
     return rows;
   }
+  function viewRoster(){return global.tipoutTestPresetView ? readArray('tipout-test-preset-roster-v1') : normalizeRoster();}
   function isActive(row) {
     var status = text(row && row.status).toLowerCase();
     return !!row && row.active !== false && status !== 'inactive' && status !== 'disabled';
@@ -48,18 +49,18 @@
   function listRoles() {
     var hidden = readArray(HIDDEN_ROLES_KEY).map(text);
     var roles = SYSTEM_ROLES.filter(function(role) { return hidden.indexOf(role) < 0; }).concat(readArray(ROLE_OPTIONS_KEY).map(text));
-    normalizeRoster().forEach(function(row) { if (isActive(row) && text(row.role)) roles.push(text(row.role)); });
+    viewRoster().forEach(function(row) { if (isActive(row) && text(row.role)) roles.push(text(row.role)); });
     var seen = Object.create(null);
     return roles.filter(function(role) { var key = role.toLowerCase(); if (!role || seen[key]) return false; seen[key] = true; return true; });
   }
   function listEmployees(storeName) {
     var target = canonicalRosterStoreName(storeName).toLowerCase();
-    return normalizeRoster().filter(function(row) {
+    return viewRoster().filter(function(row) {
       return isActive(row) && (!target || canonicalRosterStoreName(row.store).toLowerCase() === target);
     }).map(function(row) { return { id: text(row.id), name: text(row.name), role: text(row.role), store: canonicalRosterStoreName(row.store), active: true }; });
   }
   function getEmployeeById(id) {
-    var key = text(id); return normalizeRoster().map(function(row) { return { id: text(row.id), name: text(row.name), role: text(row.role), store: canonicalRosterStoreName(row.store), active: isActive(row) }; }).find(function(row) { return row.id === key; }) || null;
+    var key = text(id); return viewRoster().map(function(row) { return { id: text(row.id), name: text(row.name), role: text(row.role), store: canonicalRosterStoreName(row.store), active: isActive(row) }; }).find(function(row) { return row.id === key; }) || null;
   }
   function resolveReceiverEmployees(rule, storeName) {
     var availableRoles = listRoles(), employees = listEmployees(storeName || (rule && rule.store)), resolved = [], issues = [], seen = Object.create(null);

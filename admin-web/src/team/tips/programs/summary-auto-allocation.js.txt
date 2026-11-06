@@ -38,6 +38,7 @@ async function executeSummaryAutoDate(date,item){
  document.getElementById('storeSelect').value=store;var existing=summaryAutoExisting(store,date);if(existing)return existing;
  var rows=readAllocationScopeRows({store:store,startDate:date,endDate:date});if(!rows[0]||!rows[0].businessStatusResult)throw new Error('无法读取当天营业数据');if(!rows[0].businessStatusResult.allocatable)return {status:'skipped',message:'未营业，无需分配'};
  var rules=getRulesForCurrentStore();if(!rules.length)throw new Error('当前门店没有可用的小费分配规则');if(rules.some(function(r){return r.clockin==='noclock';}))throw new Error('需在当天明细补全手动工时后分配');
+ if(window.TipOutTestPresets)window.TipOutTestPresets.beforeAllocation(store,date);
  var snapshot=window.prepareTipoutQuickSnapshot(store,date);
  try{await TipOutAllocationResults.commit(snapshot,{onlyIfUnallocated:true,assertActive:assertSummaryAutoActive});}catch(error){assertSummaryAutoActive();var concurrent=summaryAutoExisting(store,date);if(concurrent)return concurrent;throw error;}
  var message='系统分配已保存';try{TipOutDateState.notify(store,date);}catch(_){message+='；汇总通知失败，请刷新查看';}
