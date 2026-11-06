@@ -1342,6 +1342,12 @@
       created: today(),
       editorDraft: editorDraft
     };
+    if (isBuffetProfile() && !draftId && !sourceRuleId && !isCopy) {
+      draftRule.id = null;
+      draftRule.status = "disabled";
+      draftRule.transientCreate = true;
+      return draftRule;
+    }
     draftRule = buildCompatibilityRule(draftRule, "draft");
     rules.push(draftRule);
     saveRules(rules);
@@ -2320,8 +2326,73 @@
     element.className = "olf-save-state" + (kind ? " is-" + kind : "");
   }
 
+  function isTransientBuffetCreate() {
+    return !!(isBuffetProfile() && editorState && editorState.rule && editorState.rule.transientCreate);
+  }
+
+  function persistNewBuffetRule(rule) {
+    if (rule.savedRuleId != null) return rule.savedRuleId;
+    if (!moduleProfile.repository || typeof moduleProfile.repository.mutateEnvelope !== "function") throw new Error("规则存储不可用");
+    var savedId;
+    moduleProfile.repository.mutateEnvelope(null, function (next) {
+      var prepared = cloneValue(rule);
+      prepared.id = nextRuleId(next.rules.concat(next.drafts));
+      prepared.sourceRuleId = null;
+      delete prepared.transientCreate;
+      delete prepared.savedRuleId;
+      var built = buildCompatibilityRule(prepared, "disabled");
+      built.status = "disabled";
+      built.publishedConfig = null;
+      next.rules.push(built);
+      savedId = built.id;
+      return next;
+    });
+    // Only mark committed after the atomic repository write succeeds.
+    rule.savedRuleId = savedId;
+    return savedId;
+  }
+
+  function saveTransientBuffetRuleAndReturn() {
+    if (!isTransientBuffetCreate() || viewMode || editorState.savingFinal || editorState.currentStep !== finalStepNumber()) return false;
+    var check = validateAll(editorState.rule.editorDraft);
+    if (check) {
+      editorState.stepErrors[check.step] = check.message;
+      toast(check.message, true);
+      goToEditorStep(check.step, true);
+      return false;
+    }
+    editorState.savingFinal = true;
+    var button = document.getElementById("headerSaveButton");
+    if (button) button.disabled = true;
+    try {
+      setSaveState("正在保存…", "saving");
+      persistNewBuffetRule(editorState.rule);
+      editorState.dirty = false;
+      setSaveState("保存成功，规则已禁用", "");
+      toast("保存成功，规则已禁用");
+      teardownSceneComboNavSpy();
+      go(moduleProfile.routes.list);
+      return true;
+    } catch (error) {
+      setSaveState("保存失败，请重试", "error");
+      toast("保存失败，当前输入已保留，请重试", true);
+      return false;
+    } finally {
+      editorState.savingFinal = false;
+      if (button) button.disabled = false;
+    }
+  }
+
+  function renderTransientBuffetReview(html) {
+    return html.replace("确认规则并发布", "确认规则并保存")
+      .replace(/发布前检查/g, "保存前检查")
+      .replace(/<div class="olf-summary olf-summary--primary">[\s\S]*?<\/div>$/,
+        '<div class="olf-summary olf-summary--primary"><strong>保存后默认禁用：</strong>保存不会下发或启用规则；需要时请在列表中手动启用。</div>');
+  }
+
   function saveEditorDraft(immediate) {
     if (!editorState || !editorState.rule) return false;
+    if (isTransientBuffetCreate()) return true;
     if (editorState.quantitySceneDialog) return false;
     if (viewMode) return true;
     window.clearTimeout(editorState.saveTimer);
@@ -2355,6 +2426,7 @@
     if (viewMode) return;
     editorState.dirty = true;
     setSaveState("有未保存的更改", "saving");
+    if (isTransientBuffetCreate()) return;
     try { sessionStorage.setItem(RECOVERY_PREFIX + editorState.rule.id, JSON.stringify(editorState.rule.editorDraft)); } catch (error) {}
     window.clearTimeout(editorState.saveTimer);
     editorState.saveTimer = window.setTimeout(function () { saveEditorDraft(false); }, AUTOSAVE_DELAY);
@@ -5779,7 +5851,7 @@
       if (editorState.currentStep === 2) return renderBuffetQuantityStep(draft);
       if (editorState.currentStep === 3) return renderStepSix(draft);
       if (editorState.currentStep === 4) return renderStepFive(draft);
-      return renderStepSeven(draft);
+      return isTransientBuffetCreate() ? renderTransientBuffetReview(renderStepSeven(draft)) : renderStepSeven(draft);
     }
     if (editorState.currentStep === 1) return renderStepOne(draft);
     if (editorState.currentStep === 2) return renderStepThree(draft);
@@ -5917,6 +5989,14 @@
     document.getElementById("headerSaveButton").style.display = editorState.currentStep === finalStepNumber() ? "none" : "";
     document.getElementById("saveReturnButton").style.display = editorState.currentStep === finalStepNumber() ? "" : "none";
     document.getElementById("nextButton").textContent = editorState.currentStep === finalStepNumber() ? "保存并下发" : "下一步";
+    if (isTransientBuffetCreate()) {
+      var atFinalSave = editorState.currentStep === finalStepNumber();
+      document.getElementById("headerSaveButton").textContent = "保存";
+      document.getElementById("headerSaveButton").className = "olf-button olf-button--primary";
+      document.getElementById("headerSaveButton").style.display = atFinalSave ? "" : "none";
+      document.getElementById("saveReturnButton").style.display = "none";
+      document.getElementById("nextButton").style.display = atFinalSave ? "none" : "";
+    }
     syncNextButtonState();
     syncBatchControls();
     if (editorState.configuredLimitPreview && editorState.configuredLimitPreview.open) {
@@ -6002,6 +6082,14 @@
 
   function discardEditorDraftAndLeave() {
     if (!editorState || !editorState.rule) return;
+    if (isTransientBuffetCreate()) {
+      editorState.dirty = false;
+      if (editorState.productAddDialog) editorState.productAddDialog.dirty = false;
+      teardownSceneComboNavSpy();
+      closeDialog(false);
+      go(moduleProfile.routes.list);
+      return;
+    }
     window.clearTimeout(editorState.saveTimer);
     var draftId = editorState.rule.id;
     var rules = loadRules().filter(function (rule) { return String(rule.id) !== String(draftId); });
@@ -8118,7 +8206,10 @@
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === quantityStepNumber());
     editorState.buffetQuantityWorkbench = createBuffetQuantityWorkbenchState();
     var editorTitlePrefix = viewMode ? "查看" : (rule.sourceRuleId ? "编辑" : "新增");
-    var saveStateText = viewMode ? "只读查看" : "草稿已保存";
+    if (isTransientBuffetCreate()) steps = moduleProfile.steps.map(function (step, index) {
+      return index === moduleProfile.steps.length - 1 ? { title: "确认保存", note: "复核并保存" } : step;
+    });
+    var saveStateText = viewMode ? "只读查看" : (isTransientBuffetCreate() ? "尚未保存" : "草稿已保存");
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + editorTitlePrefix + (isBuffetProfile() ? '自助餐规则' : '数量与频次规则') + '</h1><span class="olf-save-state" id="saveState">' + saveStateText + '</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
       '<div class="olf-overlay olf-selected-preview-overlay" data-selected-preview-overlay></div>' +
       '<div class="olf-overlay olf-selected-category-dishes-overlay" data-selected-category-dishes-overlay></div>' +
@@ -8209,9 +8300,24 @@
       updateSelectedPreviewEntry(draft);
       window.scrollTo(0, pageScrollY);
     });
-    document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
+    window.addEventListener("beforeunload", function (event) {
+      if (isTransientBuffetCreate() && (editorState.dirty || (editorState.productAddDialog && editorState.productAddDialog.dirty))) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+    document.getElementById("headerSaveButton").addEventListener("click", function () {
+      if (isTransientBuffetCreate()) { saveTransientBuffetRuleAndReturn(); return; }
+      if (saveEditorDraft(true)) toast("草稿已保存");
+    });
     document.getElementById("backButton").addEventListener("click", function () {
       if (viewMode) { teardownSceneComboNavSpy(); go(moduleProfile.routes.list); return; }
+      if (isTransientBuffetCreate()) {
+        var hasPendingCreate = editorState.dirty || (editorState.productAddDialog && editorState.productAddDialog.dirty);
+        if (!hasPendingCreate) { go(moduleProfile.routes.list); return; }
+        openDialog("放弃未保存的规则？", "离开后将丢弃本次填写内容，不会保留草稿。", "放弃并返回", discardEditorDraftAndLeave);
+        return;
+      }
       var isEditingExistingRule = editorState.rule.sourceRuleId != null;
       if (!isEditingExistingRule && !saveEditorDraft(true)) return;
       var leaveEditor = function () {
@@ -8260,6 +8366,7 @@
     });
     document.getElementById("previousButton").addEventListener("click", function () { if (editorState.currentStep > 1) goToEditorStep(editorState.currentStep - 1, true); });
     document.getElementById("saveReturnButton").addEventListener("click", function () {
+      if (isTransientBuffetCreate()) return;
       if (!saveEditorDraft(true)) return;
       var leaveEditor = function () {
         teardownSceneComboNavSpy();
@@ -8282,6 +8389,7 @@
     document.getElementById("nextButton").addEventListener("click", function () {
       var draft = editorState.rule.editorDraft;
       if (editorState.currentStep < finalStepNumber()) { goToEditorStep(editorState.currentStep + 1, false); return; }
+      if (isTransientBuffetCreate()) { saveTransientBuffetRuleAndReturn(); return; }
       var check = validateAll(draft);
       if (check) { editorState.stepErrors[check.step] = check.message; toast(check.message, true); goToEditorStep(check.step, true); return; }
       if (!saveEditorDraft(true)) return;
