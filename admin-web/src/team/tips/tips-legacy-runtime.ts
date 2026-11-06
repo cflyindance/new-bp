@@ -132,6 +132,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }
     } : undefined,
     tipoutQuickPreparation: quickPreparation,
+    tipoutIsPageActive: () => !controller.signal.aborted && (quickPreparation || root.isConnected && parseTipsRoute(realWindow.location.hash).href.split('?')[0] === route.href.split('?')[0]),
     tipoutTestPresetCatalog: TIPOUT_TEST_CATALOG,
     tipoutTestPresetView: readTestPresetStores(route.query)!==null,
     tipoutDashboardAssetBase: `${import.meta.env.BASE_URL}tipout/dashboard/`,

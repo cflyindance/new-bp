@@ -21,7 +21,8 @@ function dashboardSetBusy(busy){
 function dashboardSyncDates(){var range=dashboardRange();document.getElementById('dashboardDateStart').value=range.startDate;document.getElementById('dashboardDateEnd').value=range.endDate;document.getElementById('dashboardRangeLabel').textContent=range.startDate+' — '+range.endDate;document.querySelectorAll('#dashboardFilters [data-date-preset]').forEach(function(b){var r=TipOutSummaryDateSort.quickDateRange(b.dataset.datePreset);b.setAttribute('aria-pressed',String(b.dataset.datePreset===activeSummaryDatePreset&&r.startDate===range.startDate&&r.endDate===range.endDate));});}
 function dashboardDateChange(){if(dashboardBusy)return;activeSummaryDatePreset='';document.getElementById('dateStart').value=document.getElementById('dashboardDateStart').value;document.getElementById('dateEnd').value=document.getElementById('dashboardDateEnd').value;if(!validateSummaryDateRange(false)){document.getElementById('dashboardDateError').textContent='请输入有效日期，开始日期不能晚于结束日期';return;}document.getElementById('dashboardDateError').textContent='';dashboardSyncDates();scheduleSummaryAutoAllocation();}
 function dashboardDatePreset(key){if(dashboardBusy)return;var r=TipOutSummaryDateSort.quickDateRange(key);if(!r)return;activeSummaryDatePreset=key;document.getElementById('dateStart').value=r.startDate;document.getElementById('dateEnd').value=r.endDate;document.getElementById('dashboardDateError').textContent='';dashboardSyncDates();scheduleSummaryAutoAllocation();}
-function assertSummaryAutoActive(){if(summaryAutoDisposed)throw new Error('页面已离开，停止自动分配');if(summaryAutoScope&&summaryAutoScope.key!==dashboardScopeKey())throw new Error('可访问门店或日期范围已变化，请刷新看板');}
+function summaryAutoPageIsActive(){return !summaryAutoDisposed&&(typeof window.tipoutIsPageActive!=='function'||window.tipoutIsPageActive());}
+function assertSummaryAutoActive(){if(!summaryAutoPageIsActive())throw new Error('页面已离开，停止自动分配');if(summaryAutoScope&&summaryAutoScope.key!==dashboardScopeKey())throw new Error('可访问门店或日期范围已变化，请刷新看板');}
 function summaryAutoExisting(store,date){var state=TipOutDateState.inspect(store,date);if(state.error)throw new Error(state.error);if(state.payoutStatus==='paid')return {status:'skipped',message:'已发放，保留原结果'};if(state.snapshot||TipOutAllocationResults.isAllocated(store,date))return {status:'skipped',message:'已分配，保留原结果'};return null;}
 async function dashboardInspectStores(){
  var allowed=dashboardAllowedStores(),range=dashboardRange();dashboardStores=[];dashboardIssues=[];
@@ -41,6 +42,7 @@ async function executeSummaryAutoDate(date,item){
  if(window.TipOutTestPresets)window.TipOutTestPresets.beforeAllocation(store,date);
  var snapshot=window.prepareTipoutQuickSnapshot(store,date);
  try{await TipOutAllocationResults.commit(snapshot,{onlyIfUnallocated:true,assertActive:assertSummaryAutoActive});}catch(error){assertSummaryAutoActive();var concurrent=summaryAutoExisting(store,date);if(concurrent)return concurrent;throw error;}
+ assertSummaryAutoActive();
  var message='系统分配已保存';try{TipOutDateState.notify(store,date);}catch(_){message+='；汇总通知失败，请刷新查看';}
  try{if(window.TipOutPayrollBridge)TipOutPayrollBridge.syncAfterAllocation(store,date,date);}catch(_){message+='；薪资同步失败，请更新员工数据';}
  return {status:'success',message:message};
@@ -49,7 +51,7 @@ function dashboardRefreshSavedDays(){dashboardStores.forEach(function(s){s.days.
 function dashboardSaveReport(){try{sessionStorage.setItem(dashboardReportKey,JSON.stringify({key:summaryAutoScope.key,items:dashboardLastItems,issues:dashboardIssues}));}catch(_){} }
 function dashboardReadReport(key){try{var r=JSON.parse(sessionStorage.getItem(dashboardReportKey)||'null');return r&&r.key===key&&Array.isArray(r.items)?r:null;}catch(_){return null;}}
 function renderDashboardProgress(){
- if(summaryAutoDisposed||!isAllocationDashboard())return;
+ if(!summaryAutoPageIsActive()||!isAllocationDashboard())return;
  var items=summaryAutoQueue?summaryAutoQueue.items:dashboardLastItems;dashboardLastItems=items;var c=TipOutDashboardModel.counts(items),running=dashboardBusy,current=items.find(function(i){return i.status==='running';});
  var root=document.getElementById('dashboardHero');root.classList.toggle('is-success',!running&&!c.failed&&!dashboardIssues.length);root.classList.toggle('is-active',running);
  document.getElementById('dashboardTaskTitle').textContent=dashboardInspecting?'正在检查分配任务':running?'正在自动分配小费':(c.failed||dashboardIssues.length)?'小费分配已结束':c.total?'小费分配已完成':'当前范围无需自动分配';
@@ -64,19 +66,19 @@ function renderDashboardProgress(){
  document.getElementById('dashboardTaskRows').innerHTML=items.map(function(i){return '<tr><td>'+escapeSummaryHtml(i.storeLabel||i.store)+'</td><td>'+escapeSummaryHtml(i.date)+'</td><td>'+labels[i.status]+'</td><td>'+escapeSummaryHtml(i.message||'—')+'</td></tr>';}).join('');document.getElementById('dashboardTaskDetails').hidden=!items.length;
  if(!running)dashboardRefreshSavedDays();renderDashboardStores();renderDashboardIssues();renderDashboardRules();
 }
-function renderSummaryAutoProgress(queue){if(summaryAutoDisposed)return;dashboardLastItems=queue.items;if(!queue.running){dashboardCompleted=true;dashboardSetBusy(false);dashboardSaveReport();}renderDashboardProgress();}
+function renderSummaryAutoProgress(queue){if(!summaryAutoPageIsActive())return;dashboardLastItems=queue.items;if(!queue.running){dashboardCompleted=true;dashboardSetBusy(false);dashboardSaveReport();}renderDashboardProgress();}
 async function startSummaryAutoAllocation(){
- if(summaryAutoDisposed||dashboardBusy||!isAllocationDashboard()||!validateSummaryDateRange(false))return;
+ if(!summaryAutoPageIsActive()||dashboardBusy||!isAllocationDashboard()||!validateSummaryDateRange(false))return;
  summaryAutoScope=Object.assign(dashboardRange(),{key:dashboardScopeKey()});summaryAutoQueue=null;dashboardLastItems=[];dashboardCompleted=false;dashboardInspecting=true;dashboardSetBusy(true);renderDashboardProgress();
  try{await dashboardInspectStores();assertSummaryAutoActive();var plan=TipOutDashboardModel.plan(dashboardStores),report=dashboardReadReport(summaryAutoScope.key);dashboardInspecting=false;
   var failedKeys=report?report.items.filter(function(i){return i.status==='failed';}).map(function(i){return TipOutDashboardModel.key(i.store,i.date);}):[];
   if(report&&plan.every(function(i){return failedKeys.indexOf(TipOutDashboardModel.key(i.store,i.date))>=0;})){dashboardLastItems=report.items.map(function(i){if(i.status==='failed'&&summaryAutoExisting(i.store,i.date))return Object.assign({},i,{status:'skipped',message:'已另行分配，保留原结果'});return i;});dashboardCompleted=true;dashboardSetBusy(false);renderDashboardProgress();return;}
   if(!plan.length){dashboardCompleted=true;dashboardSetBusy(false);renderDashboardProgress();dashboardSaveReport();return;}
   summaryAutoQueue=window.TipOutAutoAllocation.create(plan,executeSummaryAutoDate,renderSummaryAutoProgress);await summaryAutoQueue.run();
- }catch(error){if(!summaryAutoDisposed){dashboardInspecting=false;dashboardIssues.push({message:error.message||'自动分配无法启动'});dashboardSetBusy(false);renderDashboardProgress();}}
+ }catch(error){if(summaryAutoPageIsActive()){dashboardInspecting=false;dashboardIssues.push({message:error.message||'自动分配无法启动'});dashboardSetBusy(false);renderDashboardProgress();}}
 }
-function scheduleSummaryAutoAllocation(){if(summaryAutoDisposed)return;if(isStoreSummaryRoute()){syncStoreSummaryHeader();return;}if(summaryAutoTimer)window.clearTimeout(summaryAutoTimer);summaryAutoTimer=window.setTimeout(function(){summaryAutoTimer=null;startSummaryAutoAllocation();},200);}
-function retrySummaryAutoAllocation(){if(dashboardBusy||summaryAutoDisposed)return;if(!summaryAutoQueue&&dashboardLastItems.length)summaryAutoQueue=window.TipOutAutoAllocation.create(dashboardLastItems.map(function(i){return Object.assign({},i);}),executeSummaryAutoDate,renderSummaryAutoProgress);if(summaryAutoQueue){dashboardSetBusy(true);summaryAutoQueue.run(true);}}
+function scheduleSummaryAutoAllocation(){if(!summaryAutoPageIsActive())return;if(isStoreSummaryRoute()){syncStoreSummaryHeader();return;}if(summaryAutoTimer)window.clearTimeout(summaryAutoTimer);summaryAutoTimer=window.setTimeout(function(){summaryAutoTimer=null;startSummaryAutoAllocation();},200);}
+function retrySummaryAutoAllocation(){if(dashboardBusy||!summaryAutoPageIsActive())return;if(!summaryAutoQueue&&dashboardLastItems.length)summaryAutoQueue=window.TipOutAutoAllocation.create(dashboardLastItems.map(function(i){return Object.assign({},i);}),executeSummaryAutoDate,renderSummaryAutoProgress);if(summaryAutoQueue){dashboardSetBusy(true);summaryAutoQueue.run(true);}}
 function closeSummaryAutoAllocation(){} // No modal: completion stays on the dashboard.
 function dashboardStoreUrl(store,date){var r=dashboardRange();return 'index.html?screen=store&store='+encodeURIComponent(store)+'&startDate='+encodeURIComponent(date||r.startDate)+'&endDate='+encodeURIComponent(date||r.endDate)+'&datePreset='+encodeURIComponent(date?'custom':activeSummaryDatePreset||'custom');}
 function openDashboardStore(index,date){if(dashboardBusy)return;var s=dashboardStores[Number(index)];if(!s||!dashboardAllowedStores().some(function(a){return a.store===s.store;}))return;window.location.href=dashboardStoreUrl(s.store,date);}
@@ -101,4 +103,4 @@ function initializeDashboardPage(){
  if(storeMode){syncSummaryDatePresetUi();syncStoreSummaryHeader();}else dashboardSyncDates();return true;
 }
 ['click','change','input','keydown'].forEach(function(type){document.addEventListener(type,function(e){if(dashboardBusy&&e.target.closest&&e.target.closest('#allocationDashboard')&&e.target.closest('button,a,input,select,summary')){e.preventDefault();e.stopImmediatePropagation();}},true);});
-window.registerTipOutCleanup(function(){summaryAutoDisposed=true;if(summaryAutoQueue)summaryAutoQueue.stop();});
+window.registerTipOutCleanup(function(){summaryAutoDisposed=true;if(summaryAutoTimer!==null){window.clearTimeout(summaryAutoTimer);summaryAutoTimer=null;}if(summaryAutoQueue)summaryAutoQueue.stop();});
