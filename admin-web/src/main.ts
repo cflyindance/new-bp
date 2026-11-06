@@ -12111,7 +12111,10 @@ function mountInitializedPage(): void {
     activePayrollPage = null;
   }
   destroyTeamEmployeesPage();
-  destroyTeamTipsPage();
+  // Sidebar-only redraws must not recreate the automatic allocation runtime.
+  const retainedTipsRoot = activeTipsPage && isAuthenticated() && activeTipsPage.canRetain()
+    ? document.querySelector<HTMLElement>('[data-team-tips-root]') : null;
+  if (!retainedTipsRoot) destroyTeamTipsPage();
   releaseFohMenuOrderLimitsFullscreen();
   releaseFohBuffetRulesFullscreen();
   bindChainBrandOrgSyncListener();
@@ -12452,7 +12455,12 @@ function mountInitializedPage(): void {
 
   const tipsRoot = app.querySelector<HTMLElement>("[data-team-tips-root]");
   if (tipsRoot) {
-    activeTipsPage = mountTipsPage(tipsRoot, parseTipsRoute(location.hash), createTipsPageContext());
+    if (retainedTipsRoot && activeTipsPage) {
+      tipsRoot.replaceWith(retainedTipsRoot);
+      activeTipsPage.reattach();
+    } else activeTipsPage = mountTipsPage(tipsRoot, parseTipsRoute(location.hash), createTipsPageContext());
+  } else if (retainedTipsRoot) {
+    destroyTeamTipsPage();
   }
 
   bindMarketingScreensaverFullscreenFlow(app);
@@ -13343,7 +13351,10 @@ if (["", "#", "#/", "#/home", "#/home/"].includes(location.hash) && applyDefault
 bindPageSaveGuard();
 bindProviderSessionRevalidation(mount);
 bindBrandRuntimeGuards();
-window.addEventListener("hashchange", mount);
+window.addEventListener("hashchange", () => {
+  destroyTeamTipsPage();
+  mount();
+});
 
 if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
   document.documentElement.classList.add("dark");
