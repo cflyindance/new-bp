@@ -2072,7 +2072,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function getDetailBusinessStatus(dateKey, rules) {
-      if (TipOutBusinessStatus.isDemoClosedDate(dateKey)) {
+      if (TipOutBusinessStatus.isDemoClosedDate(dateKey,getDetailPayoutScope().store)) {
         return TipOutBusinessStatus.inspectFacts({ salesAmount: 0, tipAmount: 0, punchRecords: [] });
       }
       var punchRecords = [];

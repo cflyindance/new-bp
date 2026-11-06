@@ -26,7 +26,7 @@ var ALLOC_KEY = 'tipout_allocated';
       saveAllocatedDatesForStore(store, dates);
     }
 
-    const EMPLOYEE_ROSTER_KEY = 'tipout-employees-roster-v1';
+    const EMPLOYEE_ROSTER_KEY = window.tipoutTestPresetView ? 'tipout-test-preset-roster-v1' : 'tipout-employees-roster-v1';
 
     const DEFAULT_EMPLOYEES = [
       { employeeId: 'fallback:maria-garcia', name: 'Maria Garcia',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 185, tipRate: 0.15 },
@@ -974,7 +974,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var storeRules = getRulesForCurrentStore();
       return getDateRange().map(function(dateKey) {
         var employeeResults = getDailyEmployeeResultsForEmployees(dateKey, scopedEmployees);
-        if (TipOutBusinessStatus.isDemoClosedDate(dateKey)) {
+        if (TipOutBusinessStatus.isDemoClosedDate(dateKey,(document.getElementById('storeSelect')||{}).value)) {
           employeeResults = employeeResults.map(function(item) {
             return Object.assign({}, item, {
               before: 0, deducted: 0, received: 0, after: 0,
@@ -1922,6 +1922,7 @@ var ALLOC_KEY = 'tipout_allocated';
       initStoreSelect();applyDefaultSummaryDateRange();syncSummaryDateSortUi();
       var queryView=new URLSearchParams(window.location.search).get('view');activeSummaryView=TipOutSummaryUi.resolveSummaryView(history.state,queryView);
       if(!initializeDashboardPage())return;
+      if(window.TipOutTestPresetUi)window.TipOutTestPresetUi.mount();
       if(isAllocationDashboard()){scheduleSummaryAutoAllocation();return;}
       restoreSummaryUiState(true);syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();
     }

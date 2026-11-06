@@ -1,0 +1,84 @@
+(function(root){
+'use strict';
+var KEY='tipout-test-presets-v1',VERSION=1,PREFIX='tipout-preset-', busy=false;
+var catalog=root.tipoutTestPresetCatalog||[];
+function copy(v){return JSON.parse(JSON.stringify(v));}
+function object(key,empty){var raw=root.localStorage.getItem(key);var v=raw?JSON.parse(raw):empty;if(!v||typeof v!=='object'||Array.isArray(v)!==Array.isArray(empty))throw new Error(key+'格式异常，未改动数据');return v;}
+function state(){return object(KEY,{version:VERSION,cases:{}});}
+function find(id){var item=catalog.find(function(c){return c.id===id;});if(!item)throw new Error('未知预设');return item;}
+function name(id){var c=find(id);return '【小费测试】'+({C:'规则',S:'状态',E:'异常'}[c.group])+' '+id+' '+c.title;}
+function owned(store){return catalog.find(function(c){return name(c.id)===store;});}
+function entry(store){var c=owned(store);return c&&state().cases[c.id];}
+function ruleId(id){find(id);return 903110000+({C:0,S:100,E:200}[id[0]])+Number(id.slice(1));}
+function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dates(id,today){var c=find(id),end=new Date((today||dateKey(new Date()))+'T12:00:00'),n=c.group==='C'?1:c.group==='S'?14:7,list=[];for(var i=n-1;i>=0;i--){var d=new Date(end);d.setDate(d.getDate()-i);list.push(dateKey(d));}return list;}
+function actor(id,key,role,tips,sales,hours,orders){return {id:PREFIX+id+'-'+key,name:id+'员工'+key,role:id+role,store:name(id),active:true,tips:tips||0,sales:sales||0,hours:hours==null?8:hours,orders:orders==null?1:orders};}
+function definition(id){
+ var a=[actor(id,'A','接收员',0,100,8),actor(id,'B','接收员',0,100,8),actor(id,'D','贡献员',0,100,8)],p=100,mode='average',clock='clock';
+ if(id==='C03'){mode='hours';a[0].hours=2;a[1].hours=6;}
+ if(id==='C04'){mode='hours';a[0].hours=4;a[1].hours=8;}
+ if(id==='C05'){mode='orders';a[1].orders=3;}
+ if(id==='C06'){a[1].role=id+'接收员';a.push(actor(id,'C','辅助员',0,100,8));}
+ if(id==='C07'||id==='C08'){a[1].hours=0;if(id==='C08'){clock='unrestricted';mode='orders';}}
+ if(['C09','C10','C11'].indexOf(id)>=0)a[2].tips={C09:60,C10:100,C11:150}[id];
+ if(id==='C13'){a=[actor(id,'A','贡献员',20,2000),actor(id,'B','贡献员',1000,3000),actor(id,'R','接收员',0,0)];}
+ if(id==='C14'){a=[actor(id,'A','贡献员',1000,1000),actor(id,'B','贡献员',1000,2000),actor(id,'C','贡献员',1000,2000),actor(id,'R','接收员',0,5000)];p=500;}
+ if(id==='C15'){a=[actor(id,'A','接收员',100,100)];p=30;}
+ if(id==='C16'){a.push(actor(id,'C','接收员',0,100));p=.01;}
+ if(id==='S08')p=0;
+ if(id==='E06'){a[0].hours=0;a[1].hours=0;}
+ if(id!=='C14')a.push(actor(id,'P','预算员',0,p*10,0));
+ var rule={id:ruleId(id),ruleName:'【预设 '+id+'】'+find(id).title,testPresetId:id,store:name(id),poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'sales',pct:10,conditions:{employee:[PREFIX+id+'-P']}}],receivers:[{roles:[id+'接收员'],pct:100}],distribution:mode,clockin:clock,workHoursConfig:{mode:id==='C04'?'capped':'actual',maxHoursPerDay:id==='C04'?2:null},deductConfig:{tipIncome:{scopeType:'role',roles:[id+'贡献员'],rate:1}}};
+ if(id==='C02')rule.receivers[0].employeeWeights={[id+'接收员']:{[a[0].name]:1,[a[1].name]:3}};
+ if(id==='C06')rule.receivers=[{roles:[id+'接收员'],pct:60},{roles:[id+'辅助员'],pct:40}];
+ if(id==='C13')rule.deductConfig={personalSalesPct:{scopeType:'role',roles:[id+'贡献员'],rate:.02,salesConditions:{revenueType:'Net Sales (税前营业额)',role:[id+'贡献员']}}};
+ if(id==='C14'){rule.poolRules=[{type:'sales',pct:5,deduction:{version:1,role:id+'贡献员'}}];delete rule.deductConfig;}
+ if(id==='C15')rule.deductConfig={tipIncome:{scopeType:'employee',employee:[a[0].name],rate:.2}};
+ if(id==='E07')rule.receivers[0].pct=80;
+ return {actors:a,rules:id==='S06'?[]:[rule]};
+}
+function closed(store,date){var c=owned(store),e=entry(store);return !!(e&&(c.id==='S05'||c.id==='S07'&&e.dates.indexOf(date)%5===4));}
+function facts(store,date){
+ var c=owned(store),e=entry(store);if(!c||!e)return null;
+ if(c.id==='E08'&&e.fault)throw new Error('E08测试注入：门店小费来源读取失败（可在测试预设中修复）');
+ if(e.dates.indexOf(date)<0)return [];
+ return definition(c.id).actors.map(function(a){var off=closed(store,date),hours=off?0:a.hours,tips=off?0:a.tips,sales=off?0:a.sales,count=off?0:a.orders;
+ var offsetLabel=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',timeZoneName:'shortOffset'}).formatToParts(new Date(date+'T12:00:00Z')).find(function(p){return p.type==='timeZoneName';}).value,offsetHours=Number(offsetLabel.replace('GMT','')),offset=(offsetHours<0?'-':'+')+String(Math.abs(offsetHours)).padStart(2,'0')+':00';
+ var start=date+'T08:00:00'+offset,end=date+'T'+String(8+hours).padStart(2,'0')+':00:00'+offset;
+ var orders=Array.from({length:count},function(_,i){return {id:a.id+':'+date+':'+i,employeeId:a.id,businessDate:date,salesAmount:sales/count,tipAmount:tips/count,surcharge:0,orderType:'dine_in',area:'main',paymentMethod:'card',localTime:'11:30',completedPaymentAt:date+'T11:30:00'+offset,timeZone:'America/Chicago',lines:[{productId:'preset-main',productLine:'POS',category:'主菜',amount:sales/count}]};});
+ return {version:'tipout-test-presets-v1',key:a.id+':'+date,storeId:store,dateKey:date,employeeId:a.id,name:a.name,role:a.role,scenarioId:c.id,contributionScenario:find(c.id).expected,orders:orders,reportedTipEvents:[],salesAmount:sales,orderTips:tips,reportedTips:0,originalTips:tips,surcharge:0,closed:off,attendance:{hours:hours,originalHours:hours,effectiveHours:hours,clockStatus:hours?'已打卡':'未打卡',punchSessions:hours?[{clockIn:'08:00',clockOut:String(8+hours).padStart(2,'0')+':00',clockInAt:start,clockOutAt:end,durationHours:hours,status:'complete'}]:[],adjustment:null}};
+ });
+}
+function beforeAllocation(store,date){var c=owned(store),e=entry(store);if(!c||!e||!e.fault)return;if(c.id==='E03'||((c.id==='E02'||c.id==='E04')&&e.dates.indexOf(date)%3===1))throw new Error(c.id+'测试注入：当日分配服务暂时失败（修复故障后可重试）');}
+function shouldSeed(id,index){if(id[0]==='C')return 'system';if(id==='S02'||id==='S03'||id==='S04'||id==='S08'||id==='E05')return id==='S03'?'paid':id==='S04'?'manual':'system';if(id==='S07')return ['pending','system','paid','manual','closed'][index%5];return 'pending';}
+function saveState(s){root.localStorage.setItem(KEY,JSON.stringify(s));}
+async function clearOwned(id,e){
+ var store=name(id);for(var date of e.dates){await root.TipOutDateState.withLock(store,date,async function(){var key=store+'\u0000'+date;['tipout_allocation_results_v1','tipout-payout-records-v1','tipout_unconfirmed_updates_v1'].forEach(function(k){var d=object(k,{});delete d[key];root.localStorage.setItem(k,JSON.stringify(d));});var d=object('tipout_allocated',{});if(Array.isArray(d[store]))d[store]=d[store].filter(function(x){return x!==date;});root.localStorage.setItem('tipout_allocated',JSON.stringify(d));});}
+}
+async function load(ids,restore,today,onProgress){
+ if(busy)throw new Error('预设正在加载');if(!root.navigator.locks)throw new Error('浏览器不支持安全加载测试预设');ids=Array.from(new Set(ids));ids.forEach(find);busy=true;
+ try{return await root.navigator.locks.request('tipout-test-preset-loader',async function(){
+ var report=[];for(var id of ids){var s=state(),existing=s.cases[id];if(existing&&!restore){report.push({id:id,status:'保留现有预设',dates:existing.dates});continue;}
+ var spec=definition(id),range=dates(id,today);if(object('tipout_rules',[]).some(function(r){return r.id===ruleId(id)&&r.testPresetId!==id;}))throw new Error('预设规则编号与现有规则冲突，未覆盖');['tipout_rules','tipout-test-preset-roster-v1'].forEach(function(k){object(k,[]);});['tipout_allocation_results_v1','tipout-payout-records-v1','tipout_unconfirmed_updates_v1','tipout_allocated'].forEach(function(k){object(k,{});});if(existing)await clearOwned(id,existing);
+ var rules=object('tipout_rules',[]).filter(function(r){return r.id!==ruleId(id);}),roster=object('tipout-test-preset-roster-v1',[]).filter(function(r){return !String(r.id||'').startsWith(PREFIX+id+'-');});
+ rules=rules.concat(spec.rules);roster=roster.concat(spec.actors.map(function(a){return {id:a.id,name:a.name,role:a.role,store:a.store,active:true};}));
+ // Parse all affected documents before writing; corrupt ordinary records are never repaired or cleared by this tool.
+ ['tipout_allocation_results_v1','tipout-payout-records-v1','tipout_unconfirmed_updates_v1','tipout_allocated'].forEach(function(k){object(k,{});});
+ root.localStorage.setItem('tipout_rules',JSON.stringify(rules));root.localStorage.setItem('tipout-test-preset-roster-v1',JSON.stringify(roster));s.cases[id]={dates:range,fault:id[0]==='E'&&['E01','E05','E06','E07'].indexOf(id)<0,status:'loading',loadedAt:new Date().toISOString()};saveState(s);
+ try{for(var i=0;i<range.length;i++){var date=range[i],kind=shouldSeed(id,i);if(['system','paid','manual'].indexOf(kind)<0)continue;
+ var snapshot=root.prepareTipoutQuickSnapshot(name(id),date);snapshot.allocationSource=kind==='manual'?'manual':'system';
+ if(kind==='manual'){var es=snapshot.pools[0].employees.filter(function(a){return a.role===id+'接收员';});if(es.length>=2){es[0].amount+=10;es[1].amount-=10;es[0].percentage=60;es[1].percentage=40;es.forEach(function(e){e.percentageSource='manual';delete e.allocationBase;});snapshot=root.TipOutFunding.reconcileExisting(snapshot,spec.rules);}}
+ snapshot=await root.TipOutAllocationResults.commit(snapshot,{onlyIfUnallocated:true});
+ if(kind==='paid')await root.TipOutDateState.confirmPayout({storeId:name(id),businessDate:date,requestId:PREFIX+id+':'+date,expectedSnapshotId:snapshot.snapshotId,expectedSnapshotVersion:snapshot.snapshotVersion,expectedSnapshotHash:snapshot.snapshotHash,paidByDisplayName:'测试预设'});
+ if(onProgress)onProgress(id+' · '+date);await new Promise(function(r){root.setTimeout(r,0);});
+ }
+ s=state();s.cases[id].status='ready';saveState(s);report.push({id:id,status:'加载完成',dates:range});
+ }catch(error){var causes=[],err=error;while(err&&causes.length<5){causes.push(err.message||String(err));err=err.cause;}var reason=causes.join('：');s=state();s.cases[id].status='incomplete';s.cases[id].error=reason;saveState(s);report.push({id:id,status:'加载未完成：'+reason,dates:range});}
+ if(onProgress)onProgress(id+' '+report[report.length-1].status);
+ }return report;
+ });}finally{busy=false;}
+}
+async function repair(ids){if(busy)throw new Error('预设正在加载');return root.navigator.locks.request('tipout-test-preset-loader',async function(){var s=state();ids.forEach(function(id){find(id);if(s.cases[id])s.cases[id].fault=false;});var rules=object('tipout_rules',[]);if(ids.indexOf('E07')>=0&&s.cases.E07)rules.forEach(function(r){if(r.id===ruleId('E07')&&r.testPresetId==='E07'&&r.store===name('E07'))r.receivers[0].pct=100;});root.localStorage.setItem('tipout_rules',JSON.stringify(rules));saveState(s);});}
+function url(id){var c=find(id),e=entry(name(id));if(!e)throw new Error('请先加载该预设');var p=new URLSearchParams({testPresets:'1',startDate:e.dates[0],endDate:e.dates[e.dates.length-1],datePreset:'custom'});if(c.group==='E'){p.set('testGroup','E');p.set('testCase',id);}else{p.set('screen','store');p.set('store',name(id));}return 'index.html?'+p.toString();}
+root.TipOutTestPresets={catalog:catalog,key:KEY,version:VERSION,name:name,ruleId:ruleId,owned:owned,entry:entry,dates:dates,definition:definition,facts:facts,closed:closed,beforeAllocation:beforeAllocation,load:load,repair:repair,url:url,state:state,isBusy:function(){return busy;}};
+})(window);

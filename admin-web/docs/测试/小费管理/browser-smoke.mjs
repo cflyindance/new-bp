@@ -1,0 +1,17 @@
+import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const shots=process.argv[2],session='tips-test-presets-final-20261106';fs.mkdirSync(shots,{recursive:true});
+const captureDir=fs.mkdtempSync(path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(?:[A-Za-z]:)/,m=>m.slice(1))),'scope-cli-'));let call=0;const cli=args=>{const out=path.join(captureDir,(++call)+'.out'),err=out+'.err',a=fs.openSync(out,'w'),e=fs.openSync(err,'w');try{execFileSync('C:/Users/27273/Tools/node/node-v23.9.0-win-x64/node_modules/agent-browser/bin/agent-browser-win32-x64.exe',['--session',session,...args.split(' ')],{stdio:['ignore',a,e],timeout:30000});}catch(error){throw Error(fs.readFileSync(err,'utf8')||error.message);}finally{fs.closeSync(a);fs.closeSync(e);}return fs.readFileSync(out,'utf8');};
+const run=code=>JSON.parse(cli('eval -b '+Buffer.from(code).toString('base64')));
+const root='Array.from(document.querySelectorAll("*")).find(e=>e.shadowRoot)?.shadowRoot';
+const act=body=>run('(()=>{const r='+root+';'+body+'})()');
+async function wait(code){for(let i=0;i<1200;i++){const x=run(code);if(x)return x;await new Promise(r=>setTimeout(r,150));}throw Error('UI timeout '+code);}
+const click=selector=>act('r.querySelector('+JSON.stringify(selector)+').click();return true;');
+const select=(selector,value)=>act('const el=r.querySelector('+JSON.stringify(selector)+');el.value='+JSON.stringify(value)+';el.dispatchEvent(new Event("change",{bubbles:true}));return el.value;');
+const options=selector=>act('return Array.from(r.querySelector('+JSON.stringify(selector)+').options).map(e=>e.value);');
+const drawer=()=>act('return Array.from(r.querySelectorAll(".drawer.show")).map(e=>e.id);');
+const summary=id=>act('return r.querySelector('+JSON.stringify('#deduct-card-'+id+'-conditions')+').textContent;');
+const poolSummary=()=>act('return Array.from(r.querySelectorAll("#poolRulesContainer .pool-rule-conditions")).map(e=>e.textContent);');
+cli('open http://127.0.0.1:65257/#/team/tips/distribution');await wait('('+root+')?.querySelector("#allocationDashboard")?.getAttribute("aria-busy")==="false"');assert.ok(act('return !r.querySelector("#dashboardStores").textContent.includes("【小费测试】");'));assert.equal(run('JSON.parse(localStorage.getItem("tipout-employees-roster-v1")).filter(e=>e.store.startsWith("【小费测试】")).length'),0);click('#tipoutPresetButton');act('r.querySelector("#tipoutPresetDialog input[aria-label^=S01]").click();Array.from(r.querySelectorAll("#tipoutPresetDialog button")).find(e=>e.textContent==="加载所选").click();return true;');await wait('('+root+')?.querySelector(".tipout-daily-row")');assert.ok(cli('get url').includes('S01'));assert.ok(act('return r.querySelector("#dailySummaryList").textContent.includes("未分配");'));click('#tipoutPresetSummaryButton');act('const row=Array.from(r.querySelectorAll("#tipoutPresetDialog tbody tr")).find(e=>e.cells[1].textContent==="C02");Array.from(row.querySelectorAll("button")).find(e=>e.textContent==="查看规则").click();return true;');await wait('('+root+')?.querySelector("#ruleName")');assert.ok(act('return r.querySelector("#ruleName").value.includes("C02");'));cli('screenshot '+path.join(shots,'rule-editor.png'));console.log('PASS ordinary dashboard and roster exclude presets, single-load navigates to unallocated summary, numeric test rule opens editor');
