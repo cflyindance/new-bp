@@ -627,10 +627,10 @@
       "framing": "viewport-page"
     },
     {
-      "file": "assets/tips-detail-fixed-store-20261106/details.png",
-      "sha256": "69f6f386e0c6a96b7ff8609fbdc3ec140e0519e7287d079084897ac18678a0b9",
-      "baseline": "cb2549c4 + TIPOUT-DETAIL-FIXED-STORE-20261106-01",
-      "route": "http://127.0.0.1:65253/#/team/tips/details?date=2026-11-01&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231",
+      "file": "assets/tips-detail-copy-cleanup-20261106/details.png",
+      "sha256": "ad0d10e6844c78b338bd384def347805df2bfa2fbc7ab4715e810a3622f6ab1d",
+      "baseline": "4c30d7a8 + TIPOUT-DETAIL-COPY-CLEANUP-20261106-01",
+      "route": "http://127.0.0.1:65254/#/team/tips/details?date=2026-11-04&store=Golden%20Dragon%20Chinese%20Kitchen%20-%20Dallas%2C%20TX%2075231",
       "capturedAt": "2026-11-06",
       "width": 1440,
       "height": 1000,
@@ -667,7 +667,7 @@
     "src/team/tips/legacy/tipout-summary-date-sort.js.txt": "cde8bea6c6d82bcb524c79622c53c57f9a1c2aafe34996edfa6232dd06b6620a",
     "src/team/tips/legacy/tipout-summary-ui.js.txt": "749851d2ff8266272a9a2ca40523d5a81d66f9a5ed929a47a3bb1a18f828f62f",
     "src/team/tips/programs/contributor-shares-editor.js.txt": "3be64f314d5af2ef43e36d12afd7bfd783d3e9a91acf25101ed8fb05179403fa",
-    "src/team/tips/programs/details.js.txt": "dda24c7318e7f5cfc2ba484d894c2db6ffe7f9c9e4724c7be0fd4105489af23a",
+    "src/team/tips/programs/details.js.txt": "6d30174c88cd43dae319d0b4dfaa85cc75384973cf30b23f66aaa4b3ce684360",
     "src/team/tips/programs/distribution.js.txt": "4e1516473a007de14bd0738c2790708eb75450932c8e7853808015990d6acceb",
     "src/team/tips/programs/employee-reconciliation.js.txt": "dfeac8bf9bd252b60632bb5884b53d2cec599fb555c1b273ffe13d8bb0808f30",
     "src/team/tips/programs/rule-editor.js.txt": "338e82c7adc62217a2952db1eacbe0ab4ff0bb947ec839bca1312b104604e3c1",
@@ -684,10 +684,10 @@
     "src/team/tips/tips-navigation.ts": "17af55fd98c788801dc6c1c817af6c3f3d25529bcc753230d4152aafbec0195e",
     "src/team/tips/tips-page.css": "75814c0994f6f903dee9d609458b4ccdf276f1a50b0db442830f1f993dd7807e",
     "src/team/tips/tips-shell.css": "d546c9818a10560c98e1c5ca120758376d58ecbd547989687068cf095c047d3b",
-    "src/team/tips/tips-templates.ts": "206dd2452ff5ee3c287a2f3c1364454bc06213c87724bed46a24af832f857046",
+    "src/team/tips/tips-templates.ts": "25492ec013b4ad525e2948178048ce65e7884bc55a7277f807c7a9d327672d89",
     "src/team/tips/legacy/tipout-scenario-data.js.txt": "17109c18e41a5495380e7f250c8478e82125746b9256c311ae4196339baa3622",
     "src/team/tips/legacy/tipout-dashboard-model.js.txt": "e1c956b3b3fa12272945b76e11a2a43d808e11662c2a7a55537b093e286af0ee",
-    "src/team/tips/tips-figma.css": "cddfe20bc30641ab8f128daf1ab98aa885191349fa37e0f260d55ae093f2e138",
+    "src/team/tips/tips-figma.css": "398db129d56b5a9298c36526c5d3fd314419bb249c036b5a92180255eb7da14a",
     "src/team/tips-page.ts": "0cac2364d9ce4e09f9a18d20922a0d87d220ff3bb342674948cd2cc86724496d"
   },
   "operationCoverage": [
@@ -1768,7 +1768,7 @@
       "operation": "门店",
       "definition": "在页面标题下方以门店图标和名称只读展示当前门店；筛选区不展示门店字段，不提供切换入口。当日规则、员工及分配结果均限定在该门店。",
       "line": 264,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1778,7 +1778,7 @@
       "operation": "日期",
       "definition": "只读展示进入明细时选择的完整营业日；不提供日历或日期切换。",
       "line": 265,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1788,7 +1788,7 @@
       "operation": "规则名称筛选",
       "definition": "多选、全选；只改变可见规则，不缩小保存或发放的整日范围。",
       "line": 266,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1798,7 +1798,7 @@
       "operation": "原始总小费",
       "definition": "当日来源总额，保持与员工原始事实一致。",
       "line": 267,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1808,7 +1808,7 @@
       "operation": "入池总金额",
       "definition": "当日可分配池金额；草稿变化尚未成为正式确认结果。",
       "line": 268,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1818,7 +1818,7 @@
       "operation": "已分配总额",
       "definition": "有效确认接收金额，不把未保存调整直接计入。",
       "line": 269,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1828,7 +1828,7 @@
       "operation": "未分配总额",
       "definition": "未确认采用预计池金额，确认后采用池余额。",
       "line": 270,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -1838,7 +1838,7 @@
       "operation": "小费池数量",
       "definition": "当日适用规则／池数量。",
       "line": 271,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2018,7 +2018,7 @@
       "operation": "贡献方标签",
       "definition": "橙色文字、浅橙底，标识本规则的扣除员工及金额。",
       "line": 311,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2028,7 +2028,7 @@
       "operation": "接收方标签",
       "definition": "绿色文字、浅绿底，标识本规则的接收员工及分得金额。",
       "line": 312,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2038,7 +2038,7 @@
       "operation": "双重身份",
       "definition": "同一员工既贡献又接收时分别展示两种身份及金额，不用净额替代。",
       "line": 313,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2048,7 +2048,7 @@
       "operation": "商家承担提示",
       "definition": "无员工贡献，由商家承担；员工扣除为0。",
       "line": 314,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2058,7 +2058,7 @@
       "operation": "贡献明细缺失",
       "definition": "提示无法查看贡献依据；缺失字段显示“—”，不将缺失数据作为0或重算已确认数据。",
       "line": 315,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2228,7 +2228,7 @@
       "operation": "关联营业额项",
       "definition": "读取来源项ID、名称、比例及扣除角色；不将整个小费池金额作为本项应扣。",
       "line": 358,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2238,7 +2238,7 @@
       "operation": "个人营业额",
       "definition": "当天归属该员工、符合本营业额项口径及取值条件的营业额。",
       "line": 359,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2248,7 +2248,7 @@
       "operation": "扣除占比",
       "definition": "个人营业额÷本扣除角色当前个人营业额合计，显示两位小数。",
       "line": 360,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2258,7 +2258,7 @@
       "operation": "应扣总额",
       "definition": "关联营业额项入池金额；调整当天该项公式基数或比例后同步重算。",
       "line": 361,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2268,7 +2268,7 @@
       "operation": "应扣金额",
       "definition": "本项应扣总额按原始营业额占比精确分币所得，不按显示比例反算。",
       "line": 362,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2278,7 +2278,7 @@
       "operation": "可扣余额",
       "definition": "原始可扣小费减去前序规则／来源项已实扣金额，不包含本轮新分得。",
       "line": 363,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
@@ -2288,7 +2288,7 @@
       "operation": "实际扣除",
       "definition": "min(应扣,可扣余额)；少扣不转给其他员工。实际贡献C按实扣累加。",
       "line": 364,
-      "interfaceImage": "assets/tips-detail-fixed-store-20261106/details.png",
+      "interfaceImage": "assets/tips-detail-copy-cleanup-20261106/details.png",
       "outcomeCoverage": "字段及状态定义保持；图像版本见来源清单，不以默认界面替代所有分支验收"
     },
     {
