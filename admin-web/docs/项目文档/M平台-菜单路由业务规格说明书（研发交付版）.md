@@ -1,11 +1,37 @@
 # M 平台菜单路由业务规格说明书（研发交付版）
 
-> V1.0 · 2026-10-21；MENU-JSON-PARITY-20261021-18。
-> 产品：[v1.1](./M平台-菜单路由可视化配置设计方案.md)；个人：[V1.0](./M平台-菜单路由需求文档（个人规范版）.md)。
+> V1.1 · 2026-11-06；PAGE-REG-20261106-01；基线 main@cb2549c4。
+> 产品：[v1.2](./M平台-菜单路由可视化配置设计方案.md)；个人：[V1.1](./M平台-菜单路由需求文档（个人规范版）.md)。
 
 | 版本 | 日期 | 变更 |
 | --- | --- | --- |
+| V1.1 | 2026-11-06 | PAGE-REG-20261106-01：注册合同、快照绑定与 JSON 兼容；配对产品 v1.2、个人 V1.1 |
 | V1.0 | 2026-10-21 | 实际 JSON 菜单源与双向一致性、演示缓存兼容 |
+
+## 页面注册与快照绑定
+
+![注册目录](assets/page-registration/registry.png)
+
+图注：2026-11-06，功能分支基于 main@cb2549c4 的未提交预览，隔离演示数据。详情与关联弹框在个人版操作章节就近展示。
+
+| 字段／对象 | 定义 |
+| --- | --- |
+| PageRegistration.id | 必填稳定标识；清单重复阻断加载，只在编辑器内部使用，不导出新业务字段。 |
+| title / titleEn | 默认中英文名称，title 必填；选择不会覆盖菜单自定义名称或多语言。 |
+| module / source | 维护模块和代码来源，供搜索和详情查看。 |
+| status | active / retired；停用拒绝新关联，保留历史菜单快照。 |
+| routing.type | inner / iframe / external / micro-app；链接菜单走原兼容入口。 |
+| routing.path | 必填应用内绝对路径，禁用 //、查询、hash、首尾空白及重复路径。 |
+| routing.url | iframe / external 必填 HTTP(S) URL。 |
+| routing.microAppConfig | 微应用必填 name、HTTP(S) url，其他字段沿用 MenuNode；入口由研发部署配置提供。 |
+| permissions | 可缺省能力声明，只读，不授予权限、不改写菜单 accessControl。 |
+| 快照比较 | type/path/url/microAppConfig/externalConfig 完全匹配，对象键序无关；未匹配不自动修复历史值。 |
+| bindRegisteredPage | 深拷贝菜单，清理旧技术参数和 targetKey，再写注册快照。保留身份、名称、多语言、权限、extraInfo、显示与排序；有子项拒绝绑定。 |
+| 持久化 | 使用原仓库与 JSON；不写 pageId、注册状态、查询、候选字段。刷新后通过快照识别。研发变更路由不会追溯修改既有发布菜单，需要显式重新关联。 |
+
+实现入口：page-registration-domain.ts、page-registration-catalog.ts、page-registrations.ts、page-registration-ui.ts；editor-ui/node-form-ui 负责集成。显式清单同路径替换既有目录描述，显式清单内部重复仍校验失败。
+
+算例：id=A/key=B/name=我的商品、旧 external /old、权限[p1]、extraInfo=[1]，选 inner /brand-products/products 后身份、名称、权限、扩展不变，url 和 externalConfig 清除。停用或有子项时拒绝；空叶子发布提示选择；取消不写草稿。verify-page-registration.ts 覆盖以上合同；旧参考文件测试因桌面文件缺失尚未完成。
 
 ## 当前有效定义：与商家后台导航逐项一致
 

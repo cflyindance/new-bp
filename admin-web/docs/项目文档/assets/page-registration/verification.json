@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "baseline": "cb2549c4",
+  "branch": "codex/page-registration-navigation-20261106",
+  "url": "http://127.0.0.1:65262/#/m-platform/nav-blueprint",
+  "time": "2026-11-06T06:28:48.059Z",
+  "checks": [
+    "catalog",
+    "search",
+    "status",
+    "details",
+    "spec",
+    "cancel",
+    "escape",
+    "overlay-cancel",
+    "binding",
+    "identity-preserved",
+    "draft-view-switch",
+    "leave-protection",
+    "publish",
+    "reload",
+    "empty-leaf-validation"
+  ],
+  "pageErrors": []
+}

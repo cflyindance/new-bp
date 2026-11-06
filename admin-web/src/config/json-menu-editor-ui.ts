@@ -24,6 +24,9 @@ import { decodeMenuNodePath, encodeMenuNodePath, findFirstDescendantIssuePath, r
 import { rerenderPreservingJsonMenuDetailScroll, rerenderPreservingJsonMenuTreeScroll } from "./json-menu-editor-scroll";
 import { shouldIgnoreJsonMenuSearchInput } from "./json-menu-search-autofill-guard";
 import { JSON_MENU_FORM_SECTIONS, resolveActiveJsonMenuFormSection, type JsonMenuFormSection } from "./json-menu-form-anchor";
+import { getPageRegistrations } from "./page-registration-catalog";
+import { bindRegisteredPage, matchRegisteredPage } from "./page-registration-domain";
+import { registrationUi, registrationTabs, registryView, registryRows, registrationModal, pickerRows } from "./page-registration-ui";
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function currentUser(): MenuEditorUser {
@@ -80,6 +83,13 @@ function rerenderPreservingMenuFormScroll(onMount: () => void): void {
   requestAnimationFrame(() => requestAnimationFrame(syncMenuFormAnchor));
 }
 function rerenderPreservingMenuTreeScroll(onMount: () => void): void { rerenderPreservingJsonMenuTreeScroll(onMount); }
+
+function closeRegistrationModal(onMount: () => void): void {
+  const detail = registrationUi.detail, spec = registrationUi.spec;
+  registrationUi.picker = false; registrationUi.detail = ""; registrationUi.spec = false;
+  rerenderPreservingMenuFormScroll(onMount);
+  requestAnimationFrame(() => document.querySelector<HTMLElement>(detail ? `[data-page-detail="${CSS.escape(detail)}"]` : spec ? "[data-page-spec]" : "[data-page-picker-open]")?.focus());
+}
 
 function restoreMenuFormScroll(top: number, onMount: () => void): void {
   onMount();
@@ -291,11 +301,13 @@ export function renderJsonMenuEditorPage(): string {
       </div>
       <div class="mt-1.5 flex items-center"><span class="text-sm text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span></div>
       ${state.message ? `<div class="mt-2 rounded-lg ${state.status === "error" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"} px-3 py-2 text-xs">${escapeHtml(state.message)}</div>` : ""}
+      ${registrationTabs()}
     </header>
-    <div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_rgba(15,23,42,0.035)]">
+    ${registrationUi.view === "registry" ? registryView() : `<div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_rgba(15,23,42,0.035)]">
       ${renderJsonMenuTree(document, state.selectedPath, state.issues, searchValue, expandedPaths)}
       ${renderJsonMenuNodeFormPanel(document, dialogState, state.issues, state.published)}
-    </div>
+    </div>`}
+    ${registrationModal()}
     ${fullscreenPreviewOpen ? renderJsonMenuFullscreenPreview(document, state.locale, state.selectedPath, selected, ancestors, fullscreenPreviewSheetRootPath, fullscreenPreviewSheetExpandedPaths) : ""}
   </div>`;
 }
@@ -305,7 +317,7 @@ function openAdd(parentPath: MenuNodePath, onMount: () => void): void {
   if (!document) return;
   if (parentPath.length && (isCompatibilityProtected(document.menu, parentPath) || subtreeContainsCompatibility(document.menu, parentPath))) { showAppToast("该节点属于兼容保护范围，不能添加子菜单。", { variant: "error" }); return; }
   const id = createMenuObjectId();
-  const node: MenuNode = { id, name: parentPath.length ? "新建子菜单" : "新增一级导航", key: `menu_${id.slice(-8)}`, type: "inner", path: "/new-menu" };
+  const node: MenuNode = { id, name: parentPath.length ? "新建子菜单" : "新增一级导航", key: `menu_${id}`, type: "inner" };
   if (!jsonMenuEditorStore.addNode(parentPath, node)) { showAppToast("新增子菜单失败。", { variant: "error" }); return; }
   if (!parentPath.length) jsonMenuEditorStore.moveSelected([], 0);
   if (parentPath.length) expandedPaths.add(encodeMenuNodePath(parentPath));
@@ -490,6 +502,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
   if (!node.name?.trim()) { dialogState.error = "请填写菜单名称。"; return null; }
   if (!node.id?.trim()) { dialogState.error = "请填写节点 ID。"; return null; }
   if (!node.key?.trim()) { dialogState.error = "请填写 Key。"; return null; }
+  if (dialogState.pageMode === "inner" && !node.path?.trim()) { dialogState.error = "请选择注册页面，或在特殊接入 / 兼容配置中填写路由。"; return null; }
   const normalized = normalizeMenuNodeForPageMode(node, dialogState.pageMode, {
     depth: dialogState.parentPath.length + 1,
     initialExplicitType: dialogState.initialExplicitType,
@@ -537,6 +550,7 @@ async function publishCurrentMenu(onMount: () => void): Promise<boolean> {
     showAppToast(first ? `发布被阻止：${first.message}` : jsonMenuEditorStore.state.message || "发布失败", { variant: "error" });
   }
   dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath);
+  if (!result.ok && dialogState) dialogState.dirty = true;
   onMount();
   return result.ok;
 }
@@ -560,6 +574,37 @@ export function bindJsonMenuEditor(onMount: () => void): void {
 
   document.body.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
+    const pageView = target.closest<HTMLElement>("[data-page-view]")?.dataset.pageView;
+    if (pageView === "nav" || pageView === "registry") { registrationUi.view = pageView; onMount(); return; }
+    if (target.closest("[data-page-picker-open]") && dialogState) {
+      registrationUi.picker = true; registrationUi.pickerQuery = "";
+      registrationUi.pending = matchRegisteredPage(dialogState.draft, getPageRegistrations())?.id ?? "";
+      rerenderPreservingMenuFormScroll(onMount);
+      requestAnimationFrame(() => document.querySelector<HTMLInputElement>("[data-page-picker-search]")?.focus()); return;
+    }
+    const pagePick = target.closest<HTMLElement>("[data-page-pick]")?.dataset.pagePick;
+    if (pagePick) {
+      if (!getPageRegistrations().some(p => p.id === pagePick && p.status === "active")) return;
+      registrationUi.pending = pagePick;
+      const rows = document.querySelector<HTMLElement>("[data-page-picker-rows]"); if (rows) rows.innerHTML = pickerRows();
+      document.querySelector<HTMLButtonElement>("[data-page-confirm]")?.removeAttribute("disabled");
+      document.querySelector<HTMLElement>(`[data-page-pick="${CSS.escape(pagePick)}"]`)?.focus(); return;
+    }
+    if (target.closest("[data-page-confirm]") && dialogState) {
+      const page = getPageRegistrations().find(p => p.id === registrationUi.pending); if (!page) return;
+      try {
+        dialogState.draft = bindRegisteredPage(dialogState.draft, page);
+        dialogState.pageMode = page.routing.type; dialogState.pageModeTouched = true;
+        dialogState.dirty = true; dialogState.error = undefined; dialogState.specialPageOpen = false;
+        closeRegistrationModal(onMount);
+      } catch (error) { showAppToast(error instanceof Error ? error.message : "页面关联失败", { variant: "error" }); }
+      return;
+    }
+    const pageDetail = target.closest<HTMLElement>("[data-page-detail]")?.dataset.pageDetail;
+    if (pageDetail) { registrationUi.detail = pageDetail; onMount(); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("[data-page-close]")?.focus()); return; }
+    if (target.closest("[data-page-spec]")) { registrationUi.spec = true; onMount(); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("[data-page-close]")?.focus()); return; }
+    if (target.closest("[data-page-close]") || target.matches("[data-page-overlay]")) { closeRegistrationModal(onMount); return; }
+    if (target.closest("[data-page-special-toggle]") && dialogState) { dialogState.specialPageOpen = !dialogState.specialPageOpen; rerenderPreservingMenuFormScroll(onMount); return; }
     if (!target.closest("[data-jme-menu-actions]")) document.querySelectorAll<HTMLDetailsElement>("[data-jme-menu-actions][open]").forEach((menu) => { menu.open = false; });
     const formAnchor = target.closest<HTMLButtonElement>("[data-jme-form-anchor]")?.dataset.jmeFormAnchor as JsonMenuFormSection | undefined;
     if (formAnchor) {
@@ -782,6 +827,8 @@ export function bindJsonMenuEditor(onMount: () => void): void {
 
   document.body.addEventListener("input", (event) => {
     const input = event.target as HTMLInputElement;
+    if (input.matches("[data-page-registry-search]")) { registrationUi.query = input.value; const rows = document.querySelector<HTMLElement>("[data-page-registry-rows]"); if (rows) rows.innerHTML = registryRows(); return; }
+    if (input.matches("[data-page-picker-search]")) { registrationUi.pickerQuery = input.value; const rows = document.querySelector<HTMLElement>("[data-page-picker-rows]"); if (rows) rows.innerHTML = pickerRows(); return; }
     if (input.matches("[data-jme-parent-picker-search]") && dialogState) {
       dialogState.parentPickerSearch = input.value;
       rerenderParentPickerSearch(input.value, onMount);
@@ -818,6 +865,7 @@ export function bindJsonMenuEditor(onMount: () => void): void {
 
   document.body.addEventListener("change", (event) => {
     const input = event.target as HTMLInputElement | HTMLSelectElement;
+    if (input.matches("[data-page-registry-status]")) { registrationUi.status = input.value; const rows = document.querySelector<HTMLElement>("[data-page-registry-rows]"); if (rows) rows.innerHTML = registryRows(); return; }
     if (input.dataset.jmeRootField) { jsonMenuEditorStore.updateRoot((document) => (document as unknown as Record<string, unknown>)[input.dataset.jmeRootField!] = input.value); onMount(); return; }
     if (input.dataset.jmeDialogField) { assignDialogField(input.dataset.jmeDialogField, input.value); if (input.dataset.jmeDialogField === "accessControl.bool") rerenderPreservingMenuFormScroll(onMount); return; }
     if (input.matches("[data-jme-dialog-parent]") && dialogState) { dialogState.parentPath = decodeMenuNodePath(input.value); if (dialogState.pageMode === "directory" && dialogState.parentPath.length >= 2) dialogState.pageMode = "inner"; dialogState.error = undefined; onMount(); }
@@ -853,6 +901,16 @@ export function bindJsonMenuEditor(onMount: () => void): void {
   document.body.addEventListener("dragover", (event) => { if ((event.target as HTMLElement).closest("[data-jme-drop-parent]")) event.preventDefault(); });
   document.body.addEventListener("drop", (event) => { const zone = (event.target as HTMLElement).closest<HTMLElement>("[data-jme-drop-parent]"); if (!zone || !draggedPath) return; event.preventDefault(); jsonMenuEditorStore.select(draggedPath); if (!jsonMenuEditorStore.moveSelected(decodeMenuNodePath(zone.dataset.jmeDropParent ?? ""), Number(zone.dataset.jmeDropIndex ?? 0))) showAppToast("无法移动到该位置：不能形成循环或影响兼容保留子树。", { variant: "error" }); draggedPath = null; expandAll(); rerenderPreservingMenuTreeScroll(onMount); });
   document.addEventListener("keydown", (event) => {
+    const pageModal = document.querySelector<HTMLElement>("[data-page-modal]");
+    if (pageModal) {
+      if (event.key === "Escape") { event.preventDefault(); closeRegistrationModal(onMount); return; }
+      if (event.key === "Tab") {
+        const items = Array.from(pageModal.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, [tabindex="0"]'));
+        if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
+      }
+      return;
+    }
     if (!fullscreenPreviewOpen) return;
     if (event.key === "Escape") { event.preventDefault(); clearFullscreenEnvironment(onMount); return; }
     if (event.key !== "Tab") return;
