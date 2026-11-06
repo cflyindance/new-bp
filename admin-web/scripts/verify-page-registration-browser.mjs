@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
+const base = process.env.PREVIEW_URL || 'http://127.0.0.1:65263';
+const output = 'docs/项目文档/assets/menu-routing-subnav';
+mkdirSync(output, { recursive: true });
+const registryLink = '[data-m-nav-layer="routing"] a[href$="/page-registry"]';
+const navigationLink = '[data-m-nav-layer="routing"] a[href$="/navigation"]';
 const require = createRequire(import.meta.url);
 const { chromium } = require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 const errors = []; page.on('pageerror', error => errors.push(error.message));
-const shot = name => page.screenshot({ path: `docs/项目文档/assets/page-registration/${name}.png`, animations: 'disabled', timeout: 20000 });
+const shot = name => page.screenshot({ path: `${output}/${name}.png`, animations: 'disabled', timeout: 20000 });
 try {
-  await page.goto('http://127.0.0.1:65262/', { waitUntil: 'domcontentloaded' });
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
   await page.locator('[data-login-form]').waitFor();
   // 复用项目既有隔离演示验收 fixture，不访问线上账号或接口。
   await page.evaluate(async () => {
@@ -16,13 +21,30 @@ try {
     (await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('demo.menusifu.cn');
     (await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();
   });
-  await page.goto('http://127.0.0.1:65262/#/m-platform/nav-blueprint', { waitUntil: 'domcontentloaded' });
+  await page.goto(`${base}/#/m-platform/nav-blueprint`, { waitUntil: 'domcontentloaded' });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.locator('[data-page-view="registry"]').waitFor({ timeout: 60000 }).catch(async error => {
+  await page.locator(registryLink).waitFor({ timeout: 60000 }).catch(async error => {
     console.log('PAGE', page.url(), (await page.locator('body').innerText()).slice(0,1500), errors);
     throw error;
   });
-  await page.locator('[data-page-view="registry"]').click();
+  assert.equal(await page.locator('[data-page-view], [aria-label="路由管理视角"]').count(), 0);
+  assert.equal(await page.locator(`${navigationLink}[aria-current="page"]`).count(), 1);
+  await page.locator('[data-m-nav-layer="routing"] [data-m-nav-back]').click();
+  await shot('root');
+  await page.locator('[data-m-nav-open="routing"]').click();
+  await shot('children');
+  await page.locator(navigationLink).click();
+  await page.waitForURL('**/nav-blueprint/navigation');
+  await shot('navigation-page');
+  await page.locator(registryLink).click();
+  await page.waitForURL('**/nav-blueprint/page-registry');
+  assert.equal(await page.locator('[data-m-nav-layer="routing"] a[aria-current="page"]').count(), 1);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('[data-page-registry]').waitFor();
+  await page.goBack();
+  await page.locator('[data-jme-tree-panel]').waitFor();
+  await page.goForward();
+  await page.locator('[data-page-registry]').waitFor();
   assert.equal(await page.locator('[data-page-registry-rows] tr').count(), 286);
   await shot('registry');
   await page.locator('[data-page-registry-search]').fill('merchant.products.list');
@@ -36,7 +58,7 @@ try {
   await page.locator('[data-page-registry-status]').selectOption('retired');
   assert.match(await page.locator('[data-page-registry-rows]').innerText(), /暂无匹配/); await shot('registry-empty');
   await page.locator('[data-page-registry-status]').selectOption('all');
-  await page.locator('[data-page-view="nav"]').click();
+  await page.locator(navigationLink).click();
   await page.locator('[data-jme-select="0.0"]').click();
   await page.locator('[data-page-picker-open]').waitFor(); await shot('navigation');
   const original = await page.locator('[data-page-binding]').innerText();
@@ -61,10 +83,11 @@ try {
   assert.equal(await page.locator('[data-jme-dialog-field="name"]').inputValue(), name);
   assert.equal(await page.locator('[data-jme-dialog-field="key"]').inputValue(), key);
   assert.equal(await page.locator('[data-jme-publish-current]').isEnabled(), true); await shot('linked');
-  await page.locator('[data-page-view="registry"]').click();
-  await page.locator('[data-page-view="nav"]').click();
+  await page.locator(registryLink).click();
+  await page.locator(navigationLink).click();
   assert.match(await page.locator('[data-page-binding]').innerText(), /merchant.products.list/);
   assert.equal(await page.locator('[data-jme-publish-current]').isEnabled(), true);
+  await shot('draft-retained');
   await page.locator('[data-page-special-toggle]').click();
   await page.locator('[data-jme-dialog-field="path"]').waitFor(); await shot('special');
   await page.locator('[data-page-special-toggle]').click();
@@ -84,9 +107,10 @@ try {
   await page.locator('[data-jme-publish-current]').click();
   await page.getByText('请选择注册页面，或在特殊接入 / 兼容配置中填写路由。', { exact: true }).waitFor(); await shot('new-empty-validation');
   assert.deepEqual(errors, []);
-  writeFileSync('docs/项目文档/assets/page-registration/verification.json', JSON.stringify({status:'passed',baseline:'cb2549c4',branch:'codex/page-registration-navigation-20261106',url:'http://127.0.0.1:65262/#/m-platform/nav-blueprint',time:new Date().toISOString(),checks:['catalog','search','status','details','spec','cancel','escape','overlay-cancel','binding','identity-preserved','draft-view-switch','leave-protection','publish','reload','empty-leaf-validation'],pageErrors:errors},null,2));
+  writeFileSync(`${output}/verification.json`, JSON.stringify({status:'passed',baseline:'ec151927',branch:'codex/menu-routing-subnav-20261106',url:base,time:new Date().toISOString(),checks:['child-navigation','parent-back','legacy-default','independent-routes','unique-current','no-tabs','deep-link-reload','browser-history','catalog','search','status','details','spec','cancel','escape','overlay-cancel','binding','identity-preserved','draft-route-switch','leave-protection','publish','reload','empty-leaf-validation'],pageErrors:errors},null,2));
   console.log('PASS actual browser: catalog/search/status/details/spec; choose/cancel/bind; preserve identity/name; leave protection; publish/reload; empty leaf validation');
 } catch (error) {
-  writeFileSync('docs/项目文档/assets/page-registration/verification.json', JSON.stringify({status:'failed',error:String(error),pageErrors:errors},null,2));
+  await shot('failure').catch(()=>{});
+  writeFileSync(`${output}/verification.json`, JSON.stringify({status:'failed',error:String(error),pageErrors:errors},null,2));
   throw error;
 } finally { await browser.close(); }

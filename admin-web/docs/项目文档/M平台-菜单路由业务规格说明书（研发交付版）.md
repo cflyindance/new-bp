@@ -1,12 +1,65 @@
 # M 平台菜单路由业务规格说明书（研发交付版）
 
-> V1.1 · 2026-11-06；PAGE-REG-20261106-01；基线 main@cb2549c4。
-> 产品：[v1.2](./M平台-菜单路由可视化配置设计方案.md)；个人：[V1.1](./M平台-菜单路由需求文档（个人规范版）.md)。
+> V1.3 · 2026-11-06；LOCAL-PAGE-REG-20261106-03；功能基线 main@ec151927。
+> 产品：[v1.4](./M平台-菜单路由可视化配置设计方案.md)；个人：[V1.3](./M平台-菜单路由需求文档（个人规范版）.md)。变更与验证：[交付记录](assets/local-page-registration/README.md)。
 
-| 版本 | 日期 | 变更 |
-| --- | --- | --- |
-| V1.1 | 2026-11-06 | PAGE-REG-20261106-01：注册合同、快照绑定与 JSON 兼容；配对产品 v1.2、个人 V1.1 |
-| V1.0 | 2026-10-21 | 实际 JSON 菜单源与双向一致性、演示缓存兼容 |
+## 本地注册对象与写入
+
+![注册页面字段](assets/local-page-registration/create.png)
+
+![微应用字段](assets/local-page-registration/micro-app.png)
+
+图注：2026-11-06，65263、codex/menu-routing-subnav-20261106 未提交预览，隔离演示数据；控件联动决定实际写入的类型字段。
+
+| 字段／对象 | 定义 |
+| --- | --- |
+| 存储 key | menusifu:local-page-registrations:v1，独立于菜单文档和权限存储；不写源码文件，不调用服务端接口。 |
+| 存储结构 | `{version:1,pages:PageRegistration[]}`；版本固定数字 1。读入需检查对象、版本、数组、必填字符串、四类加载参数及全目录冲突。 |
+| id | string，必填、去首尾空白；与全目录精确比较唯一。 |
+| title | string，必填、去首尾空白。 |
+| titleEn | 可选 string，去首尾空白，空时省略。 |
+| module | string，必填、去首尾空白；仅目录元信息。 |
+| status | 固定 active；不在新增表单提供停用配置。 |
+| source | 固定“本地注册（当前浏览器）”；不接受表单伪造来源或权限声明。 |
+| routing.type | inner／iframe／external／micro-app；表单默认 inner，非法类型拒绝。 |
+| routing.path | 必填 string，去首尾空白；共享原绝对路由及重复校验，无查询／hash／//。 |
+| routing.url | 仅 iframe／external 写入并必填 HTTP(S)。 |
+| routing.microAppConfig | 仅 micro-app 写入，name 和 HTTP(S) url 必填；其他类型省略。 |
+| 类型切换 | 隐藏字段取消必填并禁用；已填写值在本弹框类型往返保留，但不适用字段不落库。 |
+| 读取 | 内置清单单独缓存，本地记录每次重新读取并与内置合并校验；无记录返回空数组。异常仅忽略不可读本地部分，不删原值，不阻断内置目录。 |
+| 写入前置 | handler 再校验 routing 编辑权限；读取最新本地记录，校验整个目录，阻止内置／本地标识或路径冲突。 |
+| 成功 | setItem 成功后返回记录；弹框关闭、目录按新 id 过滤、状态为全部，目录和选择器立即可读；不修改菜单 JSON。 |
+| 失败 | 格式、重复、非法 URL、存储拒绝或配额异常均不关闭表单、不显示成功；保留输入。已损坏存储禁止覆盖。 |
+| 取消 | 关闭、取消、Esc、遮罩都不调用写入，丢弃表单输入，不动菜单草稿。 |
+| 权限 | 复用 m:page:routing 的 edit；read 仅浏览、搜索、详情。局部 localStorage 不是服务端安全边界，不新增或自动授予任何业务访问权。 |
+
+![存储写入失败](assets/local-page-registration/storage-failure.png)
+
+图注：同版本隔离会话、受控浏览器配额异常；界面保留输入，存储原值不变。
+
+算例：内置 `/brand-products/products` 已存在，新 id 使用同一路径必须拒绝；本地 `local.demo.report` 再次保存必须拒绝。注册 inner `/local-demo-report` 后刷新可见，选择后仅生成对应 MenuNode 技术快照，菜单名称和权限不变且仍需独立发布。微应用提供 ftp 入口拒绝；本地 JSON 损坏时显示内置目录并阻止覆盖。
+
+浏览器范围、共享同一浏览器配置文件及清缓存后果由产品“本地范围”单点定义。没有新增金额、计算、服务端数据表、同步或发布接口。实现为 local-page-registration.ts、page-registration-create-ui.ts、catalog/UI/editor 集成；验证与缺口单独见交付记录。
+
+## 二级导航与路由合同
+
+![菜单路由配置子导航](assets/menu-routing-subnav/children.png)
+
+![注册目录页面](assets/menu-routing-subnav/registry.png)
+
+图注：2026-11-06，codex/menu-routing-subnav-20261106 基于 main@ec151927 的未提交功能预览，65263 隔离演示数据。其他注册弹框及绑定字段不因入口变更重新定义。
+
+| 字段／操作 | 定义 |
+| --- | --- |
+| MENU_ROUTING_PAGES | 固定 nav→导航编排→`/m-platform/nav-blueprint/navigation`；registry→页面注册中心→`/m-platform/nav-blueprint/page-registry`；不持久化到菜单 JSON。 |
+| menuRoutingPage(path) | 去查询和末尾斜杠后精确识别注册中心，其余原根／旧编辑地址默认 nav；不改历史编辑路由参数解析。 |
+| 页面渲染 | renderJsonMenuEditorPage(view) 接收地址决定的视角，不再使用 registrationUi.view 或页内 Tab。 |
+| 导航／高亮 | 已授权 routing 模块映射两个子链接，共用页 id=routing；只按规范化子地址判断当前项，不按共享 id 同时点亮两项。复用 bindNavigationSubmenuActions。 |
+| 权限合同 | 原 m:module:routing／m:page:routing 与动作资源不变；隐藏两入口均拒绝，只读允许目录搜索／状态筛选／详情／规范／关闭，不豁免选择或确认关联的写操作。 |
+| 草稿状态 | 模块内 document、selectedPath、dialogState 与目录筛选不因子路由切换重置。切换不写 JSON、不自动提交、不发布；返回层级不重建表单。原切换菜单时保存并发布／不保存分支保持。 |
+| 默认与异常 | 旧根地址首次加载导航编排；目录无搜索结果显示原空态；原读取／发布失败处理不变。此变更没有金额、计算、单位或新增后端字段。 |
+
+验收算例：从旧根地址显示编排且仅编排高亮；进入 page-registry 后只有注册中心高亮，刷新仍为目录；退回 navigation，原节点和未发布关联仍在，切换另一个菜单仍提示；只读目录可以搜索但不允许写绑定。验证记录见 `assets/menu-routing-subnav/verification.json` 和专项脚本 `verify-menu-routing-navigation.ts`。
 
 ## 页面注册与快照绑定
 

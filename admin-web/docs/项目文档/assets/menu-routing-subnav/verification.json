@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "baseline": "ec151927",
+  "branch": "codex/menu-routing-subnav-20261106",
+  "url": "http://127.0.0.1:65263",
+  "time": "2026-11-06T09:24:22.276Z",
+  "checks": [
+    "child-navigation",
+    "parent-back",
+    "legacy-default",
+    "independent-routes",
+    "unique-current",
+    "no-tabs",
+    "deep-link-reload",
+    "browser-history",
+    "catalog",
+    "search",
+    "status",
+    "details",
+    "spec",
+    "cancel",
+    "escape",
+    "overlay-cancel",
+    "binding",
+    "identity-preserved",
+    "draft-route-switch",
+    "leave-protection",
+    "publish",
+    "reload",
+    "empty-leaf-validation"
+  ],
+  "pageErrors": []
+}

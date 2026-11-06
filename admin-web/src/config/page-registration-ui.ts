@@ -1,14 +1,13 @@
 import type { MenuNode } from "./json-menu-document-domain";
-import { getPageRegistrations } from "./page-registration-catalog";
+import { getPageRegistrations, getLocalPageRegistrationError } from "./page-registration-catalog";
 import { matchRegisteredPage, searchPageRegistrations, type PageRegistration } from "./page-registration-domain";
+import { LOCAL_PAGE_REGISTRATION_SOURCE } from './local-page-registration';
+import { renderPageRegistrationCreateDialog } from './page-registration-create-ui';
 
-export const registrationUi = { view: "nav" as "nav" | "registry", query: "", status: "all", picker: false, pickerQuery: "", pending: "", detail: "", spec: false };
+export const registrationUi = { query: "", status: "all", picker: false, pickerQuery: "", pending: "", detail: "", spec: false, create: false };
 export const pageHtml = (s: string): string => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const button = "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600";
 const field = "mt-3 h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-blue-500";
-export function registrationTabs(): string {
-  return `<div class="mt-5 inline-flex rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="路由管理视角">${[["nav", "导航编排", "产品 / 运营"], ["registry", "页面注册中心", "研发"]].map(([key, title, role]) => `<button type="button" role="tab" aria-selected="${registrationUi.view === key}" data-page-view="${key}" class="rounded-lg px-5 py-2.5 text-sm ${registrationUi.view === key ? "bg-blue-50 font-semibold text-blue-600" : "text-slate-500 hover:bg-slate-50"}">${title}<span class="ml-2 text-xs font-normal text-slate-400">${role}</span></button>`).join("")}</div>`;
-}
 export function registeredPageSection(node: MenuNode): string {
   const p = matchRegisteredPage(node, getPageRegistrations());
   const legacy = Boolean(node.path || node.url || node.targetKey || node.microAppConfig);
@@ -16,10 +15,15 @@ export function registeredPageSection(node: MenuNode): string {
 }
 export function registryRows(): string {
   const pages = searchPageRegistrations(getPageRegistrations(), registrationUi.query, registrationUi.status);
-  return pages.length ? pages.map(p => `<tr class="border-b border-slate-100"><td class="px-5 py-4"><strong class="text-sm font-medium text-slate-800">${pageHtml(p.title)}</strong><p class="mt-1 break-all font-mono text-xs text-slate-400">${pageHtml(p.id)}</p></td><td class="px-5 py-4"><code class="break-all text-xs text-slate-600">${pageHtml(p.routing.path)}</code><p class="mt-1 text-xs text-slate-400">${p.routing.type}</p></td><td class="px-5 py-4 text-sm text-slate-600">${pageHtml(p.module)}</td><td class="px-5 py-4 text-xs text-slate-500">${p.status === "active" ? "可选择" : "已停用"}</td><td class="px-5 py-4"><button type="button" data-page-detail="${pageHtml(p.id)}" class="text-sm text-blue-600 hover:underline">查看详情</button></td></tr>`).join("") : `<tr><td colspan="5" class="p-12 text-center text-sm text-slate-400">暂无匹配页面，请调整搜索条件。</td></tr>`;
+  return pages.length ? pages.map(p => `<tr class="border-b border-slate-100"><td class="px-5 py-4"><strong class="text-sm font-medium text-slate-800">${pageHtml(p.title)}</strong>${p.source === LOCAL_PAGE_REGISTRATION_SOURCE ? '<span class="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">本地</span>' : ''}<p class="mt-1 break-all font-mono text-xs text-slate-400">${pageHtml(p.id)}</p></td><td class="px-5 py-4"><code class="break-all text-xs text-slate-600">${pageHtml(p.routing.path)}</code><p class="mt-1 text-xs text-slate-400">${p.routing.type}</p></td><td class="px-5 py-4 text-sm text-slate-600">${pageHtml(p.module)}</td><td class="px-5 py-4 text-xs text-slate-500">${p.status === "active" ? "可选择" : "已停用"}</td><td class="px-5 py-4"><button type="button" data-page-detail="${pageHtml(p.id)}" class="text-sm text-blue-600 hover:underline">查看详情</button></td></tr>`).join("") : `<tr><td colspan="5" class="p-12 text-center text-sm text-slate-400">暂无匹配页面，请调整搜索条件。</td></tr>`;
 }
 export function registryView(): string {
-  return `<section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white" data-page-registry><header class="shrink-0 border-b border-slate-100 p-6"><div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-lg font-semibold text-slate-900">页面目录</h2><p class="mt-2 text-xs leading-6 text-slate-500">研发通过代码清单维护页面能力，随应用版本交付。这里仅展示注册信息，不赋予访问权限。</p></div><button type="button" data-page-spec class="${button}">查看注册规范</button></div><div class="mt-4 flex gap-3"><input type="search" aria-label="搜索注册页面" data-page-registry-search value="${pageHtml(registrationUi.query)}" placeholder="搜索页面名称、标识、模块或路由" class="${field} flex-1"><select aria-label="注册页面状态" data-page-registry-status class="${field} max-w-40">${[["all", "全部状态"], ["active", "可选择"], ["retired", "已停用"]].map(([v,t])=>`<option value="${v}" ${registrationUi.status===v?'selected':''}>${t}</option>`).join("")}</select></div></header><div class="min-h-0 flex-1 overflow-auto"><table class="w-full text-left"><thead class="sticky top-0 bg-slate-50 text-xs text-slate-400"><tr>${["页面名称 / 标识", "路由 / 类型", "维护模块", "状态", "操作"].map(t=>`<th class="px-5 py-3 font-medium">${t}</th>`).join("")}</tr></thead><tbody data-page-registry-rows>${registryRows()}</tbody></table></div></section>`;
+  const localError = getLocalPageRegistrationError();
+  return `<section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white" data-page-registry>
+    <header class="shrink-0 border-b border-slate-100 p-6"><div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-lg font-semibold text-slate-900">页面目录</h2><p class="mt-2 text-xs leading-6 text-slate-500">内置页面随代码版本交付；新增注册仅保存在当前浏览器及本站点，不跨浏览器或端口同步，不赋予访问权限。</p></div><div class="flex flex-wrap gap-2"><button type="button" data-page-spec class="${button}">查看注册规范</button><button type="button" data-page-register class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">＋ 注册页面</button></div></div>
+    ${localError ? `<p role="alert" class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">${pageHtml(localError)}</p>` : ''}
+    <div class="mt-4 flex gap-3"><input type="search" aria-label="搜索注册页面" data-page-registry-search value="${pageHtml(registrationUi.query)}" placeholder="搜索页面名称、标识、模块或路由" class="${field} flex-1"><select aria-label="注册页面状态" data-page-registry-status class="${field} max-w-40">${[["all", "全部状态"], ["active", "可选择"], ["retired", "已停用"]].map(([v,t])=>`<option value="${v}" ${registrationUi.status===v?'selected':''}>${t}</option>`).join("")}</select></div></header>
+    <div class="min-h-0 flex-1 overflow-auto"><table class="w-full text-left"><thead class="sticky top-0 bg-slate-50 text-xs text-slate-400"><tr>${["页面名称 / 标识", "路由 / 类型", "维护模块", "状态", "操作"].map(t=>`<th class="px-5 py-3 font-medium">${t}</th>`).join("")}</tr></thead><tbody data-page-registry-rows>${registryRows()}</tbody></table></div></section>`;
 }
 export function pickerRows(): string {
   const matches = searchPageRegistrations(getPageRegistrations(), registrationUi.pickerQuery);
@@ -29,6 +33,7 @@ function details(page: PageRegistration): string {
   return `<dl class="grid gap-5 p-6 text-sm sm:grid-cols-2">${[["页面唯一标识",page.id],["默认名称",page.title],["维护模块",page.module],["路由地址",page.routing.path],["页面类型",page.routing.type],["状态",page.status==='active'?'可选择':'已停用'],["注册来源",page.source],["权限能力声明",page.permissions?.join(", ") || "未声明（沿用现有权限规则）"]].map(([k,v])=>`<div><dt class="text-xs text-slate-400">${k}</dt><dd class="mt-2 break-all text-slate-700">${pageHtml(v)}</dd></div>`).join("")}</dl><pre class="mx-6 mb-6 overflow-auto rounded-xl bg-slate-50 p-4 text-xs leading-6 text-slate-600">${pageHtml(JSON.stringify(page.routing,null,2))}</pre>`;
 }
 export function registrationModal(): string {
+  if (registrationUi.create) return renderPageRegistrationCreateDialog();
   if (!registrationUi.picker && !registrationUi.detail && !registrationUi.spec) return "";
   const p = getPageRegistrations().find(p=>p.id===registrationUi.detail);
   const title = registrationUi.picker ? "选择注册页面" : registrationUi.spec ? "页面注册规范" : `${p?.title ?? "页面"} · 注册详情`;
