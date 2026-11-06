@@ -770,11 +770,10 @@ var ALLOC_KEY = 'tipout_allocated';
         businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : '',
         payoutStatus: ['pending-payout', 'paid', 'not-required'].indexOf(saved.datePayoutStatus) >= 0 ? saved.datePayoutStatus : ''
       };
-      var restoredEmployeeStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus);
       employeeSummaryFilters = {
         role: saved.employeeSummaryRole || '',
         employeeScope: saved.employeeSummaryScope || { mode: 'all', ids: [] },
-        statuses: restoredEmployeeStatus ? [restoredEmployeeStatus] : []
+        statuses: []
       };
       employeeSummarySort = {
         key: ['employee', 'hours', 'finalAmount'].indexOf(saved.employeeSortKey) >= 0 ? saved.employeeSortKey : 'finalAmount',
@@ -1207,10 +1206,8 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function syncEmployeeSummaryFilterState() {
       var role = document.getElementById('employeeSummaryRoleFilter');
-      var status = document.getElementById('employeeSummaryStatusFilter');
       employeeSummaryFilters.role = role && role.value ? role.value : '';
-      var normalizedStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(status && status.value);
-      employeeSummaryFilters.statuses = normalizedStatus ? [normalizedStatus] : [];
+      employeeSummaryFilters.statuses = [];
     }
 
     function handleEmployeeSummaryRoleChange() {
@@ -1340,7 +1337,6 @@ var ALLOC_KEY = 'tipout_allocated';
       empty.hidden = aggregates.length > 0;
       container.closest('.tipout-table-wrap').hidden = aggregates.length === 0;
       container.innerHTML = aggregates.map(function(aggregate) {
-        var statusClass = aggregate.status === '已完成' ? 'is-complete' : 'is-pending';
         var name = escapeSummaryHtml(aggregate.name);
         var roles = aggregate.roles.map(function(role) { return '<span class="tipout-employee-role-tag">' + escapeSummaryHtml(role) + '</span>'; }).join('');
         return '<tr class="tipout-employee-row" data-employee-id="' + escapeSummaryHtml(aggregate.employeeId) +
@@ -1355,7 +1351,6 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong class="tip-amount--deduct">' + renderContributionSummary(aggregate) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(aggregate.receivedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
           '<td><strong class="tipout-employee-final">' + formatEmployeeSummaryMoney(aggregate.finalAmountCents, aggregate.hasConfirmedAmount) + '</strong>' + (aggregate.hasPartialConfirmed ? '<small class="tipout-employee-partial">已确认部分</small>' : '') + '</td>' +
-          '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +
           '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 分配汇总明细">›</td></tr>';
       }).join('');
     }

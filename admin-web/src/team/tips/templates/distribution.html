@@ -238,15 +238,6 @@
                       <div class="multi-select-dropdown" id="employeeSummaryEmployeeOptions"></div>
                     </div>
                   </div>
-                  <div class="filter-field">
-                    <label class="filter-field-label" for="employeeSummaryStatusFilter">分配状态</label>
-                    <select id="employeeSummaryStatusFilter" class="form-control form-control-lg" data-native-onchange="handleEmployeeSummaryFilterChange()">
-                      <option value="">全部状态</option>
-                      <option value="已完成">已完成</option>
-                      <option value="部分待分配">部分待分配</option>
-                      <option value="待分配">待分配</option>
-                    </select>
-                  </div>
                 </div>
                 <div class="filter-field tipout-date-sort-field" id="dateSortField">
                   <label class="filter-field-label" for="dateSortSelect">展示顺序</label>
@@ -288,7 +279,6 @@
                   <th>贡献入池总额</th>
                   <th>从池分得总额</th>
                   <th aria-sort="descending"><button id="employeeSortFinalAmount" type="button" class="tipout-table-sort" data-native-onclick="toggleEmployeeSummarySort('finalAmount')">分配后总小费 <span aria-hidden="true">↓</span></button></th>
-                  <th>分配状态</th>
                   <th aria-label="进入明细"></th>
                 </tr></thead>
                 <tbody id="employeeReconciliationList" aria-label="员工小费分配汇总"></tbody>
