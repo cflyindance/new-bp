@@ -2446,7 +2446,7 @@
     if (stepNumber === 4) {
       if (draft.authorization.enabled) {
         if (!draft.authorization.allowedScopes.length) return "请至少启用一种授权范围";
-        if (draft.authorization.allowedScopes.indexOf(draft.authorization.defaultScope) < 0) return "默认授权范围必须属于已启用范围";
+        if (!isBuffetProfile() && draft.authorization.allowedScopes.indexOf(draft.authorization.defaultScope) < 0) return "默认授权范围必须属于已启用范围";
         for (var i = 0; i < draft.authorization.allowedScopes.length; i += 1) {
           if (!draft.authorization.scopePermissions[draft.authorization.allowedScopes[i]]) return "请为每种授权范围选择所需权限";
         }
@@ -5359,7 +5359,7 @@
     if (normalizeBuffetAuthorizationScopes(draft) && !viewMode) markEditorDirty();
     return '<div class="olf-content-head"><h2 tabindex="-1">设置超限授权</h2></div>' +
       '<section class="olf-section"><div class="olf-section-head"><div><h3>允许服务员密码授权</h3><div class="olf-help">关闭后，超限将直接拒绝。</div></div><label class="olf-switch"><input type="checkbox" data-auth-enabled' + (auth.enabled ? " checked" : "") + ' /><span class="olf-switch-track"></span><span>' + (auth.enabled ? "已开启" : "已关闭") + '</span></label></div></section>' +
-      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + (isBuffetProfile() ? "" : renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更")) + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span>' + renderAuthorizationDefault(draft, supportsRoundAuthorization) + '</label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>' : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
+      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + (isBuffetProfile() ? "" : renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更")) + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section>' + (isBuffetProfile() ? "" : '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span>' + renderAuthorizationDefault(draft, supportsRoundAuthorization) + '</label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>') : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
   }
 
   function namesFor(items, ids) {
@@ -5742,7 +5742,7 @@
       '<div class="olf-review-row"><span>人数 / 轮次</span><strong>' + esc(draft.partyRanges.map(function (range) { return formatRange(range, "人"); }).join("、") + (draft.period === "multi_round" ? "；" + draft.roundRanges.map(function (range) { return formatRange(range, "轮"); }).join("、") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
       '<div class="olf-review-row"><span>数量完成度</span><strong>' + completion.complete + "/" + completion.total + ' 个单元格</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
       '<div class="olf-review-row"><span>生效条件</span><strong>' + esc((draft.conditions.effectiveTo ? draft.conditions.effectiveFrom + " 至 " + draft.conditions.effectiveTo : draft.conditions.effectiveFrom + " 起长期") + " · " + formatBusinessHourTimeLabel(draft.conditions) + " · " + formatActivityCycleLabel(draft.conditions) + " · " + memberText) + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>' +
-      '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
+      '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (!isBuffetProfile() && draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
       '</div></section><div class="olf-summary olf-summary--primary"><strong>下一步：</strong>保存并下发后进入门店选择与发布确认；发布完成前，门店继续使用上一完整版本。</div>';
   }
 
@@ -5760,7 +5760,7 @@
         '<div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</strong><button class="olf-button olf-button--small" data-fix-step="1">编辑</button></div>' +
         '<div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds) || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
         '<div class="olf-review-row"><span>数量完成度</span><strong>' + completion.complete + '/' + completion.total + ' 个实际数量项</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
-        '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
+        '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (!isBuffetProfile() && draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
         '</div></section><h3>按门店复核数量策略</h3>' + renderV4QuantityPolicySummary(draft, draft.deployStoreIds) +
         '<div class="olf-summary olf-summary--primary"><strong>下一步：</strong>保存并下发后直接进入发布确认；只有已选择的生效门店会进入运行快照。</div>';
     }
@@ -8070,8 +8070,8 @@
       markEditorDirty(); renderEditor(); return;
     }
     if (target.hasAttribute("data-auth-role")) { draft.authorization.scopePermissions[target.getAttribute("data-auth-role")] = target.value; markEditorDirty(); return; }
-    if (target.hasAttribute("data-auth-default")) { draft.authorization.defaultScope = target.value; markEditorDirty(); return; }
-    if (target.hasAttribute("data-auth-reason")) { draft.authorization.reasonRequired = target.checked; markEditorDirty(); return; }
+    if (target.hasAttribute("data-auth-default")) { if (isBuffetProfile()) return; draft.authorization.defaultScope = target.value; markEditorDirty(); return; }
+    if (target.hasAttribute("data-auth-reason")) { if (isBuffetProfile()) return; draft.authorization.reasonRequired = target.checked; markEditorDirty(); return; }
   }
 
   function mountEditor() {

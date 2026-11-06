@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const flow = fs.readFileSync(path.join(root, "dist/Configuration center/assets/order-limit-flow.js"), "utf8");
+const listView = fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-rule-list-view.js"), "utf8");
+assert.doesNotMatch(listView, /defaultAuthorizationScope|authorizationReason/, "列表不再注册或展示隐藏字段");
 const renderStart = flow.indexOf("  function renderScopeRow(");
 const renderEnd = flow.indexOf("  function namesFor(", renderStart);
 const eventStart = flow.indexOf('    if (target.hasAttribute("data-auth-enabled"))');
@@ -54,7 +56,7 @@ function renderUnchanged(value) {
 
 for (const scope of ["round", "order"]) {
   const html = renderUnchanged(draft(scope));
-  assert.match(html, new RegExp('<option value="' + scope + '" selected>'));
+  assert.doesNotMatch(html, /data-auth-default|data-auth-reason|默认授权范围|授权原因必须填写/);
   assert.match(html, /data-auth-scope="round"/);
   assert.match(html, /data-auth-scope="order"/);
   assert.doesNotMatch(html, /沿用原默认授权范围/);
@@ -62,17 +64,16 @@ for (const scope of ["round", "order"]) {
 
 const legacy = draft("operation");
 const legacyHtml = renderUnchanged(legacy);
-assert.match(legacyHtml, /沿用原默认授权范围：本次操作/);
-assert.match(legacyHtml, /<option value="" disabled selected>请选择以更改默认授权范围<\/option>/);
+assert.doesNotMatch(legacyHtml, /默认授权范围|data-auth-default|data-auth-reason/);
 assert.doesNotMatch(legacyHtml, /<option value="(?:round|order)" selected>/, "不得假装已切换默认值");
 
 const operationOnlyHtml = renderUnchanged(draft("operation", ["operation"]));
-assert.match(operationOnlyHtml, /沿用原默认授权范围：本次操作/);
+assert.doesNotMatch(operationOnlyHtml, /默认授权范围|data-auth-reason/);
 assert.doesNotMatch(operationOnlyHtml, /data-auth-default/, "无其他选项时不能出现空白可操作下拉框");
 
 const emptyHtml = renderUnchanged(draft("", []));
 assert.doesNotMatch(emptyHtml, /data-auth-default|沿用原默认授权范围/);
-assert.match(emptyHtml, /请先启用至少一种授权范围/);
+assert.doesNotMatch(emptyHtml, /授权原因必须填写/);
 
 const orderOnly = draft("operation", ["operation", "order"], ["order_lifetime"]);
 delete orderOnly.authorization.scopePermissions.round;
@@ -82,7 +83,7 @@ const normalizeOrder = draft("round", ["operation", "round", "order"], ["order_l
 const normalizedHtml = context.renderStepSix(normalizeOrder);
 assert.equal(normalizeOrder.authorization.defaultScope, "operation", "纯整单保留原有规范化规则");
 assert.deepEqual(normalizeOrder.authorization.allowedScopes, ["operation", "order"]);
-assert.match(normalizedHtml, /沿用原默认授权范围：本次操作/);
+assert.doesNotMatch(normalizedHtml, /默认授权范围|data-auth-reason/);
 assert.doesNotMatch(normalizedHtml, /data-auth-scope="round"|<option value="round"/);
 
 const disabled = draft("operation");
@@ -90,7 +91,7 @@ disabled.authorization.enabled = false;
 assert.doesNotMatch(renderUnchanged(disabled), /data-auth-scope|data-auth-default|data-auth-role/);
 
 context.viewMode = true;
-assert.match(renderUnchanged(draft("operation")), /沿用原默认授权范围：本次操作/);
+assert.doesNotMatch(renderUnchanged(draft("operation")), /默认授权范围|data-auth-reason/);
 context.viewMode = false;
 
 function event(attribute, value, checked, attrValue) {
@@ -99,16 +100,16 @@ function event(attribute, value, checked, attrValue) {
 
 const retainedPermissions = JSON.stringify(legacy.authorization.scopePermissions);
 context.handleAuth(legacy, event("data-auth-default", "order"));
-assert.equal(legacy.authorization.defaultScope, "order", "显式更改才替换原默认值");
+assert.equal(legacy.authorization.defaultScope, "operation", "隐藏字段事件不得修改历史默认值");
 assert.deepEqual(legacy.authorization.allowedScopes, ["operation", "round", "order"]);
 assert.equal(JSON.stringify(legacy.authorization.scopePermissions), retainedPermissions);
-assert.match(renderUnchanged(JSON.parse(JSON.stringify(legacy))), /<option value="order" selected>/);
+assert.doesNotMatch(renderUnchanged(JSON.parse(JSON.stringify(legacy))), /data-auth-default|data-auth-reason/);
 
 context.handleAuth(legacy, event("data-auth-scope", "", false, "round"));
 assert.deepEqual(legacy.authorization.allowedScopes, ["operation", "order"]);
-assert.equal(legacy.authorization.defaultScope, "order");
+assert.equal(legacy.authorization.defaultScope, "operation");
 context.handleAuth(legacy, event("data-auth-reason", "", false));
-assert.equal(legacy.authorization.reasonRequired, false);
+assert.equal(legacy.authorization.reasonRequired, true, "隐藏原因事件不得修改历史配置");
 context.handleAuth(legacy, event("data-auth-enabled", "", false));
 assert.equal(legacy.authorization.enabled, false);
 assert.equal(legacy.authorization.scopePermissions.operation, "值班经理");
@@ -118,6 +119,12 @@ const menuHtml = renderUnchanged(draft("operation"));
 assert.match(menuHtml, /data-auth-scope="operation"/);
 assert.match(menuHtml, /data-auth-role="operation"/);
 assert.match(menuHtml, /<option value="operation" selected>本次操作<\/option>/);
+assert.match(menuHtml, /data-auth-reason/);
 assert.doesNotMatch(menuHtml, /沿用原默认授权范围/);
+const menuDraft = draft("operation");
+context.handleAuth(menuDraft, event("data-auth-default", "order"));
+context.handleAuth(menuDraft, event("data-auth-reason", "", false));
+assert.equal(menuDraft.authorization.defaultScope, "order");
+assert.equal(menuDraft.authorization.reasonRequired, false);
 
 console.log("verify-buffet-hidden-operation-entry: PASS");

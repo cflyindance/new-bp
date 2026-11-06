@@ -922,7 +922,6 @@
     if (authorization.enabled) {
       var scopes = Array.isArray(authorization.allowedScopes) ? authorization.allowedScopes : [];
       if (!scopes.length) return { valid: false, message: "请至少启用一种授权范围" };
-      if (scopes.indexOf(authorization.defaultScope) < 0) return { valid: false, message: "默认授权范围必须属于已启用范围" };
       if (scopes.some(function (scope) { return !(authorization.scopePermissions && authorization.scopePermissions[scope]); })) return { valid: false, message: "请为每种授权范围选择所需权限" };
     }
     var conditions = draft.conditions || {};
