@@ -1485,32 +1485,30 @@ var ALLOC_KEY = 'tipout_allocated';
     }
     function renderDetailContributionSummary(funding, confirmed, configuredRule) {
       var label = '<span class="tag tipout-party-tag tipout-party-contributor">贡献方</span>';
+      var prefix = confirmed ? '' : '预计';
+      function table(entries) {
+        return '<div class="tipout-table-wrap"><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>' + prefix + '实际扣除</th></tr></thead><tbody>' + entries.map(function(e) {
+          return '<tr><td>' + escHtml(e.name || e.employeeId) + '</td><td>' + escHtml(e.role || '—') + '</td><td><strong>' + money(e.amount) + '</strong></td></tr>';
+        }).join('') + '</tbody></table></div>';
+      }
       if (!funding || !Array.isArray(funding.contributionRules) || !funding.contributionRules.length) {
         var entries = funding && funding.contributions;
         if (Array.isArray(entries) && entries.length) {
-          var prefix = confirmed ? '' : '预计';
-          return '<section class="detail-contribution-section"><h4>' + label + ' 员工贡献</h4><div class="tipout-table-wrap"><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>' + prefix + '应扣金额</th><th>可扣余额</th><th>' + prefix + '实际扣除</th></tr></thead><tbody>' + entries.map(function(e) {
-            return '<tr><td>' + escHtml(e.name || e.employeeId) + '</td><td>' + escHtml(e.role || '—') + '</td><td>' + (e.due == null ? '—' : money(e.due)) + '</td><td>' + (e.available == null ? '—' : money(e.available)) + '</td><td><strong>' + money(e.amount) + '</strong></td></tr>';
-          }).join('') + '</tbody></table></div><p>' + (confirmed ? '已确认贡献快照' : '预计试算，尚未形成正式扣除。') + '</p></section>';
+          return '<section class="detail-contribution-section"><h4>' + label + ' 员工贡献</h4>' + table(entries) + '<p>' + (confirmed ? '已确认贡献快照' : '预计试算，尚未形成正式扣除。') + '</p></section>';
         }
         var merchant = configuredRule && configuredRule.contributionMode === 'merchant';
         if (funding && Array.isArray(entries) && !entries.length && Number(funding.ownerContribution) === Number(funding.actual)) merchant = true;
         return '<section class="detail-contribution-section"><h4>' + label + '</h4><p>' + (merchant ? '无员工贡献，由商家承担' : '贡献明细暂不可用，请重新计算后查看') + '</p>' + (!merchant && configuredRule ? '<div>' + formatDeductRulesDisplay(configuredRule) + '</div>' : '') + '</section>';
       }
-      var prefix=confirmed?'':'预计';
-      return '<section class="detail-contribution-section">'+funding.contributionRules.map(function(rule){
-        var rows=(rule.employees||[]).map(function(e){
-          return '<tr><td>'+escHtml(e.name)+'</td><td>'+escHtml(e.role)+'</td>'+(rule.shareMode==='sales_proportional'?'<td>'+money(e.salesAmount)+'</td>':rule.shareMode==='sales_weighted'?'<td>'+money(e.salesAmount)+'</td><td>'+Number(e.weight)+'</td><td>'+Number(e.allocationWeight).toFixed(2)+'</td>':rule.shareMode==='weights'?'<td>'+Number(e.weight)+'</td>':'')+'<td>'+(e.pct==null?'—':Number(e.pct).toFixed(2)+'%')+'</td><td>'+money(e.due)+'</td><td>'+money(e.available)+'</td><td><strong>'+money(e.amount)+'</strong></td></tr>';
-        }).join('');
-        var shortage=Number(rule.shortfall)>0;
-        var explanation=(rule.employees||[]).filter(function(e){return Number(e.shortfall)>0;}).map(function(e){return escHtml(e.name)+'应扣'+money(e.due)+'，可扣余额'+money(e.available)+'，实际扣除'+money(e.amount);}).join('；');
-          return '<div class="detail-contribution-rule"><h4>' + label + ' 小费贡献方规则 · '+escHtml(rule.label||'贡献规则')+' · '+(Number(rule.rate)*100).toFixed(2)+'%</h4>'+
-            (rule.custom?'<p class="contributor-shares-note">'+(['weights','sales_weighted','sales_proportional'].indexOf(rule.shareMode)>=0?'贡献计算：':'员工承担方式：')+(rule.shareMode==='sales_proportional'?'按个人营业额占比分摊':rule.shareMode==='sales_weighted'?'按个人营业额×人工权重分摊':rule.shareMode==='weights'?'按员工权重分担':rule.shareMode==='average'?'按员工人数平均分担（比例仅展示，按人数精确分币）':'自定义承担比例')+'</p>':'')+
-          '<p class="contributor-shares-note">'+prefix+'应扣总额 <strong>'+money(rule.plannedContribution)+'</strong>　'+prefix+'实际扣除 <strong>'+money(rule.actualContribution)+'</strong>'+(shortage?'　少扣金额 <strong>'+money(rule.shortfall)+'</strong>':'')+'</p>'+
-          '<div class="tipout-table-wrap"><table class="detail-table"><thead><tr><th>员工</th><th>角色</th>'+(rule.shareMode==='sales_proportional'?'<th>个人营业额</th><th>扣除占比</th>':rule.shareMode==='sales_weighted'?'<th>个人营业额</th><th>人工权重</th><th>加权营业额</th><th>扣除占比</th>':rule.shareMode==='weights'?'<th>员工权重</th><th>权重换算比例</th>':'<th>承担比例</th>')+'<th>'+prefix+'应扣金额</th><th>可扣余额</th><th>'+prefix+'实际扣除</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-          (shortage?'<details class="tipout-funding-excess contribution-shortage"><summary><span>可扣余额不足，少扣 '+money(rule.shortfall)+'</span><span aria-label="查看少扣明细">?</span></summary><p>'+explanation+'。差额不转由其他员工承担。实际贡献按实际扣除计算，最终分配及老板补足仍按P/C规则计算；少扣金额不等于老板补足金额。</p></details>':'')+'</div>';
-      }).join('')+'<p class="tipout-funding-source">'+(confirmed?'已确认贡献快照，不代表实际付款。':'预计试算，尚未形成正式扣除。')+'</p></section>';
+      return '<section class="detail-contribution-section">' + funding.contributionRules.map(function(rule) {
+        var shortage = Number(rule.shortfall) > 0;
+        var explanation = (rule.employees || []).filter(function(e) { return Number(e.shortfall) > 0; }).map(function(e) { return escHtml(e.name) + '应扣' + money(e.due) + '，可扣余额' + money(e.available) + '，实际扣除' + money(e.amount); }).join('；');
+        return '<div class="detail-contribution-rule"><h4>' + label + ' 小费贡献方规则 · ' + escHtml(rule.label || '贡献规则') + ' · ' + (Number(rule.rate) * 100).toFixed(2) + '%</h4>' +
+          '<p class="contributor-shares-note">' + prefix + '实际扣除 <strong>' + money(rule.actualContribution) + '</strong></p>' + table(rule.employees || []) +
+          (shortage ? '<details class="tipout-funding-excess contribution-shortage"><summary><span>可扣余额不足，少扣 ' + money(rule.shortfall) + '</span><span aria-label="查看少扣明细">?</span></summary><p>' + explanation + '。差额不转由其他员工承担。实际贡献按实际扣除计算，最终分配及老板补足仍按P/C规则计算；少扣金额不等于老板补足金额。</p></details>' : '') + '</div>';
+      }).join('') + '<p class="tipout-funding-source">' + (confirmed ? '已确认贡献快照，不代表实际付款。' : '预计试算，尚未形成正式扣除。') + '</p></section>';
     }
+
     function renderSavedDetailFunding(snapshot) {
       (snapshot.pools||[]).forEach(function(pool){
         var bundle=Array.from(document.querySelectorAll('.detail-rule-bundle')).find(function(el){return el.getAttribute('data-rule-id')===String(pool.ruleId);});
@@ -2407,18 +2405,16 @@ var ALLOC_KEY = 'tipout_allocated';
         var s = (r.store || '').trim();
         if (s && !seen[s]) { seen[s] = 1; stores.push(s); }
       });
-      sel.innerHTML = '<option value="">请选择门店</option>' + stores.map(function(s) {
-        return '<option value="' + s + '">' + s + '</option>';
-      }).join('');
-      if (stores.length > 0 && !sel.value) sel.value = stores[0];
+      var selectedStore = getDetailUrlParams().store || stores[0] || '';
+      sel.value = stores.indexOf(selectedStore) >= 0 ? selectedStore : '';
+      sel.title = sel.value;
+      var name = document.getElementById('detailStoreName');
+      if (name) { name.textContent = sel.value || '未选择门店'; name.title = sel.value; }
     }
 
     function getDetailUrlParams() {
       var params = {};
-      (location.search || '').slice(1).split('&').forEach(function(p) {
-        var kv = p.split('=');
-        if (kv[0] && kv[1]) params[kv[0]] = decodeURIComponent(kv[1]);
-      });
+      new URLSearchParams(location.search || '').forEach(function(value, key) { params[key] = value; });
       return params;
     }
 
@@ -2428,10 +2424,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var dateInp = document.getElementById('detailDate');
         if (dateInp) dateInp.value = params.date;
       }
-      if (params.store) {
-        var storeSel = document.getElementById('storeSelect');
-        if (storeSel) storeSel.value = params.store;
-      }
+
       return params;
     }
 

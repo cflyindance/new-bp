@@ -150,15 +150,9 @@
         <!--TIPOUT_STANDALONE_HEADER-->
 
         <div class="tipout-detail-context-bar">
-          <div class="filter-field tipout-detail-store-field">
-            <label for="storeSelect">门店</label>
-            <select id="storeSelect" class="form-control" data-native-onchange="renderDetailPage()">
-              <option value="">请选择门店</option>
-            </select>
-          </div>
           <div class="filter-field tipout-detail-date-field">
             <label for="detailDate">日期</label>
-            <input type="date" id="detailDate" class="form-control" value="2026-01-03" data-native-onchange="renderDetailPage()">
+            <input type="text" id="detailDate" class="form-control" value="2026-01-03" readonly aria-readonly="true">
           </div>
           <div class="filter-field tipout-detail-rule-filter-field">
             <span id="detailRuleFilterLabel">规则名称</span>

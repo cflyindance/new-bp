@@ -23,8 +23,9 @@ const standaloneHeaders: Partial<Record<TipsView, StandalonePageHeaderOptions>> 
   },
   "details": {
     "titleHtml": "小费分配明细",
+    "subtitleHtml": "<span class=\"tipout-detail-store-subtitle\"><img src=\"/tipout/dashboard/store.svg\" alt=\"\"><span id=\"detailStoreName\" aria-label=\"当前门店\">—</span></span><input id=\"storeSelect\" type=\"hidden\">",
     "backHtml": "<button type=\"button\" class=\"btn\" data-native-onclick=\"returnToSummary()\">返回汇总</button>",
-    "actionsHtml": "<div class=\"tipout-heading-actions\">\n            <button type=\"button\" id=\"updateTipDataBtn\" class=\"btn\" data-native-onclick=\"updateTipData()\">更新小费数据</button>\n          </div>\n        <div class=\"tipout-sticky-actions\" id=\"detailActionBar\">\n          <span id=\"detailAllocationScopeHint\">确认后将生成当天正式小费分配结果</span>\n          <div>\n            <button id=\"confirmDetailPayoutBtn\" class=\"btn\" hidden data-native-onclick=\"openDetailPayoutModal(event)\">确认已发放</button>\n            <button id=\"confirmDetailAllocationBtn\" class=\"btn btn-primary\" data-native-onclick=\"confirmDetailAllocation()\">确认分配</button>\n            <button id=\"saveCurrentDetailAllocationBtn\" class=\"btn btn-primary\" aria-disabled=\"true\" style=\"opacity:.45\" data-native-onclick=\"saveCurrentDetailAllocation()\">保存当前分配</button>\n          </div>\n        </div>",
+    "actionsHtml": "<div class=\"tipout-sticky-actions\" id=\"detailActionBar\">\n          <span id=\"detailAllocationScopeHint\">确认后将生成当天正式小费分配结果</span>\n          <div>\n            <button id=\"confirmDetailPayoutBtn\" class=\"btn\" hidden data-native-onclick=\"openDetailPayoutModal(event)\">确认已发放</button>\n            <button id=\"confirmDetailAllocationBtn\" class=\"btn btn-primary\" data-native-onclick=\"confirmDetailAllocation()\">确认分配</button>\n            <button id=\"saveCurrentDetailAllocationBtn\" class=\"btn btn-primary\" aria-disabled=\"true\" style=\"opacity:.45\" data-native-onclick=\"saveCurrentDetailAllocation()\">保存当前分配</button>\n          </div>\n        </div>",
     "className": "tipout-figma-header"
   },
   "employee-reconciliation": {
