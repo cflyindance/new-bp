@@ -111,6 +111,8 @@ export function bindServiceGate(onMount:()=>void):void {
     if(anchor.closest('[data-service-gate]')||anchor.querySelector('[data-service-menu-state]'))return;
     const rights=currentServiceAccess(anchor.hash.slice(1));if(!rights.length)return;
     const active=rights.find(r=>r.usable), label=active?.label??rights[0].label;
+    const menuPath=anchor.hash.slice(1).split('?')[0];
+    if(active&&label==='正式生效'&&/^\/team(?:\/|$)/.test(menuPath)&&anchor.closest('nav, aside'))return;
     const tag=document.createElement('span');tag.dataset.serviceMenuState='';tag.className='ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground';
     tag.textContent=active?label:'◇ '+label;anchor.append(tag);
   });
