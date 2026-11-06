@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "baseline": "ec151927",
+  "branch": "codex/menu-routing-subnav-20261106",
+  "url": "http://127.0.0.1:65263",
+  "at": "2026-11-06T13:05:25.584Z",
+  "checks": [
+    "open",
+    "required",
+    "cancel",
+    "escape-focus",
+    "overlay",
+    "save",
+    "reload",
+    "details",
+    "duplicate-id",
+    "duplicate-path",
+    "four-types",
+    "micro-validation",
+    "picker-visible",
+    "binding-no-auto-publish",
+    "quota-input-retained",
+    "readonly",
+    "corrupt-no-overwrite"
+  ],
+  "pageErrors": []
+}

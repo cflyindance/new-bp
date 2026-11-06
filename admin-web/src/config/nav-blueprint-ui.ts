@@ -102,6 +102,7 @@ import {
 } from "./platform-preset-store";
 
 import { bindJsonMenuEditor, renderJsonMenuEditorPage } from "./json-menu-editor-ui";
+import { menuRoutingPage } from "./menu-routing-navigation";
 
 
 
@@ -669,9 +670,9 @@ export function renderNavBlueprintPage(path: string): string {
 
   const edit = parseNavBlueprintEditPath(path);
 
-  if (edit) return renderJsonMenuEditorPage();
+  if (edit) return renderJsonMenuEditorPage("nav");
 
-  return renderJsonMenuEditorPage();
+  return renderJsonMenuEditorPage(menuRoutingPage(path).view);
 
 }
 
@@ -685,7 +686,7 @@ export function findNavBlueprintPageTitle(path: string): { title: string; module
 
   if (edit) return { title: "菜单路由可视化编辑器", module: "M 平台" };
 
-  return { title: "菜单路由配置", module: "M 平台" };
+  return { title: menuRoutingPage(path).title, module: "菜单路由配置" };
 
 }
 
