@@ -818,6 +818,12 @@ var ALLOC_KEY = 'tipout_allocated';
         showNotification('当天未营业，无法查看分配明细', 'warning');
         return;
       }
+      if (!snapshotRow || !snapshotRow.allocated) {
+        confirmAction('该日期尚未分配小费，请先完成分配后查看明细', null, {
+          title: '暂无法查看分配明细', okText: '知道了', hideCancel: true
+        });
+        return;
+      }
       captureSummaryUiState(dateKey, '');
       var store = (document.getElementById('storeSelect') || {}).value || '';
       if (snapshotRow) {

@@ -164,7 +164,10 @@ function confirmAction(message, callback, options) {
     okBtn.textContent = options.okText || '确定';
     okBtn.className = options.okClass || 'btn btn-primary';
   }
-  if (cancelBtn) cancelBtn.textContent = options.cancelText || '取消';
+  if (cancelBtn) {
+    cancelBtn.textContent = options.cancelText || '取消';
+    cancelBtn.style.display = options.hideCancel === true ? 'none' : '';
+  }
   openModal('tipoutConfirmModal');
 }
 
