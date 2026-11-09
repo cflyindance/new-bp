@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "period projection and width existed, but COLUMN_GROUPS omitted period, so settings and preference normalization excluded it. E2E also confirmed restore-default redraw detached its click target before document outside-click detection, closing the panel before confirmation.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "not_required",
+  "changedFiles": [
+    "dist/Configuration center/assets/buffet-rule-list-view.js",
+    "dist/Configuration center/buffet-rule.html",
+    "scripts/verify-buffet-period-column.mjs",
+    "scripts/verify-buffet-period-column-browser.cjs",
+    "scripts/verify-buffet-list-slim.mjs",
+    "scripts/verify-buffet-no-advanced.mjs",
+    "docs/superpowers/specs/2026-09-07-buffet-scene-step-fusion-design.md",
+    "docs/superpowers/specs/自助餐规则业务规格说明书（研发交付版）.md",
+    "docs/superpowers/specs/自助餐规则需求文档（个人规范版）.md",
+    "docs/superpowers/specs/2026-11-07-buffet-list-delivery-gaps.md",
+    "docs/superpowers/specs/assets/buffet-period-columns-20261109.png",
+    "docs/verification/buffet-period-column-20261109/README.md",
+    "docs/verification/buffet-period-column-20261109/analysis-scope.json",
+    "docs/verification/buffet-period-column-20261109/bug-result.json"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": ["verify-buffet-period-column: AssertionError 字段设置必须包含限购周期 before source edit", "browser regression timed out at confirmation after restore-default before stopPropagation fix"],
+    "greenEvidence": ["verify-buffet-period-column PASS", "87 verify-buffet-*.mjs passed; focused list regressions rerun after event fix", "TypeScript --noEmit and git diff --check passed"]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "User-visible field settings and preference persistence",
+    "evidence": ["verify-buffet-period-column-browser.cjs passed: checkbox, confirm, cancel, reload, restore defaults, failed-write retention and retry", "External Chrome at port 5305 confirmed period checkbox and table values; docs/superpowers/specs/assets/buffet-period-columns-20261109.png"]
+  },
+  "build": {"required":false,"status":"skipped","reason":"Only runtime list definition and existing inline event handling; no build boundary changed. CI unknown."},
+  "unverifiedScopes": ["Production deployment", "Real POS execution", "Other five-step page screenshot gaps remain unchanged"]
+}
