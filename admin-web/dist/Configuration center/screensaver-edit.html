@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>编辑主题 - 屏保</title>
+  <title>编辑广告 - 屏保与首页广告</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
@@ -35,7 +35,7 @@
           <button type="button" id="editBackBtn" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="返回">
             <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M872 474H298.7l413.1-413.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L201.4 479.7c-6.2 6.2-9.4 14.4-9.4 22.6s3.1 16.4 9.4 22.6l465.1 465.1c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L298.7 550H872c17.7 0 32-14.3 32-32s-14.3-32-32-32z"/></svg>
           </button>
-          <h1 class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">编辑主题</h1>
+          <h1 class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">编辑广告</h1>
         </div>
         <button type="button" id="editNextStepBtn" class="inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-primary px-5 text-base font-medium text-white shadow-[0_2px_0_rgba(5,145,255,0.1)] hover:bg-[#4096ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">选择门店</button>
       </div>
@@ -48,14 +48,15 @@
         <div class="space-y-8 rounded-2xl border border-[#f0f0f0] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:p-8">
         <input type="hidden" id="editThemeId" name="id" value="" />
         <div>
-          <label for="editThemeName" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">主题名称</label>
-          <input type="text" id="editThemeName" name="name" required placeholder="请输入主题名称" class="h-12 w-full rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+          <label for="editThemeName" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">广告名称</label>
+          <input type="text" id="editThemeName" name="name" required placeholder="请输入广告名称" class="h-12 w-full rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
         </div>
         <div class="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-5">
           <div>
-            <label for="editIdleTimeoutInput" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">无操作进入屏保时间</label>
+            <label for="editIdleTimeoutInput" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">屏保触发等待时间</label>
+            <p id="editIdleTimeoutInputHint" class="mb-2 text-xs text-[rgba(0,0,0,0.45)]">仅用于屏保位置</p>
             <div class="flex items-center gap-2">
-              <input id="editIdleTimeoutInput" type="number" min="1" step="1" value="60" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              <input id="editIdleTimeoutInput" aria-describedby="editIdleTimeoutInputHint" type="number" min="1" step="1" value="60" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
               <span class="shrink-0 text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">秒</span>
             </div>
           </div>
@@ -132,7 +133,7 @@
       <div class="ui-dialog-header">
         <h3 id="editBackConfirmTitle" class="ui-dialog-title">返回提示</h3>
       </div>
-      <p class="ui-dialog-body leading-relaxed">确定返回屏保列表吗？当前编辑内容将不会保存。</p>
+      <p class="ui-dialog-body leading-relaxed">确定返回广告列表吗？当前编辑内容将不会保存。</p>
       <div class="ui-dialog-footer">
         <button type="button" id="editBackConfirmCancel" class="ui-dialog-btn">取消</button>
         <button type="button" id="editBackConfirmOk" class="ui-dialog-btn ui-dialog-btn--primary">确定返回</button>
@@ -629,7 +630,7 @@
           var images = getMaterialImages();
           images.unshift({
             id: 'm' + Date.now() + Math.random().toString(36).substr(2, 5),
-            name: name || '屏保图片_' + new Date().toLocaleString(),
+            name: name || '广告图片_' + new Date().toLocaleString(),
             category: '',
             url: dataUrl
           });
@@ -945,11 +946,11 @@
         var carouselRaw = String(document.getElementById('editCarouselIntervalInput').value).trim();
         var carouselIntervalSec = parseInt(carouselRaw, 10);
         if (!name) {
-          Toast.validate('请输入主题名称');
+          Toast.validate('请输入广告名称');
           return;
         }
         if (idleRaw === '' || isNaN(idleTimeoutSec) || idleTimeoutSec < 1) {
-          Toast.validate('请输入无操作进入屏保时间');
+          Toast.validate('请输入屏保触发等待时间');
           return;
         }
         if (carouselRaw === '' || isNaN(carouselIntervalSec) || carouselIntervalSec < 1) {
@@ -957,7 +958,7 @@
           return;
         }
         if (portraitList.length === 0 && landscapeList.length === 0) {
-          Toast.validate('请至少上传一个竖版或横版的屏保素材');
+          Toast.validate('请至少上传一个竖版或横版的广告素材');
           return;
         }
 
@@ -996,7 +997,7 @@
               window.location.href = window.appendMenusifuEmbeddedParam(redirectUrl);
             } catch (err) {
               console.error('保存失败:', err);
-              Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的屏保主题后重试。');
+              Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的广告后重试。');
             }
           }).catch(function(err) {
             console.error('图片处理失败:', err);

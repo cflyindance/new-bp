@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>选择展示生效时间 - 下发屏保</title>
+  <title>选择展示生效时间 - 投放广告</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
@@ -34,7 +34,7 @@
       <div class="space-y-6 rounded-2xl border border-[#f0f0f0] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:p-8">
         <div>
           <h2 class="mb-1 text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">生效时段</h2>
-          <p class="text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">请设置展示生效的 <strong class="font-medium text-[rgba(0,0,0,0.65)]">开始时间</strong> 与 <strong class="font-medium text-[rgba(0,0,0,0.65)]">结束时间</strong>（日期 + 时分）。开始时间可为过去时间；保存时仅校验结束晚于开始及与已生效主题重叠等规则，不与当前时刻做严格比对。</p>
+          <p class="text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">请设置展示生效的 <strong class="font-medium text-[rgba(0,0,0,0.65)]">开始时间</strong> 与 <strong class="font-medium text-[rgba(0,0,0,0.65)]">结束时间</strong>（日期 + 时分）。开始时间可为过去时间；保存时仅校验结束晚于开始及与已生效广告重叠等规则，不与当前时刻做严格比对。</p>
         </div>
         <div id="timePickerWrap" class="space-y-6">
           <div>
@@ -56,7 +56,7 @@
       </div>
     </main>
   </div>
-  <!-- 保存时若与已生效主题时间重叠则弹出（仅保存时校验，编辑过程中不提示） -->
+  <!-- 保存时若与已生效广告时间重叠则弹出（仅保存时校验，编辑过程中不提示） -->
   <div id="overlapSaveConfirmModal" class="fixed inset-0 z-[61] hidden items-center justify-center bg-black/[0.45] p-4" aria-hidden="true">
     <div class="ui-dialog-panel flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="overlapSaveConfirmTitle">
       <div class="ui-dialog-header flex-shrink-0">
@@ -69,13 +69,13 @@
       </div>
     </div>
   </div>
-  <!-- 完成下发二次确认（不使用浏览器 confirm） -->
+  <!-- 完成投放二次确认（不使用浏览器 confirm） -->
   <div id="submitConfirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/[0.45] p-4" aria-hidden="true">
     <div class="ui-dialog-panel w-full max-w-sm overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="submitConfirmTitle">
       <div class="ui-dialog-header">
-        <h3 id="submitConfirmTitle" class="ui-dialog-title">确认下发</h3>
+        <h3 id="submitConfirmTitle" class="ui-dialog-title">确认投放</h3>
       </div>
-      <p class="ui-dialog-body leading-relaxed">确认将屏保下发到已选门店？确认后将保存下发与生效设置并返回列表。</p>
+      <p class="ui-dialog-body leading-relaxed">确认将广告投放到已选门店？确认后将保存投放与生效设置并返回列表。</p>
       <div class="ui-dialog-footer">
         <button type="button" id="submitConfirmCancel" class="ui-dialog-btn">取消</button>
         <button type="button" id="submitConfirmOk" class="ui-dialog-btn ui-dialog-btn--primary">确定</button>
@@ -295,7 +295,7 @@
         };
       }
 
-      /** 与列表上架校验一致，且对方须为「已生效」中的已上架主题 */
+      /** 与列表上架校验一致，且对方须为「已生效」中的已上架广告 */
       function findOverlapConflictsWithActivePublished() {
         var candidate = buildOverlapCandidateTheme();
         if (!candidate) return { conflicts: [], candidate: null };
@@ -317,7 +317,7 @@
           var otherRange = parseStoredThemeEffectRange(other);
           if (!otherRange) continue;
           if (!rangesOverlap(myRange, otherRange)) continue;
-          var tname = other.name ? String(other.name) : '未命名主题';
+          var tname = other.name ? String(other.name) : '未命名广告';
           for (var p = 0; p < myPairs.length; p++) {
             var pair = myPairs[p];
             if (!hasStoreChannelPair(other, pair.mid, pair.channel)) continue;
@@ -407,10 +407,10 @@
         });
 
         var out = [];
-        out.push('在相同门店、相同渠道下，当前主题与已生效主题存在生效时间重叠。');
+        out.push('在相同门店、相同渠道下，当前广告与已生效广告存在生效时间重叠。');
         out.push('');
         if (globalThemes.length) {
-          out.push('冲突已生效主题：');
+          out.push('冲突已生效广告：');
           globalThemes.forEach(function(r) {
             out.push('  · 「' + r.themeName + '」');
             out.push('    ' + overlapThemeTimeRangeLine(r));
@@ -549,7 +549,7 @@
           } else if (window.KioskThemeOverlap) {
             overlapSaveConfirmText.textContent = KioskThemeOverlap.CONFIRM_MESSAGE;
           } else {
-            overlapSaveConfirmText.textContent = '在相同门店、相同渠道下，当前主题与已生效主题存在生效时间重叠。';
+            overlapSaveConfirmText.textContent = '在相同门店、相同渠道下，当前广告与已生效广告存在生效时间重叠。';
           }
         }
         if (!overlapSaveConfirmModal) {

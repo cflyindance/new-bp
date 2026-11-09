@@ -1,5 +1,5 @@
 /**
- * 与 effective-time / kiosk-theme-list 一致：门店×渠道 + 生效时间段 vs 已上架且「已生效」主题。
+ * 与 effective-time / kiosk-theme-list 一致：门店×渠道 + 生效时间段 vs 已上架且「已生效」广告。
  * 供屏保新建/编辑保存前提示使用。
  */
 (function(global) {
@@ -168,7 +168,7 @@
       var otherRange = parseStoredThemeEffectRange(other);
       if (!otherRange) continue;
       if (!rangesOverlap(myRange, otherRange)) continue;
-      var tname = other.name ? String(other.name) : '未命名主题';
+      var tname = other.name ? String(other.name) : '未命名广告';
       for (var p = 0; p < myPairs.length; p++) {
         var pair = myPairs[p];
         if (!hasStoreChannelPair(other, pair.mid, pair.channel)) continue;
@@ -188,9 +188,9 @@
     return { conflicts: conflicts, candidate: candidate };
   }
 
-  /** 保存前重叠确认弹窗：首段说明 + 冲突的已生效主题名称与生效时间（按主题去重） */
+  /** 保存前重叠确认弹窗：首段说明 + 冲突的已生效广告名称与生效时间（按广告去重） */
   function formatOverlapSaveConfirmText(conflicts) {
-    var head = '在相同门店、相同渠道下,当前主题与已生效主题存在生效时间重叠。';
+    var head = '在相同门店、相同渠道下,当前广告与已生效广告存在生效时间重叠。';
     if (!conflicts || !conflicts.length) return head;
 
     function timeLine(r) {
@@ -211,12 +211,12 @@
       var key = id || (String(c.themeName || '') + '\x1e' + String(c.effectTime || ''));
       if (byTheme[key]) return;
       byTheme[key] = {
-        themeName: c.themeName || '未命名主题',
+        themeName: c.themeName || '未命名广告',
         effectTime: c.effectTime,
         distributeTime: c.distributeTime
       };
     });
-    var lines = [head, '', '冲突的已生效主题：'];
+    var lines = [head, '', '冲突的已生效广告：'];
     var keys = Object.keys(byTheme).sort(function(a, b) {
       return String(byTheme[a].themeName).localeCompare(String(byTheme[b].themeName), 'zh-CN');
     });
@@ -232,6 +232,6 @@
     findActivePublishedOverlaps: findActivePublishedOverlaps,
     parseStoredThemeEffectRange: parseStoredThemeEffectRange,
     formatOverlapSaveConfirmText: formatOverlapSaveConfirmText,
-    CONFIRM_MESSAGE: '在相同门店、相同渠道下,当前主题与已生效主题存在生效时间重叠。'
+    CONFIRM_MESSAGE: '在相同门店、相同渠道下,当前广告与已生效广告存在生效时间重叠。'
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -1973,7 +1973,7 @@ function renderMarketingScreensaverIframePanel(): string {
     return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
-        title="营销中心屏保功能"
+        title="营销中心屏保与首页广告"
         data-marketing-screensaver-frame
         class="block h-full w-full flex-1 border-0"
         src="${MARKETING_SCREENSAVER_IFRAME_SRC}"
