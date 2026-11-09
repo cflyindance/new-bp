@@ -5396,6 +5396,12 @@
     return '<div class="olf-review-row"><label class="olf-inline"><input type="checkbox" data-auth-scope="' + scope + '"' + (enabled ? " checked" : "") + ' /><span><strong>' + esc(title) + '</strong><span class="olf-hint" style="display:block">' + esc(copy) + '</span></span></label><select class="olf-select" data-auth-role="' + scope + '"' + (enabled ? "" : " disabled") + '>' + roles.map(function (role) { return '<option value="' + esc(role) + '"' + (draft.authorization.scopePermissions[scope] === role ? " selected" : "") + '>' + esc(role) + '</option>'; }).join("") + '</select><span></span></div>';
   }
 
+  function authorizationSummary(draft) {
+    var auth = draft.authorization;
+    if (isBuffetProfile()) return auth.enabled ? "允许服务员密码授权" : "不允许授权";
+    return auth.enabled ? auth.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "不允许授权";
+  }
+
   function normalizeBuffetAuthorizationScopes(draft) {
     if (!isBuffetV4Draft(draft) || (draft.enabledPeriods || []).some(function (period) { return period !== "order_lifetime"; })) return false;
     var auth = draft.authorization || {};
@@ -5431,7 +5437,7 @@
     if (normalizeBuffetAuthorizationScopes(draft) && !viewMode) markEditorDirty();
     return '<div class="olf-content-head"><h2 tabindex="-1">设置超限授权</h2></div>' +
       '<section class="olf-section"><div class="olf-section-head"><div><h3>允许服务员密码授权</h3><div class="olf-help">关闭后，超限将直接拒绝。</div></div><label class="olf-switch"><input type="checkbox" data-auth-enabled' + (auth.enabled ? " checked" : "") + ' /><span class="olf-switch-track"></span><span>' + (auth.enabled ? "已开启" : "已关闭") + '</span></label></div></section>' +
-      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + (isBuffetProfile() ? "" : renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更")) + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section>' + (isBuffetProfile() ? "" : '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span>' + renderAuthorizationDefault(draft, supportsRoundAuthorization) + '</label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>') : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
+      (auth.enabled ? (isBuffetProfile() ? "" : '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更") + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span>' + renderAuthorizationDefault(draft, supportsRoundAuthorization) + '</label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>') : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
   }
 
   function namesFor(items, ids) {
@@ -5800,7 +5806,7 @@
     var check = validateAll(draft);
     var completion = limitCompletion(draft);
     var memberText = draft.conditions.memberMode === "all" ? "全部顾客" : namesFor(memberLevels, draft.conditions.memberLevelIds);
-    var authText = draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "不允许授权";
+    var authText = authorizationSummary(draft);
     var childText = draft.conditions.childCountPolicy === "inherit" ? "继承门店" : draft.conditions.childCountPolicy === "include" ? "计入" : "不计入";
     var calcText = subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType) +
       (draft.subject === "party_size" ? " · 儿童人数" + childText : "");
@@ -5822,9 +5828,7 @@
     if (isBuffetV4Draft(draft)) {
       var check = validateAll(draft);
       var completion = limitCompletion(draft, draft.deployStoreIds);
-      var authText = draft.authorization.enabled
-        ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ")
-        : "不允许授权";
+      var authText = authorizationSummary(draft);
       return '<div class="olf-content-head"><h2 tabindex="-1">确认规则并发布</h2></div>' +
         '<div class="olf-summary ' + (check ? "olf-summary--danger" : "olf-summary--success") + '"><strong>' + (check ? "发布前检查未通过：" : "发布前检查通过：") + '</strong>' + esc(check ? check.message : "周期、实际数量、授权和生效门店均完整。") + (check ? ' <button type="button" class="olf-button olf-button--small" data-fix-step="' + check.step + '" style="margin-left:10px">前往修正</button>' : '') + '</div>' +
         '<section class="olf-section"><div class="olf-review">' +
@@ -8150,6 +8154,7 @@
     }
     if (target.hasAttribute("data-auth-enabled")) { draft.authorization.enabled = target.checked; markEditorDirty(); renderEditor(); return; }
     if (target.hasAttribute("data-auth-scope")) {
+      if (isBuffetProfile()) return;
       var scope = target.getAttribute("data-auth-scope");
       var scopeIndex = draft.authorization.allowedScopes.indexOf(scope);
       if (target.checked && scopeIndex < 0) draft.authorization.allowedScopes.push(scope);
@@ -8157,7 +8162,7 @@
       if (draft.authorization.allowedScopes.indexOf(draft.authorization.defaultScope) < 0) draft.authorization.defaultScope = draft.authorization.allowedScopes[0] || "";
       markEditorDirty(); renderEditor(); return;
     }
-    if (target.hasAttribute("data-auth-role")) { draft.authorization.scopePermissions[target.getAttribute("data-auth-role")] = target.value; markEditorDirty(); return; }
+    if (target.hasAttribute("data-auth-role")) { if (isBuffetProfile()) return; draft.authorization.scopePermissions[target.getAttribute("data-auth-role")] = target.value; markEditorDirty(); return; }
     if (target.hasAttribute("data-auth-default")) { if (isBuffetProfile()) return; draft.authorization.defaultScope = target.value; markEditorDirty(); return; }
     if (target.hasAttribute("data-auth-reason")) { if (isBuffetProfile()) return; draft.authorization.reasonRequired = target.checked; markEditorDirty(); return; }
   }

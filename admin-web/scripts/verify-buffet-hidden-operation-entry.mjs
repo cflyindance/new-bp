@@ -57,8 +57,9 @@ function renderUnchanged(value) {
 for (const scope of ["round", "order"]) {
   const html = renderUnchanged(draft(scope));
   assert.doesNotMatch(html, /data-auth-default|data-auth-reason|默认授权范围|授权原因必须填写/);
-  assert.match(html, /data-auth-scope="round"/);
-  assert.match(html, /data-auth-scope="order"/);
+  assert.doesNotMatch(html, /data-auth-scope|data-auth-role|可选授权范围与权限/);
+  assert.match(html, /data-auth-enabled/);
+  assert.doesNotMatch(html, /硬性拒绝/);
   assert.doesNotMatch(html, /沿用原默认授权范围/);
 }
 
@@ -105,14 +106,25 @@ assert.deepEqual(legacy.authorization.allowedScopes, ["operation", "round", "ord
 assert.equal(JSON.stringify(legacy.authorization.scopePermissions), retainedPermissions);
 assert.doesNotMatch(renderUnchanged(JSON.parse(JSON.stringify(legacy))), /data-auth-default|data-auth-reason/);
 
+const beforeHiddenEvents = JSON.stringify(legacy.authorization);
+const dirtyBeforeHiddenEvents = dirty;
 context.handleAuth(legacy, event("data-auth-scope", "", false, "round"));
-assert.deepEqual(legacy.authorization.allowedScopes, ["operation", "order"]);
+context.handleAuth(legacy, event("data-auth-role", "任意角色", false, "order"));
+assert.deepEqual(legacy.authorization.allowedScopes, ["operation", "round", "order"]);
+assert.equal(JSON.stringify(legacy.authorization), beforeHiddenEvents, "隐藏范围和角色事件不得修改授权数据");
+assert.equal(dirty, dirtyBeforeHiddenEvents, "隐藏事件不应标脏");
 assert.equal(legacy.authorization.defaultScope, "operation");
 context.handleAuth(legacy, event("data-auth-reason", "", false));
 assert.equal(legacy.authorization.reasonRequired, true, "隐藏原因事件不得修改历史配置");
 context.handleAuth(legacy, event("data-auth-enabled", "", false));
 assert.equal(legacy.authorization.enabled, false);
 assert.equal(legacy.authorization.scopePermissions.operation, "值班经理");
+
+assert.equal(context.authorizationSummary(draft()), "允许服务员密码授权");
+assert.equal(context.authorizationSummary(disabled), "不允许授权");
+assert.equal((flow.match(/var authText = authorizationSummary\(draft\);/g) || []).length, 2, "两条编辑复核路径仅概括开关状态");
+const profile = fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-rule-profile.js"), "utf8");
+assert.match(profile, /title: "超限授权", note: "授权开关设置"/);
 
 buffet = false;
 const menuHtml = renderUnchanged(draft("operation"));
@@ -126,5 +138,10 @@ context.handleAuth(menuDraft, event("data-auth-default", "order"));
 context.handleAuth(menuDraft, event("data-auth-reason", "", false));
 assert.equal(menuDraft.authorization.defaultScope, "order");
 assert.equal(menuDraft.authorization.reasonRequired, false);
+context.handleAuth(menuDraft, event("data-auth-scope", "", false, "round"));
+context.handleAuth(menuDraft, event("data-auth-role", "店长", false, "operation"));
+assert.deepEqual(menuDraft.authorization.allowedScopes, ["operation", "order"]);
+assert.equal(menuDraft.authorization.scopePermissions.operation, "店长");
+assert.equal(context.authorizationSummary(menuDraft), "本次操作 / 当前订单");
 
 console.log("verify-buffet-hidden-operation-entry: PASS");
