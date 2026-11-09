@@ -11,7 +11,7 @@ import {openConfirmDialog} from '../ui/app-confirm-dialog';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {registerPageSaveDirtyProbe} from '../config/page-save-registry';
 
-export function isMarketingDisplayPath(path:string):boolean {const p=path.split('?')[0].replace(/\/$/,'');return p===CONTENTS_PATH||p===PLACEMENTS_PATH||p==='/marketing/display-content'||p==='/marketing/screensaver'}
+export function isMarketingDisplayPath(path:string):boolean {const p=path.split('?')[0].replace(/\/$/,'');return p===CONTENTS_PATH||p===PLACEMENTS_PATH||p==='/marketing/display-content'}
 export function isDisplayRegionPath(path:string):boolean{return path.split('?')[0].replace(/\/$/,'')===REGIONS_PATH}
 export function renderMarketingDisplayPage(path:string):string {const mode=isDisplayRegionPath(path)?'regions':path.split('?')[0]===PLACEMENTS_PATH?'placements':'contents';return `<section class="display-page" data-display-page data-path="${e(mode==='regions'?REGIONS_PATH:mode==='placements'?PLACEMENTS_PATH:CONTENTS_PATH)}" data-mode="${mode}"></section>`}
 type Mode='contents'|'placements'|'regions';

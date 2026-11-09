@@ -338,6 +338,7 @@ export const NAV_MODULES: NavModule[] = [
       { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", children: [
         { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
         { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
+        { id: "mkt-legacy-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
       ] },
       { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
       { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
@@ -1122,6 +1123,7 @@ export const MARKETING_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", activePrefixes: ["/marketing/display-content", "/marketing/screensaver"], sidebarChildren: [
     { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
     { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
+    { id: "mkt-legacy-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
   ] },
   { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
   { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
