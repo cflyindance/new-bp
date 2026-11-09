@@ -1866,7 +1866,8 @@ function isInventoryExpiryIframePath(path: string): boolean {
 }
 
 function isMarketingScreensaverIframePath(path: string): boolean {
-  return isMarketingDisplayPath(path);
+  const route = path.split("?")[0].replace(/\/$/, "");
+  return route === "/marketing/screensaver" || isMarketingDisplayPath(path);
 }
 
 function isMarketingAdsIframePath(path: string): boolean {
@@ -1968,6 +1969,19 @@ function renderInventoryExpiryIframeSplit(): string {
 
 /** 主区全宽嵌入营销中心屏保功能页 */
 function renderMarketingScreensaverIframePanel(): string {
+  if (location.hash.slice(1).split("?")[0].replace(/\/$/, "") === "/marketing/screensaver") {
+    return `
+    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <iframe
+        title="营销中心屏保功能"
+        data-marketing-screensaver-frame
+        class="block h-full w-full flex-1 border-0"
+        src="${MARKETING_SCREENSAVER_IFRAME_SRC}"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-read; clipboard-write; fullscreen"
+      ></iframe>
+    </div>`;
+  }
   return renderMarketingDisplayPage(location.hash.replace(/^#/, ""));
 }
 
@@ -2887,7 +2901,8 @@ function renderMarketingSecondarySheet(hash: string, open: boolean): string {
       : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, mktSubnav, getActiveMarketingSheetSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, mktSubnav, getActiveMarketingSheetSubPath,
+              (p, item) => item.sidebarChildren?.find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path ?? "", {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: mktSheetAria,
             })}
@@ -3857,7 +3872,7 @@ function rememberSidebarNavScroll(scrollTop: number): void {
 /** 将 `#/menu`、`#/reports` 等仅一级路径规范为各自 defaultChildPath（单页模块 path===default 时不跳转） */
 function normalizeTabModuleHashes(): void {
   const raw = location.hash.slice(1);
-  if (raw === "/marketing/screensaver" || raw === "/marketing/screensaver/" || raw === "/marketing/display-content" || raw === "/marketing/display-content/") {
+  if (raw === "/marketing/display-content" || raw === "/marketing/display-content/") {
     replaceHashPath("/marketing/display-content/contents");
     return;
   }
