@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
+  <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
   <script>
@@ -471,6 +472,11 @@
       }
 
       function executeSaveDraftFromEffectiveTime() {
+          var selectedPositions = KioskThemePositions.read();
+          if (!selectedPositions.length) {
+            Toast.validate('请返回选择渠道页，至少选择一个展示位置。');
+            return;
+          }
           var themeId = '';
           try { themeId = localStorage.getItem('current_theme_id_for_distribute') || ''; } catch (e) {}
           if (themeId) {
@@ -497,6 +503,7 @@
               theme.effectTime = (sD && sT && eD && eT) ? sD + ' ' + sT + ' - ' + eD + ' ' + eT : '--';
             }
             theme.distributeChannels = Array.isArray(selectedChannels) ? selectedChannels : [];
+            theme.distributePositions = selectedPositions.slice();
               theme.distributedStores = selectedStores.map(function(store, idx) {
               var channelStatuses = channelsForStores.map(function(chName) {
                 return { channel: chName };
@@ -506,12 +513,14 @@
             theme.lastDistributePrefs = {
               stores: selectedStores.map(function(s) { return { name: s.name, mid: s.mid }; }),
               channels: Array.isArray(selectedChannels) ? selectedChannels.slice() : [],
+              positions: selectedPositions.slice(),
               startDate: startDateInput ? startDateInput.value : '',
               startTime: startTimeInput ? startTimeInput.value : '',
               endDate: endDateInput ? endDateInput.value : '',
               endTime: endTimeInput ? endTimeInput.value : ''
             };
               localStorage.setItem('kiosk_themes', JSON.stringify(themes));
+              KioskThemePositions.clear();
               try { localStorage.removeItem('selected_stores_for_distribute'); } catch (e) {}
               try { localStorage.removeItem('selected_channels_for_distribute'); } catch (e) {}
             try { localStorage.removeItem('distribute_date'); } catch (e) {}
@@ -564,6 +573,10 @@
 
       document.getElementById('submitBtn').addEventListener('click', function(e) {
         e.preventDefault();
+        if (!KioskThemePositions.read().length) {
+          Toast.validate('请返回选择渠道页，至少选择一个展示位置。');
+          return;
+        }
         var pr = getProposedTimeRangeMs();
         if (!pr) {
           Toast.validate('请填写完整的开始与结束时间。');
