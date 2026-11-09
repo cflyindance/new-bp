@@ -5,7 +5,7 @@ const window={};
 const context=vm.createContext({window,console});
 for(const name of ["brand-menu-structure-picker","buffet-rule-policy","buffet-list-query","buffet-rule-list-view"])vm.runInContext(fs.readFileSync("dist/Configuration center/assets/"+name+".js","utf8"),context);
 const q=window.BuffetListQuery,v=window.BuffetRuleListView;
-assert.equal(v.columnDefinitions().length,11);
+assert.equal(v.columnDefinitions().length,12);
 assert.equal(v.defaultVisibleColumns().length,7);
 assert.equal(v.normalizeColumnPreference({version:1,visible:["name","strategy","partyScenario","productScope","effectiveStores","status","actions"]}).visible.join(","),v.defaultVisibleColumns().join(","));
 assert.ok(v.defaultVisibleColumns().includes("effectiveTime"));

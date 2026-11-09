@@ -1,0 +1,36 @@
+{
+  "rootCauseStatus": "confirmed",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": ["dist/Configuration center/buffet-rule.html"],
+  "workspace": {
+    "status": "clean",
+    "evidence": ["New managed worktree started clean at main@5253b17f3d8fc01241f915525a7906ec59fcf490", "Created codex/buffet-period-column-20261109 before edits; main and prior branch untouched"]
+  },
+  "references": [
+    {"path":"dist/Configuration center/buffet-rule.html","symbol":"renderColumns/tableHtml/loadColumns/columnPanel.onclick","relation":"entry_point","impact":"affected"},
+    {"path":"dist/Configuration center/assets/buffet-rule-list-view.js","symbol":"COLUMN_GROUPS/columnDefinitions/normalizeColumnPreference/projectColumns","relation":"definition","impact":"affected"},
+    {"path":"dist/Configuration center/assets/buffet-list-query.js","symbol":"BuffetListQuery","relation":"shared_caller","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-rule-list-view.mjs","symbol":"list view regression","relation":"test","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-default-list-ui.mjs","symbol":"list inline script VM regression","relation":"test","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-hidden-operation-entry.mjs","symbol":"operation regression","relation":"test","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-v4-lifecycle.mjs","symbol":"label regression","relation":"test","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-product-wording.mjs","symbol":"wording regression","relation":"test","impact":"not_affected"},
+    {"path":"scripts/verify-buffet-list-slim.mjs","symbol":"column count","relation":"test","impact":"affected"},
+    {"path":"scripts/verify-buffet-no-advanced.mjs","symbol":"column count","relation":"test","impact":"affected"}
+  ],
+  "deepReadPaths": ["dist/Configuration center/buffet-rule.html", "dist/Configuration center/assets/buffet-rule-list-view.js", "scripts/verify-buffet-rule-list-view.mjs", "scripts/verify-buffet-default-list-ui.mjs", "scripts/verify-buffet-list-slim.mjs", "scripts/verify-buffet-no-advanced.mjs"],
+  "sharedCallers": ["dist/Configuration center/buffet-rule.html"],
+  "sharedCallersComplete": true,
+  "dataFlow": [
+    {"from":"dist/Configuration center/assets/buffet-rule-list-view.js","to":"dist/Configuration center/buffet-rule.html","evidence":"columnDefinitions feeds both columnMap/table headings and renderColumns checkbox list; preference whitelist also uses definitions"},
+    {"from":"dist/Configuration center/buffet-rule.html","to":"dist/Configuration center/assets/buffet-rule-list-view.js","evidence":"records feed createViewModel; projectColumns already maps normalized period labels; confirm normalizes draftColumns before writing module-local preference"}
+  ],
+  "expansions": [
+    {"question":"Why does restore-default close the panel before confirmation?","trigger":"evidence_conflict","addedPaths":[],"expectedEvidence":"Browser timeout at confirm after restore; existing inline default branch redraw detaches target before document click closest check"}
+  ],
+  "wikiQueries": [
+    {"question":"Where is the buffet field-settings whitelist and period projection defined?","mode":"wiki_bypass","reason":"resolve-query-context.mjs returned matched:false, wiki_not_configured; source traced directly"}
+  ],
+  "risk":"low: list-only presentation and module-local column preference; no rule mutation or permission change"
+}

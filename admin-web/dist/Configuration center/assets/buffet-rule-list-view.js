@@ -4,7 +4,7 @@
   var PERIODS = ["order_lifetime", "per_round", "multi_round"];
   var FIXED_COLUMNS = ["name", "status", "actions"];
   var DEFAULT_COLUMNS = ["name", "strategy", "productScope", "effectiveStores", "effectiveTime", "status", "actions"];
-  var COLUMN_GROUPS = [{id:"extra",label:"更多信息",columns:[["partyRanges","人数区间"],["roundRanges","轮次区间"],["authorization","超限授权"],["description","规则描述"]]}];
+  var COLUMN_GROUPS = [{id:"extra",label:"更多信息",columns:[["period","限购周期"],["partyRanges","人数区间"],["roundRanges","轮次区间"],["authorization","超限授权"],["description","规则描述"]]}];
   var BASE_COLUMNS = [
     { id: "name", label: "规则名称", fixed: true, defaultVisible: true, width: 210 },
     { id: "strategy", label: "规则策略", defaultVisible: true, width: 230 },

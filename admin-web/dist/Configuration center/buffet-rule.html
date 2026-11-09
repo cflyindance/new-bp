@@ -99,7 +99,7 @@
       document.getElementById('columnPanel').onclick=function(e){
         if(e.target.closest('#columnCancel')){state.columnsOpen=false;render();return}
         if(e.target.closest('#columnConfirm')){try{var next=view.normalizeColumnPreference({version:2,visible:state.draftColumns}).visible;saveColumns(next);state.visibleColumns=next;state.columnsOpen=false;render()}catch(error){document.getElementById('columnError').textContent='保存失败，请重试；原列设置未改变'}return}
-        if(e.target.closest('[data-columns-default]')){state.draftColumns=view.defaultVisibleColumns();renderColumns();return}
+        if(e.target.closest('[data-columns-default]')){e.stopPropagation();state.draftColumns=view.defaultVisibleColumns();renderColumns();return}
         var input=e.target.closest('[data-column]');if(!input||input.disabled)return;
         if(input.checked&&!state.draftColumns.includes(input.dataset.column))state.draftColumns.push(input.dataset.column);
         if(!input.checked)state.draftColumns=state.draftColumns.filter(function(id){return id!==input.dataset.column});
