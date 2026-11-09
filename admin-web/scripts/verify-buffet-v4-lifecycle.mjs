@@ -13,7 +13,7 @@ const list = fs.readFileSync(path.join(root, "dist/Configuration center/buffet-r
 for (const marker of ["periodSummary", "quantityPolicySummary", "按门店复核数量策略", "整桌兜底", "相同菜品", "实际数量项", "validateBuffetStaticFeasibility"]) {
   assert.ok(flow.includes(marker), `v4 发布复核缺少 ${marker}`);
 }
-assert.match(list, /菜品集/);
+assert.match(fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-rule-list-view.js"), "utf8"), /菜品集/);
 assert.match(list, /validateActivation/);
 
 const storage = new Map();

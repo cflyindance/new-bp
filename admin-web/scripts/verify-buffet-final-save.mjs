@@ -78,6 +78,6 @@ listContext.state.advancedOpen=false;
 listContext.restoreCreateReturn();
 assert.equal(listContext.state.filters.keyword,'牛肉');
 assert.equal(listContext.state.filters.storeId,'store-a');
-assert.equal(listContext.state.advancedOpen,true);
+assert.equal(listContext.state.advancedOpen,false,'removed advanced state is not restored');
 assert.equal(storage.size,0,'return context consumed once');
 console.log('verify-buffet-final-save: PASS');

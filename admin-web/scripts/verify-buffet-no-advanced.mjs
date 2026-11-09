@@ -1,0 +1,15 @@
+import fs from "node:fs";
+import vm from "node:vm";
+import assert from "node:assert/strict";
+const window={};vm.runInNewContext(fs.readFileSync("dist/Configuration center/assets/buffet-rule-list-view.js","utf8"),{window});
+const view=window.BuffetRuleListView;
+const rows=[{id:"a",name:"整单",status:"disabled",deployStoreIds:["a"],periods:["order_lifetime","per_round"]},{id:"b",name:"每轮",status:"active",deployStoreIds:["b"],periods:["per_round"]}];
+assert.equal(view.filterRows(rows,{subject:"party_size",targetType:"dish",objectKey:"stale",effectiveAt:"2026-11-09T23:00",partySize:"99"}).length,2,"removed cached conditions must not silently filter");
+assert.equal(view.filterRows(rows,{storeId:"a",period:"per_round"}).length,1);
+assert.equal(view.filterRows(rows,{keyword:"整单",status:"disabled"}).length,1);
+assert.equal(view.columnDefinitions().length,11,"columns unchanged");
+const html=fs.readFileSync("dist/Configuration center/buffet-rule.html","utf8");
+assert.doesNotMatch(html,/id="(?:advancedFilters|toggleAdvanced|filterObject|filterTarget|filterTime|objectSearch)"|advancedOpen|effectiveAt|objectKey/);
+for(const id of ["filterKeyword","filterStore","filterStatus","filterPeriod","toggleColumns"])assert.ok(html.includes(id));
+for(const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);
+console.log("verify-buffet-no-advanced: PASS");
