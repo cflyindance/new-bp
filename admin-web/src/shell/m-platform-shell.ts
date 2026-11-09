@@ -1,4 +1,5 @@
 import { renderFutureVersionDiffBanner } from "./future-version-banner";
+import {isDisplayRegionPath,renderMarketingDisplayPage,bindMarketingDisplayPage} from '../marketing-display/ui';
 import {isBusinessMenuTemplatePath} from '../config/business-menu-template-scope';
 import {renderBusinessMenuTemplatePage,bindBusinessMenuTemplatePage} from '../config/business-menu-template-manager';
 import { renderMCenter, bindMCenter } from '../permissions/m-platform-ui';
@@ -59,6 +60,7 @@ export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
 export function isMPlatformContentPath(path: string): boolean {
   return (
+    isDisplayRegionPath(path) ||
     isMPlatformPresetPath(path) ||
     isBusinessMenuTemplatePath(path) ||
     isNavBlueprintPath(path) ||
@@ -82,6 +84,7 @@ export function renderMPlatformSidebar(path: string): string {
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
   if (!mCanVisit(path)) return { title: "访问受限", module: "M 平台" };
+  if (isDisplayRegionPath(path)) return {title:'展示区域管理',module:'M 平台'};
   if(isBusinessMenuTemplatePath(path))return {title:'业态与菜单模板',module:'M 平台'};
   return (
     findNavBlueprintPageTitle(path) ??
@@ -120,6 +123,7 @@ function renderMPlatformHeader(path: string): string {
 
 function renderMPlatformContent(path: string): string {
   if (!mCanVisit(path)) return mDenied();
+  if (isDisplayRegionPath(path)) return renderMarketingDisplayPage(path);
   if (isDeviceActivityPath(path)) return renderDeviceActivityPage(path);
   if (isActivityPath(path)) return renderActivityPage(path);
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
@@ -213,6 +217,7 @@ export function bindMPlatformShell(onMount: () => void): void {
 
   const path = currentPath;
   if (!mCanVisit(path)) return;
+  if (isDisplayRegionPath(path)) {bindMarketingDisplayPage();applyMControlStates();return;}
   if(isBusinessMenuTemplatePath(path)){bindBusinessMenuTemplatePage();applyMControlStates();return;}
   bindNavBlueprint(onMount);
   if (isAnySubscriptionAdminPath(path)) {

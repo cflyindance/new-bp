@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {resolveFlowStorePage,selectFlowStorePage,renderFlowStores,renderFlowChannels,renderFlowTime,readFlowWallTime,availableFlowTerminals} from '../src/marketing-display/flow-views';
+import {createPlatformState,type DisplayContent} from '../src/marketing-display/domain';
+
+const stores=Array.from({length:23},(_,i)=>({id:`M${String(i+1).padStart(8,'0')}`,name:`门店 ${i+1}`,address:i?'地址':'',postalCode:i?'12345':undefined}));
+const first=resolveFlowStorePage(stores,'',1),second=resolveFlowStorePage(stores,'',2),last=resolveFlowStorePage(stores,'',999);
+assert.equal(first.items.length,10);assert.equal(second.items.length,10);assert.equal(last.page,3);assert.equal(last.items.length,3);
+assert.equal(resolveFlowStorePage(stores,'M00000023',1).count,1);
+assert.equal(resolveFlowStorePage(stores,'not present',5).items.length,0);
+let selected=selectFlowStorePage(['M00000023'],first.items,true);
+selected=selectFlowStorePage(selected,second.items,true);
+assert.equal(selected.length,21);
+selected=selectFlowStorePage(selected,first.items,false);
+assert.equal(selected.length,11);assert.ok(selected.includes('M00000023'));assert.ok(!selected.includes('M00000001'));
+const html=renderFlowStores(stores,selected,'',2);
+assert.match(html,/地址/);assert.match(html,/邮编/);assert.match(html,/共 23 条/);assert.match(html,/已选门店 <span>\(11\)/);
+assert.match(html,/aria-current="page"/);assert.match(html,/全选当前页门店/);
+assert.doesNotMatch(renderFlowStores([{id:'safe',name:'<script>alert(1)</script>'}],[],'',1),/<script>/);
+assert.match(renderFlowStores([stores[0]],[],'',1),/—/,'missing metadata is not fabricated');
+const region=createPlatformState().regions[0];region.bindings={Kiosk:{minimumVersion:'5.0.1',mediaKinds:['image']},OO:{minimumVersion:'1.0.0',mediaKinds:['video']}};
+const content:DisplayContent={id:'c',name:'test',regionId:region.id,version:1,updatedAt:0,assets:[{id:'a',name:'a',kind:'image',url:'/a.png',variant:'9:16'}],settings:{idle:60,interval:5}};
+assert.deepEqual(availableFlowTerminals(region,content),['Kiosk']);
+const channels=renderFlowChannels(region,content,['Kiosk']);assert.match(channels,/渠道范围/);assert.match(channels,/终端类型/);assert.match(channels,/尚未接入此区域/);assert.match(channels,/不支持当前方案的素材类型/);
+region.enabled=false;assert.equal(availableFlowTerminals(region,content).length,0);
+assert.equal(readFlowWallTime('2026-11-09','12:34'),'2026-11-09T12:34');assert.equal(readFlowWallTime('2026-11-09',''),'');
+const times=renderFlowTime('2026-11-09T12:34','','Asia/Shanghai');assert.match(times,/type="date"/);assert.match(times,/type="time"/);assert.match(times,/name="startDate"/);assert.match(times,/name="endTime"/);assert.doesNotMatch(times,/datetime-local/);
+console.log('PASS reference flow: scoped pagination, selection retention, metadata escaping, terminal compatibility and split wall-clock fields');

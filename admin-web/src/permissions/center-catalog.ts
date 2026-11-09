@@ -67,6 +67,10 @@ export function buildCenterCatalog(): Catalog {
     const children = moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });
+  // Preserve stored screensaver grants as a compatibility resource, not a business navigation leaf.
+  if (!resources.has(pageKey('/marketing/screensaver'))) {
+    resources.set(pageKey('/marketing/screensaver'), {key:pageKey('/marketing/screensaver'),title:'展示内容兼容权限',type:'page',parent:navigationKey('marketing','mkt-screensaver'),path:'/marketing/screensaver',compatibilityOnly:true,defaultAccess:'read'});
+  }
   for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
     const key = pageKey(hub.settingsPath);
     if (!resources.has(key)) {

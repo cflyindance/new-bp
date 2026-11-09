@@ -50,7 +50,6 @@ export const CLOUD_PRODUCT_NAV_CHILD_IDS = [
   "pt-decoration",
   "mkt-campaigns",
   "mkt-manual",
-  "mkt-screensaver",
   "notif-templates",
   "notif-scene-config",
   "notif-quota",

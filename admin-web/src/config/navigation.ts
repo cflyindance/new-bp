@@ -335,7 +335,10 @@ export const NAV_MODULES: NavModule[] = [
     children: [
       { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
       { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
-      { id: "mkt-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
+      { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", children: [
+        { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
+        { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
+      ] },
       { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
       { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
     ],
@@ -1116,7 +1119,10 @@ export const BRAND_MENU_SUBNAV: ProductCenterSidebarSubItem[] = [
 export const MARKETING_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
   { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
-  { id: "mkt-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
+  { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", activePrefixes: ["/marketing/display-content", "/marketing/screensaver"], sidebarChildren: [
+    { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
+    { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
+  ] },
   { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
   { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
 ];
@@ -1417,12 +1423,14 @@ export function getActiveMarketingSheetSubPath(path: string): string {
 /** @deprecated 使用 getActiveMarketingSheetSubPath */
 export const getActiveMarketingMgmtSubPath = getActiveMarketingSheetSubPath;
 
-export function findMarketingNavTitle(path: string): { title: string; module: string } | null {
+export function findMarketingNavTitle(path: string): { title: string; titleEn?: string; module: string } | null {
   if (!path.startsWith("/marketing")) return null;
   const sorted = [...MARKETING_SHEET_SUBNAV].sort((a, b) => b.path.length - a.path.length);
   for (const c of sorted) {
+    const leaf = c.sidebarChildren?.find(child => path === child.path || path.startsWith(`${child.path}/`));
+    if (leaf) return { title: leaf.title, titleEn: leaf.titleEn, module: "营销中心 · 展示内容" };
     if (path === c.path || path.startsWith(`${c.path}/`)) {
-      return { title: c.title, module: "营销中心 · Marketing center" };
+      return { title: c.title, titleEn: c.titleEn, module: "营销中心 · Marketing center" };
     }
   }
   return { title: "营销中心", module: "营销中心 · Marketing center" };

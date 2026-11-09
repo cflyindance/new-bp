@@ -42,6 +42,9 @@ export const PAGE_BATCH_SAVE_EXCLUDE_PATHS = new Set<string>([
 
 /** 独立功能页（非 module-settings-catalog Hub） */
 export const PAGE_BATCH_SAVE_FEATURE_PATHS = new Set<string>([
+  "/marketing/display-content/contents",
+  "/marketing/display-content/placements",
+  "/m-platform/display-regions",
   "/team/clock-in",
   "/team/shift-scheduling",
   "/team/breaks-overtime",

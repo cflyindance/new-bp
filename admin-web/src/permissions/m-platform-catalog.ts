@@ -61,7 +61,7 @@ export const M_MODULES: MModule[] = [
     page('alerts', '告警', '/m-platform/hardware/alerts', false),
   ] },
   { id: 'presets', title: '平台预设', pages: [page('presets', '平台预设', '/m-platform/platform-preset', true, [
-    action('publish', '发布预设', '[data-pp-publish],[data-bt-publish],[data-template-publish-confirm],[data-template-enable-confirm],[data-template-enabled]'),
+    action('publish', '发布预设 / 管理展示区域', '[data-pp-publish],[data-bt-publish],[data-template-publish-confirm],[data-template-enable-confirm],[data-template-enabled],[data-display-region-write]'),
     action('sync', '同步商家', '[data-pp-sync-merchant]'),
     action('restore', '恢复默认预设', '[data-pp-restore-defaults]'),
   ])] },
@@ -96,6 +96,7 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
   if(path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');return provider?{...provider,title:'变更记录'}:undefined;}
   // Independent navigation entry, reusing the existing preset permission resource.
   if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
+  if(path==='/m-platform/display-regions'){const presets=M_PAGES.find(p=>p.id==='presets');return presets?{...presets,title:'展示区域管理'}:undefined;}
   if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':PERMISSION_ROLE_LABELS.merchantTitle};}
   const exact = M_PAGES.find(p => p.path === path);
   if (exact) return exact.id === 'roles' ? {...exact, title: PERMISSION_ROLE_LABELS.platformTitle} : exact;
