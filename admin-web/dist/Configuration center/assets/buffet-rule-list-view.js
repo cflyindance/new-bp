@@ -139,14 +139,16 @@
   }
   function containsParty(row, size) { return row.subject === "order" || row.partyRanges.some(function (range) { return size >= range.min && (range.max == null || size <= range.max); }); }
   function normalizeFilters(filters) {
-    filters = filters || {}; var party = String(filters.partySize == null ? "" : filters.partySize).trim(), partyNumber = /^\d+$/.test(party) && Number(party) >= 1 ? Number(party) : null;
-    return { keyword: String(filters.keyword || "").trim().toLowerCase(), storeId: filters.storeId || "", status: filters.status || "", subject: filters.subject || "", period: filters.period || "", targetType: filters.targetType || "", partySize: party, partyNumber: partyNumber, partyInvalid: party !== "" && partyNumber == null, effectiveTimeKey: "", objectKey: filters.objectKey || "", effectiveAt: filters.effectiveAt || "" };
+    filters=filters||{};
+    return {keyword:String(filters.keyword||"").trim().toLowerCase(),storeId:filters.storeId||"",status:filters.status||"",period:filters.period||""};
   }
-  function filterRows(rows, filters) {
-    var f = normalizeFilters(filters);
-    return copyArray(rows).filter(function (row) {
-      var search = row.name.toLowerCase();
-      return (!f.keyword || search.indexOf(f.keyword) >= 0) && (!f.storeId || row.deployStoreIds.indexOf(f.storeId) >= 0) && (!f.status || row.status === f.status) && (!f.subject || row.subject === f.subject) && (!f.period || row.periods.indexOf(f.period) >= 0) && (!f.targetType || row.targetType === f.targetType) && (f.partyInvalid || f.partyNumber == null || containsParty(row, f.partyNumber)) && (!f.objectKey || window.BuffetListQuery.matchesProduct(row,f.objectKey,f.storeId)) && (!f.effectiveAt || !!f.storeId && row.deployStoreIds.indexOf(f.storeId)>=0 && window.BuffetListQuery.timeMatch(row.config,f.effectiveAt)===true);
+  function filterRows(rows,filters) {
+    var f=normalizeFilters(filters);
+    return copyArray(rows).filter(function(row){
+      return (!f.keyword || row.name.toLowerCase().indexOf(f.keyword)>=0)
+        && (!f.storeId || row.deployStoreIds.indexOf(f.storeId)>=0)
+        && (!f.status || row.status===f.status)
+        && (!f.period || row.periods.indexOf(f.period)>=0);
     });
   }
   function groupRows(rows) {

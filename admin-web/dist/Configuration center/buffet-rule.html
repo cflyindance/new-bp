@@ -22,12 +22,8 @@
 <label class="filter"><span>限购周期</span><select class="control" id="filterPeriod"><option value="">全部周期</option><option value="order_lifetime">整单</option><option value="per_round">每轮</option><option value="multi_round">分轮次</option></select></label>
 <button class="btn" id="resetFilters">重置</button>
 </section>
-<div class="subbar"><div class="subbar-left"><button class="btn" id="toggleAdvanced" aria-expanded="false">高级筛选</button><span class="count" id="resultCount"></span></div><div class="subbar-right"><div class="settings"><button class="btn" id="toggleColumns" aria-expanded="false">字段设置</button><div class="settings-panel" id="columnPanel" hidden></div></div></div></div>
-<section class="advanced" id="advancedFilters" hidden>
-<label class="filter"><span>涉及商品</span><input class="control" id="objectSearch" type="search" placeholder="搜索候选商品，不直接筛选规则" /><select class="control" id="filterObject" aria-label="涉及商品"></select><span class="count">按门店、产线、商品身份匹配；含分类和菜品集覆盖</span></label>
-<label class="filter"><span>限购对象</span><select class="control" id="filterTarget"><option value="">全部对象</option><option value="dish">菜品</option><option value="category">分类</option><option value="dish_set">菜品集</option></select></label>
-<label class="filter"><span>适用日期时间</span><input class="control" type="datetime-local" id="filterTime" disabled /><span class="count" id="timeHint"></span><span class="filter-error" id="timeError" role="alert"></span></label>
-</section><p class="filter-error" id="queryWarning" role="status"></p>
+<div class="subbar"><div class="subbar-left"><span class="count" id="resultCount"></span></div><div class="subbar-right"><div class="settings"><button class="btn" id="toggleColumns" aria-expanded="false">字段设置</button><div class="settings-panel" id="columnPanel" hidden></div></div></div></div>
+
 <div id="ruleList"></div></div></section></main>
 
   <script src="assets/order-limit-store-catalog.js"></script>
@@ -39,21 +35,20 @@
   <script src="assets/buffet-rule-list-view.js"></script>
 <script>
     (function(){
-      var profile=window.ORDER_LIMIT_MODULE_PROFILE,repo=profile.repository,view=window.BuffetRuleListView,query=window.BuffetListQuery,stores=window.OrderLimitStoreCatalog||[],list=document.getElementById("ruleList"),rawRows=[],rows=[],options={stores:[],times:[]};
-      function emptyFilters(){return {keyword:"",storeId:"",status:"",period:"",targetType:"",objectKey:"",effectiveAt:""};}
-      var state={filters:emptyFilters(),advancedOpen:false,columnsOpen:false,visibleColumns:loadColumns(),draftColumns:[]};
+      var profile=window.ORDER_LIMIT_MODULE_PROFILE,repo=profile.repository,view=window.BuffetRuleListView,stores=window.OrderLimitStoreCatalog||[],list=document.getElementById("ruleList"),rawRows=[],rows=[],options={stores:[],times:[]};
+      function emptyFilters(){return {keyword:"",storeId:"",status:"",period:""};}
+      var state={filters:emptyFilters(),columnsOpen:false,visibleColumns:loadColumns(),draftColumns:[]};
       var columnMap={};view.columnDefinitions().forEach(function(column){columnMap[column.id]=column});
       function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
       function go(url){location.href=window.appendMenusifuEmbeddedParam?window.appendMenusifuEmbeddedParam(url):url}
       var createReturnKey='buffet-rule:create-return:v1';
-      function rememberCreateReturn(){try{sessionStorage.setItem(createReturnKey,JSON.stringify({filters:state.filters,advancedOpen:state.advancedOpen,scrollY:window.scrollY||0}))}catch(error){}}
+      function rememberCreateReturn(){try{sessionStorage.setItem(createReturnKey,JSON.stringify({filters:state.filters,scrollY:window.scrollY||0}))}catch(error){}}
       function restoreCreateReturn(){
         try{
           var saved=JSON.parse(sessionStorage.getItem(createReturnKey)||'null');
           sessionStorage.removeItem(createReturnKey);if(!saved)return;
           Object.keys(state.filters).forEach(function(key){if(saved.filters&&typeof saved.filters[key]==='string')state.filters[key]=saved.filters[key]});
-          state.advancedOpen=!!saved.advancedOpen;
-          [['filterKeyword','keyword'],['filterStatus','status'],['filterPeriod','period'],['filterTarget','targetType'],['filterTime','effectiveAt']].forEach(function(pair){document.getElementById(pair[0]).value=state.filters[pair[1]]});
+          [['filterKeyword','keyword'],['filterStatus','status'],['filterPeriod','period']].forEach(function(pair){document.getElementById(pair[0]).value=state.filters[pair[1]]});
           refreshDynamicOptions();render();requestAnimationFrame(function(){window.scrollTo(0,Math.max(0,Number(saved.scrollY)||0))});
         }catch(error){}
       }
@@ -61,15 +56,7 @@
       function loadColumns(){try{return view.normalizeColumnPreference(JSON.parse(localStorage.getItem(profile.storage.listColumnsKey)||"null")).visible}catch(e){return view.defaultVisibleColumns()}}
       function saveColumns(visible){localStorage.setItem(profile.storage.listColumnsKey,JSON.stringify({version:2,visible:visible}))}
       function selectOptions(el,first,items,value,key,label){el.innerHTML='<option value="">'+first+'</option>'+items.map(function(item){return'<option value="'+esc(item[key])+'"'+(String(item[key])===String(value)?' selected':'')+'>'+esc(item[label])+'</option>'}).join('')}
-      function refreshObjects(){
-        var search=document.getElementById('objectSearch').value.trim().toLowerCase();
-        var candidates=query.objectOptions(stores,state.filters.storeId).filter(function(p){return p.key===state.filters.objectKey||!search||p.label.toLowerCase().includes(search)});
-        selectOptions(document.getElementById('filterObject'),candidates.length?'全部商品':'暂无匹配商品',candidates,state.filters.objectKey,'key','label');
-      }
-      function refreshDynamicOptions(){
-        selectOptions(document.getElementById('filterStore'),'全部门店',stores,state.filters.storeId,'id','name');
-        refreshObjects();
-      }
+      function refreshDynamicOptions(){selectOptions(document.getElementById('filterStore'),'全部门店',stores,state.filters.storeId,'id','name');}
       function cellHtml(columnId,row){
         var cell=view.projectColumns(row)[columnId]||{main:'—'},sticky=columnId==='name'?' sticky-left':columnId==='status'?' sticky-status':columnId==='actions'?' sticky-right':'';
         if(columnId==='name')return'<td class="'+sticky+'"><div class="name-cell"><button class="name" data-view="'+esc(row.id)+'">'+esc(row.name)+'</button>'+(row.isSystemDefault?'<span class="system-badge">系统默认</span>':'')+'</div></td>';
@@ -84,23 +71,11 @@
         panel.innerHTML='<div class="settings-head"><strong>字段设置</strong><button class="btn" data-columns-default>恢复默认</button></div>'+[{label:'默认展示',columns:defs.filter(function(c){return c.defaultVisible})},{label:'更多信息',columns:defs.filter(function(c){return !c.defaultVisible})}].map(function(group){return'<section class="column-group"><div class="column-group-title">'+group.label+'</div><div class="column-options">'+group.columns.map(function(column){return'<label class="column-option'+(column.fixed?' is-fixed':'')+'"><input type="checkbox" data-column="'+esc(column.id)+'"'+(state.draftColumns.includes(column.id)?' checked':'')+(column.fixed?' disabled':'')+' /><span>'+esc(column.label)+'</span></label>'}).join('')+'</div></section>'}).join('')+'<p id="columnError" role="alert" class="filter-error"></p><div class="column-footer"><button class="btn" id="columnCancel">取消</button><button class="btn btn-primary" id="columnConfirm">确认</button></div>';
       }
       function render(){
-        var f=state.filters,error=f.effectiveAt&&(!f.storeId?'请先选择生效门店':!query.dateParts(f.effectiveAt)?'请输入有效日期时间':'');
-        var filtered=error?[]:view.filterRows(rows,f),groups=view.groupRows(filtered);
+        var filtered=view.filterRows(rows,state.filters),groups=view.groupRows(filtered);
         document.getElementById('resultCount').textContent='筛选 '+filtered.length+' / 共 '+rows.length+' 条';
-        document.getElementById('timeError').textContent=error;
-        document.getElementById('filterTime').disabled=!f.storeId;
-        var store=stores.find(function(s){return s.id===f.storeId});
-        document.getElementById('timeHint').textContent=store?'按 '+store.name+' 当地时间（'+store.zone+'）；仅核对时间条件':'请先选择生效门店，再选择当地日期时间';
-        var unknown=f.effectiveAt&&!error?rows.filter(function(r){return r.deployStoreIds.includes(f.storeId)&&query.timeMatch(r.config,f.effectiveAt)===null}).length:0;
-        document.getElementById('queryWarning').textContent=unknown?unknown+' 条规则缺失或存在非法时间配置，无法核对，未纳入匹配结果':'';
-        var count=[f.targetType,f.objectKey,f.effectiveAt].filter(Boolean).length;
-        document.getElementById('toggleAdvanced').textContent='高级筛选'+(count?'（'+count+'）':'');
-        document.getElementById('advancedFilters').hidden=!state.advancedOpen;
-        document.getElementById('toggleAdvanced').setAttribute('aria-expanded',String(state.advancedOpen));
         document.getElementById('columnPanel').hidden=!state.columnsOpen;
         document.getElementById('toggleColumns').setAttribute('aria-expanded',String(state.columnsOpen));
         if(state.columnsOpen)renderColumns();
-        if(error){list.innerHTML='<div class="empty">'+esc(error)+'</div>';return}
         if(!rows.length){list.innerHTML='<div class="empty"><strong>暂无自助餐规则</strong><p>点击“新增规则”开始配置。</p></div>';return}
         if(!filtered.length){list.innerHTML='<div class="empty"><strong>暂无匹配规则</strong><p>请调整筛选条件后重试。</p><button class="btn" data-empty-reset>重置筛选</button></div>';return}
         list.innerHTML=groupHtml('整单限制',groups.order_lifetime)+groupHtml('每轮常用组合模板',groups.per_round_combo)+groupHtml('每轮原子规则',groups.per_round)+groupHtml('其他规则',groups.custom);
@@ -109,18 +84,16 @@
         try{rawRows=records();rows=rawRows.map(function(record){return view.createViewModel(record,profile,stores)});options=view.buildFilterOptions(rows,stores);var draftOption=document.querySelector('#filterStatus option[value="draft"]');if(draftOption)draftOption.hidden=!rows.some(function(r){return r.status==='draft'});refreshDynamicOptions();render()}
         catch(e){list.innerHTML='<div class="empty"><strong>数据无法读取</strong><p>'+esc(e.message)+'</p><button class="btn" data-retry>重试</button></div>';document.getElementById('resultCount').textContent='加载失败'}
       }
-      function reset(){state.filters=emptyFilters();state.advancedOpen=false;['filterKeyword','filterStatus','filterPeriod','filterTarget','filterTime','objectSearch'].forEach(function(id){document.getElementById(id).value=''});refreshDynamicOptions();render()}
+      function reset(){state.filters=emptyFilters();['filterKeyword','filterStatus','filterPeriod'].forEach(function(id){document.getElementById(id).value=''});refreshDynamicOptions();render()}
       function find(id,items){return items.find(function(record){return String(record.id)===String(id)})}
       function save(items,message){repo.saveRules(items);if(message)AppDialogs.showToast(message,{variant:"success"});reload()}
       function templateForRecord(record){return view.createViewModel(record,profile,stores).isSystemDefault}
       function toggle(id){var items=records(),rule=find(id,items);if(!rule)return;if(rule.status==='active'){rule.status='disabled';save(items,'规则已禁用');return}var check=profile.lifecycle&&profile.lifecycle.validateActivation?profile.lifecycle.validateActivation(rule,items):null;if(!check&&window.BuffetRuleDomain&&window.BuffetRuleDomain.findConflict){var config=rule.authoringConfig||rule.authoringDraft||rule.editorDraft||rule;check=window.BuffetRuleDomain.findConflict(config,items,[rule.id])?{valid:false,message:'当前规则与已启用规则存在冲突'}:{valid:true,message:''}}if(!check||!check.valid){AppDialogs.showToast((check&&check.message)||'无法校验规则完整性',{variant:'error'});return}if(profile.lifecycle&&profile.lifecycle.prepareActivation)profile.lifecycle.prepareActivation(rule);rule.status='active';save(items,'规则已启用')}
       function remove(id){var items=records(),rule=find(id,items);if(!rule)return;var message=templateForRecord(rule)?'删除后，下次进入列表会恢复为空白且禁用的默认规则；当前配置不会保留。确定删除？':'删除后无法恢复，确定删除该自助餐规则？';void AppDialogs.confirm({title:'确认删除',message:message,confirmLabel:'确认删除',danger:true}).then(function(ok){if(ok)save(items.filter(function(item){return String(item.id)!==String(id)}),'规则已删除')})}
 
-      [['filterKeyword','keyword','input'],['filterStatus','status','change'],['filterPeriod','period','change'],['filterTarget','targetType','change'],['filterObject','objectKey','change'],['filterTime','effectiveAt','input']].forEach(function(binding){document.getElementById(binding[0]).addEventListener(binding[2],function(e){state.filters[binding[1]]=e.target.value;render()})});
-      document.getElementById('filterStore').onchange=function(e){var changed=state.filters.objectKey||state.filters.effectiveAt;state.filters.storeId=e.target.value;state.filters.objectKey='';state.filters.effectiveAt='';document.getElementById('filterTime').value='';document.getElementById('objectSearch').value='';refreshObjects();render();if(changed)AppDialogs.showToast('门店已变更，请重新选择商品或日期时间')};
-      document.getElementById('objectSearch').oninput=refreshObjects;
+      [['filterKeyword','keyword','input'],['filterStatus','status','change'],['filterPeriod','period','change']].forEach(function(binding){document.getElementById(binding[0]).addEventListener(binding[2],function(e){state.filters[binding[1]]=e.target.value;render()})});
+      document.getElementById('filterStore').onchange=function(e){state.filters.storeId=e.target.value;render()};
       document.getElementById('resetFilters').onclick=reset;
-      document.getElementById('toggleAdvanced').onclick=function(){state.advancedOpen=!state.advancedOpen;render()};
       document.getElementById('toggleColumns').onclick=function(){state.columnsOpen=!state.columnsOpen;state.draftColumns=state.visibleColumns.slice();render()};
       document.getElementById('createRule').onclick=function(){rememberCreateReturn();go(profile.routes.editor+'?mode=create')};
       document.getElementById('columnPanel').onclick=function(e){

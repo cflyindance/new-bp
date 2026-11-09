@@ -58,7 +58,7 @@ const filterOptions = view.buildFilterOptions(rows.concat([view.createViewModel(
 assert.equal(filterOptions.stores.at(-1).name, "未知门店（missing-store）");
 
 const listHtml = fs.readFileSync("dist/Configuration center/buffet-rule.html", "utf8");
-for (const requiredText of ["规则名称", "全部门店", "全部状态", "全部周期", "全部对象", "高级筛选", "涉及商品", "适用日期时间", "字段设置", "暂无匹配规则"]) {
+for (const requiredText of ["规则名称", "全部门店", "全部状态", "全部周期", "字段设置", "暂无匹配规则"]) {
   assert.ok(listHtml.includes(requiredText), `buffet list must include ${requiredText}`);
 }
 assert.ok(listHtml.indexOf("order-limit-store-catalog.js") < listHtml.indexOf("buffet-rule-list-view.js"));
