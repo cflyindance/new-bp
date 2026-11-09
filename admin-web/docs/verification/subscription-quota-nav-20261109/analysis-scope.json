@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "rootCauseStatus": "confirmed",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": [
+    "src/main.ts"
+  ],
+  "workspace": {
+    "status": "clean",
+    "evidence": [
+      "new worktree at 19cd7ea4; clean before task test and plan"
+    ]
+  },
+  "wikiQueries": [
+    {
+      "question": "订阅读取、权限消费者和导航故障链路",
+      "mode": "wiki_bypass",
+      "reason": "query resolver reported wiki_not_configured in preceding diagnosis; current source verified"
+    }
+  ],
+  "references": [
+    {
+      "path": "src/main.ts",
+      "symbol": "guardNavModuleAccess",
+      "relation": "entry_point",
+      "impact": "affected"
+    },
+    {
+      "path": "src/config/subscription-service-store.ts",
+      "symbol": "readSubscriptionServiceSnapshot",
+      "relation": "definition",
+      "impact": "affected"
+    },
+    {
+      "path": "src/config/business-menu-template-ui.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-overview.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-menu-preview.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-data.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-ui.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-runtime.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-package-detail-editor.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-entitlement-store.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-package-lifecycle-ui.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-package-subject-preview.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/service-package-version-preview.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/subscription-service-create-wizard-ui.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    },
+    {
+      "path": "src/config/subscription-service-ui.ts",
+      "symbol": "readSubscriptionServiceSnapshot consumer",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "validation": "normal snapshot contract unchanged; quota-only fallback preserves persisted rights; service regression and E2E"
+    }
+  ],
+  "deepReadPaths": [
+    "src/config/subscription-service-store.ts",
+    "src/config/service-entitlement-data.ts",
+    "src/config/subscription-service-runtime.ts",
+    "src/config/platform-preset-nav-filter.ts",
+    "scripts/verify-subscription-service.ts",
+    "scripts/verify-service-package-lifecycle.cjs",
+    "scripts/verify-service-entitlements.cjs"
+  ],
+  "sharedCallersComplete": true,
+  "sharedCallers": [
+    "src/config/business-menu-template-ui.ts",
+    "src/config/service-entitlement-overview.ts",
+    "src/config/service-entitlement-menu-preview.ts",
+    "src/config/service-entitlement-data.ts",
+    "src/config/service-entitlement-ui.ts",
+    "src/config/service-entitlement-runtime.ts",
+    "src/config/service-package-detail-editor.ts",
+    "src/config/service-entitlement-store.ts",
+    "src/config/service-package-lifecycle-ui.ts",
+    "src/config/service-package-subject-preview.ts",
+    "src/config/service-package-version-preview.ts",
+    "src/config/subscription-service-create-wizard-ui.ts",
+    "src/config/subscription-service-ui.ts"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/main.ts",
+      "to": "src/config/platform-preset-nav-filter.ts",
+      "evidence": "guardNavModuleAccess invokes preset and subscription permission filter"
+    },
+    {
+      "from": "src/config/platform-preset-nav-filter.ts",
+      "to": "src/config/subscription-service-runtime.ts",
+      "evidence": "isPathAllowedBySubscription"
+    },
+    {
+      "from": "src/config/subscription-service-runtime.ts",
+      "to": "src/config/service-entitlement-data.ts",
+      "evidence": "hasCommercialRoute"
+    },
+    {
+      "from": "src/config/service-entitlement-data.ts",
+      "to": "src/config/subscription-service-store.ts",
+      "evidence": "readSubscriptionServiceSnapshot with synchronous-turn cache"
+    }
+  ],
+  "risk": "high: permissions and shared persistence reader; no permission policy change, no global storage override",
+  "expansions": [
+    {
+      "question": "Can storage failure accidentally replace existing permissions with seeded grants?",
+      "trigger": "high_risk_side_effect",
+      "addedPaths": [
+        "src/config/subscription-service-store.ts"
+      ],
+      "expectedEvidence": "reader catch covers migration write and re-seeds; strict writer has setItem before event"
+    },
+    {
+      "question": "How does the existing E2E enter the merchant storefront without bypassing permissions?",
+      "trigger": "runtime_path_unconfirmed",
+      "addedPaths": [
+        "src/config/enterprise-merchant-impersonate.ts",
+        "src/shell/app-shell-mode.ts"
+      ],
+      "expectedEvidence": "store impersonation requires existing M-platform route; fixtures use real entrypoint"
+    }
+  ]
+}

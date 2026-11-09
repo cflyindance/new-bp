@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "QuotaExceededError in optional subscription read-cache migration was caught as a read failure, then reseeded and rethrown into navigation permission guards.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": [
+    "src/config/subscription-service-store.ts",
+    "scripts/verify-subscription-read-quota.cjs",
+    "scripts/verify-subscription-read-quota-browser.cjs"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "verify-subscription-read-quota.cjs: QuotaExceededError escaped original reader"
+    ],
+    "greenEvidence": [
+      "same script PASS; valid rights preserved, writes strict, damaged storage not reseeded"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "shared permission reader is on actual navigation and entitlement consumers",
+    "evidence": [
+      "native verify-service-entitlements.cjs PASS on port 5304",
+      "verify-subscription-read-quota-browser.cjs PASS: parent/child/buffet iframe with injected quota; stored data unchanged; unauthorized service denied"
+    ]
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "No build boundary changed; TypeScript noEmit passed, Vite E2E passed; CI status unknown"
+  },
+  "unverifiedScopes": [
+    "user original profile after future main merge",
+    "production remote entitlements and deployment",
+    "other storage keys reaching quota"
+  ]
+}
