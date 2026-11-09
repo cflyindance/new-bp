@@ -14,7 +14,10 @@ assert.ok(stores.length > 0);
 assert.equal(new Set(stores.map((store) => store.id)).size, stores.length);
 assert.deepEqual(stores.map((store) => store.order), [...stores].sort((a, b) => a.order - b.order).map((store) => store.order));
 
-const listWindow = loadBrowserAsset("dist/Configuration center/assets/buffet-rule-list-view.js");
+const pickerWindow = loadBrowserAsset("dist/Configuration center/assets/brand-menu-structure-picker.js");
+loadBrowserAsset("dist/Configuration center/assets/buffet-rule-policy.js",pickerWindow);
+loadBrowserAsset("dist/Configuration center/assets/buffet-list-query.js",pickerWindow);
+const listWindow = loadBrowserAsset("dist/Configuration center/assets/buffet-rule-list-view.js",pickerWindow);
 const view = listWindow.BuffetRuleListView;
 assert.ok(view);
 assert.equal(view.normalizeStatus("inactive"), "disabled");
@@ -41,13 +44,13 @@ assert.equal(current.legacyCapabilities[0].id, "KPOS-O01");
 assert.equal(current.group, "order_lifetime");
 assert.equal(unknown.legacyCapabilities.length, 0);
 
-assert.deepEqual(Array.from(view.defaultVisibleColumns()), ["name", "strategy", "partyScenario", "productScope", "effectiveStores", "status", "actions"]);
-assert.deepEqual(JSON.parse(JSON.stringify(view.normalizeColumnPreference({ version: 1, visible: ["name", "unknown", "description"] }))), { version: 1, visible: ["name", "description", "status", "actions"] });
-assert.deepEqual(Array.from(view.normalizeColumnPreference({ version: 2, visible: ["description"] }).visible), Array.from(view.defaultVisibleColumns()));
+assert.deepEqual(Array.from(view.defaultVisibleColumns()), ["name", "strategy", "productScope", "effectiveStores", "effectiveTime", "status", "actions"]);
+assert.deepEqual(JSON.parse(JSON.stringify(view.normalizeColumnPreference({ version: 1, visible: ["name", "unknown", "description"] }))), { version: 2, visible: ["name", "description", "status", "actions"] });
+assert.deepEqual(Array.from(view.normalizeColumnPreference({ version: 99, visible: ["description"] }).visible), Array.from(view.defaultVisibleColumns()));
 
 const productRule = { id: "products", status: "draft", authoringDraft: { name: "商品", subject: "party_size", period: "per_round", targetType: "dish", participatingStoreIds: ["ny-midtown"], targetsByStore: { "ny-midtown": [{ productLineId: "kiosk", dishId: "a" }, { productLineId: "kiosk", dishId: "a" }, { productLineId: "emenu", dishId: "a" }] } } };
 const productColumns = view.projectColumns(view.createViewModel(productRule, profile, stores));
-assert.equal(productColumns.productScope.main, "指定菜品 2 个");
+assert.equal(productColumns.productScope.main, "无法核对商品目录");
 assert.equal(view.quantitySummary([{ configured: true, value: 0 }, { configured: true, value: 4 }], 3, "最多 "), "3 个场景 · 最多 0–4（已配置 2/3）");
 assert.equal(view.quantitySummary([], 3, "最多 "), "未配置");
 
@@ -55,7 +58,7 @@ const filterOptions = view.buildFilterOptions(rows.concat([view.createViewModel(
 assert.equal(filterOptions.stores.at(-1).name, "未知门店（missing-store）");
 
 const listHtml = fs.readFileSync("dist/Configuration center/buffet-rule.html", "utf8");
-for (const requiredText of ["规则搜索", "全部门店", "全部状态", "全部主体", "全部周期", "全部对象", "高级筛选", "实际就餐人数", "生效时间", "字段设置", "暂无匹配规则"]) {
+for (const requiredText of ["规则名称", "全部门店", "全部状态", "全部周期", "全部对象", "高级筛选", "涉及商品", "适用日期时间", "字段设置", "暂无匹配规则"]) {
   assert.ok(listHtml.includes(requiredText), `buffet list must include ${requiredText}`);
 }
 assert.ok(listHtml.indexOf("order-limit-store-catalog.js") < listHtml.indexOf("buffet-rule-list-view.js"));

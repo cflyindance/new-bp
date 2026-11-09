@@ -3,22 +3,14 @@
 
   var PERIODS = ["order_lifetime", "per_round", "multi_round"];
   var FIXED_COLUMNS = ["name", "status", "actions"];
-  var DEFAULT_COLUMNS = ["name", "strategy", "partyScenario", "productScope", "effectiveStores", "status", "actions"];
-  var COLUMN_GROUPS = [
-    { id: "legacy", label: "旧规则核对", columns: [["legacyCapabilities", "旧 KPOS 调研能力"], ["coverage", "覆盖结果"]] },
-    { id: "type", label: "规则类型", columns: [["subject", "限购主体"], ["period", "额度周期"], ["targetType", "限购对象"], ["measurement", "计量方式"]] },
-    { id: "scenario", label: "场景与数量", columns: [["partyRanges", "人数区间"], ["roundRanges", "轮次区间"], ["roundTotal", "每轮总量"], ["targetLimit", "对象限额"], ["sameDishLimit", "相同菜品限额"]] },
-    { id: "product", label: "商品配置", columns: [["participatingStores", "参与门店"], ["productLines", "适用产线"], ["targetCount", "目标商品数"], ["quantityCompletion", "数量完成度"]] },
-    { id: "authorization", label: "超限授权", columns: [["authorizationScopes", "授权范围"], ["requiredPermission", "所需权限"]] },
-    { id: "effective", label: "生效范围", columns: [["effectiveDate", "有效日期"], ["activityPeriod", "活动周期"], ["businessHours", "营业时段"], ["memberScope", "会员范围"]] },
-    { id: "extra", label: "补充字段", columns: [["description", "规则描述"]] }
-  ];
+  var DEFAULT_COLUMNS = ["name", "strategy", "productScope", "effectiveStores", "effectiveTime", "status", "actions"];
+  var COLUMN_GROUPS = [{id:"extra",label:"更多信息",columns:[["partyRanges","人数区间"],["roundRanges","轮次区间"],["authorization","超限授权"],["description","规则描述"]]}];
   var BASE_COLUMNS = [
     { id: "name", label: "规则名称", fixed: true, defaultVisible: true, width: 210 },
     { id: "strategy", label: "规则策略", defaultVisible: true, width: 230 },
-    { id: "partyScenario", label: "人数场景", defaultVisible: true, width: 170 },
     { id: "productScope", label: "商品范围", defaultVisible: true, width: 190 },
     { id: "effectiveStores", label: "生效门店", defaultVisible: true, width: 170 },
+    { id: "effectiveTime", label: "生效时间", defaultVisible: true, width: 230 },
     { id: "status", label: "状态", fixed: true, defaultVisible: true, width: 90 },
     { id: "actions", label: "操作", fixed: true, defaultVisible: true, width: 260 }
   ];
@@ -148,13 +140,13 @@
   function containsParty(row, size) { return row.subject === "order" || row.partyRanges.some(function (range) { return size >= range.min && (range.max == null || size <= range.max); }); }
   function normalizeFilters(filters) {
     filters = filters || {}; var party = String(filters.partySize == null ? "" : filters.partySize).trim(), partyNumber = /^\d+$/.test(party) && Number(party) >= 1 ? Number(party) : null;
-    return { keyword: String(filters.keyword || "").trim().toLowerCase(), storeId: filters.storeId || "", status: filters.status || "", subject: filters.subject || "", period: filters.period || "", targetType: filters.targetType || "", partySize: party, partyNumber: partyNumber, partyInvalid: party !== "" && partyNumber == null, effectiveTimeKey: filters.effectiveTimeKey || "" };
+    return { keyword: String(filters.keyword || "").trim().toLowerCase(), storeId: filters.storeId || "", status: filters.status || "", subject: filters.subject || "", period: filters.period || "", targetType: filters.targetType || "", partySize: party, partyNumber: partyNumber, partyInvalid: party !== "" && partyNumber == null, effectiveTimeKey: "", objectKey: filters.objectKey || "", effectiveAt: filters.effectiveAt || "" };
   }
   function filterRows(rows, filters) {
     var f = normalizeFilters(filters);
     return copyArray(rows).filter(function (row) {
-      var search = (row.name + " " + row.legacyCapabilities.map(function (item) { return item.id + " " + item.label; }).join(" ")).toLowerCase();
-      return (!f.keyword || search.indexOf(f.keyword) >= 0) && (!f.storeId || row.deployStoreIds.indexOf(f.storeId) >= 0) && (!f.status || row.status === f.status) && (!f.subject || row.subject === f.subject) && (!f.period || row.periods.indexOf(f.period) >= 0) && (!f.targetType || row.targetType === f.targetType) && (f.partyInvalid || f.partyNumber == null || containsParty(row, f.partyNumber)) && (!f.effectiveTimeKey || row.effectiveTimeKey === f.effectiveTimeKey);
+      var search = row.name.toLowerCase();
+      return (!f.keyword || search.indexOf(f.keyword) >= 0) && (!f.storeId || row.deployStoreIds.indexOf(f.storeId) >= 0) && (!f.status || row.status === f.status) && (!f.subject || row.subject === f.subject) && (!f.period || row.periods.indexOf(f.period) >= 0) && (!f.targetType || row.targetType === f.targetType) && (f.partyInvalid || f.partyNumber == null || containsParty(row, f.partyNumber)) && (!f.objectKey || window.BuffetListQuery.matchesProduct(row,f.objectKey,f.storeId)) && (!f.effectiveAt || !!f.storeId && row.deployStoreIds.indexOf(f.storeId)>=0 && window.BuffetListQuery.timeMatch(row.config,f.effectiveAt)===true);
     });
   }
   function groupRows(rows) {
@@ -177,19 +169,24 @@
   function defaultVisibleColumns() { return DEFAULT_COLUMNS.slice(); }
   function normalizeColumnPreference(pref) {
     var all = columnDefinitions().map(function (column) { return column.id; });
-    if (!pref || pref.version !== 1 || !Array.isArray(pref.visible)) return { version: 1, visible: defaultVisibleColumns() };
-    var visible = unique(pref.visible.filter(function (id) { return all.indexOf(id) >= 0; }));
-    FIXED_COLUMNS.forEach(function (id) { if (visible.indexOf(id) < 0) visible.push(id); });
-    return { version: 1, visible: visible };
+    if (!pref || [1,2].indexOf(pref.version)<0 || !Array.isArray(pref.visible)) return {version:2,visible:defaultVisibleColumns()};
+    var oldDefault=["name","strategy","partyScenario","productScope","effectiveStores","status","actions"];
+    if(pref.version===1 && pref.visible.length===oldDefault.length && oldDefault.every(function(id){return pref.visible.indexOf(id)>=0;})) return {version:2,visible:defaultVisibleColumns()};
+    var aliases={partyScenario:"partyRanges",effectiveDate:"effectiveTime",activityPeriod:"effectiveTime",businessHours:"effectiveTime",authorizationScopes:"authorization",requiredPermission:"authorization"};
+    var visible=unique(pref.visible.map(function(id){return aliases[id]||id;}).filter(function(id){return all.indexOf(id)>=0;}));
+    if(!visible.length)visible=defaultVisibleColumns();
+    FIXED_COLUMNS.forEach(function(id){if(visible.indexOf(id)<0)visible.push(id);});
+    return {version:2,visible:visible};
   }
+
   function textCell(main, sub) { return { main: main || "—", sub: sub || "" }; }
   function projectColumns(row) {
     var c = row.config, periods = row.periods.map(periodLabel), party = row.subject === "order" || row.partyRanges.some(function (range) { return range.min === 1 && range.max == null; }) ? "所有人数" : row.partyRanges.map(function (range) { return rangeLabel(range, "人"); }).join("、") || "—";
-    var subject = row.subject === "party_size" ? "按人数" : row.subject === "order" ? "按桌/订单" : "—", target = targetLabel(row.targetType), measure = measurementLabel(row.measurement), strategy = row.group === "per_round_combo" ? "按人数区间 · 每轮总量＋" + target + "额度" : subject + " · " + (periods.join("＋") || "—") + " · " + target + " · 按" + measure;
+    var subject = row.subject === "party_size" ? "按人数" : row.subject === "order" ? "按桌/订单" : "—", target = targetLabel(row.targetType), measure = measurementLabel(row.measurement), strategy = row.group === "per_round_combo" ? "按人数区间 · 每轮总量＋" + target + "额度" : subject + " · " + (periods.join("＋") || "—") + " · " + target;
     var auth = c.authorization || c.overrideAuthorization || {}, required = c.quantityRequiredCount || c.requiredQuantityCount || 0;
     return {
-      name: textCell(row.name, row.isSystemDefault ? "系统默认" : ""), strategy: textCell(strategy), partyScenario: textCell(party), productScope: textCell(productScope(row.record, c)), effectiveStores: textCell(storesLabel(row.deployStoreIds, row.stores)), status: textCell(statusLabel(row.status)), actions: textCell(""),
-      legacyCapabilities: textCell(row.legacyCapabilities.map(function (item) { return item.id + " " + item.label; }).join("；") || "—"), coverage: textCell(row.coverage || "—"), subject: textCell(subject), period: textCell(periods.join("＋") || "—"), targetType: textCell(target), measurement: textCell("按" + measure), partyRanges: textCell(party), roundRanges: textCell(row.roundRanges.map(function (range) { return rangeLabel(range, "轮"); }).join("、") || "—"),
+      name: textCell(row.name, row.isSystemDefault ? "系统默认" : ""), strategy: textCell(strategy), partyScenario: textCell(party), productScope: textCell(window.BuffetListQuery ? window.BuffetListQuery.productSummary(row) : productScope(row.record, c)), effectiveStores: textCell(row.deployStoreIds.length ? storesLabel(row.deployStoreIds, row.stores) : "未设置"), effectiveTime:textCell(window.BuffetListQuery ? window.BuffetListQuery.timeSummary(c) : "无法核对"), authorization:textCell(window.BuffetListQuery ? window.BuffetListQuery.authorization(c) : "无法核对"), status: textCell(statusLabel(row.status)), actions: textCell(""),
+      legacyCapabilities: textCell(row.legacyCapabilities.map(function (item) { return item.id + " " + item.label; }).join("；") || "—"), coverage: textCell(row.coverage || "—"), subject: textCell(subject), period: textCell(periods.join("＋") || "—"), targetType: textCell(target), measurement: textCell("按" + measure), partyRanges: textCell(party), roundRanges: textCell(row.periods.indexOf("multi_round")<0 ? "不适用" : row.roundRanges.map(function (range) { return rangeLabel(range, "轮"); }).join("、") || "无法核对"),
       roundTotal: textCell(periods.some(function (p) { return p === "每轮" || p === "多轮"; }) || row.group === "per_round_combo" ? quantitySummary(c.tableTotalBounds || c.totalBounds, c.totalRequiredCount || required, "最少/最多 ") : "—"), targetLimit: textCell(quantitySummary(c.tableTargetCaps || c.targetLimits, c.targetRequiredCount || required, "最多 ") ), sameDishLimit: textCell(periods.some(function (p) { return p === "每轮" || p === "多轮"; }) || row.group === "per_round_combo" ? quantitySummary(c.defaultDishLimits || c.exceptionDishLimits, c.sameDishRequiredCount || required, "最多 ") : "—"),
       participatingStores: textCell(storesLabel(row.participatingStoreIds, row.stores)), productLines: textCell(lineSummary(c, row.storeIds)), targetCount: textCell(targetCounts(row.record, c).reduce(function (sum, value) { return sum + value; }, 0) || "—"), quantityCompletion: textCell(c.quantityCompletionLabel || (c.quantityConfiguredCount != null && required ? c.quantityConfiguredCount + " / " + required : "—")),
       authorizationScopes: textCell(copyArray(auth.allowedScopes).map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : scope === "order" ? "当前订单" : scope; }).join("、") || "—"), requiredPermission: textCell(auth.permissionName || auth.permission || "—"),

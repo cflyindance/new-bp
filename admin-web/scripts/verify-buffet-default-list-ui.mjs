@@ -83,13 +83,14 @@ const context = {
       lifecycle: {},
     },
   },
-  document: { getElementById: id => id === "ruleList" ? list : id === "createRule" ? createRule : passiveElement, addEventListener() {} },
+  document: { getElementById: id => id === "ruleList" ? list : id === "createRule" ? createRule : passiveElement, querySelector() { return null; }, addEventListener() {} },
   location: { href: "" },
   AppDialogs: { showToast() {}, confirm: async () => false },
   console,
 };
 context.window.window = context.window;
 context.window.AppDialogs = context.AppDialogs;
+vm.runInNewContext(fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-list-query.js"), "utf8"), context);
 vm.runInNewContext(listViewSource, context, { filename: "buffet-rule-list-view.js" });
 vm.runInNewContext(inlineScripts[0], context, { filename: "buffet-rule.html" });
 
