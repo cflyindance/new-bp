@@ -1,0 +1,77 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+
+(async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const base = process.env.BRAND_PREVIEW_URL || 'http://127.0.0.1:5310';
+  const output = process.env.USAGE_SCREENSHOT_DIR || 'output/playwright/buffet-auth-toggle';
+  fs.mkdirSync(output, { recursive: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(base + '/Configuration%20center/buffet-rule.html');
+    await page.getByRole('heading', { name: '自助餐规则', exact: true }).waitFor();
+    const initial = await page.evaluate(() => {
+      const p = window.ORDER_LIMIT_MODULE_PROFILE;
+      const scenario = p.defaultScenarios.find(item => item.key === 'order|per_round|dish');
+      if (!scenario) throw Error('existing default scenario not found');
+      const first = p.createDefaultScenarioRule(scenario, 9001);
+      const defaults = JSON.parse(JSON.stringify(first.editorDraft.authorization));
+      first.origin = 'custom';
+      first.status = 'draft';
+      first.editorDraft.currentStep = 3;
+      first.editorDraft.highestStep = 5;
+      first.editorDraft.buffetSceneFusionVersion = 1;
+      first.editorDraft.name = '授权开关验收';
+      const second = JSON.parse(JSON.stringify(first));
+      second.id = 9002;
+      second.status = 'disabled';
+      second.editorDraft.authorization.allowedScopes = ['order'];
+      second.editorDraft.authorization.scopePermissions = { order: '店长' };
+      second.editorDraft.authorization.defaultScope = 'order';
+      second.authoringConfig = JSON.parse(JSON.stringify(second.editorDraft));
+      p.repository.saveRules([first, second]);
+      return defaults;
+    });
+    assert.deepEqual(initial.allowedScopes, ['operation', 'round', 'order']);
+    assert.deepEqual(initial.scopePermissions, { operation: '值班经理', round: '主管', order: '店长' });
+    await page.goto(base + '/Configuration%20center/buffet-rule-editor.html?draftId=9001');
+    await page.getByRole('heading', { name: '设置超限授权', exact: true }).waitFor();
+    const enabled = page.locator('[data-auth-enabled]');
+    assert.equal(await enabled.isChecked(), true);
+    assert.equal(await page.locator('[data-auth-scope],[data-auth-role],[data-auth-default],[data-auth-reason]').count(), 0);
+    assert.equal(await page.getByText('可选授权范围与权限', { exact: true }).count(), 0);
+    assert.equal(await page.getByText('授权开关设置', { exact: true }).count(), 1);
+    await page.screenshot({ path: output + '/enabled.png' });
+    await enabled.uncheck();
+    await page.getByText('硬性拒绝：', { exact: true }).waitFor();
+    await page.waitForFunction(() => window.ORDER_LIMIT_MODULE_PROFILE.repository.loadRules().find(r => r.id === 9001).editorDraft.authorization.enabled === false);
+    const disabledAuth = await page.evaluate(() => window.ORDER_LIMIT_MODULE_PROFILE.repository.loadRules().find(r => r.id === 9001).editorDraft.authorization);
+    assert.deepEqual(disabledAuth, { ...initial, enabled: false });
+    await page.screenshot({ path: output + '/disabled.png' });
+    await page.getByRole('button', { name: '下一步', exact: true }).click();
+    assert.match(await page.locator('[aria-current="step"]').innerText(), /生效范围/);
+    await page.getByRole('button', { name: '上一步', exact: true }).click();
+    await page.getByRole('heading', { name: '设置超限授权', exact: true }).waitFor();
+    await enabled.check();
+    await page.waitForFunction(() => window.ORDER_LIMIT_MODULE_PROFILE.repository.loadRules().find(r => r.id === 9001).editorDraft.authorization.enabled === true);
+    await page.reload();
+    await page.getByRole('heading', { name: '设置超限授权', exact: true }).waitFor();
+    assert.equal(await enabled.isChecked(), true);
+    assert.deepEqual(await page.evaluate(() => window.ORDER_LIMIT_MODULE_PROFILE.repository.loadRules().find(r => r.id === 9001).editorDraft.authorization), initial);
+    await page.goto(base + '/Configuration%20center/buffet-rule-editor.html?ruleId=9002&view=1');
+    await page.locator('button[data-step="3"]').click();
+    await page.getByRole('heading', { name: '设置超限授权', exact: true }).waitFor();
+    assert.equal(await enabled.isEnabled(), false);
+    assert.equal(await page.locator('[data-auth-scope],[data-auth-role]').count(), 0);
+    const retained = await page.evaluate(() => window.ORDER_LIMIT_MODULE_PROFILE.repository.loadRules().find(r => r.id === 9002).authoringConfig.authorization);
+    assert.deepEqual(retained.allowedScopes, ['order']);
+    assert.deepEqual(retained.scopePermissions, { order: '店长' });
+    assert.deepEqual(errors, []);
+    console.log('PASS real Chrome: switch-only UI, enabled/disabled screenshots, next/back, autosave and reload, existing defaults unchanged, restrictive legacy config retained, readonly switch disabled');
+  } finally {
+    await browser.close();
+  }
+})().catch(error => { console.error(error); process.exit(1); });
