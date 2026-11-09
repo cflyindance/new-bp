@@ -2,6 +2,8 @@ import type {Resource} from './center-domain';
 import type {AuthorizationRow} from './center-authorization';
 export const marketingPermissionPages=[
   ['/marketing/screensaver','屏保'],
+  ['/marketing/display-content/contents','内容方案'],
+  ['/marketing/display-content/placements','投放管理'],
   ['/marketing/ads','广告'],
   ['/marketing/poster-pro','海报Pro'],
   ['/asset-center/materials','图片素材'],
@@ -18,6 +20,11 @@ export function registerMarketingPages(resources:Map<string,Resource>):void {
       resources.set(key,{key,title:`编辑${title}`,type:'action',parent:page,path,requires:[content]});
     }
     for(const action of actions)action.requires=[...new Set([...(action.requires??[]),content])];
+    if(path.startsWith('/marketing/display-content/')){
+      resources.get(page)!.inheritFrom='page:/marketing/screensaver';
+      const manage=resources.get(`action:${path}:manage-page`);
+      if(manage)manage.inheritFrom='action:/marketing/screensaver:manage-page';
+    }
   }
 }
 export function marketingAuthorizationRows(resources:Map<string,Resource>,page:string):AuthorizationRow[]|undefined {

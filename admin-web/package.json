@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "verify:display-content": "node --experimental-strip-types scripts/verify-marketing-display.ts",
     "dev:menu-design": "npm --prefix apps/menu-design run dev",
     "build:menu-design": "node scripts/build-menu-design.mjs",
     "ai:menu-design": "npm --prefix apps/menu-design run ai",
