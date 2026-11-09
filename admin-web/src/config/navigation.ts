@@ -335,7 +335,7 @@ export const NAV_MODULES: NavModule[] = [
     children: [
       { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
       { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
-      { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", children: [
+      { id: "mkt-screensaver", title: "营销广告", titleEn: "Marketing ads", path: "/marketing/display-content", children: [
         { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
         { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
         { id: "mkt-legacy-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
@@ -1120,7 +1120,7 @@ export const BRAND_MENU_SUBNAV: ProductCenterSidebarSubItem[] = [
 export const MARKETING_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
   { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
-  { id: "mkt-screensaver", title: "展示内容", titleEn: "Display content", path: "/marketing/display-content", activePrefixes: ["/marketing/display-content", "/marketing/screensaver"], sidebarChildren: [
+  { id: "mkt-screensaver", title: "营销广告", titleEn: "Marketing ads", path: "/marketing/display-content", activePrefixes: ["/marketing/display-content", "/marketing/screensaver"], sidebarChildren: [
     { id: "mkt-display-contents", title: "内容方案", titleEn: "Content plans", path: "/marketing/display-content/contents" },
     { id: "mkt-display-placements", title: "投放管理", titleEn: "Placements", path: "/marketing/display-content/placements" },
     { id: "mkt-legacy-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
@@ -1430,7 +1430,7 @@ export function findMarketingNavTitle(path: string): { title: string; titleEn?: 
   const sorted = [...MARKETING_SHEET_SUBNAV].sort((a, b) => b.path.length - a.path.length);
   for (const c of sorted) {
     const leaf = c.sidebarChildren?.find(child => path === child.path || path.startsWith(`${child.path}/`));
-    if (leaf) return { title: leaf.title, titleEn: leaf.titleEn, module: "营销中心 · 展示内容" };
+    if (leaf) return { title: leaf.title, titleEn: leaf.titleEn, module: "营销中心 · 营销广告" };
     if (path === c.path || path.startsWith(`${c.path}/`)) {
       return { title: c.title, titleEn: c.titleEn, module: "营销中心 · Marketing center" };
     }
