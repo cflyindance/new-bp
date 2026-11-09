@@ -98,23 +98,40 @@ function normalizeSnapshot(value: Partial<SubscriptionServiceSnapshot> | null): 
 }
 
 export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const snapshot=normalizeSnapshot(JSON.parse(raw) as SubscriptionServiceSnapshot);
-      const entChanged=appendEntitlementDemo(snapshot),growthChanged=appendGrowthDemo(snapshot),basicChanged=appendBasicDemo(snapshot);
-      if(entChanged||growthChanged||basicChanged)writeSubscriptionServiceSnapshot(snapshot,false);
-      return snapshot;
-    }
-  } catch {
-    /* fall through */
+  // Reading permissions must not replace a valid saved snapshot when only its
+  // optional demo/cache migration cannot be persisted. Never seed on read errors.
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw !== null) {
+    const parsed = JSON.parse(raw) as Partial<SubscriptionServiceSnapshot> | null;
+    if (!parsed || parsed.schemaVersion !== 1) throw new Error("服务与订阅数据格式无效，请保留数据并联系管理员处理。");
+    const snapshot = normalizeSnapshot(parsed);
+    const migrated = JSON.parse(JSON.stringify(snapshot)) as SubscriptionServiceSnapshot;
+    const entChanged=appendEntitlementDemo(migrated),growthChanged=appendGrowthDemo(migrated),basicChanged=appendBasicDemo(migrated);
+    if (!entChanged && !growthChanged && !basicChanged) return snapshot;
+    return persistReadCache(migrated) ? migrated : snapshot;
   }
   const seeded = seedSnapshot();
   appendEntitlementDemo(seeded);
   appendGrowthDemo(seeded);
   appendBasicDemo(seeded);
-  writeSubscriptionServiceSnapshot(seeded, false);
+  persistReadCache(seeded);
   return seeded;
+}
+
+let readCacheQuotaReported = false;
+function persistReadCache(snapshot: SubscriptionServiceSnapshot): boolean {
+  try {
+    writeSubscriptionServiceSnapshot(snapshot, false);
+    return true;
+  } catch (error) {
+    const name = error instanceof Error ? error.name : (error as { name?: string } | null)?.name;
+    if (name !== "QuotaExceededError" && name !== "NS_ERROR_DOM_QUOTA_REACHED") throw error;
+    if (!readCacheQuotaReported) {
+      console.warn("服务与订阅自动缓存未能保存：本地存储配额不足；已有权限数据保持不变，用户保存仍需成功写入。", error);
+      readCacheQuotaReported = true;
+    }
+    return false;
+  }
 }
 
 function appendBasicDemo(snapshot:SubscriptionServiceSnapshot):boolean {
