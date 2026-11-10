@@ -1924,7 +1924,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if(!initializeDashboardPage())return;
       if(window.TipOutTestPresetUi)window.TipOutTestPresetUi.mount();
       if(isAllocationDashboard()){scheduleSummaryAutoAllocation();return;}
-      restoreSummaryUiState(true);syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();
+      restoreSummaryUiState(true);syncSummaryViewUi();updateEmployeeFilter(true);renderSummaryViews();syncStoreSummaryHeader();scheduleSummaryAutoAllocation();
     }
 
     document.addEventListener('DOMContentLoaded', initializeSummaryPage);

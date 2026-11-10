@@ -1,0 +1,93 @@
+// Store-summary allocation uses the same date queue and guarded writes as the dashboard.
+var storeSummaryAutoOpen=false,storeSummaryAutoBusy=false,storeSummaryAutoRevision=0;
+var storeSummaryAutoFocus=null,storeSummaryAutoBackground=[];
+
+function storeSummaryAutoPlan(){
+ var store=document.getElementById('storeSelect').value;
+ var allowed=dashboardAllowedStores().find(function(s){return s.store===store;});
+ if(!allowed)throw new Error('当前门店不在可访问范围');
+ if(!getRulesForCurrentStore().length)return [];
+ var range=dashboardRange(),rows=readAllocationScopeRows({store:store,startDate:range.startDate,endDate:range.endDate});
+ var days=rows.map(function(row){
+  var state=TipOutDateState.inspect(store,row.dateKey);
+  return {date:row.dateKey,allocatable:!!(row.businessStatusResult&&row.businessStatusResult.allocatable),allocated:!!(state.snapshot||row.allocated||TipOutAllocationResults.isAllocated(store,row.dateKey)),paid:state.payoutStatus==='paid'};
+ });
+ return TipOutDashboardModel.plan([{store:store,label:allowed.label,ruleCount:1,days:days}]);
+}
+
+function openStoreSummaryAutoAllocation(){
+ var overlay=document.getElementById('storeSummaryAutoModal');
+ storeSummaryAutoFocus=document.activeElement;
+ storeSummaryAutoBackground=['storeSummaryPage','summaryActionBar'].map(function(id){var node=document.getElementById(id);return {node:node,inert:node.inert};});
+ storeSummaryAutoBackground.forEach(function(x){x.node.inert=true;});
+ storeSummaryAutoOpen=true;overlay.hidden=false;overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');
+ document.getElementById('storeSummaryAutoDialog').focus();
+}
+
+function renderStoreSummaryAutoProgress(queue){
+ if(!summaryAutoPageIsActive()||!storeSummaryAutoOpen)return;
+ storeSummaryAutoBusy=queue.running;
+ var counts=TipOutDashboardModel.counts(queue.items),current=queue.items.find(function(i){return i.status==='running';});
+ var running=queue.running,failed=counts.failed>0,range=summaryAutoScope;
+ var notice=document.getElementById('storeSummaryAutoNotice');
+ notice.textContent=range.startDate+' 至 '+range.endDate+(running?' 有小费未分配。为确保数据准确，需先完成自动分配才能查看门店分配汇总。':failed?' 自动分配已结束，部分日期分配失败。可重试失败日期，或关闭查看已保存的结果。':' 自动分配已完成，分配结果已保存。');
+ document.getElementById('storeSummaryAutoTaskTitle').textContent=running?'正在分配小费':failed?'部分日期分配失败':'小费分配已完成';
+ var state=document.getElementById('storeSummaryAutoState');state.textContent=running?'分配中':failed?'部分失败':'分配完成';state.dataset.state=running?'running':failed?'failed':'success';
+ var bar=document.getElementById('storeSummaryAutoProgress');bar.max=counts.total||1;bar.value=counts.processed;
+ document.getElementById('storeSummaryAutoProcessed').textContent='已处理 '+counts.processed+' / '+counts.total+' 天';
+ document.getElementById('storeSummaryAutoPercent').textContent=(counts.total?Math.round(counts.processed/counts.total*100):100)+'%';
+ document.getElementById('storeSummaryAutoCurrent').textContent=current?'正在分配 '+current.date:running?'正在准备任务':'所有日期已处理';
+ document.getElementById('storeSummaryAutoStats').innerHTML='<span>成功 '+counts.success+' 天</span><span>失败 '+counts.failed+' 天</span><span>跳过 '+counts.skipped+' 天</span>';
+ var close=document.getElementById('storeSummaryAutoClose');close.disabled=running;close.setAttribute('aria-label',running?'正在分配，暂不可关闭':'关闭自动分配结果');close.title=running?'正在分配，暂不可关闭':'关闭';
+ var done=document.getElementById('storeSummaryAutoDone');done.hidden=running;done.disabled=running;
+ var retry=document.getElementById('storeSummaryAutoRetry');retry.hidden=running||!failed;retry.disabled=running||!failed;
+ document.getElementById('storeSummaryAutoResults').hidden=running||!failed;
+ var labels={success:'分配成功',failed:'分配失败',skipped:'已跳过',running:'正在分配',pending:'等待分配'};
+ var resultItems=queue.items.slice().sort(function(a,b){return Number(b.status==='failed')-Number(a.status==='failed');});
+ document.getElementById('storeSummaryAutoRows').innerHTML=resultItems.map(function(i){return '<tr><td>'+escapeSummaryHtml(i.date)+'</td><td>'+labels[i.status]+'</td><td>'+escapeSummaryHtml(i.message||'—')+'</td></tr>';}).join('');
+ if(!running){invalidateDayPipelineCache();renderSummaryViews();syncStoreSummaryHeader();document.getElementById(failed?'storeSummaryAutoRetry':'storeSummaryAutoDone').focus();}
+}
+
+async function startStoreSummaryAutoAllocation(revision){
+ if(!summaryAutoPageIsActive()||!isStoreSummaryRoute()||storeSummaryAutoOpen||!validateSummaryDateRange(false))return;
+ var scope=Object.assign(dashboardRange(),{key:dashboardScopeKey(),store:document.getElementById('storeSelect').value});
+ try{
+  // Yield before inspection so a newer date selection can invalidate this check.
+  await new Promise(function(resolve){window.setTimeout(resolve,0);});
+  if(revision!==storeSummaryAutoRevision||!summaryAutoPageIsActive()||scope.key!==dashboardScopeKey()||scope.store!==document.getElementById('storeSelect').value)return;
+  var plan=storeSummaryAutoPlan();
+  if(!plan.length)return;
+  summaryAutoScope=scope;storeSummaryAutoBusy=true;
+  summaryAutoQueue=window.TipOutAutoAllocation.create(plan,executeSummaryAutoDate,renderSummaryAutoProgress);
+  openStoreSummaryAutoAllocation();
+  var pending=summaryAutoQueue.run();renderStoreSummaryAutoProgress(summaryAutoQueue);await pending;
+ }catch(error){if(summaryAutoPageIsActive()){storeSummaryAutoBusy=false;if(storeSummaryAutoOpen)closeStoreSummaryAutoAllocation();showNotification('无法自动分配：'+(error.message||'请重试'),'error');}}
+}
+
+function retryStoreSummaryAutoAllocation(){
+ if(storeSummaryAutoBusy||!summaryAutoPageIsActive()||!storeSummaryAutoOpen||!summaryAutoQueue)return;
+ if(!summaryAutoQueue.items.some(function(i){return i.status==='failed';}))return;
+ var pending=summaryAutoQueue.run(true);storeSummaryAutoBusy=true;renderStoreSummaryAutoProgress(summaryAutoQueue);return pending;
+}
+
+function closeStoreSummaryAutoAllocation(){
+ if(storeSummaryAutoBusy||!storeSummaryAutoOpen)return;
+ var overlay=document.getElementById('storeSummaryAutoModal');overlay.hidden=true;overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');storeSummaryAutoOpen=false;
+ storeSummaryAutoBackground.forEach(function(x){x.node.inert=x.inert;});storeSummaryAutoBackground=[];
+ invalidateDayPipelineCache();renderSummaryViews();syncStoreSummaryHeader();
+ var fallback=document.getElementById('summaryDatePresets').querySelector('[aria-pressed="true"]')||document.getElementById('dateStart');
+ var target=storeSummaryAutoFocus&&storeSummaryAutoFocus.isConnected&&!storeSummaryAutoFocus.disabled&&storeSummaryAutoFocus!==document.body?storeSummaryAutoFocus:fallback;
+ if(target&&target.focus)target.focus();
+}
+
+function handleStoreSummaryAutoOverlay(event){if(event.target===event.currentTarget)closeStoreSummaryAutoAllocation();}
+function handleStoreSummaryAutoKeydown(event){
+ if(!storeSummaryAutoOpen)return;
+ if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();closeStoreSummaryAutoAllocation();return;}
+ if(event.key!=='Tab')return;
+ var dialog=document.getElementById('storeSummaryAutoDialog'),controls=Array.from(dialog.querySelectorAll('button:not([disabled])')).filter(function(el){return !el.hidden;});
+ var first=controls[0],last=controls[controls.length-1];
+ if(!first){event.preventDefault();dialog.focus();return;}
+ if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialog)){event.preventDefault();last.focus();}
+ else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===dialog)){event.preventDefault();first.focus();}
+}
