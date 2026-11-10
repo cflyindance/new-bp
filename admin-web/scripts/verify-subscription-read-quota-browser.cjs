@@ -36,12 +36,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.getByRole('button',{name:'前厅管理中心',exact:true}).click();
   await page.screenshot({path:dir+'/parent-navigation.png'});
   // Published menu documents may retain the earlier label for this same group.
-  const orderRules=page.getByRole('button',{name:/^菜单下单(?:规则|限制)$/});
+  const orderRules=page.getByRole('button',{name:'下单规则',exact:true});
   await orderRules.waitFor();
   await orderRules.click();
-  await page.getByRole('link',{name:'自助餐规则',exact:true}).click();
+  await page.getByRole('link',{name:'自助餐限购',exact:true}).click();
   await page.waitForURL('**/#/operations/queue-call/buffet-rules');
-  await page.frameLocator('[data-foh-buffet-rules-root] iframe').getByRole('heading',{name:'自助餐规则',exact:true}).waitFor();
+  await page.frameLocator('[data-foh-buffet-rules-root] iframe').getByRole('heading',{name:'自助餐限购',exact:true}).waitFor();
   await page.screenshot({path:dir+'/navigation-after-quota.png'});
   assert.equal(await page.evaluate(()=>localStorage.getItem('menusifu:subscription-service-packages-v1')),before);
   assert.equal(errors.length,0,errors.join('\n'));

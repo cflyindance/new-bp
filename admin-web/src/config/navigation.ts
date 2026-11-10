@@ -456,18 +456,18 @@ export const NAV_MODULES: NavModule[] = [
       },
       {
         id: "qc-menu-order-limits",
-        title: "菜单下单限制",
-        titleEn: "Menu order limits",
+        title: "下单规则",
+        titleEn: "Order rules",
         path: "/operations/queue-call/menu-order-limits",
         children: [
-          { id: "qc-dish-round", title: "每轮菜品互斥/组合", titleEn: "Dish exclusion / combination per round", path: "/operations/queue-call/menu-order-limits/dish-round" },
-          { id: "qc-order-other", title: "其他设置", titleEn: "Other settings", path: "/operations/queue-call/menu-order-limits/other" },
+          { id: "qc-dish-round", title: "菜品搭配", titleEn: "Dish pairing", path: "/operations/queue-call/menu-order-limits/dish-round" },
+          { id: "qc-order-other", title: "下单设置", titleEn: "Order settings", path: "/operations/queue-call/menu-order-limits/other" },
         ],
       },
       {
         id: "foh-buffet-rules",
-        title: "自助餐规则",
-        titleEn: "Buffet rules",
+        title: "自助餐限购",
+        titleEn: "Buffet limits",
         path: "/operations/queue-call/buffet-rules",
       },
       { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
@@ -1373,14 +1373,21 @@ export function groupNotificationSheetSubnav(items: ProductCenterSidebarSubItem[
 export function groupRuleRestrictionsSubnav(items: ProductCenterSidebarSubItem[]): ProductCenterSidebarSubItem[] {
   const limits = items.find((item) => item.id === "qc-menu-order-limits");
   const buffet = items.find((item) => item.id === "foh-buffet-rules");
+  // Display aliases also cover previously published menu labels without rewriting
+  // their stored snapshots or changing the already-filtered capability set.
+  const labels: Record<string, { title: string; titleEn: string }> = {
+    "foh-buffet-rules": { title: "自助餐限购", titleEn: "Buffet limits" },
+    "qc-dish-round": { title: "菜品搭配", titleEn: "Dish pairing" },
+    "qc-order-other": { title: "下单设置", titleEn: "Order settings" },
+  };
   const children = [
     ...(buffet ? [{ id: buffet.id, title: buffet.title, titleEn: buffet.titleEn, path: buffet.path }] : []),
     ...(limits?.sidebarChildren ?? []),
-  ];
+  ].map((child) => child.id && labels[child.id] ? { ...child, ...labels[child.id] } : child);
   const group: ProductCenterSidebarSubItem = {
     id: "qc-rule-restrictions",
-    title: "菜单下单限制",
-    titleEn: "Menu ordering rules",
+    title: "下单规则",
+    titleEn: "Order rules",
     path: "/operations/queue-call/rule-restrictions",
     activePrefixes: children.map((child) => child.path),
     sidebarChildren: children,

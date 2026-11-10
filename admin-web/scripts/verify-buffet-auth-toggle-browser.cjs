@@ -12,7 +12,7 @@ const fs = require('node:fs');
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/Configuration%20center/buffet-rule.html');
-    await page.getByRole('heading', { name: '自助餐规则', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '自助餐限购', exact: true }).waitFor();
     const initial = await page.evaluate(() => {
       const p = window.ORDER_LIMIT_MODULE_PROFILE;
       const scenario = p.defaultScenarios.find(item => item.key === 'order|per_round|dish');

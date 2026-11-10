@@ -237,7 +237,7 @@ function renderDishRoundTabPanel(activeTab: MenuOrderLimitTabId): string {
     <section
       id="menu-order-limit-panel-dish-round"
       role="region"
-      aria-label="每轮菜品互斥/组合"
+      aria-label="菜品搭配"
       class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
       data-menu-order-limit-panel="dish-round"
     >
@@ -268,7 +268,7 @@ function renderOtherSettingsTabPanel(activeTab: MenuOrderLimitTabId): string {
     <section
       id="menu-order-limit-panel-other"
       role="region"
-      aria-label="其他设置"
+      aria-label="下单设置"
       class="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-menu-order-limit-panel="other"
     >
