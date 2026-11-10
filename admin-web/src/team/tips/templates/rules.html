@@ -48,6 +48,12 @@
             <select class="form-control" id="storeFilter" data-native-onchange="renderRulesTable()">
               <option value="">全部门店</option>
             </select>
+            <label class="filter-field-label" for="poolKindFilter">池类型</label>
+            <select class="form-control" id="poolKindFilter" aria-label="池类型" data-native-onchange="renderRulesTable()">
+              <option value="">全部类型</option>
+              <option value="tip">小费池</option>
+              <option value="surcharge">加收服务费池</option>
+            </select>
           </div>
             <div>
               <h1 id="rulesTitle" class="sr-only">分配规则</h1>
@@ -71,8 +77,7 @@
                 <tr>
                   <th>规则名称</th>
                   <th>门店</th>
-                  <th>池类型与规则摘要</th>
-                  <th>分配说明</th>
+                  <th>池类型</th>
                   <th>操作</th>
                 </tr>
               </thead>
