@@ -1,3 +1,4 @@
+import {validateBrandCreationFields} from './brand-create-validation';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
 import {providerScopeActive,providerTargetAllowed,providerBrandListed,assertProviderTarget} from '../auth/provider-access-runtime';
@@ -2008,14 +2009,15 @@ export function updateMerchantStatus(merchantId:string,status:MerchantStatus,ope
 }
 
 export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant {
-  const snap = input.accountProvisioningRequired ? structuredClone(readSnapshot()) : readSnapshot();
+  validateBrandCreationFields(input);
+  const snap = structuredClone(readSnapshot());
   const initialIds = [...new Set(input.initialStoreIds ?? [])];
   const candidates = listBrandAssociationCandidates();
   if (initialIds.some(id => !candidates.some(s => s.storeId === id))) throw Error('所选门店归属已变化，请重新选择。');
   const initialKeys = input.initialMenuKeys ? validateExplicitMenuKeys(input.initialMenuKeys, input.productLineIds) : undefined;
   const merchantId = genId("merchant");
   const bid = input.bid ?? generateNextBid(snap);
-  const code = input.code.trim() || slugCode(input.name) || merchantId;
+  const code = input.code?.trim() || bid;
   const status: MerchantStatus = input.activateImmediately ? "active" : "onboarding";
   const group =
     (input.groupId ? getGroupById(input.groupId) : undefined) ??
@@ -2030,10 +2032,10 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     code,
     orgType: input.orgType,
     status,
-    timezone: input.timezone,
+    timezone: input.timezone?.trim() || "Asia/Shanghai",
     locale: "zh-CN",
     address: input.firstStoreAddress?.trim(),
-    contactName: input.contactName.trim(),
+    contactName: input.contactName?.trim() || undefined,
     contactPhone: input.contactPhone?.trim(),
     primaryAdminEmail: input.primaryAdminEmail.trim(),
     createdAt: nowIso(),
@@ -2120,7 +2122,7 @@ export function createMerchant(input: CreateMerchantInput, operatorEmail = DEMO_
     operatorEmail,
     detail: `M 平台代开通品牌「${merchant.name}」（${getMerchantOrgTypeLabel(merchant.orgType)} · BID ${bid}）${input.initialMenuSource?" · "+input.initialMenuSource:""}`,
   });
-  if(input.accountProvisioningRequired)persistBrandConfiguration(snap);else writeSnapshot(snap);
+  persistBrandConfiguration(snap);
   notifyChainBrandOrgSyncForMerchant(merchantId);
   if (status === "active" || input.activateImmediately) {
     syncMerchantCapabilityPresets(merchantId, true);

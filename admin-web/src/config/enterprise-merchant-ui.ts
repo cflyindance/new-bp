@@ -950,7 +950,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="detail">
-      ${renderStandalonePageHeader({level:2,className:"shrink-0",titleHtml:`${escapeHtml(merchant.name)}`,backHtml:`<a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>`,subtitleHtml:`<p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>`})}
+      ${renderStandalonePageHeader({level:2,className:"shrink-0",titleHtml:`${escapeHtml(merchant.name)}`,backHtml:`<a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>`,subtitleHtml:`<p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid && merchant.bid!==merchant.code ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>`})}
       ${renderDetailTabs(merchantId, tab)}
       <div class="min-h-0 flex-1 overflow-y-auto pt-2">${body}</div>
     </div>`;

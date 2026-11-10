@@ -1,0 +1,38 @@
+{
+  "base": "http://127.0.0.1:5314",
+  "results": [
+    {
+      "provisioning": false,
+      "rejected": true,
+      "unchanged": true,
+      "expected": "B00000032",
+      "bid": "B00000032",
+      "code": "B00000032",
+      "timezone": "Asia/Shanghai",
+      "contactOmitted": true,
+      "readiness": [
+        "请先开通至少一名已启用的品牌管理员",
+        "请至少开通一个品牌菜单页面"
+      ]
+    },
+    {
+      "provisioning": true,
+      "rejected": true,
+      "unchanged": true,
+      "expected": "B00000033",
+      "bid": "B00000033",
+      "code": "B00000033",
+      "timezone": "Asia/Shanghai",
+      "contactOmitted": true,
+      "readiness": [
+        "请先开通至少一名已启用的品牌管理员",
+        "请至少开通一个品牌菜单页面"
+      ]
+    }
+  ],
+  "invalidBusiness": true,
+  "invalidLine": true,
+  "invalidUnchanged": true,
+  "legacyCode": "brand-create-demo-compat",
+  "errors": []
+}

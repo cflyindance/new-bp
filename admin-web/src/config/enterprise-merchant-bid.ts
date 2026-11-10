@@ -48,6 +48,7 @@ export function collectUsedBids(snapshot: EnterpriseMerchantSnapshot): Set<strin
   const used = new Set<string>();
   for (const m of snapshot.merchants) {
     if (m.bid) used.add(normalizeBid(m.bid));
+    if (m.code && isBidFormat(m.code)) used.add(m.code);
   }
   for (const r of snapshot.posStoreRequests ?? []) {
     if (r.createdBid) used.add(normalizeBid(r.createdBid));
@@ -67,6 +68,9 @@ export function generateNextBid(snapshot: EnterpriseMerchantSnapshot): string {
   const used = collectUsedBids(snapshot);
   let seq = snapshot.bidSeq ?? 1;
   while (used.has(formatBid(seq))) seq += 1;
+  if (!Number.isSafeInteger(seq) || seq < 1 || seq > 99_999_999) {
+    throw Error("品牌编号已用尽或序列无效，请联系管理员。");
+  }
   snapshot.bidSeq = seq + 1;
   return formatBid(seq);
 }
