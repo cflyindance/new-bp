@@ -1,3 +1,6 @@
+import {resolveStoreBusinessStatus,type StoreBusinessResult} from './store-business-status';
+import {readStoreBusinessFacts} from './store-business-facts';
+import {getAuthenticatedEmail} from '../auth/login';
 import {validateBrandCreationFields} from './brand-create-validation';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
@@ -1959,11 +1962,17 @@ export function getMerchantOrgTypeLabel(orgType: EnterpriseMerchant["orgType"]):
 export function getStoreStatusLabel(status: MerchantOrgStore["status"]): string {
   const map: Record<MerchantOrgStore["status"], string> = {
     preparing: "筹备中",
-    open: "营业中",
-    closed: "停业",
+    open: "已开业（按近30天判定）",
+    closed: "暂停经营",
+    terminated: "已关闭",
     archived: "已归档",
   };
   return map[status] ?? status;
+}
+
+export function getStoreOperatingStatus(store:MerchantOrgStore,now=new Date()):StoreBusinessResult {
+ const timezone=getMerchantById(store.merchantId)?.timezone??'Asia/Shanghai';
+ return resolveStoreBusinessStatus(store,timezone,readStoreBusinessFacts(store.storeId,timezone,now),now);
 }
 
 export function statusBadgeClass(status: MerchantStatus): string {
@@ -2348,22 +2357,28 @@ export function mountMerchantToOrg(input: MountMerchantStoreInput, operatorEmail
 export function updateMerchantStoreStatus(
   storeId: string,
   status: MerchantOrgStoreStatus,
-  operatorEmail = DEMO_OPERATOR,
+  operatorEmail = getAuthenticatedEmail() ?? DEMO_OPERATOR,
 ): MerchantOrgStore | null {
-  const snap = readSnapshot();
+  if(!['preparing','open','closed','terminated','archived'].includes(status))throw Error('门店状态无效。');
+  if(currentMAccess(mActionKey('stores','status'))!=='edit')throw Error('暂无门店状态编辑权限。');
+  const snap = structuredClone(readSnapshot());
   const store = snap.stores.find((s) => s.storeId === storeId);
-  if (!store) return null;
+  if (!store) throw Error('门店不存在或已移除，请刷新后重试。');
+  assertProviderTarget(store.merchantId,storeId);
   const prev = store.status;
+  if(prev===status)return store;
   store.status = status;
   appendChangelog(snap, {
     merchantId: store.merchantId,
     action: "org.store.status",
+    storeId,
     operatorEmail,
+    facts:{category:'品牌门店',title:'修改门店经营状态',target:store.name,source:'M平台门店管理',fields:[{name:'经营状态',before:getStoreStatusLabel(prev),after:getStoreStatusLabel(status)}]},
     detail: `门店「${store.name}」状态：${getStoreStatusLabel(prev)} → ${getStoreStatusLabel(status)}`,
   });
   const merchant = snap.merchants.find((m) => m.merchantId === store.merchantId);
   if (merchant) merchant.updatedAt = nowIso();
-  writeSnapshot(snap);
+  persistBrandConfiguration(snap);
   notifyChainBrandOrgSyncForMerchant(store.merchantId);
   notifyChainBrandOrgSyncForMerchant(store.linkedMerchantId);
   return store;

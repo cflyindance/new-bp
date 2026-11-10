@@ -51,8 +51,9 @@ function merchantStatusLabel(status: MerchantStatus): string {
 function storeStatusLabel(status: MerchantOrgStoreStatus): string {
   const map: Record<MerchantOrgStoreStatus, string> = {
     preparing: "筹备中",
-    open: "营业中",
-    closed: "已打烊",
+    open: "已开业",
+    closed: "暂停经营",
+    terminated: "已关闭",
     archived: "已归档",
   };
   return map[status] ?? status;

@@ -1,3 +1,7 @@
+import {getStoreOperatingStatus} from './enterprise-merchant-store';
+import {currentMAccess} from '../permissions/m-platform-store';
+import {mActionKey} from '../permissions/m-platform-catalog';
+import type {MerchantOrgStore} from './enterprise-merchant-types';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {renderBrandServiceEntitlements,bindBrandServiceEntitlements} from './service-entitlement-ui';
 import {MERCHANT_SUBSCRIPTIONS_PATH} from './subscription-service-scope';
@@ -247,7 +251,7 @@ function renderMerchantBrandStoreTable(
                 <td class="px-4 py-2.5 text-xs">${escapeHtml(store.code)}</td>
                 <td class="px-4 py-2.5 text-xs">${escapeHtml(regionName)}</td>
                 <td class="px-4 py-2.5 max-w-[14rem] truncate text-xs text-muted-foreground" title="${escapeHtml(store.address ?? "")}">${escapeHtml(store.address ?? "—")}</td>
-                <td class="px-4 py-2.5">${renderStoreStatusBadge(store.status)}</td>
+                <td class="px-4 py-2.5">${renderOperatingBadge(store)}</td>
               </tr>`;
             })
             .join("")}
@@ -359,12 +363,17 @@ function renderStoreStatusBadge(status: MerchantOrgStoreStatus): string {
   return `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${storeStatusBadgeClass(status)}">${escapeHtml(getStoreStatusLabel(status))}</span>`;
 }
 
+function renderOperatingBadge(store:MerchantOrgStore):string {
+  const result=getStoreOperatingStatus(store);
+  return `<span class="ba-tag" title="${escapeHtml(result.start&&result.end?result.start+' 至 '+result.end:'')}">${escapeHtml(result.label)}</span>`;
+}
+
 function renderEnterpriseStoreTable(rows: EnterpriseStoreListRow[]): string {
   if(!rows.length)return '<div class="ba ba-empty">暂无匹配门店</div>';
   const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th>所属品牌 / BID</th><th>门店状态</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
+  return `<div class="ba ba-table-wrap"><table style="min-width:1000px"><thead><tr><th>门店名称 / MID</th><th>所属品牌 / BID</th><th>经营状态（近30天）</th><th>菜单开通</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${rows.map(row=>{
     const capability=getStoreCapability(row.store.storeId),keys=new Set(capability?.enabledKeys??[]),count=choices.filter(c=>c.isPage&&keys.has(c.key)).length;
-    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreStatusLabel(row.store.status))}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="品牌服务未启用或当前员工无访问授权"'}>代登录</button></div></td></tr>`;
+    return `<tr><td><a href="${storeDetailHref(row.store.storeId)}"><strong>${escapeHtml(row.store.name)}</strong></a><br><small>${escapeHtml(row.store.storeId)} · ${escapeHtml(row.store.address??'暂无地址')}</small></td><td><span>${escapeHtml(row.merchantName)}</span><br><small>${escapeHtml(row.merchantBid??'—')}</small></td><td><span class="ba-tag">${escapeHtml(getStoreOperatingStatus(row.store).label)}</span></td><td><span class="ba-tag ${keys.size?'active':''}">${keys.size?`${count} 个页面`:'未开通'}</span></td><td><small>${capability?.updatedAt?escapeHtml(formatDate(capability.updatedAt)):'—'}${capability?.updatedBy?`<br>${escapeHtml(capability.updatedBy)}`:''}</small></td><td><div class="ba-actions"><a href="${storeDetailHref(row.store.storeId)}">详情</a><button type="button" class="ba-btn" data-store-impersonate="${escapeHtml(row.store.storeId)}" ${canImpersonateStore(row.store.storeId)?'':'disabled title="品牌服务未启用或当前员工无访问授权"'}>代登录</button></div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -397,7 +406,7 @@ function renderOrgTreeStoreItem(store: ReturnType<typeof getMerchantStores>[numb
   return `<li class="text-sm leading-relaxed">
     <span class="text-card-foreground">${escapeHtml(store.name)}</span>
     <span class="font-mono text-xs text-muted-foreground"> · ${escapeHtml(store.storeId)}</span>${addressPart}
-    <span class="text-xs text-muted-foreground"> (${escapeHtml(getStoreStatusLabel(store.status))})</span>
+    <span class="text-xs text-muted-foreground"> (${escapeHtml(getStoreOperatingStatus(store).label)})</span>
   </li>`;
 }
 
@@ -753,7 +762,7 @@ function renderMerchantDetailOrg(merchantId: string): string {
               <td class="px-3 py-2.5">${escapeHtml(region?.name ?? "—")}</td>
               <td class="px-3 py-2.5">
                 <select data-merchant-store-status="${escapeHtml(s.storeId)}" class="h-8 rounded-md border border-input bg-background px-2 text-xs">
-                  ${(["preparing", "open", "closed", "archived"] as MerchantOrgStoreStatus[])
+                  ${(["preparing", "open", "closed", "terminated"] as MerchantOrgStoreStatus[])
                     .map(
                       (st) =>
                         `<option value="${st}"${s.status === st ? " selected" : ""}>${escapeHtml(getStoreStatusLabel(st))}</option>`,
@@ -978,6 +987,8 @@ function renderStoreDetailOverview(storeId: string, readOnly = false): string {
   const merchant = getMerchantById(store.merchantId);
   const storeCap = getStoreCapability(storeId);
   const brandCap = getMerchantCapability(store.merchantId);
+  const business=getStoreOperatingStatus(store);
+  const canChange=!readOnly&&currentMAccess(mActionKey('stores','status'))==='edit';
   const row = (label: string, value: string) =>
     `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
 
@@ -989,7 +1000,11 @@ function renderStoreDetailOverview(storeId: string, readOnly = false): string {
           ${row("门店名称", escapeHtml(store.name))}
           ${row("MID", `<span class="font-mono text-xs">${escapeHtml(store.storeId)}</span>`)}
           ${row("编码", escapeHtml(store.code))}
-          ${row("状态", renderStoreStatusBadge(store.status))}
+          ${row("经营状态（近30天）", renderOperatingBadge(store))}
+          ${row("统计周期", business.start&&business.end?business.start+' 至 '+business.end:'—')}
+          ${row("营业数据", store.status!=='open'?'人工维护（不自动覆盖）':business.source==='demo'?'演示数据':business.source==='integrated'?'营业事实同步':'尚未接入')}
+          ${row("数据更新", business.updatedAt?formatDate(business.updatedAt):'—')}
+          ${canChange?row('维护经营状态',`<select aria-label="维护经营状态" data-merchant-store-status="${escapeHtml(store.storeId)}" class="h-9 rounded-md border border-input bg-background px-2 text-sm">${(['preparing','open','closed','terminated',...(store.status==='archived'?['archived']:[])] as MerchantOrgStoreStatus[]).map(st=>`<option value="${st}" ${st===store.status?'selected':''}>${escapeHtml(getStoreStatusLabel(st))}</option>`).join('')}</select>`):''}
           ${row("地址", escapeHtml(store.address ?? "—"))}
           ${row("所属品牌", merchant ? readOnly ? escapeHtml(merchant.name) : `<a href="${merchantDetailHref(merchant.merchantId)}" class="text-primary hover:underline">${escapeHtml(merchant.name)}</a>` : escapeHtml(store.merchantId))}
           ${row("品牌 BID", `<span class="font-mono text-xs">${escapeHtml(merchant?.bid ?? "—")}</span>`)}
@@ -1263,8 +1278,8 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     sel.addEventListener("change", () => {
       const storeId = sel.dataset.merchantStoreStatus;
       if (!storeId) return;
-      updateMerchantStoreStatus(storeId, sel.value as MerchantOrgStoreStatus);
-      onMount();
+      try { updateMerchantStoreStatus(storeId, sel.value as MerchantOrgStoreStatus); showAppToast('门店经营状态已更新');onMount(); }
+      catch(error){const store=getStoreById(storeId);if(store)sel.value=store.status;showAppToast(error instanceof Error?error.message:'门店状态保存失败');}
     });
   });
 

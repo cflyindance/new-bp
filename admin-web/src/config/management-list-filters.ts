@@ -1,3 +1,4 @@
+import {getStoreOperatingStatus} from './enterprise-merchant-store';
 import './management-list-filters.css';
 import {getMerchants,getEnterpriseStoreList,getMerchantStores,getStoreCapability,getMerchantById} from './enterprise-merchant-store';
 import {brandRawMenuKeys,brandMenuChoices,readBrandAccess} from './brand-access-store';
@@ -15,14 +16,14 @@ export function filteredManagementBrands(f:ManagementFilter){
  const q=(f.query??'').trim().toLowerCase();
  return brands().filter(m=>(!f.status||serviceStatus(m.status)===f.status)&&(!q||[m.name,m.bid,m.code,m.primaryAdminEmail,...readBrandAccess(m.merchantId).accounts.map(a=>a.email)].join(' ').toLowerCase().includes(q))&&(!f.progress||brandOnboardingProgress(m.merchantId)===f.progress)&&(!f.menu||(hasBrandPages(m.merchantId)?'yes':'no')===f.menu)&&(!f.stores||(getMerchantStores(m.merchantId).length?'yes':'no')===f.stores)&&(!f.from||m.createdAt.slice(0,10)>=f.from)&&(!f.to||m.createdAt.slice(0,10)<=f.to));
 }
-export function filteredManagementStores(f:ManagementFilter){return getEnterpriseStoreList({allEnterprises:true,merchantId:f.merchantId,status:f.status as never,query:f.query}).filter(r=>(!f.mode||(getStoreCapability(r.store.storeId)?.menuMode==='inherit'?'inherit':'independent')===f.mode)&&(!f.menu||(hasStorePages(r.store.storeId)?'yes':'no')===f.menu)&&(!f.brandStatus||serviceStatus(getMerchantById(r.merchantId)!.status)===f.brandStatus));}
+export function filteredManagementStores(f:ManagementFilter){return getEnterpriseStoreList({allEnterprises:true,merchantId:f.merchantId,query:f.query}).filter(r=>(!f.status||getStoreOperatingStatus(r.store).status===f.status)&&(!f.mode||(getStoreCapability(r.store.storeId)?.menuMode==='inherit'?'inherit':'independent')===f.mode)&&(!f.menu||(hasStorePages(r.store.storeId)?'yes':'no')===f.menu)&&(!f.brandStatus||serviceStatus(getMerchantById(r.merchantId)!.status)===f.brandStatus));}
 const states:[string,string][]=[['onboarding','待启用'],['active','已启用'],['suspended','已暂停'],['closed','已关闭']];
 function field(name:string,title:string,options:[string,string][],f:ManagementFilter){return `<label data-filter-field="${name}" class="flex flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><select name="${name}" class="h-9 rounded-md border border-input bg-background px-2 text-sm"><option value="">全部</option>${options.map(([v,t])=>`<option value="${esc(v)}" ${f[name]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;}
 const input=(name:string,title:string,type:string,f:ManagementFilter,placeholder='')=>`<label data-filter-field="${name}" class="flex flex-col gap-1"><span class="text-xs text-muted-foreground">${title}</span><input name="${name}" type="${type}" value="${esc(f[name]??'')}" placeholder="${placeholder}" class="h-9 rounded-md border border-input bg-background px-3 text-sm"></label>`;
 export function renderManagementFilters(kind:Kind){
  const f=savedManagementFilter(kind),store=kind==='store';
  const brand=store?field('merchantId','所属品牌',brands().map(m=>[m.merchantId,m.name]),f):'';
- const status=field('status',store?'门店状态':'服务状态',store?[['open','营业中'],['preparing','筹备中'],['closed','停业'],['archived','已归档']]:states,f);
+ const status=field('status',store?'经营状态（近30天）':'服务状态',store?[['open','正常营业'],['no-records','近30天无营业记录'],['unknown','营业情况未知'],['preparing','筹备中'],['closed','暂停经营'],['terminated','已关闭'],['archived','已归档']]:states,f);
  const search=input('query','搜索','search',f,store?'门店 / MID / 地址 / 邮编 / 品牌 / BID':'品牌名称 / BID / 编码 / 管理员账号');
  const actions='<button type="submit" class="ba-btn ba-primary">查询</button><button type="button" class="ba-btn" data-filter-reset>重置</button>';
  const menu=field('menu',store?'生效菜单':'品牌菜单',store?[['no','无生效菜单'],['yes','有生效菜单']]:[['no','未配置'],['yes','已配置']],f);

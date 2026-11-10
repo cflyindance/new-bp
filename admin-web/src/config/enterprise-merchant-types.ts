@@ -4,7 +4,7 @@ export type MerchantStatus = "draft" | "onboarding" | "active" | "suspended" | "
 
 export type MerchantOrgType = "single-store" | "chain";
 
-export type MerchantOrgStoreStatus = "preparing" | "open" | "closed" | "archived";
+export type MerchantOrgStoreStatus = "preparing" | "open" | "closed" | "archived" | "terminated";
 
 export type MerchantLicenseStatus = "active" | "expiring" | "expired" | "suspended";
 
