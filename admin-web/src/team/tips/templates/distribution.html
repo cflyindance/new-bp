@@ -392,4 +392,24 @@
           </div>
         </div>
       </div>
+<div id="storeSummaryAutoModal" class="modal-overlay store-auto-overlay" hidden aria-hidden="true" data-native-onclick="handleStoreSummaryAutoOverlay(event)" data-native-onkeydown="handleStoreSummaryAutoKeydown(event)">
+  <section id="storeSummaryAutoDialog" class="store-auto-dialog" role="dialog" aria-modal="true" aria-labelledby="storeSummaryAutoTitle" aria-describedby="storeSummaryAutoNotice" tabindex="-1">
+    <header class="store-auto-header">
+      <button id="storeSummaryAutoClose" type="button" class="store-auto-close" aria-label="关闭自动分配结果" data-native-onclick="closeStoreSummaryAutoAllocation()"><span aria-hidden="true">×</span></button>
+      <h2 id="storeSummaryAutoTitle">自动分配小费</h2>
+    </header>
+    <div class="store-auto-body">
+      <div class="store-auto-notice"><span class="store-auto-info" aria-hidden="true">i</span><p id="storeSummaryAutoNotice"></p></div>
+      <section class="store-auto-card" aria-label="日期分配进度">
+        <div class="store-auto-heading"><span class="store-auto-task-icon"><img data-dashboard-asset="list-checks.svg" alt=""></span><h3 id="storeSummaryAutoTaskTitle">正在分配小费</h3><span id="storeSummaryAutoState" data-state="running" role="status">分配中</span></div>
+        <progress id="storeSummaryAutoProgress" max="1" value="0" aria-label="日期自动分配进度"></progress>
+        <div class="store-auto-caption" aria-live="polite"><span id="storeSummaryAutoProcessed">已处理 0 / 0 天</span><strong id="storeSummaryAutoPercent">0%</strong></div>
+        <p id="storeSummaryAutoCurrent" class="store-auto-current"></p>
+        <footer id="storeSummaryAutoStats" class="store-auto-stats"></footer>
+      </section>
+      <section id="storeSummaryAutoResults" class="store-auto-results" hidden aria-label="自动分配结果明细"><h3>分配结果</h3><div class="store-auto-table"><table class="data-table"><thead><tr><th>日期</th><th>结果</th><th>说明</th></tr></thead><tbody id="storeSummaryAutoRows"></tbody></table></div></section>
+      <footer class="store-auto-actions"><button id="storeSummaryAutoRetry" type="button" class="btn" hidden data-native-onclick="retryStoreSummaryAutoAllocation()">重试失败日期</button><button id="storeSummaryAutoDone" type="button" class="btn btn-primary" hidden data-native-onclick="closeStoreSummaryAutoAllocation()">查看门店汇总</button></footer>
+    </div>
+  </section>
+</div>
 </section>
