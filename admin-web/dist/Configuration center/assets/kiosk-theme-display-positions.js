@@ -27,5 +27,12 @@
     root.localStorage.setItem(key, JSON.stringify({ themeId: themeId(), positions: normalize(values) }));
   }
   function clear() { root.localStorage.removeItem(key); }
-  root.KioskThemePositions = { options: options, normalize: normalize, read: read, write: write, clear: clear };
+  // Cards reflect saved activity configuration, never another editing session.
+  function savedForTheme(theme) {
+    if (!theme || typeof theme !== 'object') return [];
+    if (Object.prototype.hasOwnProperty.call(theme, 'distributePositions')) return normalize(theme.distributePositions);
+    var prefs = theme.lastDistributePrefs;
+    return normalize(prefs && prefs.positions);
+  }
+  root.KioskThemePositions = { options: options, normalize: normalize, read: read, write: write, clear: clear, savedForTheme: savedForTheme };
 })(window);

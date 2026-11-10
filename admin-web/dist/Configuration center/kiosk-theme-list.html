@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script src="assets/kiosk-theme-display-positions.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -140,7 +141,7 @@
                   <button type="button" class="ui-menu-item" role="option" data-value="已下架" aria-selected="false">已下架</button>
                 </div>
               </div>
-              <div class="flex h-12 w-fit max-w-full shrink-0 flex-wrap items-center gap-2 rounded-full bg-black/[0.04] px-4 sm:flex-nowrap sm:gap-2.5 sm:px-5">
+              <div class="flex min-h-12 w-fit max-w-full shrink-0 flex-wrap items-center gap-2 rounded-2xl bg-black/[0.04] px-4 py-2 sm:h-12 sm:flex-nowrap sm:rounded-full sm:gap-2.5 sm:px-5 sm:py-0">
                 <span class="flex shrink-0 text-[#00000073]" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M880 184H712v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H384v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H144c-17.7 0-32 14.3-32 32v664c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V216c0-17.7-14.3-32-32-32zm-40 656H184V256h128v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h256v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h128v584zM688 420h-55.2c-5.1 0-10 2.5-12.8 6.6L512 581.6 406.8 426.6c-2.8-4.1-7.7-6.6-12.8-6.6H336c-6.6 0-10.3 7.3-6.4 12.9l126.8 174.1c.8 1.1 1.9 1.6 3.2 1.6s2.4-.5 3.2-1.6L694.4 433c3.9-5.6.2-12.9-6.4-12.9z"/></svg>
                 </span>
@@ -632,11 +633,21 @@
       }
 
       function buildChannelTagsHtml(theme) {
-        var arr = theme.distributeChannels;
-        if (!arr || !arr.length) return '';
-        return '<div class="mt-auto flex flex-wrap gap-1 pt-1">' + arr.map(function(ch) {
+        var arr = Array.isArray(theme.distributeChannels) ? theme.distributeChannels : [];
+        var channelTags = arr.map(function(ch) {
           return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(channelChipLabel(ch)) + '</span>';
-        }).join('') + '</div>';
+        }).join('');
+        var selectedPositions = KioskThemePositions.savedForTheme(theme);
+        var positionTags = KioskThemePositions.options.filter(function(option) {
+          return selectedPositions.indexOf(option.value) >= 0;
+        }).map(function(option) {
+          return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(option.label) + '</span>';
+        }).join('');
+        var unconfigured = '<span class="text-xs leading-5 text-[rgba(0,0,0,0.45)]">未配置</span>';
+        return '<div class="mt-auto flex flex-wrap items-center gap-x-6 gap-y-2 pt-1" data-ad-distribution-targets>' +
+          '<div class="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="投放渠道"><span class="mr-1 text-xs leading-5 text-[rgba(0,0,0,0.65)]">投放渠道：</span>' + (channelTags || unconfigured) + '</div>' +
+          '<div class="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="展示位置"><span class="mr-1 text-xs leading-5 text-[rgba(0,0,0,0.65)]">展示位置：</span>' + (positionTags || unconfigured) + '</div>' +
+        '</div>';
       }
 
       function collectMediaPairs(theme) {
@@ -1187,7 +1198,7 @@
         var pagedList = list.slice(startIndex, endIndex);
 
         function metaDivider() {
-          return '<div class="flex items-stretch py-1"><div class="w-px min-h-[40px] self-stretch rounded-full bg-[#d9d9d9]"></div></div>';
+          return '<div class="hidden items-stretch py-1 sm:flex"><div class="w-px min-h-[40px] self-stretch rounded-full bg-[#d9d9d9]"></div></div>';
         }
 
         var html = pagedList.map(function(t) {
@@ -1242,14 +1253,14 @@
               storeCol +
             '</div>';
 
-          return '<div class="theme-list-card screensaver-card flex items-center gap-8 px-8 py-6" data-id="' + escapeHtml(t.id) + '">' +
+          return '<div class="theme-list-card screensaver-card relative flex flex-wrap items-center gap-4 px-4 py-4 sm:flex-nowrap sm:gap-8 sm:px-8 sm:py-6" data-id="' + escapeHtml(t.id) + '">' +
             renderThumbStage(t) +
-            '<div class="flex min-h-[136px] min-w-0 flex-1 flex-col gap-3">' +
+            '<div class="flex min-h-[136px] min-w-0 basis-full flex-1 flex-col gap-3 sm:basis-auto">' +
               '<h3 class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">' + escapeHtml(t.name) + '</h3>' +
               metaRow +
               buildChannelTagsHtml(t) +
             '</div>' +
-            '<div class="relative shrink-0 self-start">' +
+            '<div class="absolute right-4 top-4 shrink-0 self-start sm:relative sm:right-auto sm:top-auto">' +
               '<button type="button" class="more-btn flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none" aria-label="\u66f4\u591a">' + MENU_ICN.more + '</button>' +
               '<div class="dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute right-0 top-[calc(100%+8px)] z-20 hidden bg-white">' +
                 dropdownInner +
