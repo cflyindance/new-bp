@@ -1,6 +1,5 @@
 import {renderServiceGate,renderServiceTrialNotice,bindServiceGate} from './config/service-entitlement-ui';
 import {installServiceEntitlementRuntime} from './config/service-entitlement-runtime';
-import { renderFutureVersionDiffBanner } from "./shell/future-version-banner";
 import { bindNavigationSubmenuActions } from './shell/navigation-submenu-actions';
 import { currentMAccount } from './permissions/m-platform-store';
 import { mCanVisit } from './permissions/m-platform-runtime';
@@ -12432,7 +12431,6 @@ function mountInitializedPage(): void {
 
   app.innerHTML = `
     <div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden">
-      ${renderFutureVersionDiffBanner()}
       ${renderImpersonationBanner()}
       <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         ${renderSidebar()}

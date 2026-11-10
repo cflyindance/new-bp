@@ -1,4 +1,3 @@
-import { renderFutureVersionDiffBanner } from "./future-version-banner";
 import {isDisplayRegionPath,renderMarketingDisplayPage,bindMarketingDisplayPage} from '../marketing-display/ui';
 import {isBusinessMenuTemplatePath} from '../config/business-menu-template-scope';
 import {renderBusinessMenuTemplatePage,bindBusinessMenuTemplatePage} from '../config/business-menu-template-manager';
@@ -189,7 +188,6 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
 
 export function mountMPlatformShell(onMount: () => void, path: string): string {
   return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell>
-    ${isMPlatformMerchantPath(path) ? renderFutureVersionDiffBanner(true) : ""}
     ${sessionStorage.getItem('menusifu:provider-access-notice')?'<div role="alert" class="mp-readonly-note" data-provider-session-notice>商户访问授权已失效，请联系管理员。<button type="button" data-provider-notice-close style="margin-left:20px">关闭</button></div>':''}
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">${renderMPlatformShell(onMount, path)}</div>
   </div>`;
