@@ -40,15 +40,19 @@ function initStoreFilter() {
       if (filterStore) {
         rules = rules.filter(function(r) { return r.store === filterStore; });
       }
+      var poolKindFilter = document.getElementById('poolKindFilter');
+      var filterKind = poolKindFilter ? poolKindFilter.value : '';
+      if (filterKind) {
+        rules = rules.filter(function(rule) { return (rule.poolKind === 'surcharge' ? 'surcharge' : 'tip') === filterKind; });
+      }
       renderRuleMetrics(rules);
       var tableBody = document.getElementById('rulesTableBody');
       tableBody.innerHTML = '';
       if (rules.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新增规则」创建</div></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">' + (filterStore || filterKind ? '暂无符合筛选条件的规则' : '暂无规则，请点击「新增规则」创建') + '</div></td></tr>';
         return;
       }
       rules.forEach(function(rule) {
-        var desc = ruleData.buildRuleDescription(rule);
         var referenceIssues = window.TipOutRosterDirectory && TipOutRosterDirectory.validateRuleReferences
           ? TipOutRosterDirectory.validateRuleReferences(rule, rule.store)
           : [];
@@ -59,9 +63,6 @@ function initStoreFilter() {
         if (rule.poolKind === 'surcharge') editUrl += '&poolKind=surcharge';
         var poolKindLabel = ruleData.getRulePoolKindLabel(rule);
         var poolKindTagClass = ruleData.getRulePoolKindTagClass(rule);
-        var poolKindDescription = rule.poolKind === 'surcharge'
-          ? '现金/信用卡加收服务费'
-          : '小费、销售额等来源';
         var menuId = 'ruleActions-' + rule.id;
         record.innerHTML =
           '<td>' +
@@ -74,11 +75,7 @@ function initStoreFilter() {
           '<td>' +
             '<div class="tipout-rule-pool-summary">' +
               '<span class="' + escapeHtml(poolKindTagClass) + '">' + escapeHtml(poolKindLabel) + '</span>' +
-              '<small>' + poolKindDescription + '</small>' +
             '</div>' +
-          '</td>' +
-          '<td><p class="tipout-rule-description">' + escapeHtml(desc) + '</p>' +
-            (referenceIssues.length ? '<small class="tipout-rule-store">角色或员工已失效，请编辑规则后再分配</small>' : '') +
           '</td>' +
           '<td><div class="tipout-rule-record-actions">' +
             '<a class="btn btn-primary tipout-rule-edit" href="' + editUrl + '">编辑</a>' +

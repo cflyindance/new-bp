@@ -121,6 +121,12 @@
 .store-auto-close:focus-visible,.store-auto-dialog button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 @media(max-width:760px){.store-auto-overlay{padding:12px}.store-auto-dialog{padding:16px;max-height:calc(100dvh - 24px)}.store-auto-header{gap:16px;margin-bottom:16px}.store-auto-header h2{font-size:20px}.store-auto-body{padding:16px}.store-auto-card{padding:20px}.store-auto-heading{flex-wrap:wrap;gap:12px}.store-auto-heading h3{font-size:20px}.store-auto-task-icon{flex-basis:44px;height:44px;border-radius:12px}#storeSummaryAutoState{margin-left:auto}.store-auto-notice{padding:16px;gap:12px}.store-auto-caption{font-size:16px}.store-auto-stats{gap:8px;font-size:12px;margin-top:24px}}
 /* Screenshot-aligned forms, employee detail and configuration surfaces. */
+.tipout-page-rules .tipout-rules-toolbar{display:flex;flex-wrap:wrap;gap:12px}
+.tipout-page-rules #poolKindFilter{min-height:48px;border-radius:32px;background:#f0f0f0;border:0;min-width:180px;width:auto}
+.tipout-page-rules .tipout-rules-table th:nth-child(1){width:36%}
+.tipout-page-rules .tipout-rules-table th:nth-child(2){width:32%}
+.tipout-page-rules .tipout-rules-table th:nth-child(3){width:auto}
+.tipout-page-rules .tipout-rules-table th:nth-child(4){width:192px}
 .tipout-page-rule-editor .tipout-editor-main{max-width:1200px;margin-inline:auto;gap:16px}
 .tipout-page-rule-editor .tipout-form-card,.tipout-page-rule-editor .tipout-settings-group{background:var(--card-bg);border:0;border-radius:16px;padding:24px}
 .tipout-page-rule-editor .tipout-settings-group .tipout-form-card{background:transparent;padding:0}
