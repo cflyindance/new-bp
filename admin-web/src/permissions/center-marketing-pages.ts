@@ -1,7 +1,7 @@
 import type {Resource} from './center-domain';
 import type {AuthorizationRow} from './center-authorization';
 export const marketingPermissionPages=[
-  ['/marketing/screensaver','屏保与首页广告'],
+  ['/marketing/screensaver','广告位管理'],
   ['/marketing/display-content/contents','内容方案'],
   ['/marketing/display-content/placements','投放管理'],
   ['/marketing/ads','广告'],
