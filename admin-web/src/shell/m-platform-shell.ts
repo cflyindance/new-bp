@@ -79,7 +79,7 @@ function escapeHtml(s: string): string {
 }
 
 export function renderMPlatformSidebar(path: string): string {
-  return `<aside class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="p-4 border-b border-border"><p class="text-xs text-muted-foreground">服务商管理后台</p><h1 class="mt-1 font-semibold">M 平台</h1></header>${renderMNavigation(path)}</aside>`;
+  return `<aside data-mb-navigation="m" class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="mb-nav-identity border-b"><span class="mb-nav-logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span><div class="min-w-0"><h1>M 平台</h1><p>服务商管理后台</p></div></header>${renderMNavigation(path)}</aside>`;
 }
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {

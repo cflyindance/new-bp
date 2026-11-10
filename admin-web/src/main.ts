@@ -12,6 +12,7 @@ import { renderSettingsCategoryLayout, bindSettingsCategoryLayouts } from "./con
 import { orderPresetSeq, orderCenterLegacyRedirect } from "./config/order-center-navigation";
 import { flattenMemberNavigation } from "./config/member-center-navigation";
 import "./styles/app.css";
+import "./styles/mb-navigation.css";
 import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
 import { createPayrollPageContext } from "./team/payroll/payroll-context";
 import { mountEmployeesPage, type EmployeesPageHandle } from "./team/employees-page";
@@ -5007,7 +5008,7 @@ function renderSidebar(): string {
       ? "opacity-40 pointer-events-none transition-opacity duration-300"
       : "transition-opacity duration-300";
   return `
-    <aside class="flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar text-sidebar-foreground" aria-label="${escapeHtml(t("shell.navAside"))}">
+    <aside data-mb-navigation="b" class="flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar text-sidebar-foreground" aria-label="${escapeHtml(t("shell.navAside"))}">
       <div class="flex h-14 shrink-0 items-center gap-2 ${SBR_DIVIDER_B} px-4">
         <span class="flex size-9 items-center justify-center rounded-lg bg-sidebar-active text-sidebar-active-fg" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h0v7"/></svg>
