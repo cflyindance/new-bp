@@ -1,0 +1,120 @@
+[
+  {
+    "id": "demo-card-screen",
+    "name": "示例A · 仅屏保",
+    "createTime": "2026/11/10 12:00",
+    "effectTime": "2026/11/10 12:00 - 2026/11/20 12:00",
+    "distributeTime": "--",
+    "publishStatus": "draft",
+    "distributeChannels": [
+      "Kiosk"
+    ],
+    "distributedStores": [
+      {
+        "name": "演示门店",
+        "mid": "QA-DEMO-001",
+        "channelStatuses": [
+          {
+            "channel": "Kiosk"
+          }
+        ]
+      }
+    ],
+    "portraitImages": [],
+    "landscapeImages": [
+      {
+        "type": "image",
+        "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMjQwIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgZmlsbD0iI0RDRUVFRiIvPjxyZWN0IHg9Ijg2IiB5PSI0OCIgd2lkdGg9IjE0OCIgaGVpZ2h0PSIxMTIiIHJ4PSIxMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMTE1IDEzM2wyOC0yOSAyMiAxOCAyMC0zMyAyMyA0NHoiIGZpbGw9IiM4REE3QUUiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSI4MCIgcj0iMTAiIGZpbGw9IiNDNEQ2REIiLz48cmVjdCB4PSIxMTgiIHk9IjE3NyIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjciIHJ4PSIzIiBmaWxsPSIjOERBN0FFIi8+PC9zdmc+"
+      }
+    ],
+    "distributePositions": [
+      "screensaver"
+    ]
+  },
+  {
+    "id": "demo-card-home",
+    "name": "示例B · 仅首页",
+    "createTime": "2026/11/10 12:00",
+    "effectTime": "2026/11/10 12:00 - 2026/11/20 12:00",
+    "distributeTime": "--",
+    "publishStatus": "draft",
+    "distributeChannels": [
+      "eMenu"
+    ],
+    "distributedStores": [
+      {
+        "name": "演示门店",
+        "mid": "QA-DEMO-001",
+        "channelStatuses": [
+          {
+            "channel": "eMenu"
+          }
+        ]
+      }
+    ],
+    "portraitImages": [],
+    "landscapeImages": [
+      {
+        "type": "image",
+        "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMjQwIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgZmlsbD0iI0U4RTdGMyIvPjxyZWN0IHg9Ijg2IiB5PSI0OCIgd2lkdGg9IjE0OCIgaGVpZ2h0PSIxMTIiIHJ4PSIxMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMTE1IDEzM2wyOC0yOSAyMiAxOCAyMC0zMyAyMyA0NHoiIGZpbGw9IiM4REE3QUUiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSI4MCIgcj0iMTAiIGZpbGw9IiNDNEQ2REIiLz48cmVjdCB4PSIxMTgiIHk9IjE3NyIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjciIHJ4PSIzIiBmaWxsPSIjOERBN0FFIi8+PC9zdmc+"
+      }
+    ],
+    "distributePositions": [
+      "home"
+    ]
+  },
+  {
+    "id": "demo-card-both",
+    "name": "示例C · 屏保与首页",
+    "createTime": "2026/11/10 12:00",
+    "effectTime": "2026/11/10 12:00 - 2026/11/20 12:00",
+    "distributeTime": "--",
+    "publishStatus": "draft",
+    "distributeChannels": [
+      "Kiosk",
+      "OO"
+    ],
+    "distributedStores": [
+      {
+        "name": "演示门店",
+        "mid": "QA-DEMO-001",
+        "channelStatuses": [
+          {
+            "channel": "Kiosk"
+          },
+          {
+            "channel": "OO"
+          }
+        ]
+      }
+    ],
+    "portraitImages": [],
+    "landscapeImages": [
+      {
+        "type": "image",
+        "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMjQwIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgZmlsbD0iI0Y1RUFENyIvPjxyZWN0IHg9Ijg2IiB5PSI0OCIgd2lkdGg9IjE0OCIgaGVpZ2h0PSIxMTIiIHJ4PSIxMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMTE1IDEzM2wyOC0yOSAyMiAxOCAyMC0zMyAyMyA0NHoiIGZpbGw9IiM4REE3QUUiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSI4MCIgcj0iMTAiIGZpbGw9IiNDNEQ2REIiLz48cmVjdCB4PSIxMTgiIHk9IjE3NyIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjciIHJ4PSIzIiBmaWxsPSIjOERBN0FFIi8+PC9zdmc+"
+      }
+    ],
+    "distributePositions": [
+      "screensaver",
+      "home"
+    ]
+  },
+  {
+    "id": "demo-card-empty",
+    "name": "示例D · 未配置",
+    "createTime": "2026/11/10 12:00",
+    "effectTime": "2026/11/10 12:00 - 2026/11/20 12:00",
+    "distributeTime": "--",
+    "publishStatus": "draft",
+    "distributeChannels": [],
+    "distributedStores": [],
+    "portraitImages": [],
+    "landscapeImages": [
+      {
+        "type": "image",
+        "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMjQwIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgZmlsbD0iI0VBRUNFRiIvPjxyZWN0IHg9Ijg2IiB5PSI0OCIgd2lkdGg9IjE0OCIgaGVpZ2h0PSIxMTIiIHJ4PSIxMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMTE1IDEzM2wyOC0yOSAyMiAxOCAyMC0zMyAyMyA0NHoiIGZpbGw9IiM4REE3QUUiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSI4MCIgcj0iMTAiIGZpbGw9IiNDNEQ2REIiLz48cmVjdCB4PSIxMTgiIHk9IjE3NyIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjciIHJ4PSIzIiBmaWxsPSIjOERBN0FFIi8+PC9zdmc+"
+      }
+    ]
+  }
+]
