@@ -2632,7 +2632,7 @@ function renderPcSheetDarkSubnav(
           <span aria-hidden="true">←</span>
           <span class="min-w-0 flex-1 truncate">${pick(drilledParent.title, drilledParent.titleEn)}</span>
         </button>
-        <ul class="space-y-1 border-l-2 border-sidebar-active/40 pl-2.5" role="list">
+        <ul class="space-y-1 border-l-2 border-transparent pl-2.5" role="list">
           ${drilledNodes
             .map((child) => {
               const childId = child.id ?? child.path;
@@ -2654,7 +2654,7 @@ function renderPcSheetDarkSubnav(
   const activeSub = getActiveSubPath(path);
   const bp2 = opts?.brandProductSecondLevel === true;
   const l2ListClass = bp2
-    ? "space-y-1 border-l-2 border-sidebar-active/40 pl-2.5"
+    ? "space-y-1 border-l-2 border-transparent pl-2.5"
     : "space-y-0.5";
   /** 二级行：折叠父行与叶子链同一水平内边距，与「套餐组」等叶子项左缘对齐 */
   const l2RowHorizontal = bp2 ? "pl-0.5 pr-2.5" : "px-2.5";
