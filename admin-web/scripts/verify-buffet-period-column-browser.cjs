@@ -12,7 +12,7 @@ const fs = require('node:fs');
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/Configuration%20center/buffet-rule.html');
-    await page.getByRole('heading', { name: '自助餐规则', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '自助餐限购', exact: true }).waitFor();
     const headings = () => page.getByRole('columnheader', { name: '限购周期', exact: true }).count();
     const period = page.locator('input[data-column="period"]');
     const toggle = () => page.getByRole('button', { name: '字段设置', exact: true }).click();

@@ -884,7 +884,7 @@ export function renderDishRoundUnifiedWorkspaceHtml(options: {
     >
       <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div class="min-w-0">
-          <h2 class="text-base font-semibold text-card-foreground">每轮菜品互斥/组合</h2>
+          <h2 class="text-base font-semibold text-card-foreground">菜品搭配</h2>
           <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">配置同一轮下单中的菜品互斥与必选组合规则。</p>
         </div>
         <button type="button" class="${BTN_PRIMARY}" data-dish-round-add-rule>+ 新建规则</button>
