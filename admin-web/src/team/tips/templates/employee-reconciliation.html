@@ -3,6 +3,8 @@
     <section class="tipout-page-section" aria-labelledby="employeeDetailName">
       <!--TIPOUT_STANDALONE_HEADER-->
       <div id="employeeDetailContent">
+        <section class="employee-identity-card">
+        <div class="employee-identity-heading"><span class="employee-identity-avatar" aria-hidden="true">员</span><h2 id="employeeDetailName">—</h2><span id="employeeDetailRole" class="tipout-role-tag">未设置角色</span></div>
         <div class="tipout-detail-date-range" aria-label="分配汇总日期范围">
           <input id="employeeDetailStartDate" type="date" aria-label="开始日期" aria-describedby="employeeDetailDateRangeError">
           <span aria-hidden="true">～</span>
@@ -28,6 +30,7 @@
           </label>
         </div>
         <p id="employeeDetailDateRangeError" class="tipout-summary-date-error" role="alert" hidden></p>
+        </section>
         <div class="tipout-employee-detail-metrics" aria-label="员工分配汇总金额概览">
           <div><span>打卡总工时</span><strong id="employeeDetailPunchHours">—</strong></div>
           <div><span>分配计入工时</span><button id="employeeDetailAllocationHours" type="button" class="tipout-allocation-hours-button" disabled data-native-onclick="openEmployeeDetailAllocationHours(event, employeeDetailRangeHourEntries, '')">—</button></div>

@@ -29,7 +29,8 @@ const standaloneHeaders: Partial<Record<TipsView, StandalonePageHeaderOptions>> 
     "className": "tipout-figma-header"
   },
   "employee-reconciliation": {
-    "titleHtml": "<span id=\"employeeDetailName\">—</span><span id=\"employeeDetailRole\" class=\"tipout-role-tag\">未设置角色</span>",
+    "titleHtml": "员工分配明细",
+    "subtitleHtml": "<span id=\"employeeDetailStore\"></span>",
     "backHtml": "<button type=\"button\" class=\"btn\" data-native-onclick=\"returnToEmployeeReconciliation()\">← 返回员工分配汇总</button>",
     "actionsHtml": "<div class=\"tipout-detail-export export-dropdown\">\n          <button id=\"employeeDetailExportButton\" type=\"button\" class=\"btn\" aria-haspopup=\"menu\" aria-expanded=\"false\" data-native-onclick=\"toggleEmployeeDetailExportMenu(event)\">导出结果⌄</button>\n          <div id=\"employeeDetailExportMenu\" class=\"export-menu\" role=\"menu\">\n            <button type=\"button\" class=\"export-menu-item\" role=\"menuitem\" data-native-onclick=\"runEmployeeDetailExport('pdf')\">导出 PDF</button>\n            <button type=\"button\" class=\"export-menu-item\" role=\"menuitem\" data-native-onclick=\"runEmployeeDetailExport('csv')\">导出 CSV</button>\n            <button type=\"button\" class=\"export-menu-item\" role=\"menuitem\" data-native-onclick=\"openEmployeeDetailEmailModal()\">发送至邮箱</button>\n          </div>\n        </div>\n      ",
     "className": "tipout-figma-header"

@@ -525,6 +525,7 @@ function detailNumber(value) { return Number(value) || 0; }
     function renderEmployeeReconciliationDetail(snapshot) {
       employeeDetailDateSort = 'desc';
       setDetailText('employeeDetailName', snapshot.name || '—');
+      setDetailText('employeeDetailStore', snapshot.store || '—');
       setDetailText('employeeDetailRole', employeeDetailRoleLabel(snapshot.role));
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
