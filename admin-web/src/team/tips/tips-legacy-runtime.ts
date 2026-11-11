@@ -1,3 +1,4 @@
+import { tipoutDashboardAssets } from "./tips-dashboard-assets";
 import { bindTipsPlanningHints } from "./tips-planning-hints";
 import { readTipOutSchedule } from "./tips-schedule-source";
 import { TIPOUT_TEST_CATALOG, readTestPresetStores, testPresetStoreName } from './tips-test-preset-scope';
@@ -136,6 +137,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     tipoutIsPageActive: () => !controller.signal.aborted && (quickPreparation || root.isConnected && parseTipsRoute(realWindow.location.hash).href.split('?')[0] === route.href.split('?')[0]),
     tipoutTestPresetCatalog: TIPOUT_TEST_CATALOG,
     tipoutTestPresetView: readTestPresetStores(route.query)!==null,
+    tipoutDashboardAssets,
     tipoutDashboardAssetBase: `${import.meta.env.BASE_URL}tipout/dashboard/`,
     prepareTipoutQuickSnapshot: (store: string, dateKey: string, systemReallocation = false) => {
       const host = realDocument.createElement('div');

@@ -3,7 +3,8 @@ var summaryAutoQueue=null,summaryAutoDisposed=false,summaryAutoTimer=null,summar
 var dashboardStores=[],dashboardBusy=false,dashboardInspecting=false,dashboardIssues=[],dashboardLastItems=[],dashboardCompleted=false;
 var dashboardAssetBase=window.tipoutDashboardAssetBase||'/tipout/dashboard/';
 var dashboardReportKey='tipout-dashboard-report-v1';
-function dashboardIcon(name){return '<img class="dashboard-icon" src="'+dashboardAssetBase+name+'.svg" alt="">';}
+function dashboardAssetUrl(name){return (window.tipoutDashboardAssets||{})[name]||dashboardAssetBase+name;}
+function dashboardIcon(name){return '<img class="dashboard-icon" src="'+dashboardAssetUrl(name+'.svg')+'" alt="">';}
 function isStoreSummaryRoute(){var p=new URLSearchParams(window.location.search);return p.get('screen')==='store'||p.get('view')==='employee';}
 function isAllocationDashboard(){return !isStoreSummaryRoute();}
 function dashboardRange(){return {startDate:document.getElementById('dateStart').value,endDate:document.getElementById('dateEnd').value};}
@@ -102,7 +103,7 @@ function syncStoreSummaryHeader(){if(!isStoreSummaryRoute())return;var store=doc
 function resetStoreSummaryFilters(){['dateBusinessStatusFilter','dateAllocationStatusFilter','datePayoutStatusFilter','employeeSummaryStatusFilter','employeeSummaryRoleFilter'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});dateSummaryFilters={businessStatus:'',allocationStatus:'',payoutStatus:''};employeeSummaryFilters.role='';employeeSummaryFilters.statuses=[];employeeSummaryFilters.employeeScope={mode:'all',ids:[]};applyDefaultSummaryDateRange();invalidateDayPipelineCache();renderSummaryViews();syncStoreSummaryHeader();scheduleSummaryAutoAllocation();}
 function initializeDashboardPage(){
  var storeMode=isStoreSummaryRoute(),root=document.querySelector('.tipout-page-summary');root.classList.toggle('is-dashboard',!storeMode);root.classList.toggle('is-store-summary',storeMode);document.getElementById('allocationDashboard').hidden=storeMode;document.getElementById('storeSummaryPage').hidden=!storeMode;document.getElementById('summaryActionBar').hidden=!storeMode;
- root.style.setProperty('--dashboard-light','url("'+dashboardAssetBase+'allocation-light-panel.png")');root.style.setProperty('--dashboard-dark','url("'+dashboardAssetBase+'allocation-dark-panel.png")');root.querySelectorAll('[data-dashboard-asset]').forEach(function(img){img.src=dashboardAssetBase+img.dataset.dashboardAsset;});
+ root.style.setProperty('--dashboard-light','url("'+dashboardAssetBase+'allocation-light-panel.png")');root.style.setProperty('--dashboard-dark','url("'+dashboardAssetBase+'allocation-dark-panel.png")');root.querySelectorAll('[data-dashboard-asset]').forEach(function(img){img.src=dashboardAssetUrl(img.dataset.dashboardAsset);});
  var select=document.getElementById('storeSelect'),allowed=dashboardAllowedStores();allowed.forEach(function(s){if(!Array.from(select.options).some(function(o){return o.value===s.store;})){var option=document.createElement('option');option.value=s.store;option.textContent=s.label;select.appendChild(option);}});
  var p=new URLSearchParams(window.location.search),desired=p.get('store'),match=allowed.find(function(s){return s.store===desired||canonicalEmployeeStore(s.store)===canonicalEmployeeStore(desired);});
  if(storeMode){if(desired&&!match){showNotification('当前门店不在可访问范围','error');window.location.href='index.html';return false;}if(match)select.value=match.store;else if(allowed.length)select.value=allowed[0].store;else{window.location.href='index.html';return false;}}
