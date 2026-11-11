@@ -25,7 +25,7 @@ const context = {
   },
   commitDraftToEmployee() {}, buildDetailExportPayload: () => ({ summary: {} }), buildDeclarationVariables: () => ({}), finalizeConfirmEmployeeSave() {},
 };
-const save = vm.runInNewContext(`(${extract('confirmEmployeeEditModal', 'setAdpExportMenuOpen').trim()})`, context);
+const save = vm.runInNewContext(`(${extract('confirmEmployeeEditModal', 'setEmployeeMoreMenuOpen').trim()})`, {...context, window: {}});
 await save();
 assert.equal(saved, 1, 'Modal Confirm must persist without payroll confirmation');
 assert.equal(emp.declarationPreference.defaultFamilyId, 'zh');
@@ -40,7 +40,7 @@ assert.equal(hidden, 1, 'Failure keeps modal open');
 assert.equal(button.disabled, false);
 failed = false;
 emp.declarationPresentation = { status: 'ready', primary: { versionId: 'stale' } };
-const confirm = vm.runInNewContext(`(${extract('applyConfirmEmployeeSave', 'confirmEmployee').trim()})`, context);
+const confirm = vm.runInNewContext(`(${extract('applyConfirmEmployeeSave', 'confirmEmployee').trim()})`, {...context, window: {}});
 await confirm(0);
 assert.equal(confirmedVersion, 'fresh', 'Payroll confirmation must resolve the current version, not cached presentation');
 context.PayrollDeclarationBridge.resolve = async () => ({ status: 'frozen', primary: { versionId: 'retired-history' } });

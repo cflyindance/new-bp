@@ -1,3 +1,4 @@
+import type { CaOvertimeInput, CaOvertimeResult } from './payroll-ca-overtime';
 export type PayrollView = "workspace" | "periods" | "employees";
 
 export interface PayrollPeriod {
@@ -40,6 +41,10 @@ export interface PayrollAdjustments {
 }
 
 export interface PayrollEmployee {
+  /** Explicit CA opt-in; absence keeps pre-existing results, never infers jurisdiction from store text. */
+  californiaOvertimeInput?: CaOvertimeInput;
+  /** Frozen at payroll confirmation; changes to rules must not rewrite this result. */
+  californiaOvertimeSnapshot?: CaOvertimeResult;
   id: string;
   name: string;
   store?: string;
