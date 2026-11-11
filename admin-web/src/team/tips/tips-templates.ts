@@ -1,3 +1,4 @@
+import { tipoutDashboardAssets } from "./tips-dashboard-assets";
 import { renderStandalonePageHeader, type StandalonePageHeaderOptions } from "../../ui/standalone-page-header";
 import distribution from "./templates/distribution.html?raw";
 import details from "./templates/details.html?raw";
@@ -11,7 +12,8 @@ const templates: Record<TipsView, string> = { distribution, details, rules, "rul
 
 export function renderTipsTemplate(view: TipsView): string {
   const header = standaloneHeaders[view];
-  return header ? templates[view].replace("<!--TIPOUT_STANDALONE_HEADER-->", renderStandalonePageHeader(header)) : templates[view];
+  const html = header ? templates[view].replace("<!--TIPOUT_STANDALONE_HEADER-->", renderStandalonePageHeader(header)) : templates[view];
+  return html.replace(/\/tipout\/dashboard\/store\.svg/g, tipoutDashboardAssets["store.svg"]);
 }
 
 const standaloneHeaders: Partial<Record<TipsView, StandalonePageHeaderOptions>> = {
