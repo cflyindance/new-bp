@@ -3,6 +3,7 @@
  * 路径：/team/breaks-overtime
  * 布局：公共覆盖式子导航 + 独立内容页面，共享原保存与下发会话。
  */
+import { prepareContinuousMigration, validateContinuousRule } from "../team/payroll/payroll-overtime-migration";
 import {
   buildChangeDetailRows,
   changeHasDiff,
@@ -37,7 +38,7 @@ type CustomBreak = {
 };
 
 /** 计算口径（影响考勤/薪资核算逻辑） */
-type OvertimeScope = "daily" | "daily-double" | "weekly" | "nth-day";
+type OvertimeScope = "daily" | "daily-double" | "weekly" | "nth-day" | "continuous";
 
 type OvertimeRule = {
   id: string;
@@ -64,9 +65,10 @@ type BreaksOvertimeConfig = {
   convertExcessPaidToUnpaid: boolean;
   workWeekStartDay: number;
   overtimeRules: OvertimeRule[];
+  overtimeRuleHistory: OvertimeRule[];
 };
 
-const OVERTIME_SCOPES: OvertimeScope[] = ["daily", "daily-double", "weekly", "nth-day"];
+const OVERTIME_SCOPES: OvertimeScope[] = ["daily", "daily-double", "weekly", "nth-day", "continuous"];
 const DEFAULT_NTH_DAY = 7;
 const DEFAULT_NTH_DAY_TIER1 = { hours: 8, multiplier: 1.5 };
 const DEFAULT_NTH_DAY_TIER2 = { hours: 8, multiplier: 2 };
@@ -93,8 +95,14 @@ const OVERTIME_SCOPE_META: Record<
     defaultHours: 40,
     defaultMultiplier: 1.5,
   },
+  continuous: {
+    title: "连勤累计",
+    desc: "连续工作满指定天数，按本次连续工作期间累计工时分两档计薪，不按日清零。企业额外待遇不替代加州法定第7天加班。",
+    defaultHours: 1,
+    defaultMultiplier: 1.5,
+  },
   "nth-day": {
-    title: "第 N 天",
+    title: "第 N 天（历史规则）",
     desc: "连续工作第 N 天时，按两档工时阈值与工资倍率计薪（如前 8 小时 1.5×，之后 2×）。",
     defaultHours: DEFAULT_NTH_DAY_TIER1.hours,
     defaultMultiplier: DEFAULT_NTH_DAY_TIER1.multiplier,
@@ -137,6 +145,7 @@ const DEFAULT_CONFIG: BreaksOvertimeConfig = {
   workWeekStartDay: 1,
   /** 默认不预置规则，由用户新增 */
   overtimeRules: [],
+  overtimeRuleHistory: [],
 };
 
 /** 系统默认休息：名称固定不可改，可改时长/补偿/强制 */
@@ -238,23 +247,24 @@ function resolveOvertimeScope(value: unknown): OvertimeScope | null {
 }
 
 function normalizeDayNumber(value: unknown, scope: OvertimeScope): number | undefined {
-  if (scope !== "nth-day") return undefined;
+  if (scope !== "nth-day" && scope !== "continuous") return undefined;
   const n = Math.round(Number(value));
   if (Number.isFinite(n) && n >= 1) return Math.min(n, 365);
   return DEFAULT_NTH_DAY;
 }
 
 function normalizeSecondaryHours(value: unknown, scope: OvertimeScope): number | undefined {
-  if (scope !== "nth-day") return undefined;
+  if (scope !== "nth-day" && scope !== "continuous") return undefined;
   return Math.max(0.5, Number(value) || DEFAULT_NTH_DAY_TIER2.hours);
 }
 
 function normalizeSecondaryMultiplier(value: unknown, scope: OvertimeScope): number | undefined {
-  if (scope !== "nth-day") return undefined;
+  if (scope !== "nth-day" && scope !== "continuous") return undefined;
   return Math.max(1, Number(value) || DEFAULT_NTH_DAY_TIER2.multiplier);
 }
 
 function formatOvertimeScopeLabel(rule: OvertimeRule): string {
+  if (rule.scope === "continuous") return `连勤满${rule.dayNumber}天 · 累计加班`;
   if (rule.scope === "nth-day") {
     const day = rule.dayNumber ?? DEFAULT_NTH_DAY;
     return `第 ${day} 天`;
@@ -263,7 +273,7 @@ function formatOvertimeScopeLabel(rule: OvertimeRule): string {
 }
 
 function formatOvertimeHoursLabel(rule: OvertimeRule): string {
-  if (rule.scope === "nth-day") {
+  if (rule.scope === "nth-day" || rule.scope === "continuous") {
     const h2 = rule.secondaryHoursBeforeOvertime ?? DEFAULT_NTH_DAY_TIER2.hours;
     return `${rule.hoursBeforeOvertime} / ${h2}`;
   }
@@ -271,7 +281,7 @@ function formatOvertimeHoursLabel(rule: OvertimeRule): string {
 }
 
 function formatOvertimeMultiplierLabel(rule: OvertimeRule): string {
-  if (rule.scope === "nth-day") {
+  if (rule.scope === "nth-day" || rule.scope === "continuous") {
     const m2 = rule.secondaryWageMultiplier ?? DEFAULT_NTH_DAY_TIER2.multiplier;
     return `${rule.wageMultiplier}× / ${m2}×`;
   }
@@ -286,7 +296,7 @@ function getAvailableOvertimeScopes(
   const taken = new Set(
     rules.filter((r) => r.id !== excludeRuleId).map((r) => r.scope),
   );
-  return OVERTIME_SCOPES.filter((s) => !taken.has(s));
+  return OVERTIME_SCOPES.filter((s) => !taken.has(s) && (s !== "nth-day" || rules.some(r => r.id === excludeRuleId && r.scope === "nth-day")));
 }
 
 function buildOvertimeRuleFromRaw(
@@ -386,6 +396,7 @@ function normalizeConfig(raw: Partial<BreaksOvertimeConfig> | null): BreaksOvert
         ? raw.workWeekStartDay
         : DEFAULT_CONFIG.workWeekStartDay,
     overtimeRules: normalizeOvertimeRules(raw?.overtimeRules),
+    overtimeRuleHistory: Array.isArray(raw?.overtimeRuleHistory) ? structuredClone(raw.overtimeRuleHistory) : [],
   };
 }
 
@@ -705,7 +716,7 @@ function renderOvertimeRuleDialog(config: BreaksOvertimeConfig): string {
       ? editing.scope
       : availableScopes[0]!;
   const name = editing?.name ?? "";
-  const isNthDay = scope === "nth-day";
+  const isNthDay = scope === "nth-day" || scope === "continuous";
   const hours =
     editing?.hoursBeforeOvertime ??
     (isNthDay ? DEFAULT_NTH_DAY_TIER1.hours : OVERTIME_SCOPE_META[scope].defaultHours);
@@ -739,9 +750,9 @@ function renderOvertimeRuleDialog(config: BreaksOvertimeConfig): string {
             <p class="mt-1 text-xs text-muted-foreground" data-overtime-dialog-scope-desc>${escapeHtml(scopeDesc)}</p>
           </label>
           <label class="block text-sm${isNthDay ? "" : " hidden"}" data-overtime-dialog-day-wrap>
-            <span class="mb-1 block text-xs text-muted-foreground">天数 N</span>
+            <span class="mb-1 block text-xs text-muted-foreground">连续工作天数</span>
             <div class="relative max-w-[10rem]">
-              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">第</span>
+              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground" data-overtime-day-prefix>${scope === "continuous" ? "满" : "第"}</span>
               <input type="number" min="1" max="365" step="1" value="${dayNumber}" data-overtime-dialog-day class="${FORM_INPUT} px-8 tabular-nums" />
               <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">天</span>
             </div>
@@ -781,6 +792,8 @@ function renderOvertimeRuleDialog(config: BreaksOvertimeConfig): string {
             </div>
           </div>
         </div>
+        <p data-overtime-rule-error role="alert" class="mt-3 text-sm text-destructive"></p>
+        ${editing?.scope === "nth-day" ? '<label class="mt-3 block text-xs"><input type="checkbox" data-overtime-migration-reviewed>迁移为连勤累计时，我已重新核对天数、两档累计工时与倍率；保留旧版本，不重算历史工资。</label>' : ''}
         <div class="mt-5 flex justify-end gap-2">
           <button type="button" data-overtime-rule-cancel class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted">取消</button>
           <button type="button" data-overtime-rule-save class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">保存</button>
@@ -953,6 +966,7 @@ function collectConfigFromDom(root: HTMLElement): BreaksOvertimeConfig {
       : current.workWeekStartDay,
     /** 加班规则仅通过弹窗维护，列表只读展示 */
     overtimeRules: current.overtimeRules,
+    overtimeRuleHistory: current.overtimeRuleHistory,
   });
 }
 
@@ -1208,9 +1222,11 @@ function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
   const nameInput = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-name]");
 
   const syncNthDayFields = (scope: OvertimeScope): void => {
-    const isNthDay = scope === "nth-day";
+    const isNthDay = scope === "nth-day" || scope === "continuous";
     dayWrap?.classList.toggle("hidden", !isNthDay);
     tier2?.classList.toggle("hidden", !isNthDay);
+    const prefix = dialog.querySelector("[data-overtime-day-prefix]");
+    if (prefix) prefix.textContent = scope === "continuous" ? "满" : "第";
     if (tier1Label) tier1Label.textContent = isNthDay ? "档位 1" : "加班阈值";
     if (isNthDay && dayInput && (!dayInput.value || Number(dayInput.value) < 1)) {
       dayInput.value = String(DEFAULT_NTH_DAY);
@@ -1224,7 +1240,7 @@ function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
     if (scopeDesc) scopeDesc.textContent = meta.desc;
     syncNthDayFields(scope);
     if (overtimeRuleEditor?.mode === "create") {
-      if (scope === "nth-day") {
+      if (scope === "nth-day" || scope === "continuous") {
         if (hoursInput) hoursInput.value = String(DEFAULT_NTH_DAY_TIER1.hours);
         if (multiplierInput) multiplierInput.value = String(DEFAULT_NTH_DAY_TIER1.multiplier);
         if (hours2Input) hours2Input.value = String(DEFAULT_NTH_DAY_TIER2.hours);
@@ -1285,8 +1301,33 @@ function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
       nextRule.secondaryWageMultiplier = secondaryWageMultiplier;
     }
 
+    const error = validateContinuousRule(scope === "continuous" ? {
+      ...nextRule,
+      dayNumber: Number(dayInput?.value),
+      hoursBeforeOvertime: Number(hoursInput?.value),
+      wageMultiplier: Number(multiplierInput?.value),
+      secondaryHoursBeforeOvertime: Number(hours2Input?.value),
+      secondaryWageMultiplier: Number(multiplier2Input?.value),
+    } : nextRule);
+    const errorEl = dialog.querySelector("[data-overtime-rule-error]");
+    if (error) { if (errorEl) errorEl.textContent = error; return; }
+    if (scope === "continuous") Object.assign(nextRule, {
+      dayNumber: Number(dayInput?.value),
+      hoursBeforeOvertime: Number(hoursInput?.value),
+      wageMultiplier: Number(multiplierInput?.value),
+      secondaryHoursBeforeOvertime: Number(hours2Input?.value),
+      secondaryWageMultiplier: Number(multiplier2Input?.value),
+    });
     if (overtimeRuleEditor.mode === "edit") {
       const id = overtimeRuleEditor.id;
+      const source = config.overtimeRules.find(r => r.id === id);
+      if (source?.scope === "nth-day" && scope === "continuous") {
+        try {
+          const migration = prepareContinuousMigration(source, nextRule, !!dialog.querySelector<HTMLInputElement>("[data-overtime-migration-reviewed]")?.checked, newOvertimeRuleId());
+          config.overtimeRuleHistory = [...config.overtimeRuleHistory, migration.archived];
+          Object.assign(nextRule, migration.candidate);
+        } catch (e) { if (errorEl) errorEl.textContent = e instanceof Error ? e.message : "迁移校验失败"; return; }
+      }
       config.overtimeRules = config.overtimeRules.map((r) => (r.id === id ? nextRule : r));
     } else {
       config.overtimeRules = [...config.overtimeRules, nextRule];

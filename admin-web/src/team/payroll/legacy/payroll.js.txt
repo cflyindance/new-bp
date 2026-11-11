@@ -434,6 +434,7 @@
       if (!needsRefresh) return;
       employeesMap[pid] = existing.map((emp) => {
         if (!emp || typeof emp !== "object") return emp;
+        if (emp.californiaOvertimeInput || emp.californiaOvertimeSnapshot) return emp;
         if (!segmentsNeedBiweeklyRefresh(emp.segments, start, end)) return emp;
         return { ...emp, segments: buildSeedSegments(getEmployeeSeedIndex(emp), dates, emp.rate) };
       });
@@ -498,6 +499,7 @@
   }
 
   function renderManageSegmentTableHeadHtml() {
+    const caActive = !!getDraftAsEmployeeShape()?.californiaOvertimeInput;
     return `<thead>
       <tr>
         <th rowspan="2" scope="col"><span class="payroll-th-label">Date<button type="button" class="payroll-field-help" data-field-help="seg-date" aria-label="Date">?</button></span></th>
@@ -510,6 +512,7 @@
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOtRateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot-rate" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT2<button type="button" class="payroll-field-help" data-field-help="seg-ot2" aria-label="OT2">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOt2RateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot2-rate" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}">?</button></span></th>
+        ${caActive ? '<th rowspan="2">每周加班 (h)</th><th rowspan="2">第7天加班 (h)</th><th rowspan="2">合计工时 (h)</th><th rowspan="2">金额</th>' : ''}
       </tr>
       <tr>
         <th style="text-align:center;font-weight:400"><span class="payroll-th-label">In<button type="button" class="payroll-field-help" data-field-help="seg-in" aria-label="In">?</button></span></th>
@@ -602,6 +605,8 @@
   }
 
   function appendManageSegmentDayRows(rowHtml, day, dayIdx, emp) {
+    const caActive = !!emp.californiaOvertimeInput;
+    const caValue = kind => `<span data-ca-day-kind="${kind}" data-ca-day-date="${escapeHtml(day.date)}">—</span>`;
     const dayRate = getDayRate(day, emp);
     const dayOtRate = getDayOtRate(day, emp);
     const dayOt2Rate = getDayOt2Rate(day, emp);
@@ -638,10 +643,11 @@
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="unpaid-meal-break" value="${escapeHtml(day.unpaidMealBreak)}" aria-label="${escapeHtml(T("manage.segUnpaidMealBreakLabel"))}" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="rate" value="${dayRate}" aria-label="Rate" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="reg" value="${day.reg}" aria-label="Regular" /></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="${caActive ? 'hidden' : 'number'}" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" />${caActive ? caValue('daily') : ''}</td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot-rate" value="${dayOtRate}" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}" /></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="${caActive ? 'hidden' : 'number'}" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" />${caActive ? caValue('daily-double') : ''}</td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot2-rate" value="${dayOt2Rate}" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}" /></td>
+        ${caActive ? ['weekly','seventh-day','total','amount'].map(kind => `<td rowspan="${rowsForDay}">${caValue(kind)}</td>`).join('') : ''}
       </tr>`);
       } else {
         rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="0">
@@ -847,6 +853,7 @@
         employeesMap[pid] = cloneEmployeesTemplate(baseTemplate);
       }
       employeesMap[pid].forEach((emp) => {
+        if (emp?.californiaOvertimeInput || emp?.californiaOvertimeSnapshot) return;
         if (emp) emp.confirmed = true;
       });
     });
@@ -868,6 +875,7 @@
     if (!Array.isArray(list) || list.length === 0) return;
     list.forEach((emp, idx) => {
       if (!emp) return;
+      if (emp.californiaOvertimeInput || emp.californiaOvertimeSnapshot) return;
       emp.confirmed = idx < 4;
     });
   }
@@ -879,6 +887,7 @@
     const list = employeesMap[targetPid];
     if (!Array.isArray(list)) return;
     list.forEach((emp) => {
+      if (emp?.californiaOvertimeInput || emp?.californiaOvertimeSnapshot) return;
       if (emp) emp.confirmed = false;
     });
   }
@@ -1105,7 +1114,9 @@
         const rosterName = String((r.name || "")).trim();
         const existing =
           (rosterAdp && byAdp.get(rosterAdp)) || byName.get(rosterName.toLowerCase()) || current[idx] || null;
+        if (existing?.confirmed && existing.californiaOvertimeSnapshot) return cloneData(existing);
         return {
+          ...(existing || {}),
           id: (existing && existing.id) || `emp-roster-${idx + 1}`,
           name: rosterName || ((existing && existing.name) || `员工${idx + 1}`),
           store: String((r.store || (existing && existing.store) || DEFAULT_STORE_NAME)).trim() || DEFAULT_STORE_NAME,
@@ -1243,6 +1254,8 @@
   }
 
   function sumSegmentPayAmounts(emp) {
+    const californiaAmounts = window.PayrollOvertimeBridge?.amounts(emp);
+    if (californiaAmounts) return californiaAmounts;
     let regAmt = 0;
     let paidBreakAmt = 0;
     let otAmt = 0;
@@ -1465,6 +1478,13 @@
       const inp = row.querySelector('.field-seg[data-field="reg"]');
       if (inp && emp.segments[d] != null) {
         inp.value = emp.segments[d].reg;
+        if (emp.californiaOvertimeInput) {
+          inp.readOnly = true;
+          for (const [field,key] of [['ot','ot'],['ot2','ot2'],['ot-rate','otRate'],['ot2-rate','ot2Rate']]) {
+            const computed = row.querySelector(`.field-seg[data-field="${field}"]`);
+            if (computed) { computed.value = emp.segments[d][key]; computed.readOnly = true; }
+          }
+        }
       }
     });
   }
@@ -1516,6 +1536,7 @@
       if (!Array.isArray(data.employees[pid])) data.employees[pid] = list;
       list.forEach((emp) => {
         if (!emp || typeof emp !== "object") return;
+        if (emp.confirmed && emp.californiaOvertimeSnapshot) return;
         if (Array.isArray(emp.segments)) {
           emp.segments = emp.segments.map((seg) => {
             const day = migrateLegacySegmentToDay(seg);
@@ -1602,10 +1623,12 @@
     if (parsed.data) {
       try {
         const migrated = window.PayrollPeriodCalendar.migrateSnapshot(parsed.data, state, new Date(), PAYROLL_PERIOD_STATUS_SEED);
-        state.data = migrated.snapshot;
         Object.assign(state, migrated.selection);
+        // The legacy selection carries a cloned state.data; it must not overwrite the loaded snapshot.
+        state.data = migrated.snapshot;
         migratePayrollData(state.data);
-      } catch (_) {
+      } catch (error) {
+        console.warn('Payroll snapshot migration failed', error);
         state.data = cloneData(DEFAULT_DATA);
       }
     }
@@ -2107,6 +2130,9 @@
       declarationLocale: $("#field-declaration-locale")?.value || "",
       declarationFamilyId: $("#field-declaration-locale")?.selectedOptions?.[0]?.dataset?.familyId || "",
       declarationPrintMode: $("#field-declaration-print-mode")?.value || "employee-only",
+      caProfile: $("#field-ca-profile")?.value || "",
+      caRate: $("#field-ca-regular-rate")?.value || "",
+      caReviewed: !!$("#field-ca-reviewed")?.checked,
     };
   }
 
@@ -2122,12 +2148,20 @@
     if (hireDateInput) hireDateInput.value = snapshot.hireDate;
     if (declarationLocaleInput) selectEmployeeDeclarationPreference({ defaultLocaleCode: snapshot.declarationLocale, defaultFamilyId: snapshot.declarationFamilyId });
     if (declarationPrintModeInput) declarationPrintModeInput.value = snapshot.declarationPrintMode || "employee-only";
+    if ($("#field-ca-profile")) $("#field-ca-profile").value = snapshot.caProfile || "";
+    if ($("#field-ca-regular-rate")) $("#field-ca-regular-rate").value = snapshot.caRate || "";
+    if ($("#field-ca-reviewed")) $("#field-ca-reviewed").checked = !!snapshot.caReviewed;
   }
 
   function showEmployeeEditModal(trigger) {
     const modal = $("#payrollEmployeeEditModal");
     if (!modal || modal.classList.contains("show")) return;
     readFormIntoDraft();
+    employeeEditModalState.snapshot = captureEmployeeIdentityValues();
+    const payrollEmployee = getEmployee(state.periodId, state.employeeId);
+    if ($("#field-ca-profile")) { $("#field-ca-profile").value = payrollEmployee?.californiaOvertimeInput ? "US-CA" : ""; $("#field-ca-profile").disabled = !!payrollEmployee?.confirmed; }
+    if ($("#field-ca-regular-rate")) { $("#field-ca-regular-rate").value = payrollEmployee?.californiaOvertimeInput?.days?.find(d=>d.workedMinutes>0)?.regularRate || ""; $("#field-ca-regular-rate").disabled = !!payrollEmployee?.confirmed; }
+    if ($("#field-ca-reviewed")) { $("#field-ca-reviewed").checked = false; $("#field-ca-reviewed").disabled = !!payrollEmployee?.confirmed; }
     employeeEditModalState.snapshot = captureEmployeeIdentityValues();
     employeeEditModalState.trigger = trigger || document.activeElement;
     if (typeof openModal === "function") openModal("payrollEmployeeEditModal");
@@ -2178,6 +2212,14 @@
       adpFile: draft.adpFile, ssn: draft.ssn, hireDate: draft.hireDate,
       declarationPreference: draft.declarationPreference ? cloneData(draft.declarationPreference) : null,
     };
+    if (!emp.confirmed && $("#field-ca-profile")?.value === "US-CA") {
+      try {
+        identity.californiaOvertimeInput = window.PayrollOvertimeBridge.buildInput(getDraftAsEmployeeShape(), getPeriod(state.periodId), Object.values(state.data.employees || {}).flat(), Number($("#field-ca-regular-rate")?.value), !!$("#field-ca-reviewed")?.checked);
+      } catch (error) { if (typeof showNotification === 'function') showNotification(error.message, 'warning'); return; }
+    } else if (!emp.confirmed && emp.californiaOvertimeInput) {
+      if (typeof showNotification === 'function') showNotification('已启用加州核算的工资需先完成核对，不能通过切换为旧结果绕过。', 'warning');
+      return;
+    }
     const previousLabel = button?.textContent;
     employeeEditModalState.saving = true;
     if (button) { button.disabled = true; button.textContent = "保存中…"; }
@@ -2278,6 +2320,8 @@
   function buildEmployeeSnapshot(emp) {
     if (!emp) return "";
     const safe = {
+      californiaOvertimeInput: emp.californiaOvertimeInput || null,
+      californiaOvertimeSnapshot: emp.californiaOvertimeSnapshot || null,
       adpFile: emp.adpFile || "",
       ssn: emp.ssn || "",
       hireDate: emp.hireDate || "",
@@ -2580,7 +2624,9 @@
 
   function simulatePayrollBackendCalculation(emp) {
     if (!emp) return;
+    if (emp.confirmed && emp.californiaOvertimeInput) return;
     applyAutoRegularHours(emp);
+    window.PayrollOvertimeBridge?.apply(emp, getPeriod(state.periodId));
   }
 
   function commitDraftToEmployee() {
@@ -3593,10 +3639,11 @@
     const rate = getDayRate(day, emp);
     const otRate = getDayOtRate(day, emp);
     const ot2Rate = getDayOt2Rate(day, emp);
-    const regAmtNum = regNum * rate;
+    const caDayAmounts = window.PayrollOvertimeBridge?.amounts(emp, day.date);
+    const regAmtNum = caDayAmounts ? caDayAmounts.regAmt : regNum * rate;
     const paidBreakAmtNum = paidBreakH * rate;
-    const otAmtNum = otNum * otRate;
-    const ot2AmtNum = ot2Num * ot2Rate;
+    const otAmtNum = caDayAmounts ? caDayAmounts.otAmt : otNum * otRate;
+    const ot2AmtNum = caDayAmounts ? caDayAmounts.ot2Amt : ot2Num * ot2Rate;
     const totalAmtNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
     const paidMealBreak = escapeHtml(String(day.paidMealBreak || "").trim() || "—");
     const unpaidMealBreak = escapeHtml(String(day.unpaidMealBreak || "").trim() || "—");
@@ -3673,10 +3720,11 @@
       const otNum = Number(day.ot) || 0;
       const ot2Num = Number(day.ot2) || 0;
       const hoursNum = regNum + paidBreakH + otNum + ot2Num;
-      const regAmtNum = regNum * getDayRate(day, emp);
+      const caDayAmounts = window.PayrollOvertimeBridge?.amounts(emp, day.date);
+      const regAmtNum = caDayAmounts ? caDayAmounts.regAmt : regNum * getDayRate(day, emp);
       const paidBreakAmtNum = paidBreakAmtFromDay(day, emp);
-      const otAmtNum = otNum * getDayOtRate(day, emp);
-      const ot2AmtNum = ot2Num * getDayOt2Rate(day, emp);
+      const otAmtNum = caDayAmounts ? caDayAmounts.otAmt : otNum * getDayOtRate(day, emp);
+      const ot2AmtNum = caDayAmounts ? caDayAmounts.ot2Amt : ot2Num * getDayOt2Rate(day, emp);
       const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx, period);
       const wk = weeks[weekIdx] || (weeks[weekIdx] = { index: weekIdx, totals: createWeekTotals(), items: [] });
@@ -3749,6 +3797,8 @@
   }
 
   function buildDetailExportPayload(emp, period) {
+    const caResult = window.PayrollOvertimeBridge?.apply(emp, period);
+    if (caResult?.status === 'blocked') throw new Error(caResult.reason);
     ensureSystemDefaultDeclaration(emp, period);
     if (!emp || !period) return null;
     const sums = sumSegments(emp);
@@ -3776,10 +3826,11 @@
       const dayRate = getDayRate(day, emp);
       const dayOtRate = getDayOtRate(day, emp);
       const dayOt2Rate = getDayOt2Rate(day, emp);
-      const regAmtNum = regNum * dayRate;
+      const caDayAmounts = window.PayrollOvertimeBridge?.amounts(emp, day.date);
+      const regAmtNum = caDayAmounts ? caDayAmounts.regAmt : regNum * dayRate;
       const paidBreakAmtNum = paidBreakH * dayRate;
-      const otAmtNum = otNum * dayOtRate;
-      const ot2AmtNum = ot2Num * dayOt2Rate;
+      const otAmtNum = caDayAmounts ? caDayAmounts.otAmt : otNum * dayOtRate;
+      const ot2AmtNum = caDayAmounts ? caDayAmounts.ot2Amt : ot2Num * dayOt2Rate;
       const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx, period);
       const wk = weeks[weekIdx] || (weeks[weekIdx] = { index: weekIdx, totals: createWeekTotals(), items: [] });
@@ -4352,6 +4403,7 @@ html,body{height:auto!important;overflow:visible!important}
     updateManageWeekSummaries(emp, period);
     updateEmployeeBatchExportButton();
     renderWorkspaceHero(emp, period);
+    window.PayrollOvertimeBridge?.render(emp, period);
   }
 
   function showView(name) {
@@ -4378,6 +4430,7 @@ html,body{height:auto!important;overflow:visible!important}
   }
 
   function finalizeConfirmEmployeeSave(emp, changeCount) {
+    window.PayrollOvertimeBridge?.freeze(emp, getPeriod(state.periodId));
     emp.confirmed = true;
     emp.confirmedAt = new Date().toISOString();
     state.workspaceConfirmedInSession = true;
@@ -4394,6 +4447,8 @@ html,body{height:auto!important;overflow:visible!important}
   async function applyConfirmEmployeeSave(changeCount) {
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
+    const caResult = window.PayrollOvertimeBridge?.resolve(getDraftAsEmployeeShape(), getPeriod(state.periodId));
+    if (caResult?.status === 'blocked') { if (typeof showNotification === 'function') showNotification(caResult.reason, 'warning'); return; }
     commitDraftToEmployee();
     if (!emp.declarationPreference || typeof PayrollDeclarationBridge === "undefined") {
       finalizeConfirmEmployeeSave(emp, changeCount);
@@ -4444,6 +4499,11 @@ html,body{height:auto!important;overflow:visible!important}
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
     readFormIntoDraft();
+    const overtime = window.PayrollOvertimeBridge?.resolve(getDraftAsEmployeeShape(), getPeriod(state.periodId));
+    if (overtime?.status === 'blocked') {
+      if (typeof showNotification === 'function') showNotification(overtime.reason, 'warning');
+      return;
+    }
     const changes = buildWorkspaceChangeSummary();
     if (changes.length === 0) {
       applyConfirmEmployeeSave(0);
@@ -4615,6 +4675,8 @@ html,body{height:auto!important;overflow:visible!important}
   }
 
   function buildAdpRow(period, emp, roleRecord) {
+    const caResult = window.PayrollOvertimeBridge?.apply(emp, period);
+    if (caResult?.status === 'blocked') throw new Error(caResult.reason);
     const m = getAdpMapping();
     const coCode = resolveCoCode();
     const adj = mergeAdjustments(emp.adjustments);

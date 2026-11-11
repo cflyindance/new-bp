@@ -16,6 +16,7 @@ import type { PayrollDeclarationRepository } from "./payroll-declaration-api";
 import { resolveEmployeeDeclarationPresentation, renderDeclarationPartHtml } from "./payroll-declaration-presentation";
 import type { DeclarationVariables, DeclarationSnapshot } from "./payroll-declaration-types";
 import type { PayrollEmployee, PayrollPeriod } from "./payroll-types";
+import { createCaliforniaPayrollBridge } from './payroll-ca-bridge';
 
 export interface PayrollRuntimeHandle {
   getDeclarationEmployees(): PayrollEmployee[];
@@ -321,7 +322,10 @@ export function mountLegacyPayrollRuntime(
     },
   });
 
+  const californiaOvertimeBridge = createCaliforniaPayrollBridge(shadowRoot);
+  cleanups.add(() => californiaOvertimeBridge.destroy());
   const globalTarget: LegacyGlobal = {
+    PayrollOvertimeBridge: californiaOvertimeBridge,
     createPayrollScheduleDemo,
     document: scopedDocument,
     location: locationFacade,

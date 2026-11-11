@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {prepareContinuousMigration,validateContinuousRule} from '../src/team/payroll/payroll-overtime-migration.ts';
+const source={id:'old',scope:'nth-day',dayNumber:7,hoursBeforeOvertime:8,secondaryHoursBeforeOvertime:8,wageMultiplier:1.5,secondaryWageMultiplier:2};
+const candidate={...source,scope:'continuous',dayNumber:5,hoursBeforeOvertime:50,secondaryHoursBeforeOvertime:54,wageMultiplier:3,secondaryWageMultiplier:4};
+const original=JSON.stringify(source);assert.throws(()=>prepareContinuousMigration(source,candidate,false,'new'));
+assert.throws(()=>prepareContinuousMigration(source,candidate,true,'old'));
+assert.ok(validateContinuousRule({...candidate,secondaryHoursBeforeOvertime:50}));
+assert.ok(validateContinuousRule({...candidate,dayNumber:2.5}));
+const next=prepareContinuousMigration(source,candidate,true,'new');
+assert.equal(next.candidate.id,'new');assert.equal(next.archived.id,'old');assert.equal(next.archived.scope,'nth-day');assert.equal(JSON.stringify(source),original);
+console.log('PASS explicit reviewed migration, strict thresholds, new identity, immutable archive.');

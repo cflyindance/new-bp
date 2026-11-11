@@ -643,6 +643,16 @@
           </select>
           <small id="declaration-language-hint" role="status"></small>
         </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-ca-profile">加班核算</label>
+          <select id="field-ca-profile" class="payroll-employee-edit-input"><option value="">保留当前结果</option><option value="US-CA">加州 · 标准非豁免员工</option></select>
+        </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-ca-regular-rate">已核实 Regular rate（$/小时）</label>
+          <input id="field-ca-regular-rate" type="number" min="0.01" step="0.01" class="payroll-employee-edit-input" />
+          <small>单一时薪、无额外收入调整适用；奖金、多费率或特殊工时须由薪资数据源先核算。</small>
+          <label><input id="field-ca-reviewed" type="checkbox" />已核实非豁免资格、工作周起点、工作日边界及计薪基数</label>
+        </div>
       </div>
     </div>
   </div>
