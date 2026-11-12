@@ -499,7 +499,8 @@
   }
 
   function renderManageSegmentTableHeadHtml() {
-    const caActive = !!getDraftAsEmployeeShape()?.californiaOvertimeInput;
+    const caEmployee = getDraftAsEmployeeShape();
+    const caActive = !!(caEmployee?.californiaOvertimeInput || caEmployee?.californiaOvertimeSnapshot);
     return `<thead>
       <tr>
         <th rowspan="2" scope="col"><span class="payroll-th-label">Date<button type="button" class="payroll-field-help" data-field-help="seg-date" aria-label="Date">?</button></span></th>
@@ -605,7 +606,7 @@
   }
 
   function appendManageSegmentDayRows(rowHtml, day, dayIdx, emp) {
-    const caActive = !!emp.californiaOvertimeInput;
+    const caActive = !!(emp.californiaOvertimeInput || emp.californiaOvertimeSnapshot);
     const caValue = kind => `<span data-ca-day-kind="${kind}" data-ca-day-date="${escapeHtml(day.date)}">—</span>`;
     const dayRate = getDayRate(day, emp);
     const dayOtRate = getDayOtRate(day, emp);
