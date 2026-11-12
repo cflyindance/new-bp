@@ -513,7 +513,7 @@
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOtRateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot-rate" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT2<button type="button" class="payroll-field-help" data-field-help="seg-ot2" aria-label="OT2">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOt2RateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot2-rate" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}">?</button></span></th>
-        ${caActive ? '<th rowspan="2">每周加班 (h)</th><th rowspan="2">第7天加班 (h)</th><th rowspan="2">合计工时 (h)</th><th rowspan="2">金额</th>' : ''}
+        ${caActive ? '<th rowspan="2">每周加班 (h)</th><th rowspan="2">法定第7天 (h)</th><th rowspan="2">连勤加班 (h)</th><th rowspan="2">合计工时 (h)</th><th rowspan="2">金额</th>' : ''}
       </tr>
       <tr>
         <th style="text-align:center;font-weight:400"><span class="payroll-th-label">In<button type="button" class="payroll-field-help" data-field-help="seg-in" aria-label="In">?</button></span></th>
@@ -648,7 +648,7 @@
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot-rate" value="${dayOtRate}" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="${caActive ? 'hidden' : 'number'}" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" />${caActive ? caValue('daily-double') : ''}</td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot2-rate" value="${dayOt2Rate}" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}" /></td>
-        ${caActive ? ['weekly','seventh-day','total','amount'].map(kind => `<td rowspan="${rowsForDay}">${caValue(kind)}</td>`).join('') : ''}
+        ${caActive ? ['weekly','seventh-day','continuous','total','amount'].map(kind => `<td rowspan="${rowsForDay}">${caValue(kind)}</td>`).join('') : ''}
       </tr>`);
       } else {
         rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="0">
@@ -1774,6 +1774,8 @@
   }
 
   function showEmployeesDetailModal() {
+    try { const employee=getDraftAsEmployeeShape(); if(employee)window.PayrollOvertimeBridge?.assertLegacyExport(employee,getPeriod(state.periodId)); }
+    catch(error){if(typeof showNotification==='function')showNotification(error.message,'warning');return;}
     renderEmployeeDetailPreview();
     setPayrollDetailVariant("detail");
     setPrintPagination(detailPresentation.printPagination);
@@ -2134,6 +2136,7 @@
       caProfile: $("#field-ca-profile")?.value || "",
       caRate: $("#field-ca-regular-rate")?.value || "",
       caReviewed: !!$("#field-ca-reviewed")?.checked,
+      continuousRule: $("#field-continuous-rule")?.value || "",
     };
   }
 
@@ -2152,6 +2155,7 @@
     if ($("#field-ca-profile")) $("#field-ca-profile").value = snapshot.caProfile || "";
     if ($("#field-ca-regular-rate")) $("#field-ca-regular-rate").value = snapshot.caRate || "";
     if ($("#field-ca-reviewed")) $("#field-ca-reviewed").checked = !!snapshot.caReviewed;
+    if ($("#field-continuous-rule")) $("#field-continuous-rule").value = snapshot.continuousRule || "";
   }
 
   function showEmployeeEditModal(trigger) {
@@ -2160,6 +2164,14 @@
     readFormIntoDraft();
     employeeEditModalState.snapshot = captureEmployeeIdentityValues();
     const payrollEmployee = getEmployee(state.periodId, state.employeeId);
+    const continuousSelect = $("#field-continuous-rule");
+    if (continuousSelect) {
+      const saved = payrollEmployee?.californiaOvertimeInput?.continuous?.rule;
+      const options = window.PayrollOvertimeBridge?.continuousRules() || [];
+      if (saved && !options.some(r=>r.id===saved.id)) options.unshift(saved);
+      continuousSelect.innerHTML = '<option value="">不启用连勤累计</option>' + options.map(r=>`<option value="${escapeHtml(r.id)}">连勤满${r.dayNumber}天 · 超${r.hoursBeforeOvertime}/${r.secondaryHoursBeforeOvertime}小时 · ${r.wageMultiplier}/${r.secondaryWageMultiplier}倍</option>`).join('');
+      continuousSelect.value = saved?.id || ''; continuousSelect.disabled = !!payrollEmployee?.confirmed;
+    }
     if ($("#field-ca-profile")) { $("#field-ca-profile").value = payrollEmployee?.californiaOvertimeInput ? "US-CA" : ""; $("#field-ca-profile").disabled = !!payrollEmployee?.confirmed; }
     if ($("#field-ca-regular-rate")) { $("#field-ca-regular-rate").value = payrollEmployee?.californiaOvertimeInput?.days?.find(d=>d.workedMinutes>0)?.regularRate || ""; $("#field-ca-regular-rate").disabled = !!payrollEmployee?.confirmed; }
     if ($("#field-ca-reviewed")) { $("#field-ca-reviewed").checked = false; $("#field-ca-reviewed").disabled = !!payrollEmployee?.confirmed; }
@@ -2213,9 +2225,13 @@
       adpFile: draft.adpFile, ssn: draft.ssn, hireDate: draft.hireDate,
       declarationPreference: draft.declarationPreference ? cloneData(draft.declarationPreference) : null,
     };
+    if (!emp.confirmed && $("#field-continuous-rule")?.value && $("#field-ca-profile")?.value !== "US-CA") {
+      if (typeof showNotification === 'function') showNotification('请先启用并核实当前支持的加州核算，再选择连勤规则。', 'warning');
+      return;
+    }
     if (!emp.confirmed && $("#field-ca-profile")?.value === "US-CA") {
       try {
-        identity.californiaOvertimeInput = window.PayrollOvertimeBridge.buildInput(getDraftAsEmployeeShape(), getPeriod(state.periodId), Object.values(state.data.employees || {}).flat(), Number($("#field-ca-regular-rate")?.value), !!$("#field-ca-reviewed")?.checked);
+        identity.californiaOvertimeInput = window.PayrollOvertimeBridge.buildInput(getDraftAsEmployeeShape(), getPeriod(state.periodId), Object.values(state.data.employees || {}).flat(), Number($("#field-ca-regular-rate")?.value), !!$("#field-ca-reviewed")?.checked, $("#field-continuous-rule")?.value || '');
       } catch (error) { if (typeof showNotification === 'function') showNotification(error.message, 'warning'); return; }
     } else if (!emp.confirmed && emp.californiaOvertimeInput) {
       if (typeof showNotification === 'function') showNotification('已启用加州核算的工资需先完成核对，不能通过切换为旧结果绕过。', 'warning');
@@ -3798,6 +3814,7 @@
   }
 
   function buildDetailExportPayload(emp, period) {
+    window.PayrollOvertimeBridge?.assertLegacyExport(emp, period);
     const caResult = window.PayrollOvertimeBridge?.apply(emp, period);
     if (caResult?.status === 'blocked') throw new Error(caResult.reason);
     ensureSystemDefaultDeclaration(emp, period);
@@ -4676,6 +4693,7 @@ html,body{height:auto!important;overflow:visible!important}
   }
 
   function buildAdpRow(period, emp, roleRecord) {
+    window.PayrollOvertimeBridge?.assertLegacyExport(emp, period);
     const caResult = window.PayrollOvertimeBridge?.apply(emp, period);
     if (caResult?.status === 'blocked') throw new Error(caResult.reason);
     const m = getAdpMapping();
@@ -5110,6 +5128,8 @@ html,body{height:auto!important;overflow:visible!important}
     });
 
     async function printCurrentEmployeeDetail() {
+      try { const employee=getDraftAsEmployeeShape(); if(employee)window.PayrollOvertimeBridge?.assertLegacyExport(employee,getPeriod(state.periodId)); }
+      catch(error){if(typeof showNotification==='function')showNotification(error.message,'warning');return;}
       syncDerived();
       if (typeof printPayrollDetail === "function") {
         printPayrollDetail(detailPresentation.activeVariant, detailPresentation.printPagination);

@@ -97,7 +97,7 @@ const OVERTIME_SCOPE_META: Record<
   },
   continuous: {
     title: "连勤累计",
-    desc: "连续工作满指定天数，按本次连续工作期间累计工时分两档计薪，不按日清零。企业额外待遇不替代加州法定第7天加班。",
+    desc: "前几天工时参与累计门槛判断，仅从连勤达标当天起对新增工时分档，不追溯调整前几天工资；与其他规则重叠时同一分钟取最高倍率。",
     defaultHours: 1,
     defaultMultiplier: 1.5,
   },
