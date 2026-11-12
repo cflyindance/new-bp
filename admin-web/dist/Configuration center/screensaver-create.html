@@ -10,6 +10,7 @@
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
+  <script src="assets/kiosk-ad-slot-catalog.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
   <script>
@@ -225,10 +226,10 @@
       var createDraftThemeId = null;
       var urlSearchParams = new URLSearchParams(location.search);
       var adPositionEditor = KioskThemePositionEditor.mount({
-        formId: 'screensaverForm', nextId: 'distributeBtn', theme: getThemes().filter(function(t) { return t.id === urlSearchParams.get('themeId'); })[0],
+        formId: 'screensaverForm', nextId: 'distributeBtn', theme: getThemes().filter(function(t) { return t.id === (urlSearchParams.get('themeId') || urlSearchParams.get('copyFrom')); })[0], copy:urlSearchParams.has('copyFrom'),
         onChange: function() {
           ['portrait','landscape'].forEach(function(role) {
-            document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + KioskThemePositions.mediaSpec(adPositionEditor.value(), role).ratio;
+            document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + adPositionEditor.mediaSpec(role).ratio;
             updateHints(role); renderPreviews(role);
           });
         }
@@ -330,7 +331,7 @@
       function syncTypeRadiosFromLists() {
         ['portrait', 'landscape'].forEach(function(role) {
           var list = role === 'portrait' ? portraitList : landscapeList;
-          var isVideo = list.length > 0 && list[0].type === 'video';
+          var isVideo = list.length ? list[0].type === 'video' : adPositionEditor.defaultKind(role) === 'video';
           var name = role === 'portrait' ? 'portraitType' : 'landscapeType';
           document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
             r.checked = (r.value === 'video') === isVideo;
@@ -358,7 +359,7 @@
       }
 
       function getMaxCount(role) {
-        return getMediaType(role) === 'video' ? 1 : 5;
+        return adPositionEditor.maxCount(role, getMediaType(role));
       }
 
       function updateHints(role) {
@@ -366,16 +367,17 @@
         var container = document.getElementById(hintsId);
         var mediaType = getMediaType(role);
         var isPortrait = role === 'portrait';
-        var spec = KioskThemePositions.mediaSpec(adPositionEditor.value(), role);
+        var spec = adPositionEditor.mediaSpec(role);
         var size = spec.width + '×' + spec.height + 'px';
         document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + spec.ratio;
-        var html = '<p class="leading-5">建议尺寸: ' + size + '</p>';
+        var limits = adPositionEditor.spec(role);
+        var html = '<p class="leading-5">规格: ' + KioskThemePositionEditor.escape(limits.name) + ' · ' + KioskThemePositionEditor.escape(limits.applicability) + '</p><p class="leading-5">' + (limits.sizeMode === 'strict' ? '要求尺寸: ' : '建议尺寸: ') + size + '</p>';
         if (mediaType === 'video') {
-          html += '<p class="leading-5">视频格式: MP4、AVI 等主流格式</p>';
-          html += '<p class="leading-5">视频大小不超过 20MB，最多 1 个</p>';
+          html += '<p class="leading-5">视频格式: ' + limits.videoFormats.map(function(v){return v.split('/')[1].toUpperCase();}).join('、') + '</p>';
+          html += '<p class="leading-5">最多' + limits.maxVideos + '个，单个不超过' + limits.videoMaxMB + 'MB／' + limits.videoMaxSeconds + '秒</p>';
         } else {
-          html += '<p class="leading-5">图片格式: JPEG、PNG、JPG、GIF</p>';
-          html += '<p class="leading-5">图片大小建议 1M 以内，最多 5 张</p>';
+          html += '<p class="leading-5">图片格式: ' + limits.imageFormats.map(function(v){return v.split('/')[1].toUpperCase();}).join('、') + '</p>';
+          html += '<p class="leading-5">最多' + limits.maxImages + '张，单张不超过' + limits.imageMaxMB + 'MB</p>';
         }
         container.innerHTML = html;
       }
@@ -398,7 +400,7 @@
 
         var isPortrait = role === 'portrait';
         /* Preview frame follows the selected placement media specification. */
-        var boxClass = KioskThemePositions.mediaSpec(adPositionEditor.value(), role).box;
+        var boxClass = adPositionEditor.mediaSpec(role).box;
         var canDrag = list.length > 1;
         var html = '';
         list.forEach(function(item, index) {
@@ -424,6 +426,9 @@
             '</div>';
         }
         container.innerHTML = html;
+        var frameSpec = adPositionEditor.mediaSpec(role);
+        container.querySelectorAll('.ad-spec-box').forEach(function(el){el.style.aspectRatio=frameSpec.width+'/'+frameSpec.height;});
+        container.querySelectorAll('img,video').forEach(function(el){el.style.objectFit=frameSpec.fit;});
 
         container.querySelectorAll('.upload-slot').forEach(function(el) {
           el.addEventListener('click', function() {
@@ -499,7 +504,7 @@
 
       var MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 
-      function addFiles(role, files) {
+      async function addFiles(role, files) {
         if (!files || !files.length) return;
         var list = role === 'portrait' ? portraitList : landscapeList;
         var maxCount = getMaxCount(role);
@@ -507,7 +512,7 @@
         var remain = maxCount - countBefore;
         var mediaType = getMediaType(role);
         if (remain <= 0) {
-          if (mediaType === 'image') Toast.validate('最多上传5张图片');
+          if (mediaType === 'image') Toast.validate('最多上传' + maxCount + '张图片');
           return;
         }
         var oversizeVideo = false;
@@ -516,13 +521,15 @@
           for (var j = 0; j < files.length; j++) {
             if (files[j].type && files[j].type.startsWith('image/')) imagePickCount++;
           }
-          if (imagePickCount > remain) Toast.validate('最多上传5张图片');
+          if (imagePickCount > remain) Toast.validate('最多上传' + maxCount + '张图片');
         }
         for (var i = 0; i < files.length && list.length < maxCount; i++) {
           var file = files[i];
+          try { await adPositionEditor.validateItem(role, {file:file,url:URL.createObjectURL(file),type:file.type.startsWith('video/')?'video':'image'}); }
+          catch(validationError){Toast.validate(validationError.message);continue;}
           if (mediaType === 'video') {
             if (!file.type || !file.type.startsWith('video/')) continue;
-            if (file.size > MAX_VIDEO_BYTES) {
+            if (file.size > adPositionEditor.spec(role).videoMaxMB * 1024 * 1024) {
               oversizeVideo = true;
               continue;
             }
@@ -677,7 +684,7 @@
           Toast.validate('请输入图片轮播时间间隔');
           return;
         }
-        if (portraitList.length === 0 && landscapeList.length === 0) {
+        if (!adPositionEditor.hasMedia()) {
           Toast.validate('请至少上传一个竖版或横版的广告素材');
           return;
         }
@@ -708,16 +715,13 @@
             if (oldTheme.lastDistributePrefs) theme.lastDistributePrefs = oldTheme.lastDistributePrefs;
           }
           if (theme.lastDistributePrefs) theme.lastDistributePrefs = Object.assign({}, theme.lastDistributePrefs, {positions: theme.distributePositions.slice()});
-          var portraitPromises = portraitList.map(function(item) {
-            return processMedia(item, true);
-          });
-          var landscapePromises = landscapeList.map(function(item) {
-            return processMedia(item, false);
-          });
-          Promise.all([].concat(portraitPromises, landscapePromises)).then(function(allMedia) {
-            var pCount = portraitList.length;
-            theme.portraitImages = allMedia.slice(0, pCount);
-            theme.landscapeImages = allMedia.slice(pCount, pCount + landscapeList.length);
+          adPositionEditor.serialize(processMedia).then(function(result) {
+            theme.portraitImages = result.portrait;
+            theme.landscapeImages = result.landscape;
+            theme.adSlotAssets = result.bySpec;
+            theme.adSlot = result.slot;
+            theme.distributeChannels = [result.slot.productLine];
+            if (theme.lastDistributePrefs) theme.lastDistributePrefs.channels = theme.distributeChannels.slice();
             try {
               var list = getThemes();
               if (createDraftThemeId && oldTheme) {
@@ -733,6 +737,7 @@
               saveThemes(list);
               localStorage.setItem('current_theme_id_for_distribute', theme.id);
               KioskThemePositions.write(theme.distributePositions);
+              localStorage.setItem('selected_channels_for_distribute', JSON.stringify(theme.distributeChannels));
               var url = redirectUrl.replace('{themeId}', encodeURIComponent(theme.id));
               window.location.href = window.appendMenusifuEmbeddedParam(url);
             } catch (err) {
@@ -741,7 +746,7 @@
             }
           }).catch(function(err) {
             console.error('图片处理失败:', err);
-            Toast.error('素材处理失败，请重试');
+            Toast.error(err.message || '素材处理失败，请重试');
           });
         }
 
@@ -874,7 +879,7 @@
       }
 
       var originalAddFiles = addFiles;
-      addFiles = function(role, files) {
+      addFiles = async function(role, files) {
         var list = role === 'portrait' ? portraitList : landscapeList;
         var maxCount = getMaxCount(role);
         var remain = maxCount - list.length;
@@ -884,6 +889,8 @@
         
         for (var i = 0; i < files.length && list.length < maxCount; i++) {
           var file = files[i];
+          try { await adPositionEditor.validateItem(role, {file:file,url:URL.createObjectURL(file),type:file.type.startsWith('video/')?'video':'image'}); }
+          catch(validationError){Toast.validate(validationError.message);continue;}
           if (mediaType === 'video') {
             if (!file.type.startsWith('video/')) continue;
           } else {
@@ -896,7 +903,7 @@
             (function(f) {
               var maxW = role === 'portrait' ? 540 : 960;
               var maxH = role === 'portrait' ? 960 : 540;
-              compressImage(f, maxW, maxH, 0.7).then(function(dataUrl) {
+              fileToDataUrl(f).then(function(dataUrl) {
                 saveMaterialToLibrary(dataUrl);
               });
             })(file);
@@ -1034,12 +1041,13 @@
         selectedMaterialCountEl.textContent = selectedMaterials.length;
       }
 
-      document.getElementById('materialConfirmBtn').addEventListener('click', function() {
+      document.getElementById('materialConfirmBtn').addEventListener('click', async function() {
         if (selectedMaterials.length === 0) {
           Toast.warning('请选择至少一个素材');
           return;
         }
         var list = currentUploadRole === 'portrait' ? portraitList : landscapeList;
+        try { for (var mat of selectedMaterials) await adPositionEditor.validateItem(currentUploadRole,{url:mat.dataUrl,type:'image'}); } catch(error){Toast.validate(error.message);return;}
         selectedMaterials.forEach(function(mat) {
           list.push({ url: mat.dataUrl, dataUrl: mat.dataUrl, type: 'image' });
         });
@@ -1050,36 +1058,22 @@
       });
 
       function bootstrapCreatePage() {
-        var tid = urlSearchParams.get('themeId');
+        var isCopy = urlSearchParams.has('copyFrom');
+        var tid = urlSearchParams.get('themeId') || urlSearchParams.get('copyFrom');
         if (tid) {
           var themes = getThemes();
           var th = themes.filter(function(t) { return t.id === tid; })[0];
           if (th) {
-            createDraftThemeId = th.id;
+            createDraftThemeId = isCopy ? null : th.id;
             var nameInput = document.querySelector('#screensaverForm input[name="name"]');
-            if (nameInput) nameInput.value = th.name || '';
+            if (nameInput) nameInput.value = (th.name || '') + (isCopy ? '（副本）' : '');
             document.getElementById('idleTimeoutInput').value = th.idleTimeoutSec || 60;
             document.getElementById('transitionEffectSelect').value = th.transitionEffect || 'slide';
             if (window.__syncTransitionEffectDropdown) window.__syncTransitionEffectDropdown();
             document.getElementById('carouselIntervalInput').value = th.carouselIntervalSec || 3;
-            buildListFromStoredMedia(th.portraitImages || []).then(function(pl) {
-              portraitList = pl;
-              return buildListFromStoredMedia(th.landscapeImages || []);
-            }).then(function(ll) {
-              landscapeList = ll;
-              syncTypeRadiosFromLists();
-              updateAccept('portrait');
-              updateAccept('landscape');
-              updateHints('portrait');
-              updateHints('landscape');
-              renderPreviews('portrait');
-              renderPreviews('landscape');
-            }).catch(function() {
-              renderPreviews('portrait');
-              renderPreviews('landscape');
-            });
+            adPositionEditor.hydrate(th).catch(function(error){Toast.error(error.message);});
             try {
-              history.replaceState({}, '', 'screensaver-create.html?themeId=' + encodeURIComponent(createDraftThemeId));
+              if (!isCopy) history.replaceState({}, '', 'screensaver-create.html?themeId=' + encodeURIComponent(createDraftThemeId));
             } catch (eH) {}
             return;
           }
@@ -1123,6 +1117,12 @@
       });
 
       setupTransitionEffectDropdown();
+      adPositionEditor.attachMedia({
+        get: function(role){return role === 'portrait' ? portraitList : landscapeList;},
+        set: function(role,items){if(role === 'portrait') portraitList=items; else landscapeList=items;},
+        load: buildListFromStoredMedia,
+        refresh: function(role){syncTypeRadiosFromLists();updateAccept(role);updateHints(role);renderPreviews(role);}
+      });
       bootstrapCreatePage();
     })();
   </script>

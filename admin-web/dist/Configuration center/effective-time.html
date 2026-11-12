@@ -7,7 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
+  <script src="assets/kiosk-ad-slot-context.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
+  <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-slot-validation.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
   <script>
@@ -19,7 +22,7 @@
     <header class="flex-shrink-0 border-b border-[#f0f0f0] bg-white">
       <div class="flex items-center justify-between gap-4 px-6 py-4">
         <div class="flex min-w-0 flex-1 items-center gap-4">
-          <a href="channel-select.html" id="effectiveTimeBackBtn" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08]" aria-label="返回">
+          <a href="store-select.html" id="effectiveTimeBackBtn" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08]" aria-label="返回">
             <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M872 474H298.7l413.1-413.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L201.4 479.7c-6.2 6.2-9.4 14.4-9.4 22.6s3.1 16.4 9.4 22.6l465.1 465.1c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L298.7 550H872c17.7 0 32-14.3 32-32s-14.3-32-32-32z"/></svg>
           </a>
           <h1 class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">选择展示生效时间</h1>
@@ -92,7 +95,7 @@
       var effFrom = new URLSearchParams(location.search).get('from') || '';
       var backToChannel = document.getElementById('effectiveTimeBackBtn');
       if (backToChannel && effFrom) {
-        backToChannel.href = 'channel-select.html?from=' + encodeURIComponent(effFrom);
+        backToChannel.href = 'store-select.html?from=' + encodeURIComponent(effFrom) + '&themeId=' + encodeURIComponent(localStorage.getItem('current_theme_id_for_distribute')||'');
       }
 
       /** 开始时间允许早于「当前时刻」：不限制 date/time 的 min（结束与开始的相对关系仍由 applyEndMin 处理） */
@@ -291,6 +294,8 @@
           distributeTime: base && base.distributeTime,
           distributedStores: distributedStores,
           distributeChannels: Array.isArray(selectedChannels) ? selectedChannels : [],
+          adSlot: base && base.adSlot,
+          distributePositions: base && base.distributePositions,
           publishStatus: base && base.publishStatus
         };
       }
@@ -311,6 +316,7 @@
         for (var i = 0; i < themes.length; i++) {
           var other = themes[i];
           if (!other || other.id === candidate.id) continue;
+          if (!KioskAdSlots.samePosition(candidate,other)) continue;
           if (other.publishStatus !== 'published') continue;
           var eff = computeEffectStatus(other.effectTime);
           if (!eff || eff.text !== '已生效') continue;
@@ -407,7 +413,7 @@
         });
 
         var out = [];
-        out.push('在相同门店、相同渠道下，当前广告与已生效广告存在生效时间重叠。');
+        out.push('在相同门店、相同渠道和展示位置下，当前广告与已生效广告存在生效时间重叠。');
         out.push('');
         if (globalThemes.length) {
           out.push('冲突已生效广告：');
@@ -472,6 +478,7 @@
       }
 
       function executeSaveDraftFromEffectiveTime() {
+          if (!KioskAdSlotValidation.checkCurrent()) return;
           var selectedPositions = KioskThemePositions.read();
           if (selectedPositions.length !== 1) {
             Toast.validate('请返回广告编辑页，选择一个展示位置。');
@@ -549,7 +556,7 @@
           } else if (window.KioskThemeOverlap) {
             overlapSaveConfirmText.textContent = KioskThemeOverlap.CONFIRM_MESSAGE;
           } else {
-            overlapSaveConfirmText.textContent = '在相同门店、相同渠道下，当前广告与已生效广告存在生效时间重叠。';
+            overlapSaveConfirmText.textContent = '在相同门店、相同渠道和展示位置下，当前广告与已生效广告存在生效时间重叠。';
           }
         }
         if (!overlapSaveConfirmModal) {
@@ -577,6 +584,7 @@
           Toast.validate('请返回广告编辑页，选择一个展示位置。');
           return;
         }
+        if (!KioskAdSlotValidation.checkCurrent()) return;
         var pr = getProposedTimeRangeMs();
         if (!pr) {
           Toast.validate('请填写完整的开始与结束时间。');

@@ -1,3 +1,4 @@
+import {defaults,updateContract,type AdSpec,type SlotRevision} from './ad-slot-catalog';
 /** Display region/content/publication contract. No browser state or UI dependencies. */
 export const CONTENTS_PATH='/marketing/display-content/contents';
 export const PLACEMENTS_PATH='/marketing/display-content/placements';
@@ -6,7 +7,7 @@ export const DISPLAY_TERMINALS=['Kiosk','eMenu','CDS','OO','SDI','取餐屏'] as
 export type MediaKind='image'|'video';
 export type Parameter='interval'|'idle'|'transition';
 export interface TerminalBinding { minimumVersion:string; mediaKinds:MediaKind[] }
-export interface DisplayRegion {id:string;name:string;code:string;scene:string;description:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
+export interface DisplayRegion {productLine?:string;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
 export interface DisplayPlatform {schema:1;revision:number;regions:DisplayRegion[]}
 export interface DisplayAsset {id:string;name:string;kind:MediaKind;url:string;variant:string}
 export interface DisplayContent {id:string;name:string;regionId:string;assets:DisplayAsset[];settings:{interval?:number;idle?:number;transition?:string};version:number;updatedAt:number;legacyId?:string}
@@ -14,7 +15,7 @@ export interface PublicationSnapshot {contentId:string;name:string;version:numbe
 export interface DisplayPlacement {id:string;contentId:string;regionId:string;storeIds:string[];terminals:string[];startAt:number;endAt:number;timeZone:string;status:'draft'|'published'|'revoked';disabledTargets?:string[];snapshot?:PublicationSnapshot;publishedAt?:number;updatedAt:number}
 export interface MerchantDisplayState {schema:1;scope:string;revision:number;contents:DisplayContent[];placements:DisplayPlacement[];legacyIds:string[]}
 export interface DisplayContext {scope:string;storeIds:string[];canWrite:boolean}
-export type RegionInput=Pick<DisplayRegion,'name'|'code'|'scene'|'description'|'ratio'|'mediaKinds'|'maxItems'|'parameters'|'bindings'>&{id?:string};
+export type RegionInput=Pick<DisplayRegion,'name'|'code'|'scene'|'description'|'ratio'|'mediaKinds'|'maxItems'|'parameters'|'bindings'|'productLine'|'specs'|'specVersion'|'specHistory'>&{id?:string};
 export type ContentInput=Pick<DisplayContent,'name'|'regionId'|'assets'|'settings'>&{id?:string;legacyId?:string};
 export type PlacementInput=Pick<DisplayPlacement,'contentId'|'storeIds'|'terminals'|'startAt'|'endAt'>&{id?:string;timeZone?:string};
 export interface TerminalRequest {scope:string;storeId:string;terminal:string;regionCode:string;version:string;now:number;variant?:string}
@@ -22,22 +23,23 @@ function fail(message:string):never {throw new Error(message)}
 const clone=<T>(value:T):T=>structuredClone(value);
 const unique=(values:string[])=>[...new Set(values)];
 const uid=(prefix:string)=>`${prefix}-${globalThis.crypto?.randomUUID?.()??`${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
-export function createPlatformState():DisplayPlatform {return {schema:1,revision:0,regions:[{id:'idle-screensaver',name:'待机屏保',code:'idle.screensaver',scene:'待机',description:'终端无操作时展示，进入与退出由终端控制。',ratio:'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:['interval','idle','transition'],bindings:{},enabled:true,builtin:true,generation:0}]}}
+export function createPlatformState():DisplayPlatform {return {schema:1,revision:0,regions:[{id:'idle-screensaver',name:'待机屏保',code:'idle.screensaver',scene:'待机',description:'终端无操作时展示，进入与退出由终端控制。',ratio:'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:['interval','idle','transition'],bindings:{},enabled:true,builtin:true,generation:0},...defaults() as DisplayRegion[]]}}
 export function createMerchantState(scope:string):MerchantDisplayState {if(!scope)fail('请选择明确品牌后配置展示内容');return {schema:1,scope,revision:0,contents:[],placements:[],legacyIds:[]}}
 export function restrictDisplayStores<T extends {value:string}>(scope:string,options:T[],directory:{storeId:string;merchantId:string}[]):T[] {const own=new Set(directory.filter(s=>s.merchantId===scope).map(s=>s.storeId));return options.filter(s=>!!s.value&&own.has(s.value))}
 function requireContext(state:MerchantDisplayState,context:DisplayContext):void {if(!context.canWrite)fail('暂无操作权限');if(!context.scope||context.scope!==state.scope)fail('品牌上下文已变化，请重新打开页面');}
-export function parseRatios(ratio:string):string[]{const values=ratio.split('/').map(v=>v.trim());if(!values.length||values.some(v=>!/^\d{1,4}:\d{1,4}$/.test(v)||v.split(':').some(x=>+x<=0)))fail('建议比例格式为 16:9，多比例用 / 分隔');return unique(values)}
+export function parseRatios(ratio:string):string[]{const values=ratio.split('/').map(v=>v.trim());if(!values.length||values.some(v=>!/^\d{1,6}:\d{1,6}$/.test(v)||v.split(':').some(x=>+x<=0)))fail('建议比例格式为 16:9，多比例用 / 分隔');return unique(values)}
 export function saveRegion(state:DisplayPlatform,input:RegionInput,allowed:boolean):DisplayPlatform {
   if(!allowed)fail('暂无区域管理权限');const next=clone(state),existing=next.regions.find(r=>r.id===input.id);
+  input=updateContract(existing,input as DisplayRegion) as RegionInput;
   const name=input.name.trim(),code=input.code.trim(),scene=input.scene.trim();
   if(!name||name.length>30)fail('区域名称必填，最多 30 字');if(!scene||scene.length>20)fail('所属场景必填，最多 20 字');
-  if(!/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$/.test(code)||code.length>64)fail('区域编码使用小写字母、数字和 . _ - 分隔符，最多 64 字');
-  if(existing&&existing.code!==code)fail('区域编码创建后不可修改');if(next.regions.some(r=>r.code===code&&r.id!==existing?.id))fail('区域编码已存在');
+  if(!/^[a-z][a-z0-9._-]{0,63}$/.test(code)||code.length>64)fail('区域编码使用小写字母、数字和 . _ - 分隔符，最多 64 字');
+  if(existing&&existing.code!==code)fail('区域编码创建后不可修改');if(next.regions.some(r=>r.code===code&&r.productLine===input.productLine&&r.id!==existing?.id))fail('区域编码已存在');
   const ratio=parseRatios(input.ratio).join(' / ');if(!input.mediaKinds.length||input.mediaKinds.some(k=>!['image','video'].includes(k)))fail('至少选择一种有效素材类型');
   if(!Number.isInteger(input.maxItems)||input.maxItems<1||input.maxItems>20)fail('素材数量上限为 1～20 的整数');
   if(input.parameters.some(p=>!['interval','idle','transition'].includes(p)))fail('展示参数类型无效');if(input.description.length>200)fail('区域说明最多 200 字');
   const changed=existing&&['ratio','maxItems','mediaKinds','parameters'].some(key=>JSON.stringify(existing[key as keyof DisplayRegion])!==JSON.stringify({...input,ratio}[key as keyof RegionInput]));
-  if(changed&&Object.keys(existing.bindings).length)fail('已接入区域的素材规范不可直接变更，请创建新区域或先协调终端兼容');
+  if(changed&&!input.specs&&Object.keys(existing.bindings).length)fail('已接入区域的素材规范不可直接变更，请创建新区域或先协调终端兼容');
   for(const [terminal,binding] of Object.entries(input.bindings)){
     if(!(DISPLAY_TERMINALS as readonly string[]).includes(terminal))fail('终端类型无效');if(!/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(binding.minimumVersion))fail(`${terminal} 最低版本格式无效，例如 5.0.1`);
     if(!binding.mediaKinds.length||binding.mediaKinds.some(k=>!input.mediaKinds.includes(k)))fail(`${terminal} 支持的素材类型超出区域规范`);

@@ -8,7 +8,9 @@
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script src="assets/kiosk-ad-slot-catalog.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
+  <script src="assets/kiosk-ad-slot-validation.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -638,7 +640,8 @@
           return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(channelChipLabel(ch)) + '</span>';
         }).join('');
         var selectedPositions = KioskThemePositions.savedForTheme(theme);
-        var positionTags = KioskThemePositions.options.filter(function(option) {
+        var positionOptions = theme.adSlot ? [{value:theme.adSlot.code,label:theme.adSlot.name}] : KioskThemePositions.options;
+        var positionTags = positionOptions.filter(function(option) {
           return selectedPositions.indexOf(option.value) >= 0;
         }).map(function(option) {
           return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(option.label) + '</span>';
@@ -980,6 +983,7 @@
         for (var i = 0; i < allThemes.length; i++) {
           var other = allThemes[i];
           if (!other || other.id === candidate.id) continue;
+          if (!KioskAdSlots.samePosition(candidate,other)) continue;
           if (!isListShelfPublishedForOverlap(other)) continue;
           var otherRange = parseStoredThemeEffectRange(other);
           if (!otherRange) continue;
@@ -1074,7 +1078,7 @@
         });
 
         var out = [];
-        out.push('在相同门店、相同渠道下，当前广告与其他已上架广告存在生效时间重叠，无法上架。');
+        out.push('在相同门店、相同渠道和展示位置下，当前广告与其他已上架广告存在生效时间重叠，无法上架。');
         out.push('');
         if (globalThemes.length) {
           out.push('冲突的已上架广告：');
@@ -1218,6 +1222,8 @@
           var editRow = '<a href="' + editHref + '" class="ui-menu-item">' + MENU_ICN.edit + '<span>\u7f16\u8f91</span></a>';
           var split = '<div class="ui-menu-sep" role="separator" aria-hidden="true"></div>';
           var dropdownParts = [];
+          var copyHref=(window.appendMenusifuEmbeddedParam||function(u){return u;})('screensaver-create.html?copyFrom='+encodeURIComponent(t.id));
+          dropdownParts.push('<a class="ui-menu-item" href="'+copyHref+'">'+MENU_ICN.edit+'<span>复制广告</span></a>');
           if (!isPublished) {
             dropdownParts.push(menuBtn('publish-btn', MENU_ICN.cloudUp, '\u4e0a\u67b6', 'data-theme-id="' + escapeHtml(t.id) + '"'));
             dropdownParts.push(editRow);
@@ -1311,6 +1317,7 @@
             var themes = getThemes();
             var th = themes.find(function(x) { return x.id === id; });
             if (!th) return;
+            if(th.adSlot){try{KioskAdSlotValidation.validateTheme(th);}catch(error){Toast.validate(error.message);return;}}
             var block = findShelfTimeConflictsForPublish(th, themes);
             if (block.kind === 'no_range') {
               openPublishBlockModal(block.message);
@@ -1492,6 +1499,8 @@
         return imgs.map(function(img, i) {
           return {
             src: previewMediaSrc(img),
+            adSpecId: img.adSpecId,
+            fit: img.fit,
             kind: isPreviewVideoMedia(img) ? 'video' : 'image',
             orientation: orientationLabel,
             groupIndex: i + 1,
@@ -1551,16 +1560,19 @@
         }
         updatePreview._idx = currentIndex;
         var slide = currentPreviewSlides[currentIndex];
+        if(previewImage)previewImage.style.objectFit=slide.fit||'contain';
+        if(previewVideo)previewVideo.style.objectFit=slide.fit||'contain';
+        var slotSpec=previewThemeRef&&previewThemeRef.adSlot&&previewThemeRef.adSlot.specs.find(function(s){return s.id===slide.adSpecId;});
         var total = currentPreviewSlides.length;
         var unit = slide.kind === 'video' ? '段' : '张';
-        var sub = slide.groupCount > 0
+        var sub = slotSpec ? slotSpec.name+' · '+slotSpec.width+'×'+slotSpec.height+' · '+(currentIndex+1)+'/'+total : slide.groupCount > 0
           ? slide.orientation + ' 第 ' + slide.groupIndex + '/' + slide.groupCount + ' ' + unit
           : slide.orientation;
         if (previewToolbarFractionEl) {
           previewToolbarFractionEl.textContent = (currentIndex + 1) + ' / ' + total;
         }
         if (previewSlideDetailEl) {
-          var showDetail = total > 1 || (slide.groupCount && slide.groupCount > 1);
+          var showDetail = !!slotSpec || total > 1 || (slide.groupCount && slide.groupCount > 1);
           previewSlideDetailEl.textContent = showDetail ? sub : '';
           previewSlideDetailEl.classList.toggle('hidden', !showDetail);
         }
@@ -1605,9 +1617,18 @@
         }
         updatePreviewOrientationTabs();
         syncPreviewFixedHeightLayout();
+        requestAnimationFrame(applySlotPreviewFrame);
       }
 
       /** 任意横/竖素材：预览区外层高度固定为「最大可用高度」min(88vh,800px)，避免切换图片时整体跳动 */
+      function applySlotPreviewFrame() {
+        var slide=currentPreviewSlides[currentIndex],spec=slide&&previewThemeRef&&previewThemeRef.adSlot&&previewThemeRef.adSlot.specs.find(function(s){return s.id===slide.adSpecId;});
+        if(!previewZoomTargetEl||!previewAspectBoxEl)return;
+        if(!spec){previewZoomTargetEl.style.width='100%';previewZoomTargetEl.style.height='100%';return;}
+        var scale=Math.min(previewAspectBoxEl.clientWidth/spec.width,previewAspectBoxEl.clientHeight/spec.height);
+        if(scale>0){previewZoomTargetEl.style.width=(spec.width*scale)+'px';previewZoomTargetEl.style.height=(spec.height*scale)+'px';}
+      }
+      window.addEventListener('resize',function(){if(currentPreviewSlides.length)applySlotPreviewFrame();});
       function syncPreviewFixedHeightLayout() {
         var drawer = document.getElementById('previewDrawer');
         if (!drawer) return;
