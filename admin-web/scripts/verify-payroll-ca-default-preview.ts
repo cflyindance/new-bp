@@ -8,9 +8,9 @@ assert.ok(employee.californiaOvertimeInput,'Default demo must explicitly configu
 const result=resolveCaliforniaPayroll(employee,period);
 assert.equal(result?.status,'ready','Default preview must be computable');
 if(result?.status!=='ready')throw Error('Expected ready');
-for(const kind of ['daily','daily-double','weekly','seventh-day'])assert.ok(result.slices.some(s=>s.kind===kind&&s.minutes>0),kind);
+for(const kind of ['daily','daily-double','weekly','continuous'])assert.ok(result.slices.some(s=>s.kind===kind&&s.minutes>0),kind);
 assert.equal(result.totalHours,112);
-assert.equal(result.totalAmount,2600);
+assert.equal(result.totalAmount,5880);
 assert.equal(data.employees[period.id][1].californiaOvertimeInput,undefined,'Other employees must not be silently enabled');
 assert.equal(resolveCaliforniaPayroll({...employee,confirmed:false,californiaOvertimeInput:undefined},period),null);
 assert.match(californiaPayrollStatusMessage({},null),/未启用.*更多 → 编辑/);

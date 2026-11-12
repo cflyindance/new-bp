@@ -737,3 +737,14 @@
 .payroll-ca-day-details span{display:block;line-height:1.6}
 .payroll-ca-formula{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .payroll-ca-interval,.payroll-ca-evidence{color:var(--muted,#666)}
+.payroll-ca-summary dt{display:flex;align-items:center;gap:4px}
+:host .payroll-ca-continuous-help{display:inline-flex;align-items:center;justify-content:center;width:24px;height:20px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--muted,#666);cursor:help;vertical-align:middle}
+:host .payroll-ca-continuous-help:hover,:host .payroll-ca-continuous-help:focus-visible{color:var(--primary,#1677ff);outline:2px solid var(--primary,#1677ff);outline-offset:1px}
+.payroll-ca-continuous-tooltip{position:fixed;z-index:1600;width:320px;max-width:calc(100vw - 16px);box-sizing:border-box;padding:16px;background:var(--surface,#fff);color:var(--text,#1f1f1f);border:1px solid var(--border,#ededed);border-radius:8px;box-shadow:0 4px 16px #0002;font-size:12px;line-height:1.6}
+.payroll-ca-continuous-tooltip[hidden]{display:none!important}
+.payroll-ca-continuous-tooltip table{width:100%;border-collapse:collapse;margin-top:8px;font-variant-numeric:tabular-nums}
+.payroll-ca-continuous-tooltip th,.payroll-ca-continuous-tooltip td{padding:8px 4px;text-align:right;white-space:nowrap}
+.payroll-ca-continuous-tooltip th:first-child{text-align:left}
+.payroll-ca-continuous-tooltip thead,.payroll-ca-continuous-tooltip tfoot{border-bottom:1px solid var(--border,#ededed)}
+.payroll-ca-continuous-tooltip tfoot{border-top:1px solid var(--border,#ededed);border-bottom:0;font-weight:600}
+@media print{.payroll-ca-continuous-help,.payroll-ca-continuous-tooltip{display:none!important}}

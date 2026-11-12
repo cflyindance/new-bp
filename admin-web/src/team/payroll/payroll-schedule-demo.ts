@@ -73,6 +73,10 @@ function withCaliforniaDemo(period: PayrollPeriod, employee: PayrollEmployee): P
     ...employee, segments,
     californiaOvertimeInput: { jurisdiction: 'US-CA', eligibility: 'standard-nonexempt', workWeekStartDay: 0, workdayBoundaryVerified: true, periodStart: start, periodEnd: end, days },
   };
+  result.californiaOvertimeInput!.continuous={
+    rule:{id:'demo-continuous-5-50-60',scope:'continuous',dayNumber:5,hoursBeforeOvertime:50,secondaryHoursBeforeOvertime:60,wageMultiplier:3,secondaryWageMultiplier:4},
+    history:[{date:addScheduleDays(first,-1),workedMinutes:0,regularRate:rate},...days],
+  };
   const calculation = applyCaliforniaPayroll(result, period);
   if (calculation?.status !== 'ready') throw new Error('Incomplete California demo workweek');
   return result;

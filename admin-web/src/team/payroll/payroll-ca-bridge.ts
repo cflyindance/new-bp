@@ -1,8 +1,12 @@
 import { calculateCaliforniaOvertime } from './payroll-ca-overtime';
+import { createContinuousTooltip } from './payroll-ca-continuous-tooltip';
+import {mergeContinuousOvertime} from './payroll-continuous-merge';
+import {validateContinuousRule} from './payroll-overtime-migration';
+import {calculateContinuousOvertime} from './payroll-continuous-overtime';
 import type { CaOvertimeInput, CaOvertimeResult, CaPaySlice, CaHourKind } from './payroll-ca-overtime';
 
 type Employee = { confirmed?: boolean; californiaOvertimeInput?: CaOvertimeInput; californiaOvertimeSnapshot?: CaOvertimeResult; segments?: Record<string, any>[]; [key:string]:any };
-const labels:Record<CaHourKind,string>={regular:'Regular',daily:'OT','daily-double':'OT2',weekly:'每周加班','seventh-day':'第7天加班'};
+const labels:Record<CaHourKind,string>={regular:'Regular',daily:'OT','daily-double':'OT2',weekly:'每周加班','seventh-day':'法定第7天加班',continuous:'连勤加班'};
 const money=(n:number)=>n.toFixed(2);
 const escape=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 function iso(s:unknown):string {const v=String(s??'');const m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);return m?`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`:v;}
@@ -22,6 +26,10 @@ function workMinutes(day:Record<string,any>):number|null {
   return total-unpaid;
 }
 const blocked=(reason:string):CaOvertimeResult=>({status:'blocked',reason,slices:[],totalHours:null,totalAmount:null});
+export function assertSupportedLegacyExport(result:CaOvertimeResult|null):void {
+  if(result?.status==='blocked')throw new Error(result.reason);
+  if(result?.status==='ready'&&result.slices.some(s=>![1,1.5,2].includes(s.multiplier)))throw new Error('当前报表格式尚不支持连勤自定义倍率，已阻止导出，避免工时或金额缺失。');
+}
 export function resolveCaliforniaPayroll(employee:Employee,period?:Record<string,any>):CaOvertimeResult|null {
   if(employee.confirmed)return employee.californiaOvertimeSnapshot??null;
   if(!employee.californiaOvertimeInput)return null;
@@ -44,7 +52,7 @@ export function resolveCaliforniaPayroll(employee:Employee,period?:Record<string
     const current=workMinutes(day);if(current===null)return blocked('考勤时间不完整或跨工作日未拆分，请先核对。');
     context.workedMinutes=current;
   }
-  return calculateCaliforniaOvertime(input);
+  return mergeContinuousOvertime(calculateCaliforniaOvertime(input),input);
 }
 export function applyCaliforniaPayroll(employee:Employee,period?:Record<string,any>):CaOvertimeResult|null {
   const result=resolveCaliforniaPayroll(employee,period);
@@ -52,14 +60,17 @@ export function applyCaliforniaPayroll(employee:Employee,period?:Record<string,a
   for(const day of employee.segments||[]){
     const rows=result.slices.filter(s=>s.date===iso(day.date));
     day.reg=rows.filter(s=>s.multiplier===1).reduce((n,s)=>n+s.minutes,0)/60;
-    day.ot=rows.filter(s=>s.multiplier===1.5).reduce((n,s)=>n+s.minutes,0)/60;
-    day.ot2=rows.filter(s=>s.multiplier===2).reduce((n,s)=>n+s.minutes,0)/60;
+    day.ot=rows.filter(s=>s.multiplier>1&&s.multiplier<2).reduce((n,s)=>n+s.minutes,0)/60;
+    day.ot2=rows.filter(s=>s.multiplier>=2).reduce((n,s)=>n+s.minutes,0)/60;
     const rate=rows[0]?.regularRate;
     if(rate){day.otRate=rate*1.5;day.ot2Rate=rate*2;}
   }
   return result;
 }
-export function buildCaliforniaPayrollInput(employee:Employee,period:Record<string,any>,history:Employee[],regularRate:number,reviewed:boolean):CaOvertimeInput {
+export function availableContinuousRules(){
+  try{const config=JSON.parse(localStorage.getItem('bplant-team-breaks-overtime-v1')||'{}');return (Array.isArray(config.overtimeRules)?config.overtimeRules:[]).filter((r:any)=>r.scope==='continuous'&&!validateContinuousRule(r));}catch{return [];}
+}
+export function buildCaliforniaPayrollInput(employee:Employee,period:Record<string,any>,history:Employee[],regularRate:number,reviewed:boolean,continuousRuleId?:string):CaOvertimeInput {
   if(employee.confirmed)throw new Error('已确认工资不允许自动切换核算规则。');
   if(!reviewed||!Number.isFinite(regularRate)||regularRate<=0)throw new Error('请核实标准非豁免资格、固定工作日边界及regular rate后确认。');
   const dates=new Map<string,{date:string;workedMinutes:number;regularRate:number}>();
@@ -72,14 +83,27 @@ export function buildCaliforniaPayrollInput(employee:Employee,period:Record<stri
   let weekStart=1;
   try{const settings=JSON.parse(localStorage.getItem('bplant-team-breaks-overtime-v1')||'{}');if(Number.isInteger(settings.workWeekStartDay))weekStart=settings.workWeekStartDay}catch{/* engine validates the boundary */}
   const range=String(period.rangeLabel||'').split(/\s+[–-]\s+/);
-  return {jurisdiction:'US-CA',eligibility:'standard-nonexempt',workWeekStartDay:weekStart,workdayBoundaryVerified:true,periodStart:iso(period.startDate||range[0]),periodEnd:iso(period.endDate||range[1]),days:[...dates.values()]};
+  const input:CaOvertimeInput={jurisdiction:'US-CA',eligibility:'standard-nonexempt',workWeekStartDay:weekStart,workdayBoundaryVerified:true,periodStart:iso(period.startDate||range[0]),periodEnd:iso(period.endDate||range[1]),days:[...dates.values()]};
+  const previous=employee.californiaOvertimeInput?.continuous;
+  const id=continuousRuleId===undefined?previous?.rule.id:continuousRuleId;
+  if(id){
+    const rule=previous?.rule.id===id?previous.rule:availableContinuousRules().find((r:any)=>r.id===id);
+    if(!rule)throw new Error('所选连勤规则不存在或配置不完整，请先在休息与加班中配置。');
+    const sorted=[...dates.values()].sort((a,b)=>a.date.localeCompare(b.date));
+    const boundary=sorted.map(d=>d.date<=input.periodStart&&d.workedMinutes===0).lastIndexOf(true);
+    if(boundary<0)throw new Error('缺少连勤开始前的明确休息日记录，请先获取完整历史考勤。');
+    input.continuous={rule:structuredClone(rule),history:sorted.slice(boundary)};
+    const check=calculateContinuousOvertime({rule:input.continuous.rule,days:input.continuous.history,periodStart:input.periodStart,periodEnd:input.periodEnd});
+    if(check.status==='blocked')throw new Error(check.reason);
+  }
+  return input;
 }
 function sum(rows:CaPaySlice[],cash:boolean){return rows.reduce((n,s)=>n+(cash?s.amount:s.minutes/60),0);}
 export function renderCaliforniaSummary(result:Extract<CaOvertimeResult,{status:'ready'}>,cash:boolean):string {
-  const row=(name:string,value:number)=>`<div class="payroll-sum-row"><dt>${escape(name)}</dt><dd>${cash?'$':''}${money(value)}${cash?'':' h'}</dd></div>`;
-  return (['regular','daily','daily-double','weekly','seventh-day'] as CaHourKind[]).map(kind=>{
+  const row=(name:string,value:number,help=false)=>`<div class="payroll-sum-row"><dt>${escape(name)}${help?'<button type="button" class="payroll-ca-continuous-help" data-ca-continuous-help aria-label="查看连勤加班倍率拆分" aria-describedby="payroll-ca-continuous-tooltip"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6v1" stroke-width="1.5"/></svg></button>':''}</dt><dd>${cash?'$':''}${money(value)}${cash?'':' h'}</dd></div>`;
+  return (['regular','daily','daily-double','weekly','seventh-day','continuous'] as CaHourKind[]).filter(kind=>kind==='continuous'?!!result.continuousRule:kind!=='seventh-day'||result.slices.some(s=>s.kind===kind)).map(kind=>{
     const rows=result.slices.filter(s=>s.kind===kind);
-    return row(labels[kind],sum(rows,cash))+(kind==='seventh-day'?[1.5,2].map(m=>row(m===1.5?'前8小时 · 1.5倍':'超8小时 · 2倍',sum(rows.filter(s=>s.multiplier===m),cash))).join(''):'');
+    return row(labels[kind],sum(rows,cash),kind==='continuous');
   }).join('')+`<div class="payroll-sum-row"><dt>合计</dt><dd>${cash?'$':''}${money(cash?result.totalAmount:result.totalHours)}${cash?'':' h'}</dd></div>`;
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
@@ -94,8 +118,11 @@ export function californiaPayrollStatusMessage(employee:Employee,result:CaOverti
 export function createCaliforniaPayrollBridge(root:ShadowRoot){
   root.host.setAttribute('data-payroll-ca-version','20261111');
   let current:CaOvertimeResult|null=null;
+  const tooltip=createContinuousTooltip(root,()=>current);
   return {
     buildInput:buildCaliforniaPayrollInput,
+    continuousRules:availableContinuousRules,
+    assertLegacyExport(employee:Employee,period:Record<string,any>){assertSupportedLegacyExport(resolveCaliforniaPayroll(employee,period));},
     apply:applyCaliforniaPayroll,
     resolve:resolveCaliforniaPayroll,
     amounts(employee:Employee,date?:string){
@@ -103,12 +130,13 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
       if(result?.status!=='ready')return null;
       const rows=date?result.slices.filter(s=>s.date===iso(date)):result.slices;
       const regAmt=sum(rows.filter(s=>s.multiplier===1),true);
-      const otAmt=sum(rows.filter(s=>s.multiplier===1.5),true);
-      const ot2Amt=sum(rows.filter(s=>s.multiplier===2),true);
+      const otAmt=sum(rows.filter(s=>s.multiplier>1&&s.multiplier<2),true);
+      const ot2Amt=sum(rows.filter(s=>s.multiplier>=2),true);
       return {regAmt,paidBreakAmt:0,otAmt,ot2Amt,totalAmt:sum(rows,true)};
     },
     freeze(employee:Employee,period:Record<string,any>){const result=resolveCaliforniaPayroll(employee,period);if(result?.status==='ready')employee.californiaOvertimeSnapshot=structuredClone(result);},
     render(employee:Employee,period:Record<string,any>){
+      tooltip.close();
       current=resolveCaliforniaPayroll(employee,period);
       const cards=root.querySelectorAll<HTMLElement>('.payroll-sum-dl');
       let status=root.querySelector<HTMLElement>('[data-ca-overtime-status]');
@@ -148,6 +176,6 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
       });
       return current;
     },
-    destroy(){root.host.removeAttribute('data-payroll-ca-version');},
+    destroy(){tooltip.destroy();root.host.removeAttribute('data-payroll-ca-version');},
   };
 }

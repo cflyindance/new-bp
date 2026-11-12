@@ -1,5 +1,5 @@
 /** California standard nonexempt workdays; input is already split at the employer's workday boundary. */
-export type CaHourKind = 'regular' | 'daily' | 'daily-double' | 'weekly' | 'seventh-day';
+export type CaHourKind = 'regular' | 'daily' | 'daily-double' | 'weekly' | 'seventh-day' | 'continuous';
 export interface CaWorkday {
   date: string;
   workedMinutes: number;
@@ -7,6 +7,7 @@ export interface CaWorkday {
   regularRate: number;
 }
 export interface CaOvertimeInput {
+  continuous?: {rule:import('./payroll-overtime-migration').ContinuousRuleCandidate;history:CaWorkday[]};
   jurisdiction: 'US-CA';
   eligibility: 'standard-nonexempt' | 'exempt' | 'unknown' | 'alternative-workweek';
   workWeekStartDay: number;
@@ -17,20 +18,21 @@ export interface CaOvertimeInput {
   days: CaWorkday[];
 }
 export interface CaPaySlice {
+  continuousTier?:1|2;
   date: string;
   weekStart: string;
   kind: CaHourKind;
   fromMinute: number;
   toMinute: number;
   minutes: number;
-  multiplier: 1 | 1.5 | 2;
+  multiplier: number;
   regularRate: number;
   amount: number;
   evidence: string;
 }
 export type CaOvertimeResult =
   | { status: 'blocked'; reason: string; slices: []; totalHours: null; totalAmount: null }
-  | { status: 'ready'; slices: CaPaySlice[]; totalHours: number; totalAmount: number };
+  | { status: 'ready'; slices: CaPaySlice[]; totalHours: number; totalAmount: number; continuousRule?:import('./payroll-overtime-migration').ContinuousRuleCandidate };
 const DAY = 86400000;
 function dateNumber(text: string): number {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return NaN;
