@@ -141,6 +141,8 @@
       distributeTime: baseTheme && baseTheme.distributeTime,
       distributedStores: distributedStores,
       distributeChannels: Array.isArray(selectedChannels) ? selectedChannels : [],
+      adSlot: baseTheme && baseTheme.adSlot,
+      distributePositions: baseTheme && baseTheme.distributePositions,
       publishStatus: baseTheme && baseTheme.publishStatus
     };
   }
@@ -162,6 +164,7 @@
     for (var i = 0; i < themes.length; i++) {
       var other = themes[i];
       if (!other || other.id === candidate.id) continue;
+      if (global.KioskAdSlots && !global.KioskAdSlots.samePosition(candidate,other)) continue;
       if (other.publishStatus !== 'published') continue;
       var eff = computeEffectStatus(other.effectTime);
       if (!eff || eff.text !== '已生效') continue;
@@ -190,7 +193,7 @@
 
   /** 保存前重叠确认弹窗：首段说明 + 冲突的已生效广告名称与生效时间（按广告去重） */
   function formatOverlapSaveConfirmText(conflicts) {
-    var head = '在相同门店、相同渠道下,当前广告与已生效广告存在生效时间重叠。';
+    var head = '在相同门店、相同渠道和展示位置下,当前广告与已生效广告存在生效时间重叠。';
     if (!conflicts || !conflicts.length) return head;
 
     function timeLine(r) {
@@ -232,6 +235,6 @@
     findActivePublishedOverlaps: findActivePublishedOverlaps,
     parseStoredThemeEffectRange: parseStoredThemeEffectRange,
     formatOverlapSaveConfirmText: formatOverlapSaveConfirmText,
-    CONFIRM_MESSAGE: '在相同门店、相同渠道下,当前广告与已生效广告存在生效时间重叠。'
+    CONFIRM_MESSAGE: '在相同门店、相同渠道和展示位置下,当前广告与已生效广告存在生效时间重叠。'
   };
 })(typeof window !== 'undefined' ? window : this);

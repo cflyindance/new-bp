@@ -10,11 +10,11 @@
     "ai:menu-design": "npm --prefix apps/menu-design run ai",
     "test:menu-design": "npm --prefix apps/menu-design test",
     "generate:emenu-local-seasoning-browser-handler": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs",
-    "predev": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs",
+    "predev": "node scripts/build-ad-slot-catalog.mjs && node scripts/generate-emenu-local-seasoning-browser-handler.mjs",
     "dev": "vite",
     "payroll-api": "node server/payroll-api-server.mjs",
     "dev:payroll": "node server/run-payroll-dev.mjs",
-    "build": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
+    "build": "node scripts/build-ad-slot-catalog.mjs && node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
     "build:emenu-new-embed": "node scripts/build-emenu-new-embed.mjs",
     "build:kiosklite-embed": "node scripts/build-kiosklite-embed.mjs",
     "sync:kiosklite-embed": "node scripts/sync-kiosklite-embed-from-host.mjs",
@@ -88,6 +88,7 @@
     "pit:restore": "node server/pit-restore.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.25.12",
     "@tailwindcss/vite": "^4.0.0",
     "@types/http-proxy": "^1.17.17",
     "http-proxy": "^1.18.1",

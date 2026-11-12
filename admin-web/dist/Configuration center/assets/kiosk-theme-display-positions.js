@@ -3,10 +3,11 @@
   'use strict';
   var key = 'selected_display_positions_for_distribute';
   var options = [{ value: 'screensaver', label: '屏保' }, { value: 'home', label: '首页' }];
+  function registered(code) {try{return !!root.KioskAdSlots && root.KioskAdSlots.readCatalog(root.localStorage).some(function(s){return s.code===code;});}catch(e){return false;}}
   function normalize(value) {
-    return options.map(function(option) { return option.value; }).filter(function(valueKey) {
-      return Array.isArray(value) && value.indexOf(valueKey) >= 0;
-    });
+    if (!Array.isArray(value)) return [];
+    var values = value.filter(function(v){return typeof v === 'string' && /^[a-z][a-z0-9._-]{0,63}$/.test(v) && (options.some(function(o){return o.value===v;}) || registered(v));});
+    return options.map(function(o){return o.value;}).filter(function(v){return values.indexOf(v)>=0;}).concat(values.filter(function(v,i){return options.every(function(o){return o.value!==v;})&&values.indexOf(v)===i;}).sort());
   }
   function themeId() {
     try { return root.localStorage.getItem('current_theme_id_for_distribute') || ''; } catch (e) { return ''; }
@@ -20,8 +21,7 @@
     try { themes = JSON.parse(root.localStorage.getItem('kiosk_themes') || '[]'); } catch (e) {}
     var theme = Array.isArray(themes) && themes.filter(function(item) { return item.id === id; })[0];
     if (!theme) return [];
-    var saved = theme.lastDistributePrefs && theme.lastDistributePrefs.positions;
-    return normalize(Array.isArray(saved) ? saved : theme.distributePositions);
+    return savedForTheme(theme);
   }
   function write(values) {
     root.localStorage.setItem(key, JSON.stringify({ themeId: themeId(), positions: normalize(values) }));
@@ -34,5 +34,10 @@
     var prefs = theme.lastDistributePrefs;
     return normalize(prefs && prefs.positions);
   }
-  root.KioskThemePositions = { options: options, normalize: normalize, read: read, write: write, clear: clear, savedForTheme: savedForTheme };
+  function mediaSpec(position, role) {
+    var home = position === 'home';
+    if (role === 'portrait') return home ? {width:1080,height:1250,ratio:'108∶125',box:'w-[7.5rem] aspect-[108/125]'} : {width:1080,height:1920,ratio:'9∶16',box:'w-[5.625rem] aspect-[9/16]'};
+    return home ? {width:1440,height:1080,ratio:'4∶3',box:'w-[10rem] aspect-[4/3]'} : {width:1920,height:1080,ratio:'16∶9',box:'w-[10rem] aspect-video'};
+  }
+  root.KioskThemePositions = { mediaSpec: mediaSpec, options: options, normalize: normalize, read: read, write: write, clear: clear, savedForTheme: savedForTheme };
 })(window);

@@ -9,6 +9,9 @@
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script src="assets/kiosk-theme-display-positions.js"></script>
+  <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-theme-position-editor.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -54,9 +57,8 @@
         <div class="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-5">
           <div>
             <label for="editIdleTimeoutInput" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">屏保触发等待时间</label>
-            <p id="editIdleTimeoutInputHint" class="mb-2 text-xs text-[rgba(0,0,0,0.45)]">仅用于屏保位置</p>
             <div class="flex items-center gap-2">
-              <input id="editIdleTimeoutInput" aria-describedby="editIdleTimeoutInputHint" type="number" min="1" step="1" value="60" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              <input id="editIdleTimeoutInput" type="number" min="1" step="1" value="60" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
               <span class="shrink-0 text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">秒</span>
             </div>
           </div>
@@ -96,7 +98,7 @@
         <div class="border-t border-[#f0f0f0] pt-8">
           <div class="mb-3 flex flex-wrap items-baseline gap-2">
             <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">竖版</span>
-            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 9∶16</span>
+            <span data-position-ratio="portrait" class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 9∶16</span>
           </div>
           <div class="create-type-toggle mb-4" role="radiogroup" aria-label="竖版素材类型">
             <label><input type="radio" name="portraitType" value="image" checked /><span>图片</span></label>
@@ -111,7 +113,7 @@
         <div class="border-t border-[#f0f0f0] pt-8">
           <div class="mb-3 flex flex-wrap items-baseline gap-2">
             <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">横版</span>
-            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 16∶9</span>
+            <span data-position-ratio="landscape" class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 16∶9</span>
           </div>
           <div class="create-type-toggle mb-4" role="radiogroup" aria-label="横版素材类型">
             <label><input type="radio" name="landscapeType" value="image" checked /><span>图片</span></label>
@@ -303,6 +305,17 @@
         throw new Error('theme not found');
       }
 
+
+      var adPositionEditor = KioskThemePositionEditor.mount({
+        formId: 'editForm', nextId: 'editNextStepBtn', theme: theme,
+        onChange: function() {
+          ['portrait','landscape'].forEach(function(role) {
+            document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + adPositionEditor.mediaSpec(role).ratio;
+            updateHints(role); renderPreviews(role);
+          });
+        }
+      });
+
       var editBackBtn = document.getElementById('editBackBtn');
       var editBackConfirmModal = document.getElementById('editBackConfirmModal');
       var editBackConfirmOk = document.getElementById('editBackConfirmOk');
@@ -358,7 +371,7 @@
       function syncTypeRadiosFromLists() {
         ['portrait', 'landscape'].forEach(function(role) {
           var list = role === 'portrait' ? portraitList : landscapeList;
-          var isVideo = list.length > 0 && list[0].type === 'video';
+          var isVideo = list.length ? list[0].type === 'video' : adPositionEditor.defaultKind(role) === 'video';
           var name = role === 'portrait' ? 'portraitType' : 'landscapeType';
           document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
             r.checked = (r.value === 'video') === isVideo;
@@ -373,7 +386,7 @@
       }
 
       function getMaxCount(role) {
-        return getMediaType(role) === 'video' ? 1 : 5;
+        return adPositionEditor.maxCount(role, getMediaType(role));
       }
 
       function updateHints(role) {
@@ -381,14 +394,17 @@
         var container = document.getElementById(hintsId);
         var mediaType = getMediaType(role);
         var isPortrait = role === 'portrait';
-        var size = isPortrait ? '1080*1920px' : '1920*1080px';
-        var html = '<p class="leading-5">建议尺寸: ' + size + '</p>';
+        var spec = adPositionEditor.mediaSpec(role);
+        var size = spec.width + '×' + spec.height + 'px';
+        document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + spec.ratio;
+        var limits = adPositionEditor.spec(role);
+        var html = '<p class="leading-5">规格: ' + KioskThemePositionEditor.escape(limits.name) + ' · ' + KioskThemePositionEditor.escape(limits.applicability) + '</p><p class="leading-5">' + (limits.sizeMode === 'strict' ? '要求尺寸: ' : '建议尺寸: ') + size + '</p>';
         if (mediaType === 'video') {
-          html += '<p class="leading-5">视频格式: MP4、AVI 等主流格式</p>';
-          html += '<p class="leading-5">视频大小不超过 20MB，最多 1 个</p>';
+          html += '<p class="leading-5">视频格式: ' + limits.videoFormats.map(function(v){return v.split('/')[1].toUpperCase();}).join('、') + '</p>';
+          html += '<p class="leading-5">最多' + limits.maxVideos + '个，单个不超过' + limits.videoMaxMB + 'MB／' + limits.videoMaxSeconds + '秒</p>';
         } else {
-          html += '<p class="leading-5">图片格式: JPEG、PNG、JPG、GIF</p>';
-          html += '<p class="leading-5">图片大小建议 1M 以内，最多 5 张</p>';
+          html += '<p class="leading-5">图片格式: ' + limits.imageFormats.map(function(v){return v.split('/')[1].toUpperCase();}).join('、') + '</p>';
+          html += '<p class="leading-5">最多' + limits.maxImages + '张，单张不超过' + limits.imageMaxMB + 'MB</p>';
         }
         container.innerHTML = html;
       }
@@ -408,8 +424,8 @@
         var container = document.getElementById(containerId);
         var input = document.getElementById(inputId);
         var isPortrait = role === 'portrait';
-        /* 设备比例：竖版 1080×1920 = 9:16，横版 1920×1080 = 16:9 */
-        var boxClass = isPortrait ? 'w-[5.625rem] aspect-[9/16]' : 'w-[10rem] aspect-video';
+        /* Preview frame follows the selected placement media specification. */
+        var boxClass = adPositionEditor.mediaSpec(role).box;
         var canDrag = list.length > 1;
         var maxCount = getMaxCount(role);
         var html = '';
@@ -511,7 +527,7 @@
 
       var MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 
-      function addFiles(role, files) {
+      async function addFiles(role, files) {
         if (!files || !files.length) return;
         var list = role === 'portrait' ? portraitList : landscapeList;
         var maxCount = getMaxCount(role);
@@ -519,7 +535,7 @@
         var remain = maxCount - countBefore;
         var mediaType = getMediaType(role);
         if (remain <= 0) {
-          if (mediaType === 'image') Toast.validate('最多上传5张图片');
+          if (mediaType === 'image') Toast.validate('最多上传' + maxCount + '张图片');
           return;
         }
         var oversizeVideo = false;
@@ -528,13 +544,15 @@
           for (var j = 0; j < files.length; j++) {
             if (files[j].type && files[j].type.startsWith('image/')) imagePickCount++;
           }
-          if (imagePickCount > remain) Toast.validate('最多上传5张图片');
+          if (imagePickCount > remain) Toast.validate('最多上传' + maxCount + '张图片');
         }
         for (var i = 0; i < files.length && list.length < maxCount; i++) {
           var file = files[i];
+          try { await adPositionEditor.validateItem(role, {file:file,url:URL.createObjectURL(file),type:file.type.startsWith('video/')?'video':'image'}); }
+          catch(validationError){Toast.validate(validationError.message);continue;}
           if (mediaType === 'video') {
             if (!file.type || !file.type.startsWith('video/')) continue;
-            if (file.size > MAX_VIDEO_BYTES) {
+            if (file.size > adPositionEditor.spec(role).videoMaxMB * 1024 * 1024) {
               oversizeVideo = true;
               continue;
             }
@@ -641,7 +659,7 @@
       }
 
       var originalAddFiles = addFiles;
-      addFiles = function(role, files) {
+      addFiles = async function(role, files) {
         var list = role === 'portrait' ? portraitList : landscapeList;
         var maxCount = getMaxCount(role);
         var remain = maxCount - list.length;
@@ -651,6 +669,8 @@
 
         for (var i = 0; i < files.length && list.length < maxCount; i++) {
           var file = files[i];
+          try { await adPositionEditor.validateItem(role, {file:file,url:URL.createObjectURL(file),type:file.type.startsWith('video/')?'video':'image'}); }
+          catch(validationError){Toast.validate(validationError.message);continue;}
           if (mediaType === 'video') {
             if (!file.type || !file.type.startsWith('video/')) continue;
           } else {
@@ -663,7 +683,7 @@
             (function(f) {
               var maxW = role === 'portrait' ? 540 : 960;
               var maxH = role === 'portrait' ? 960 : 540;
-              compressImage(f, maxW, maxH, 0.7).then(function(dataUrl) {
+              fileToDataUrl(f).then(function(dataUrl) {
                 saveMaterialToLibrary(dataUrl);
               });
             })(file);
@@ -801,12 +821,13 @@
         selectedMaterialCountEl.textContent = selectedMaterials.length;
       }
 
-      document.getElementById('materialConfirmBtn').addEventListener('click', function() {
+      document.getElementById('materialConfirmBtn').addEventListener('click', async function() {
         if (selectedMaterials.length === 0) {
           Toast.warning('请选择至少一个素材');
           return;
         }
         var list = currentUploadRole === 'portrait' ? portraitList : landscapeList;
+        try { for (var mat of selectedMaterials) await adPositionEditor.validateItem(currentUploadRole,{url:mat.dataUrl,type:'image'}); } catch(error){Toast.validate(error.message);return;}
         selectedMaterials.forEach(function(mat) {
           list.push({ url: mat.dataUrl, dataUrl: mat.dataUrl, type: 'image' });
         });
@@ -826,18 +847,13 @@
         updateHints('landscape');
       }
 
-      Promise.all([
-        buildListFromStoredMedia(theme.portraitImages || []),
-        buildListFromStoredMedia(theme.landscapeImages || [])
-      ]).then(function(results) {
-        portraitList = results[0];
-        landscapeList = results[1];
-        finishEditPageBoot();
-      }).catch(function() {
-        portraitList = [];
-        landscapeList = [];
-        finishEditPageBoot();
+      adPositionEditor.attachMedia({
+        get: function(role){return role === 'portrait' ? portraitList : landscapeList;},
+        set: function(role,items){if(role === 'portrait') portraitList=items; else landscapeList=items;},
+        load: buildListFromStoredMedia,
+        refresh: function(role){syncTypeRadiosFromLists();updateAccept(role);updateHints(role);renderPreviews(role);}
       });
+      adPositionEditor.hydrate(theme).then(finishEditPageBoot).catch(function(error){Toast.error(error.message);finishEditPageBoot();});
 
       function revokeListItemUrls(list) {
         list.forEach(function(item) {
@@ -937,6 +953,7 @@
       }
 
       function saveEditedThemeAndRedirect(redirectUrl, opts) {
+        if (!adPositionEditor.value()) { Toast.validate('请选择一个展示位置'); return; }
         opts = opts || {};
         var saveAsDraft = !!opts.saveAsDraft;
         var name = document.getElementById('editThemeName').value.trim();
@@ -957,27 +974,24 @@
           Toast.validate('请输入图片轮播时间间隔');
           return;
         }
-        if (portraitList.length === 0 && landscapeList.length === 0) {
+        if (!adPositionEditor.hasMedia()) {
           Toast.validate('请至少上传一个竖版或横版的广告素材');
           return;
         }
 
         function runPersistEditedThemeAndRedirect() {
-          var portraitPromises = portraitList.map(function(item) {
-            return processMedia(item, true);
-          });
-          var landscapePromises = landscapeList.map(function(item) {
-            return processMedia(item, false);
-          });
-          Promise.all([].concat(portraitPromises, landscapePromises)).then(function(allMedia) {
-            var pLen = portraitList.length;
-            var portraitImages = allMedia.slice(0, pLen);
-            var landscapeImages = allMedia.slice(pLen, pLen + landscapeList.length);
+          adPositionEditor.serialize(processMedia).then(function(result) {
+            var portraitImages=result.portrait,landscapeImages=result.landscape;
             try {
               var list = getThemes();
               var idx = list.findIndex(function(t) { return t.id === id; });
               if (idx >= 0) {
+                list[idx].adSlot=result.slot;
+                list[idx].adSlotAssets=result.bySpec;
+                list[idx].distributeChannels=[result.slot.productLine];
                 list[idx].name = name;
+                list[idx].distributePositions = [adPositionEditor.value()];
+                if (list[idx].lastDistributePrefs) list[idx].lastDistributePrefs = Object.assign({}, list[idx].lastDistributePrefs, {positions:[adPositionEditor.value()],channels:[result.slot.productLine]});
                 list[idx].publishStatus = saveAsDraft ? 'draft' : 'published';
                 list[idx].idleTimeoutSec = idleTimeoutSec;
                 list[idx].transitionEffect = transitionEffect;
@@ -1001,7 +1015,7 @@
             }
           }).catch(function(err) {
             console.error('图片处理失败:', err);
-            Toast.error('素材处理失败，请重试');
+            Toast.error(err.message || '素材处理失败，请重试');
           });
         }
 
