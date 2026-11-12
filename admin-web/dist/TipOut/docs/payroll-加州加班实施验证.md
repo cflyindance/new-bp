@@ -1,6 +1,18 @@
 # Payroll 加州加班实施与验证记录
 
-变更编号 PAYROLL-20261112-CA-PREVIEW；三份配对文档V1.38：[产品](./payroll-需求分析.md)、[研发](./payroll-报表功能设计.md)、[个人规范版](./薪资管理需求文档（个人规范版）.md)。本文件仅为实现证据，不是第四份业务权威。
+变更编号 PAYROLL-20261112-INLINE-OVERTIME；三份配对文档V1.39：[产品](./payroll-需求分析.md)、[研发](./payroll-报表功能设计.md)、[个人规范版](./薪资管理需求文档（个人规范版）.md)。本文件仅为实现证据，不是第四份业务权威。
+
+## 加班明细单入口核验（2026-11-12）
+
+- 检出：C:/Users/27273/.codex/worktrees/payroll-inline-overtime/new-bp-payroll-ca/admin-web；codex/payroll-inline-overtime，基线main@11add6e0。远端获取成功，保留本地main尚未推送成果。
+- 5319为功能预览；5317主线未更改；本任务不自动提交、合并或推送。下列均为隔离演示数据，不是生产工资。
+- 汇总名称为文本，原生浏览器加班入口button=0、加班dialog=0。每日表有4个加班日期，仅这些日期提供原生details。
+- 第7天键盘Enter展开，显示8h×$20×1.5=$240与2h×$20×2=$80，合计10h/$320；同键可收起。通栏子行避免公式挤在金额窄列。
+- 将隔离演示Incentive改为20，核算blocked，14个日期金额显示—、行内明细0个、加州汇总0个；刷新恢复示例，不保存工资。
+- 切换“实际数据”，状态not-enabled，加州卡片/日期列/行内明细均为0，保留原工资；刷新恢复默认演示。历史快照无输入的读取由单元测试覆盖，未执行真实工资确认。
+- verify-payroll-ca-inline覆盖只读汇总、两档/累计区间/美分、纯Regular与0日无展开、文本转义、快照只读；CA bridge/default、持久化、原生运行链、身份保存、Regular、打印样式契约及tsc通过。
+- 生产编译独立输出D:/Dev/Temp/Codex/payroll-ca-inline-build；未覆盖dist，保留既有混合导入/大包警告。
+- 截图assets/payroll-ca-inline/summary.png和day-expanded.png用于三份V1.39有效正文。下方抽屉证据为先前实现记录，不再代表当前交互；CA-01/CA-02等未闭合项保留。
 
 ## 默认预览修复核验（2026-11-12）
 

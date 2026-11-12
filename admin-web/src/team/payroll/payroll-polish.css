@@ -720,21 +720,20 @@
 :host .payroll-schedule-table td,:host .payroll-schedule-table th { padding:12px; border-bottom:1px solid #e5eaf1; text-align:left; white-space:nowrap; }
 :host .payroll-schedule-dialog [role=alert] { color:#b42318; }
 :host .payroll-schedule-current { display:flex; flex-wrap:wrap; gap:24px; padding:20px; margin:16px 0 24px; border:1px solid #e5eaf1; border-radius:12px; }
-/* Payroll legal-overtime breakdown: same three-card structure; details stay off the main page. */
-.payroll-overtime-link{border:0;background:none;color:var(--primary,#1677ff);padding:0;text-align:left;font:inherit;cursor:pointer}
+/* Legal overtime: summary above, read-only daily calculation below. */
 .payroll-ca-summary{margin:0;padding:0}
 .payroll-ca-summary .payroll-sum-row{display:flex;justify-content:space-between;gap:12px;margin:8px 0}
 .payroll-ca-summary dd{margin:0;white-space:nowrap}
 .team-payroll-page .payroll-ca-summary .payroll-sum-row dd::before,.team-payroll-page .payroll-ca-summary .payroll-sum-row dd::after{content:none!important}
-.payroll-overtime-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:680px;max-width:calc(100vw - 24px);height:100dvh;max-height:100dvh;border:0;border-radius:12px 0 0 12px;padding:24px;overflow:auto;background:#fff;color:#1f1f1f}
-.payroll-overtime-dialog::backdrop{background:#0006}
-.payroll-overtime-dialog header{display:flex;align-items:center;gap:12px}
-.payroll-overtime-dialog header button{width:36px;height:36px;border:0;border-radius:8px;cursor:pointer}
-.payroll-overtime-dialog h2{font-size:18px;margin:0}
-.payroll-overtime-filters{display:flex;gap:12px;margin:20px 0}
-.payroll-overtime-filters label{flex:1}
-.payroll-overtime-filters select{display:block;width:100%;padding:8px;border:1px solid #ddd;border-radius:8px}
-.payroll-overtime-table{overflow:auto}
-.payroll-overtime-table table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}
-.payroll-overtime-table th,.payroll-overtime-table td{padding:12px 8px;border-bottom:1px solid #ededed;text-align:right}
-.payroll-overtime-table th:first-child,.payroll-overtime-table td:first-child{text-align:left}
+.payroll-ca-day-details{text-align:left;font-size:12px;white-space:normal;margin:0;padding:0 8px}
+.payroll-seg-table [data-ca-day-detail-row]>td{padding:4px 8px;background:var(--surface-subtle,#f7f8fa)}
+.payroll-ca-day-details summary{cursor:pointer;color:var(--primary,#1677ff);width:max-content;padding:4px 0}
+.payroll-ca-day-details summary:focus-visible{outline:2px solid var(--primary,#1677ff);outline-offset:2px;border-radius:4px}
+.payroll-ca-day-details ul{list-style:none;margin:8px 0 0;padding:0}
+.payroll-ca-day-details li{padding:12px 0;border-top:1px solid var(--border,#ededed);display:grid;grid-template-columns:110px minmax(160px,1fr) minmax(260px,1.5fr);gap:4px 16px;align-items:start}
+.payroll-ca-day-details .payroll-ca-evidence{grid-column:2 / -1}
+.payroll-ca-day-details p{margin:8px 0;font-weight:600}
+@media(max-width:800px){.payroll-ca-day-details li{display:block}.payroll-ca-day-details strong{display:block}}
+.payroll-ca-day-details span{display:block;line-height:1.6}
+.payroll-ca-formula{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.payroll-ca-interval,.payroll-ca-evidence{color:var(--muted,#666)}
