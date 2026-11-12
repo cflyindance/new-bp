@@ -1,4 +1,5 @@
 import type { PayrollData, PayrollEmployee, PayrollPeriod, PayrollSegment } from './payroll-types';
+import { applyCaliforniaPayroll } from './payroll-ca-bridge';
 
 export type PayrollDemoScenario = 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'custom' | 'switch' | 'transition';
 const date = (value: string) => new Date(`${value}T12:00:00Z`);
@@ -46,6 +47,37 @@ export function generateDemoPeriods(scenario: PayrollDemoScenario, year: number)
   return result;
 }
 
+function withCaliforniaDemo(period: PayrollPeriod, employee: PayrollEmployee): PayrollEmployee {
+  if (!period.demo || !period.id.startsWith('demo:') || employee.id !== 'demo-employee-0') throw new Error('California preview data is limited to the default demo employee');
+  const start = period.startDate!, end = period.endDate!;
+  const first = addScheduleDays(start, -date(start).getUTCDay());
+  const last = addScheduleDays(end, 6 - date(end).getUTCDay());
+  const rate = Number(employee.rate);
+  const days = [];
+  const segments: PayrollSegment[] = [];
+  for (let day = first; day <= last; day = addScheduleDays(day, 1)) {
+    const weekday = date(day).getUTCDay(), week = Math.floor(distance(first, day) / 7);
+    const hours = week % 2 === 0 ? (weekday === 0 ? 14 : weekday === 6 ? 10 : 8) : (weekday === 6 ? 0 : 8);
+    days.push({ date: day, workedMinutes: hours * 60, regularRate: rate });
+    if (day < start || day > end) continue;
+    const rest = hours > 12 ? 60 : hours > 0 ? 30 : 0;
+    const clockEnd = 360 + hours * 60 + rest;
+    segments.push({
+      date: mdy(day), role: employee.role, rate, reg: 0, ot: 0, ot2: 0,
+      otRate: rate * 1.5, ot2Rate: rate * 2,
+      paidMealBreak: '', unpaidMealBreak: rest === 60 ? '1:00' : rest ? '0:30' : '',
+      slots: [{ in: hours ? '06:00' : '', out: hours ? String(Math.floor(clockEnd / 60)).padStart(2, '0') + ':' + String(clockEnd % 60).padStart(2, '0') : '' }],
+    });
+  }
+  const result: PayrollEmployee = {
+    ...employee, segments,
+    californiaOvertimeInput: { jurisdiction: 'US-CA', eligibility: 'standard-nonexempt', workWeekStartDay: 0, workdayBoundaryVerified: true, periodStart: start, periodEnd: end, days },
+  };
+  const calculation = applyCaliforniaPayroll(result, period);
+  if (calculation?.status !== 'ready') throw new Error('Incomplete California demo workweek');
+  return result;
+}
+
 function demoEmployee(period: PayrollPeriod, store: string, index: number): PayrollEmployee {
   const [name, role] = demoEmployees[index];
   const start = period.startDate!, end = period.endDate!, rate = index === 0 ? 20 : 18;
@@ -61,11 +93,12 @@ function demoEmployee(period: PayrollPeriod, store: string, index: number): Payr
       slots: [{ in: hours ? '09:00' : '', out: hours === 8.5 ? '18:00' : hours === 6 ? '15:30' : hours ? '13:00' : '' }],
     });
   }
-  return { id: `demo-employee-${index}`, name, role, store,
+  const employee: PayrollEmployee = { id: `demo-employee-${index}`, name, role, store,
     roleRecords: index === 8 ? [{ role: 'Server' }, { role: 'Host' }] : [{ role }],
     adpFile: `DEMO-${index + 1}`, ssn: '', hireDate: '01/01/2025', rate, otRate: rate * 1.5, ot2Rate: rate * 2,
     confirmed: false, segments, adjustments: { tips: index === 2 ? 15 : segments.filter(s => Number(s.reg) + Number(s.ot) > 0).length * 12 },
   };
+  return index === 0 ? withCaliforniaDemo(period, employee) : employee;
 }
 
 export function createPayrollScheduleDemo(scenario: PayrollDemoScenario, store: string): PayrollData {

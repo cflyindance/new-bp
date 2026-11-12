@@ -1,8 +1,28 @@
 # Payroll 加州加班实施与验证记录
 
-变更编号 PAYROLL-20261111-CA-OVERTIME；三份配对文档V1.37：[产品](./payroll-需求分析.md)、[研发](./payroll-报表功能设计.md)、[个人规范版](./薪资管理需求文档（个人规范版）.md)。本文件仅为实现证据，不是第四份业务权威。
+变更编号 PAYROLL-20261112-CA-PREVIEW；三份配对文档V1.38：[产品](./payroll-需求分析.md)、[研发](./payroll-报表功能设计.md)、[个人规范版](./薪资管理需求文档（个人规范版）.md)。本文件仅为实现证据，不是第四份业务权威。
 
-## 检出与环境
+## 默认预览修复核验（2026-11-12）
+
+- 根因：默认双周演示首员工未提供加州输入，而新汇总仅在核算ready时渲染；旧页面未说明未启用状态。
+- 功能检出：C:/Users/27273/.codex/worktrees/payroll-ca-default-preview/new-bp-payroll-ca/admin-web；codex/payroll-ca-default-preview，基线main@63249e9f。远端已获取，本地main包含尚未推送的已合并成果。
+- 功能预览5318；http://127.0.0.1:5318/#/team/payroll-report 。5317主线服务未修改；本修复未提交、未合并、未推送。
+- 仅首位demo员工配置完整工作周并调用既有计算器；其他员工与实际数据不自动启用，不写回真实工资。
+
+| 检查 | 结果与范围 |
+| --- | --- |
+| RED/GREEN | 新测试先复现默认员工缺少californiaOvertimeInput；修复后默认双周为Regular80h、OT4h、OT2 2h、每周16h、第7天10h，合计112h/$2600。 |
+| 纯函数与回归 | 新默认预览测试、全部演示周期、CA bridge、持久化、原生运行链、身份保存、打印样式契约、Regular汇总通过；整项目tsc通过。 |
+| 生产编译 | Vite成功，输出D:/Dev/Temp/Codex/payroll-ca-default-preview-build，未覆盖dist；保留既有混合导入及大包警告。 |
+| 默认页 | 外部浏览器独立会话首次进入双周直接展示四类加班及112h/$2600；assets/payroll-ca-preview/default.png。 |
+| 抽屉 | 点击第7天，显示2027-06-26两档：8h/$240、2h/$80；assets/payroll-ca-preview/drawer.png。 |
+| 筛选与退出 | 2倍筛选仅2h/$80；assets/payroll-ca-preview/filtered.png。Esc关闭且焦点返回规则入口，金额不变。 |
+| 未启用隔离 | 实际数据视角显示未启用提示并保留原工资；本地工资快照新增加州配置数为0；assets/payroll-ca-preview/not-enabled.png。已确认历史文案由单元测试覆盖，未新增历史重算。 |
+| 文档 | 三份V1.38互链及当前章节19处图片引用存在性通过；图片存在不代表所有操作已验收。 |
+
+以下为前一轮规则实施证据，端口和分支仅代表当时环境，不代表当前5317主线状态。CA-01、CA-02及未覆盖操作仍保留。
+
+## 规则实施检出与环境（2026-11-11）
 
 - 独立克隆：D:/Projects/new-bp-payroll-ca/admin-web；分支codex/payroll-ca-overtime，起点main@bf585d92000b06fe41ea72e9263824524d6fdf64。
 - 已获授权使用D盘独立克隆代替未完成注册的应用worktree；原F盘脏工作区未编辑、原服务未停止。C盘未完成worktree未作为交付目录。

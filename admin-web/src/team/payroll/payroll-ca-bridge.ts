@@ -82,6 +82,11 @@ export function renderCaliforniaSummary(result:Extract<CaOvertimeResult,{status:
     return row(labels[kind],sum(rows,cash),kind)+(kind==='seventh-day'?[1.5,2].map(m=>row(m===1.5?'前8小时 · 1.5倍':'超8小时 · 2倍',sum(rows.filter(s=>s.multiplier===m),cash))).join(''):'');
   }).join('')+`<div class="payroll-sum-row"><dt>合计</dt><dd>${cash?'$':''}${money(cash?result.totalAmount:result.totalHours)}${cash?'':' h'}</dd></div>`;
 }
+export function californiaPayrollStatusMessage(employee:Employee,result:CaOvertimeResult|null):string {
+  if(result?.status==='blocked')return result.reason;
+  if(result?.status==='ready')return '';
+  return employee.confirmed ? '当前为已确认的历史薪资结果，未启用加州加班核算。' : '未启用加州加班核算，可在“更多 → 编辑”中设置。';
+}
 export function createCaliforniaPayrollBridge(root:ShadowRoot){
   root.host.setAttribute('data-payroll-ca-version','20261111');
   const events=new AbortController();
@@ -127,7 +132,8 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
       const cards=root.querySelectorAll<HTMLElement>('.payroll-sum-dl');
       let status=root.querySelector<HTMLElement>('[data-ca-overtime-status]');
       if(!status){status=document.createElement('p');status.dataset.caOvertimeStatus='';status.setAttribute('role','status');root.querySelector('.payroll-period-summary')?.prepend(status)}
-      status.hidden=current?.status!=='blocked';status.textContent=current?.status==='blocked'?current.reason:'';
+      status.textContent=californiaPayrollStatusMessage(employee,current);status.hidden=!status.textContent;
+      status.dataset.caOvertimeState=current?.status||'not-enabled';
       cards.forEach((card,i)=>{
         let display=card.parentElement?.querySelector<HTMLElement>('[data-ca-summary]');
         card.hidden=current?.status==='ready';card.style.display=card.hidden?'none':'';
