@@ -103,7 +103,8 @@ export function renderCaliforniaSummary(result:Extract<CaOvertimeResult,{status:
   const row=(name:string,value:number,help=false)=>`<div class="payroll-sum-row"><dt>${escape(name)}${help?'<button type="button" class="payroll-ca-continuous-help" data-ca-continuous-help aria-label="查看连勤加班倍率拆分" aria-describedby="payroll-ca-continuous-tooltip"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6v1" stroke-width="1.5"/></svg></button>':''}</dt><dd>${cash?'$':''}${money(value)}${cash?'':' h'}</dd></div>`;
   return (['regular','daily','daily-double','weekly','seventh-day','continuous'] as CaHourKind[]).filter(kind=>kind==='continuous'?!!result.continuousRule:kind!=='seventh-day'||result.slices.some(s=>s.kind===kind)).map(kind=>{
     const rows=result.slices.filter(s=>s.kind===kind);
-    return row(labels[kind],sum(rows,cash),kind==='continuous');
+    const name=kind==='continuous'&&result.continuousRule?`连勤加班 · ${result.continuousRule.dayNumber}天`:labels[kind];
+    return row(name,sum(rows,cash),kind==='continuous');
   }).join('')+`<div class="payroll-sum-row"><dt>合计</dt><dd>${cash?'$':''}${money(cash?result.totalAmount:result.totalHours)}${cash?'':' h'}</dd></div>`;
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
