@@ -15,7 +15,7 @@
     section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div id="adSlotGrid" class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="展示位置"></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
-    var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" class="text-primary hover:underline">修改渠道与广告位</button>';form.prepend(summary);
+    var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span>';form.prepend(summary);
     function roleFor(spec){return spec.height>spec.width?'portrait':'landscape';}
     function specs(role){return selected?selected.specs.filter(function(s){return roleFor(s)===role;}):[];}
     function spec(role){var list=specs(role);return list.find(function(s){return s.id===active[role];})||list[0]||api.newSpec(role,role==='portrait'?1080:1920,role==='portrait'?1920:1080);}
@@ -38,7 +38,7 @@
       document.getElementById('adChannelGrid').innerHTML=api.CHANNELS.map(function(c){return radio('adChannel',c,c,c===channel);}).join('');
       var options=api.available(slots,channel);document.getElementById('adSlotGrid').innerHTML=!channel?'<p class="col-span-2 text-sm text-gray-500">请先选择渠道</p>':options.length?options.map(function(s){return radio('adSlot',s.id,s.name,selected&&s.id===selected.id);}).join(''):'<p class="col-span-2 text-sm text-gray-500">该渠道暂无可用广告位，请联系平台管理员配置并登记接入</p>';
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
-      summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+selected.name+'　规格V'+selected.version:'未选择渠道与广告位';
+      summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+selected.name:'未选择渠道与广告位';
       var progress=document.querySelector('.step-progress-inner');if(progress)progress.style.width=picking?'25%':'50%';
     }
     section.addEventListener('change',async function(event){
@@ -47,7 +47,6 @@
       refresh();
     });
     next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length&&!bank[spec(role).id])bank[spec(role).id]=cache.__legacy[role];});delete cache.__legacy;}picking=false;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();});
-    summary.querySelector('button').addEventListener('click',function(){flush();picking=true;refresh();});
     window.addEventListener('storage',function(event){if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
     refresh();
     async function loadItems(items){var list=await hooks.load(items);if(config.copy){for(var item of list){if(item.type==='video'&&item.mediaRef){var blob=await KioskThemeMediaIdb.get(item.mediaRef);if(!blob)throw Error('源视频已失效，无法复制');item.file=blob;delete item.mediaRef;}}}return list;}
