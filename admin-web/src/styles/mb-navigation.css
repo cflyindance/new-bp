@@ -72,3 +72,17 @@
 @media (prefers-reduced-motion: reduce) {
   [data-mb-navigation] nav :is(a, button) { transition: none; }
 }
+
+/* MERCHANT-NAV-CLARITY-20261112-01: full names and a flat More group. */
+[data-mb-navigation="b"] :is(nav a, nav button) .truncate,
+[data-mb-navigation="b"] [data-navigation-submenu-sheet] > div:first-child .truncate {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+[data-mb-navigation="b"] #sidebar-nav-more-list {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}

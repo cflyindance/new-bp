@@ -188,10 +188,6 @@ import {
   shouldShowTeamClockInSaveBar,
 } from "./config/team-clock-in-ui";
 import {
-  cloudProductBadgeForNavChild,
-  cloudProductBadgeForNavModule,
-} from "./config/cloud-product-route-notice-ui";
-import {
   bindTeamReportsCloudNoticeUi,
   renderTeamReportsCloudNoticeDialog,
   requestTeamReportsCloudNotice,
@@ -1624,7 +1620,6 @@ import {
   formatNavModuleKicker,
   getUiLocale,
   type MessageKey,
-  navPrimaryLabel,
   pick,
   t,
   tf,
@@ -2682,7 +2677,7 @@ function renderPcSheetDarkSubnav(
             aria-controls="${childrenId}"
           >
             <span class="min-w-0 flex-1 truncate">${pick(item.title, item.titleEn)}</span>
-            ${cloudProductBadgeForNavChild(item.id)}
+
             <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${expanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
           </button>
           <ul id="${childrenId}" class="${l3WrapClass} ${expanded ? "" : "hidden"}" role="list" aria-label="${l3Label}" ${expanded ? "" : 'aria-hidden="true"'}>
@@ -2710,7 +2705,7 @@ function renderPcSheetDarkSubnav(
 
     const selected = item.path === activeSub;
     const futureDiff = isFutureVersionDiffSettingsNavChild(item.id);
-    const cloudBadge = cloudProductBadgeForNavChild(item.id);
+
     return `
         <li class="mb-0.5"${futureDiff ? " data-future-version-diff" : ""}>
           <a href="#${item.path}"
@@ -2718,7 +2713,7 @@ function renderPcSheetDarkSubnav(
               selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW
             }"
             ${selected ? 'aria-current="page"' : ""}
-          ><span class="min-w-0 flex-1 truncate">${pick(item.title, item.titleEn)}</span>${cloudBadge}</a>
+          ><span class="min-w-0 flex-1 truncate">${pick(item.title, item.titleEn)}</span></a>
         </li>`;
   };
 
@@ -5083,7 +5078,6 @@ function renderSidebarMoreGroup(
   const childrenId = "sidebar-nav-more-list";
   const chevron = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
   const activeInMore = moreModules.some((m) => pathBelongsToModule(hash, m));
-  const countLabel = escapeHtml(tf("shell.navMoreCount", { count: String(moreModules.length) }));
   return `
     <div class="mt-1 border-t border-sidebar-foreground/10 pt-2 dark:border-white/10" data-sidebar-more-group>
       <button
@@ -5096,12 +5090,11 @@ function renderSidebarMoreGroup(
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${SIDEBAR_NAV_MORE_ICON}</span>
         <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.navMore"))}</span>
-        <span class="shrink-0 rounded bg-sidebar-active/15 px-1.5 py-px text-[10px] text-sidebar-muted">${countLabel}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${expanded ? "" : "-rotate-90"}">${chevron}</span>
       </button>
       <div
         id="${childrenId}"
-        class="mt-1 space-y-0 border-l border-sidebar-foreground/15 pl-2 ml-4 dark:border-white/15 ${expanded ? "" : "hidden"}"
+        class="mt-1 space-y-0 ${expanded ? "" : "hidden"}"
         ${expanded ? "" : 'aria-hidden="true"'}
       >
         ${renderSidebarNavModuleItems(moreModules, hash, customSortMode)}
@@ -5285,17 +5278,14 @@ function renderExpandableSidebarModule(m: NavModule, hash: string, expanded: boo
         aria-controls="${childrenId}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${expanded ? "" : "-rotate-90"}">${chevron}</span>
       </button>
       <ul id="${childrenId}" class="mt-1 space-y-0.5 border-l border-sidebar-foreground/15 dark:border-white/15 ml-4 pl-2 ${expanded ? "" : "hidden"}" role="list" ${expanded ? "" : 'aria-hidden="true"'}>
         ${m.children
           .map((c) => {
             const selected = c.path === activeChildPath;
-            const chainBadge = c.chainOnly
-              ? `<span class="ml-1 rounded bg-sidebar-active/25 px-1 py-px text-[10px] text-sidebar-active-fg">${escapeHtml(t("badge.chain"))}</span>`
-              : "";
-            const cloudBadge = cloudProductBadgeForNavChild(c.id);
+
             return `
         <li${isFutureVersionDiffSettingsNavChild(c.id) ? " data-future-version-diff" : ""}>
           <a href="#${c.path}"
@@ -5304,7 +5294,7 @@ function renderExpandableSidebarModule(m: NavModule, hash: string, expanded: boo
             }"
             ${selected ? 'aria-current="page"' : ""}
             tabindex="${expanded ? "0" : "-1"}"
-          ><span class="min-w-0 flex-1 truncate">${pick(c.title, c.titleEn)}${chainBadge}</span>${cloudBadge}</a>
+          ><span class="min-w-0 flex-1 truncate">${pick(c.title, c.titleEn)}</span></a>
         </li>`;
           })
           .join("")}
@@ -5328,7 +5318,7 @@ function renderModule(m: NavModule, hash: string): string {
         aria-label="${escapeHtml(t("capital.aria"))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-xs text-sidebar-muted/90" aria-hidden="true">↗</span>
       </a>
     </div>`;
@@ -5346,10 +5336,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="product-center-main-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5367,10 +5357,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="marketing-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5388,10 +5378,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="promotions-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5409,10 +5399,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="members-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5430,10 +5420,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="reports-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5451,10 +5441,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="print-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5472,10 +5462,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="reservations-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5493,10 +5483,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="gift-cards-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5514,10 +5504,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="inventory-secondary-sheet"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5536,10 +5526,10 @@ function renderModule(m: NavModule, hash: string): string {
         class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${inModule ? SBR_ACTIVE : SBR_MUTED_ROW}"
         aria-expanded="${sheetOpen}"
         aria-controls="${sheetDomId}"
-        title="${escapeHtml(tf("nav.openSecondary", { name: navPrimaryLabel(m) }))}"
+        title="${escapeHtml(tf("nav.openSecondary", { name: pick(m.title, m.titleEn) }))}"
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
         <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${sheetOpen ? "rotate-180" : ""}" aria-hidden="true">${chevron}</span>
       </button>
     </div>`;
@@ -5557,7 +5547,7 @@ function renderModule(m: NavModule, hash: string): string {
         ${pathBelongsToModule(hash, m) ? 'aria-current="page"' : ""}
       >
         <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${ICONS[m.icon]}</span>
-        <span class="min-w-0 flex-1 truncate">${navPrimaryLabel(m)}</span>${cloudProductBadgeForNavModule(m.id)}
+        <span class="min-w-0 flex-1 truncate">${pick(m.title, m.titleEn)}</span>
       </a>
     </div>`;
 }
