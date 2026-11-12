@@ -9,6 +9,8 @@
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script src="assets/kiosk-theme-display-positions.js"></script>
+  <script src="assets/kiosk-theme-position-editor.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -96,7 +98,7 @@
         <div class="border-t border-[#f0f0f0] pt-8">
           <div class="mb-3 flex flex-wrap items-baseline gap-2">
             <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">竖版</span>
-            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 9∶16</span>
+            <span data-position-ratio="portrait" class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 9∶16</span>
           </div>
           <div class="create-type-toggle mb-4" role="radiogroup" aria-label="竖版素材类型">
             <label><input type="radio" name="portraitType" value="image" checked /><span>图片</span></label>
@@ -111,7 +113,7 @@
         <div class="border-t border-[#f0f0f0] pt-8">
           <div class="mb-3 flex flex-wrap items-baseline gap-2">
             <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">横版</span>
-            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 16∶9</span>
+            <span data-position-ratio="landscape" class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 16∶9</span>
           </div>
           <div class="create-type-toggle mb-4" role="radiogroup" aria-label="横版素材类型">
             <label><input type="radio" name="landscapeType" value="image" checked /><span>图片</span></label>
@@ -303,6 +305,17 @@
         throw new Error('theme not found');
       }
 
+
+      var adPositionEditor = KioskThemePositionEditor.mount({
+        formId: 'editForm', nextId: 'editNextStepBtn', theme: theme,
+        onChange: function() {
+          ['portrait','landscape'].forEach(function(role) {
+            document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + KioskThemePositions.mediaSpec(adPositionEditor.value(), role).ratio;
+            updateHints(role); renderPreviews(role);
+          });
+        }
+      });
+
       var editBackBtn = document.getElementById('editBackBtn');
       var editBackConfirmModal = document.getElementById('editBackConfirmModal');
       var editBackConfirmOk = document.getElementById('editBackConfirmOk');
@@ -381,7 +394,9 @@
         var container = document.getElementById(hintsId);
         var mediaType = getMediaType(role);
         var isPortrait = role === 'portrait';
-        var size = isPortrait ? '1080*1920px' : '1920*1080px';
+        var spec = KioskThemePositions.mediaSpec(adPositionEditor.value(), role);
+        var size = spec.width + '×' + spec.height + 'px';
+        document.querySelector('[data-position-ratio="' + role + '"]').textContent = '建议比例 ' + spec.ratio;
         var html = '<p class="leading-5">建议尺寸: ' + size + '</p>';
         if (mediaType === 'video') {
           html += '<p class="leading-5">视频格式: MP4、AVI 等主流格式</p>';
@@ -408,8 +423,8 @@
         var container = document.getElementById(containerId);
         var input = document.getElementById(inputId);
         var isPortrait = role === 'portrait';
-        /* 设备比例：竖版 1080×1920 = 9:16，横版 1920×1080 = 16:9 */
-        var boxClass = isPortrait ? 'w-[5.625rem] aspect-[9/16]' : 'w-[10rem] aspect-video';
+        /* Preview frame follows the selected placement media specification. */
+        var boxClass = KioskThemePositions.mediaSpec(adPositionEditor.value(), role).box;
         var canDrag = list.length > 1;
         var maxCount = getMaxCount(role);
         var html = '';
@@ -937,6 +952,7 @@
       }
 
       function saveEditedThemeAndRedirect(redirectUrl, opts) {
+        if (!adPositionEditor.value()) { Toast.validate('请选择一个展示位置'); return; }
         opts = opts || {};
         var saveAsDraft = !!opts.saveAsDraft;
         var name = document.getElementById('editThemeName').value.trim();
@@ -978,6 +994,8 @@
               var idx = list.findIndex(function(t) { return t.id === id; });
               if (idx >= 0) {
                 list[idx].name = name;
+                list[idx].distributePositions = [adPositionEditor.value()];
+                if (list[idx].lastDistributePrefs) list[idx].lastDistributePrefs = Object.assign({}, list[idx].lastDistributePrefs, {positions:[adPositionEditor.value()]});
                 list[idx].publishStatus = saveAsDraft ? 'draft' : 'published';
                 list[idx].idleTimeoutSec = idleTimeoutSec;
                 list[idx].transitionEffect = transitionEffect;

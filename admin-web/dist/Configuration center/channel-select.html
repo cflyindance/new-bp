@@ -26,7 +26,7 @@
         <a href="effective-time.html" id="nextBtnActive" class="hidden inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-primary px-5 text-base font-medium text-white shadow-[0_2px_0_rgba(5,145,255,0.1)] hover:bg-[#4096ff]">下一步</a>
       </div>
       <div class="step-progress h-1 w-full bg-[#f0f0f0]">
-        <div class="step-progress-inner h-full" style="width: 67%"></div>
+        <div class="step-progress-inner h-full" style="width: 80%"></div>
       </div>
     </header>
     <main class="mx-auto w-full max-w-2xl flex-1 p-6">
@@ -42,18 +42,6 @@
         </div>
         <div id="channelGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
       </div>
-      <section class="mt-6 rounded-2xl border border-[#f0f0f0] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:p-8" aria-labelledby="displayPositionsTitle">
-        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#f0f0f0] pb-4">
-          <h2 id="displayPositionsTitle" class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">展示位置 <span class="text-red-500" aria-hidden="true">*</span></h2>
-          <label class="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-[rgba(0,0,0,0.88)]">
-            <input type="checkbox" id="checkAllPositions" aria-label="全选展示位置" class="rounded text-primary" />
-            <span>全选</span>
-          </label>
-        </div>
-        <p id="displayPositionsHint" class="mb-5 text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">请至少选择一个展示位置，支持多选</p>
-        <div id="positionGrid" class="grid grid-cols-2 gap-3" role="group" aria-labelledby="displayPositionsTitle" aria-describedby="displayPositionsHint"></div>
-        <p id="positionStorageError" class="mt-3 hidden text-sm text-red-500" role="alert">展示位置保存失败，请检查浏览器存储后重试。</p>
-      </section>
     </main>
   </div>
   <script>
@@ -97,44 +85,9 @@
       var nextBtn = document.getElementById('nextBtn');
       var nextBtnActive = document.getElementById('nextBtnActive');
       var checkAllChannels = document.getElementById('checkAllChannels');
-      var positionGrid = document.getElementById('positionGrid');
-      var checkAllPositions = document.getElementById('checkAllPositions');
-      var positions = window.KioskThemePositions;
       function updateNext() {
-        toggleNext(getSelectedChannels().length > 0 && positions.read().length > 0);
+        toggleNext(getSelectedChannels().length > 0);
       }
-      function savePositions(values) {
-        try {
-          positions.write(values);
-          document.getElementById('positionStorageError').classList.add('hidden');
-        } catch (e) {
-          document.getElementById('positionStorageError').classList.remove('hidden');
-        }
-        renderPositions();
-      }
-      function renderPositions() {
-        var selected = positions.read();
-        positionGrid.innerHTML = positions.options.map(function(option) {
-          var checked = selected.indexOf(option.value) >= 0;
-          var stateCls = checked
-            ? 'border-primary bg-[#e6f4ff] text-[rgba(0,0,0,0.88)] ring-1 ring-primary/20'
-            : 'border-[#d9d9d9] bg-white hover:border-primary hover:bg-[#fafafa]';
-          return '<label class="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors ' + stateCls + '">' +
-            '<input type="checkbox" class="position-checkbox rounded text-primary" value="' + option.value + '"' + (checked ? ' checked' : '') + ' />' +
-            '<span>' + option.label + '</span></label>';
-        }).join('');
-        positionGrid.querySelectorAll('.position-checkbox').forEach(function(cb) {
-          cb.addEventListener('change', function() {
-            savePositions(Array.prototype.map.call(positionGrid.querySelectorAll(':checked'), function(el) { return el.value; }));
-          });
-        });
-        checkAllPositions.checked = selected.length === positions.options.length;
-        checkAllPositions.indeterminate = selected.length > 0 && selected.length < positions.options.length;
-        updateNext();
-      }
-      checkAllPositions.addEventListener('change', function() {
-        savePositions(this.checked ? positions.options.map(function(option) { return option.value; }) : []);
-      });
 
       function escapeHtml(s) {
         var d = document.createElement('div');
@@ -211,7 +164,7 @@
       nextBtnActive.addEventListener('click', function(e) {
         e.preventDefault();
         var selected = getSelectedChannels();
-        if (!selected.length || !positions.read().length) return;
+        if (!selected.length) return;
         var fromPage = new URLSearchParams(location.search).get('from') || '';
         window.location.href = window.appendMenusifuEmbeddedParam(
           'effective-time.html' + (fromPage ? ('?from=' + encodeURIComponent(fromPage)) : ''),
@@ -219,7 +172,6 @@
       });
 
       renderChannels();
-      renderPositions();
     })();
   </script>
 </body>

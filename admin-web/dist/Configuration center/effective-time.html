@@ -473,8 +473,8 @@
 
       function executeSaveDraftFromEffectiveTime() {
           var selectedPositions = KioskThemePositions.read();
-          if (!selectedPositions.length) {
-            Toast.validate('请返回选择渠道页，至少选择一个展示位置。');
+          if (selectedPositions.length !== 1) {
+            Toast.validate('请返回广告编辑页，选择一个展示位置。');
             return;
           }
           var themeId = '';
@@ -573,8 +573,8 @@
 
       document.getElementById('submitBtn').addEventListener('click', function(e) {
         e.preventDefault();
-        if (!KioskThemePositions.read().length) {
-          Toast.validate('请返回选择渠道页，至少选择一个展示位置。');
+        if (KioskThemePositions.read().length !== 1) {
+          Toast.validate('请返回广告编辑页，选择一个展示位置。');
           return;
         }
         var pr = getProposedTimeRangeMs();

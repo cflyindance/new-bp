@@ -20,8 +20,7 @@
     try { themes = JSON.parse(root.localStorage.getItem('kiosk_themes') || '[]'); } catch (e) {}
     var theme = Array.isArray(themes) && themes.filter(function(item) { return item.id === id; })[0];
     if (!theme) return [];
-    var saved = theme.lastDistributePrefs && theme.lastDistributePrefs.positions;
-    return normalize(Array.isArray(saved) ? saved : theme.distributePositions);
+    return savedForTheme(theme);
   }
   function write(values) {
     root.localStorage.setItem(key, JSON.stringify({ themeId: themeId(), positions: normalize(values) }));
@@ -34,5 +33,10 @@
     var prefs = theme.lastDistributePrefs;
     return normalize(prefs && prefs.positions);
   }
-  root.KioskThemePositions = { options: options, normalize: normalize, read: read, write: write, clear: clear, savedForTheme: savedForTheme };
+  function mediaSpec(position, role) {
+    var home = position === 'home';
+    if (role === 'portrait') return home ? {width:1080,height:1250,ratio:'108∶125',box:'w-[7.5rem] aspect-[108/125]'} : {width:1080,height:1920,ratio:'9∶16',box:'w-[5.625rem] aspect-[9/16]'};
+    return home ? {width:1440,height:1080,ratio:'4∶3',box:'w-[10rem] aspect-[4/3]'} : {width:1920,height:1080,ratio:'16∶9',box:'w-[10rem] aspect-video'};
+  }
+  root.KioskThemePositions = { mediaSpec: mediaSpec, options: options, normalize: normalize, read: read, write: write, clear: clear, savedForTheme: savedForTheme };
 })(window);
