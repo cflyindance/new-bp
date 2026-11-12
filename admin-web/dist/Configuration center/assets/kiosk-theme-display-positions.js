@@ -3,10 +3,11 @@
   'use strict';
   var key = 'selected_display_positions_for_distribute';
   var options = [{ value: 'screensaver', label: '屏保' }, { value: 'home', label: '首页' }];
+  function registered(code) {try{return !!root.KioskAdSlots && root.KioskAdSlots.readCatalog(root.localStorage).some(function(s){return s.code===code;});}catch(e){return false;}}
   function normalize(value) {
-    return options.map(function(option) { return option.value; }).filter(function(valueKey) {
-      return Array.isArray(value) && value.indexOf(valueKey) >= 0;
-    });
+    if (!Array.isArray(value)) return [];
+    var values = value.filter(function(v){return typeof v === 'string' && /^[a-z][a-z0-9._-]{0,63}$/.test(v) && (options.some(function(o){return o.value===v;}) || registered(v));});
+    return options.map(function(o){return o.value;}).filter(function(v){return values.indexOf(v)>=0;}).concat(values.filter(function(v,i){return options.every(function(o){return o.value!==v;})&&values.indexOf(v)===i;}).sort());
   }
   function themeId() {
     try { return root.localStorage.getItem('current_theme_id_for_distribute') || ''; } catch (e) { return ''; }

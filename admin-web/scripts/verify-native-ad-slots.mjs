@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext,Script} from 'node:vm';
+const base=new URL('../dist/Configuration center/',import.meta.url),data=new Map(),messages=[];
+const context={localStorage:{getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)},Toast:{validate:m=>messages.push(m)},structuredClone,Date,console};context.window=context;
+for(const name of ['kiosk-ad-slot-catalog.js','kiosk-theme-display-positions.js','kiosk-ad-slot-validation.js','kiosk-theme-overlap.js'])runInNewContext(readFileSync(new URL('assets/'+name,base),'utf8'),context);
+const policy=context.KioskAdSlots,slot=policy.defaults().find(s=>s.code==='home');
+const ad={id:'native',adSlot:policy.snapshot(slot),adSlotAssets:{portrait:[{type:'image',metadata:{kind:'image',mime:'image/png',bytes:100,width:1080,height:1250}}]},distributeChannels:['Kiosk'],distributePositions:['home']};
+data.set('kiosk_themes',JSON.stringify([ad]));data.set('current_theme_id_for_distribute','native');data.set('selected_channels_for_distribute','["Kiosk"]');
+assert.equal(context.KioskAdSlotValidation.checkCurrent(),true);
+data.set('selected_channels_for_distribute','["eMenu"]');assert.equal(context.KioskAdSlotValidation.checkCurrent(),false);
+data.set('selected_channels_for_distribute','["Kiosk"]');data.set(policy.PLATFORM_KEY,JSON.stringify({schema:1,revision:1,regions:policy.defaults().map(s=>s.id===slot.id?{...s,enabled:false}:s)}));assert.equal(context.KioskAdSlotValidation.checkCurrent(),false);
+assert.equal(JSON.parse(data.get('kiosk_themes'))[0].adSlot.version,1,'failed final validation cannot mutate saved ads');
+for(const name of ['screensaver-create.html','screensaver-edit.html','effective-time.html','kiosk-theme-list.html','store-select.html'])for(const [,code] of readFileSync(new URL(name,base),'utf8').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new Script(code,{filename:name});
+for(const name of ['kiosk-theme-position-editor.js','kiosk-ad-slot-context.js'])new Script(readFileSync(new URL('assets/'+name,base),'utf8'),{filename:name});
+console.log('PASS native slot bundle: final validation, wrong channel, disabled slot, saved-data preservation and changed page/script syntax');

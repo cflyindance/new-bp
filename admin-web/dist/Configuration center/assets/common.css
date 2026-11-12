@@ -780,3 +780,6 @@ body.embedded-marketing-page .main-content {
   box-sizing: border-box;
   overflow-y: auto;
 }
+
+/* Shared native ad-slot confirmation uses the existing dialog panel controls. */
+dialog.ad-slot-confirm::backdrop { background: rgba(0, 0, 0, .45); }

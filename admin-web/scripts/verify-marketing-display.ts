@@ -1,3 +1,4 @@
+import {newSpec} from '../src/marketing-display/ad-slot-catalog';
 import assert from 'node:assert/strict';
 import { createPlatformState, createMerchantState, duplicateContent, deleteContent, setPlacementTargetEnabled, saveRegion, setRegionEnabled, saveContent, savePlacement, publishPlacement, revokePlacement, resolveTerminalContent, importLegacyThemes, wallTimeToEpoch, restrictDisplayStores, type DisplayContext } from '../src/marketing-display/domain.ts';
 import {readDisplayState,commitDisplayState} from '../src/marketing-display/persistence.ts';
@@ -7,7 +8,7 @@ const at=Date.parse('2026-11-09T02:00:00Z');
 const ctx:DisplayContext={scope:'brand-a',storeIds:['s1','s2'],canWrite:true};
 assert.deepEqual(restrictDisplayStores('brand-a',[{value:'s1'},{value:'foreign'},{value:'roster-store:x'}],[{storeId:'s1',merchantId:'brand-a'},{storeId:'foreign',merchantId:'brand-b'}]),[{value:'s1'}],'roster and foreign-brand stores are not display targets');
 let platform=createPlatformState();
-const input={name:'首页顶部横幅',code:'home.banner',scene:'首页',description:'顶部宣传',ratio:'16:9',mediaKinds:['image'] as ['image'],maxItems:5,parameters:['interval'] as ['interval'],bindings:{Kiosk:{minimumVersion:'5.0.2',mediaKinds:['image'] as ['image']}}};
+const input={productLine:'Kiosk',specs:[{...newSpec('landscape',1920,1080),mediaKinds:['image'] as ['image']}],name:'首页顶部横幅',code:'home.banner',scene:'首页',description:'顶部宣传',ratio:'16:9',mediaKinds:['image'] as ['image'],maxItems:5,parameters:['interval'] as ['interval'],bindings:{Kiosk:{minimumVersion:'5.0.2',mediaKinds:['image'] as ['image']}}};
 platform=saveRegion(platform,{...input,id:'home'},true);
 assert.throws(()=>saveRegion(platform,{...input,id:'duplicate'},true),/编码.*存在/);
 assert.throws(()=>saveRegion(platform,{...input,id:'home',code:'changed.banner'},true),/编码.*修改/);
@@ -71,7 +72,7 @@ assert.throws(()=>commitDisplayState({...storage,setItem:()=>{throw Error('quota
 assert.equal(memory.get('brand-a'),before);
 memory.set('broken','{bad-json');assert.throws(()=>readDisplayState(storage,'broken',createPlatformState),/原数据已保留/);assert.equal(memory.get('broken'),'{bad-json');
 const nav=readFileSync(new URL('../src/config/navigation.ts',import.meta.url),'utf8');
-assert.match(nav,/title: "展示内容"[\s\S]*?sidebarChildren: \[[\s\S]*?title: "内容方案"[\s\S]*?title: "投放管理"/);
+assert.match(nav,/title: "营销广告"[\s\S]*?sidebarChildren: \[[\s\S]*?title: "内容方案"[\s\S]*?title: "投放管理"/);
 const ui=readFileSync(new URL('../src/marketing-display/ui.ts',import.meta.url),'utf8');assert.doesNotMatch(ui,/role=["']tab|role=["']tablist|class=["']tabs/,'content and placement routes must not render tabs');
 const copied=duplicateContent(merchant,platform,'c1',ctx,at);
 assert.equal(copied.contents.length,merchant.contents.length+1);assert.equal(copied.placements.length,merchant.placements.length);
