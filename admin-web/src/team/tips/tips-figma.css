@@ -260,3 +260,14 @@
 @media(max-width:640px){.tipout-page-rule-editor #poolRulesContainer .pool-rule-header{flex-wrap:wrap}.tipout-page-rule-editor .pool-source-controls{width:100%;justify-content:flex-end}.tipout-page-rule-editor .pool-source-name{max-width:100%}}
 .tipout-page-rule-editor #poolRulesContainer>.pool-rule-card{background:var(--bg-secondary,#f7f7f7)}
 .tipout-page-rule-editor #sharedPoolRulesSection{margin-bottom:0}.tipout-page-rule-editor #poolSettingsGroup #allocationModeSection{margin-bottom:0}.tipout-page-rule-editor #poolRulesContainer .pool-source-rate input{min-height:24px!important;height:24px!important}
+
+/* Shared source/contributor condition result preview. */
+.tipout-page-rule-editor #poolRulesContainer .pool-source-condition,.tipout-page-rule-editor .contributor-condition-field{flex-wrap:wrap}
+.tipout-page-rule-editor .condition-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 32px;width:100%;flex-basis:100%;margin:16px 0 0;padding:0}
+.tipout-page-rule-editor .condition-preview-grid[hidden]{display:none}
+.tipout-page-rule-editor .condition-preview-item{min-width:0;margin:0}
+.tipout-page-rule-editor .condition-preview-item dt{color:var(--text-tertiary);font-size:12px;line-height:20px;margin:0 0 8px;font-weight:400}
+.tipout-page-rule-editor .condition-preview-item dd{color:var(--text-primary);font-size:13px;line-height:22px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px}
+.tipout-page-rule-editor .condition-preview-item dd:focus-visible{outline:2px solid var(--primary);outline-offset:3px;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:800px){.tipout-page-rule-editor .condition-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px}}
+@media(max-width:480px){.tipout-page-rule-editor .condition-preview-grid{grid-template-columns:minmax(0,1fr)}}
