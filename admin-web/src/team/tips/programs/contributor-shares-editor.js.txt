@@ -205,10 +205,7 @@
         if(cfg.store&&cfg.store!==store)cfg={version:1,role:'',employees:[],store:store};
         cfg.store=store;poolSalesDeductions[id]=cfg;
         var previous=document.getElementById('pool-sales-deduction-'+id);if(previous)previous.remove();
-        var row=document.createElement('div');row.className='contributor-share-entry';row.id='pool-sales-deduction-'+id;
-        row.innerHTML='<label for="pool-sales-role-'+escapeHtmlAttr(id)+'">扣除方</label><select class="form-control" id="pool-sales-role-'+escapeHtmlAttr(id)+'" style="width:180px"'+(!store?' disabled':'')+'><option value="">'+(!store?'请先选择门店':'不扣除（可选）')+'</option>'+roles.map(function(role){return '<option value="'+escapeHtmlAttr(role)+'"'+(cfg.role===role?' selected':'')+'>'+escapeHtmlText(role)+'</option>';}).join('')+'</select>';
-        var condition=document.getElementById('rule-'+id+'-conditions');if(condition)card.insertBefore(row,condition);else card.appendChild(row);
-        document.getElementById('pool-sales-role-'+id).addEventListener('change',function(event){poolSalesDeductions[id]={version:1,store:store,role:event.target.value,employees:[]};if(event.target.value){contributionMode='employees';syncContributionModeUi();}renderPoolSalesDeductions();});
+
       });
     }
     function validatePoolSalesDeductions() {

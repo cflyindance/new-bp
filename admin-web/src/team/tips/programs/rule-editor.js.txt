@@ -3109,6 +3109,10 @@ var poolSalesDeductions = {};
     }
 
     function updateDeductCardConditionDisplay(cardId) {
+      var card = document.getElementById('deduct-card-' + cardId);
+      var cond = deductValueConditions[cardId] || {};
+      var rate = getDeductRateInput(cardId);
+      renderConditionPreview(card && card.querySelector('.contributor-condition-field'), cond, rate ? rate.value : '', hasContributorScope(cond));
       if (typeof updateContributorWeightsSummary === 'function') updateContributorWeightsSummary(cardId);
       if (typeof updateContributorSharesSummary === 'function') updateContributorSharesSummary(cardId);
       if (typeof renderContributorAllocationMethod === 'function') renderContributorAllocationMethod(cardId);
@@ -3728,6 +3732,7 @@ var poolSalesDeductions = {};
         (hasConditionRow ? '<div class="pool-rule-conditions pool-source-condition empty' + (type === 'manual' ? ' manual-pool-conditions' : '') + '" id="rule-' + ruleId + '-conditions" data-rule-id="' + ruleId + '"><span class="cond-label">取值条件' + (type === 'manual' ? '' : '<span style="color:var(--danger);margin-left:2px">*</span>') + '</span><span class="cond-text" hidden>未设置</span>' + condBtnHtml + '</div>' : '');
 
       document.getElementById('poolRulesContainer').appendChild(card);
+      card.querySelectorAll('.pool-source-rate input[type=number]').forEach(function(input) { input.addEventListener('input', function() { updatePoolRuleConditionDisplay(ruleId); }); });
       if(type==='sales')poolSalesDeductions[ruleId]=JSON.parse(JSON.stringify(opt.deduction||{version:1,role:'',employees:[],store:getRuleEditorStoreName()}));
       if(typeof renderPoolSalesDeductions==='function')renderPoolSalesDeductions();
       document.getElementById('addOptionMenu').classList.remove('show');
@@ -4326,6 +4331,51 @@ var poolSalesDeductions = {};
       showNotification('员工权重保存成功');
     }
 
+    function conditionPreviewFields(cond, pct) {
+      cond = cond && typeof cond === 'object' ? cond : {};
+      var fields = [];
+      function add(label, value) {
+        if (Array.isArray(value)) value = value.join('、');
+        if (value == null || String(value).trim() === '') return;
+        fields.push({ label: label, value: String(value) });
+      }
+      add('占比', pct == null || pct === '' ? '' : String(pct) + ' %');
+      add('角色', cond.role);
+      add('员工筛选角色', cond.employeeRoles);
+      add('员工', cond.employee);
+      add('订单区域', cond.area);
+      add('订单类型', cond.orderType);
+      if (cond.menu && typeof cond.menu === 'object') add('菜单', formatMenuCascadeCond(cond.menu));
+      add('营业额', cond.revenueType);
+      add('订单小费状态', cond.orderTipStatus === 'has_tip' ? '含小费' : (cond.orderTipStatus === 'no_tip' ? '不含小费' : ''));
+      if (Array.isArray(cond.paymentMethods) && cond.paymentMethods.length) {
+        add('支付方式', window.TipOutPaymentMethodApportion && TipOutPaymentMethodApportion.formatPaymentMethodsLabelZh
+          ? TipOutPaymentMethodApportion.formatPaymentMethodsLabelZh(cond.paymentMethods) : cond.paymentMethods);
+      }
+      add(tipTerm('小费类型'), cond.tipTypes && cond.tipTypes.length ? cond.tipTypes : cond.tipType);
+      if (cond.types || cond.surchargeType) add('加收类型', formatSurchargeTypeDisplay(cond.types || cond.surchargeType));
+      if (cond.containsProduct && menuCascadeHasAnySelection(cond.containsProduct)) add('订单需包含商品', formatMenuCascadeCond(cond.containsProduct));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) add('营业时间', (cond.hours.start || '未设置') + ' - ' + (cond.hours.end || '未设置'));
+      if (Array.isArray(cond.shift) && cond.shift.length) add('班次', formatShiftSelectionForDisplay(cond.shift));
+      if (Array.isArray(cond.weekdays) && cond.weekdays.length) add('周期（星期）', formatWeekdaysCondDisplay(cond.weekdays));
+      return fields;
+    }
+    function renderConditionPreview(container, cond, pct, visible) {
+      if (!container) return;
+      var grid = container.querySelector('.condition-preview-grid');
+      if (!grid) { grid = document.createElement('dl'); grid.className = 'condition-preview-grid'; container.appendChild(grid); }
+      grid.replaceChildren();
+      grid.hidden = !visible;
+      if (!visible) return;
+      conditionPreviewFields(cond, pct).forEach(function(field) {
+        var item = document.createElement('div'); item.className = 'condition-preview-item';
+        var label = document.createElement('dt'); label.textContent = field.label;
+        var value = document.createElement('dd'); value.textContent = field.value;
+        value.title = field.value; value.tabIndex = 0;
+        item.appendChild(label); item.appendChild(value); grid.appendChild(item);
+      });
+    }
+
     function formatSalesCondForDisplay(cond, omitRoleSubEmployees) {
       if (!cond || typeof cond !== 'object') return '';
       var parts = [];
@@ -4472,6 +4522,8 @@ var poolSalesDeductions = {};
       var textEl = el.querySelector('.cond-text');
       if (textEl) textEl.textContent = text || '未设置';
       el.classList.toggle('empty', !text);
+      var rate = card && (card.querySelector('.pool-custom-pct') || card.querySelector('.pool-source-rate input[type=number]'));
+      renderConditionPreview(el, cond, rate ? rate.value : '', !!cond && Object.keys(cond).length > 0);
     }
 
     function saveSalesCondition() {
