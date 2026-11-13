@@ -50,7 +50,7 @@ assert.deepEqual(Array.from(view.normalizeColumnPreference({ version: 99, visibl
 
 const productRule = { id: "products", status: "draft", authoringDraft: { name: "商品", subject: "party_size", period: "per_round", targetType: "dish", participatingStoreIds: ["ny-midtown"], targetsByStore: { "ny-midtown": [{ productLineId: "kiosk", dishId: "a" }, { productLineId: "kiosk", dishId: "a" }, { productLineId: "emenu", dishId: "a" }] } } };
 const productColumns = view.projectColumns(view.createViewModel(productRule, profile, stores));
-assert.equal(productColumns.productScope.main, "无法核对商品目录");
+assert.equal(productColumns.productScope.main, "Kiosk、eMenu");
 assert.equal(view.quantitySummary([{ configured: true, value: 0 }, { configured: true, value: 4 }], 3, "最多 "), "3 个场景 · 最多 0–4（已配置 2/3）");
 assert.equal(view.quantitySummary([], 3, "最多 "), "未配置");
 

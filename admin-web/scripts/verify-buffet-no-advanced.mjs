@@ -7,7 +7,7 @@ const rows=[{id:"a",name:"整单",status:"disabled",deployStoreIds:["a"],periods
 assert.equal(view.filterRows(rows,{subject:"party_size",targetType:"dish",objectKey:"stale",effectiveAt:"2026-11-09T23:00",partySize:"99"}).length,2,"removed cached conditions must not silently filter");
 assert.equal(view.filterRows(rows,{storeId:"a",period:"per_round"}).length,1);
 assert.equal(view.filterRows(rows,{keyword:"整单",status:"disabled"}).length,1);
-assert.equal(view.columnDefinitions().length,12,"columns include optional purchase period");
+assert.equal(view.columnDefinitions().length,9,"removed period and range columns");
 const html=fs.readFileSync("dist/Configuration center/buffet-rule.html","utf8");
 assert.doesNotMatch(html,/id="(?:advancedFilters|toggleAdvanced|filterObject|filterTarget|filterTime|objectSearch)"|advancedOpen|effectiveAt|objectKey/);
 for(const id of ["filterKeyword","filterStore","filterStatus","filterPeriod","toggleColumns"])assert.ok(html.includes(id));

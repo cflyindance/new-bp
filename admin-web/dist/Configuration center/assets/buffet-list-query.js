@@ -114,6 +114,23 @@
     var lines=unique(items.map(function(x){return x.product.lineLabel;}));
     return labels.slice(0,3).join("、")+(labels.length>3?"等":"")+"；"+ids.length+" 家门店 · "+items.length+" 个商品 · "+lines.join("、")+(unknown?"（部分无法核对）":"");
   }
+  function channelSummary(row) {
+    var c=row.config || {}, field=c.targetType==="category"?"categoryTargets":c.targetType==="dish_set"?"dishSetMembers":"dishTargets";
+    var storeIds=unique(array(c.participatingStoreIds).concat(array(c.deployStoreIds),Object.keys(c.storeConfigs || {}),Object.keys(c.targetsByStore || {})));
+    var ids=[], unknown=false, all=catalog(), labels={};
+    all.forEach(function(p){labels[p.lineId]=p.lineLabel;});
+    storeIds.forEach(function(id) {
+      var source=scopes(c,id);
+      if(!c.storeConfigs || !c.storeConfigs[id]) source=[{[field]:array(c.targetsByStore && c.targetsByStore[id])}];
+      source.forEach(function(scope){array(scope[field]).forEach(function(item){
+        var line=item.productLineId || item.lineId;
+        if(line)ids.push(String(line));else unknown=true;
+      });});
+    });
+    var values=unique(ids).map(function(id){return labels[id] || "未知产线（"+id+"）";});
+    if(unknown)values.push("部分产线无法核对");
+    return values.join("、") || "—";
+  }
   function authorization(c) {
     var a=c.authorization||c.overrideAuthorization;
     if(!a)return "未设置";
@@ -121,5 +138,5 @@
     var labels={operation:"本次操作",round:"当前轮",order:"当前订单"};
     return array(a.allowedScopes).map(function(k){return (labels[k]||k)+"："+(a.scopePermissions&&a.scopePermissions[k]||"权限未设置");}).join("；")||"授权配置不完整";
   }
-  window.BuffetListQuery={catalog:catalog,products:products,objectOptions:objectOptions,matchesProduct:matchesProduct,dateParts:dateParts,timeMatch:timeMatch,timeSummary:timeSummary,productSummary:productSummary,authorization:authorization};
+  window.BuffetListQuery={catalog:catalog,products:products,objectOptions:objectOptions,matchesProduct:matchesProduct,dateParts:dateParts,timeMatch:timeMatch,timeSummary:timeSummary,productSummary:productSummary,channelSummary:channelSummary,authorization:authorization};
 })();
