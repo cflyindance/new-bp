@@ -428,14 +428,10 @@
             <h2 class="tipout-rule-group-title" id="poolSettingsTitle" data-pool-label="1. 小费池设置">1. 小费池设置</h2>
 <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池金额计算规则">小费池金额计算规则</span>
-            </div>
-
-            <div id="poolRulesContainer"></div>
-
+              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池金额来源">小费池金额来源</span>
             <div class="add-option-dropdown">
               <button class="btn" data-native-onclick="toggleAddMenu()" id="addMenuBtn">
-                <span style="font-size:16px">+</span> 新增选项
+                新增选项 <span aria-hidden="true">⌄</span>
               </button>
               <div class="add-option-menu" id="addOptionMenu">
                 <div class="add-option-menu-item" data-type="sales" data-native-onclick="addPoolRule('sales')">销售额</div>
@@ -446,9 +442,14 @@
                 <div class="add-option-menu-item" data-type="custom" data-pool-label="自定义小费" data-native-onclick="addPoolRule('custom')">自定义小费</div>
               </div>
             </div>
+            </div>
+
+            <div id="poolRulesContainer"></div>
+
+
           </div>
 <details class="form-section tipout-form-card" id="allocationModeSection">
-            <summary class="form-section-title tipout-planning-hint" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">小费池计算模式</summary>
+            <summary class="form-section-title tipout-planning-hint" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">计算模式</summary>
             <div class="radio-group">
               <label class="radio-item">
                 <input type="radio" name="allocationMode" value="legacy_pool" checked data-native-onchange="onAllocationModeChange(false)">
