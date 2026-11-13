@@ -175,3 +175,19 @@
 .team-tips-page.tipout-page-employee-reconciliation-detail{background:#f0f1f2}
 .tipout-page-employee-reconciliation-detail #employeeDetailContent{background:transparent}
 .tipout-page-employee-reconciliation-detail .employee-identity-avatar{background:#f0f1f2}
+.tipout-page-rule-editor .contributor-method-settings{padding:16px 24px;border-top:1px solid var(--border-color,#ededed)}
+.tipout-page-rule-editor .contributor-method-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tipout-page-rule-editor .contributor-method-choice{display:flex;align-items:center;gap:8px;padding:14px;background:var(--tips-config-surface,#fff);border:1px solid var(--border-color,#ddd);border-radius:10px;cursor:pointer}
+.tipout-page-rule-editor .contributor-method-choice:has(input:checked){border-color:var(--primary,#1677ff);background:var(--tips-config-selected,#f0f6ff)}
+.tipout-page-rule-editor .contributor-method-choice input{accent-color:var(--primary,#1677ff)}
+.tipout-page-rule-editor .contributor-method-legacy{font-size:12px;color:var(--text-secondary);margin-top:12px}
+.tipout-page-rule-editor .contributor-method-preview{margin-top:14px}
+.tipout-page-rule-editor .contributor-method-preview summary{color:var(--primary);cursor:pointer}
+.tipout-page-rule-editor .contributor-method-preview-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}
+.tipout-page-rule-editor .contributor-method-preview-controls input{width:180px}
+.tipout-page-rule-editor .contributor-method-error{color:var(--danger,#cf3535)}
+@media(max-width:600px){.tipout-page-rule-editor .contributor-method-choices{grid-template-columns:1fr}}
+.tipout-page-rule-editor .contributor-method-preview table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.tipout-page-rule-editor .contributor-method-preview th,.tipout-page-rule-editor .contributor-method-preview td{padding:12px;text-align:right;border-bottom:1px solid var(--border-color,#ededed);white-space:nowrap}
+.tipout-page-rule-editor .contributor-method-preview th{font-weight:500;background:var(--tips-config-muted,#f7f7f7)}
+.tipout-page-rule-editor .contributor-method-preview th:first-child,.tipout-page-rule-editor .contributor-method-preview td:first-child{text-align:left}

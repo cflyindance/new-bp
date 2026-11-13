@@ -10,5 +10,5 @@ const four=facts.concat({employeeId:'D',name:'D',role:'Bar',originalTips:100,ord
 const snap={dateKey:'2026-10-23',scenarioFacts:facts,pools:[{ruleId:1,poolAmount:100,employees:[{employeeId:'B',amount:100}]}]};api.validateSnapshot(api.reconcileExisting(snap,[rule]));
 const bad=JSON.parse(JSON.stringify(entry.employeeShares));bad.mode='balance';assert.throws(()=>api.validateEmployeeShares(bad,entry.roles,facts),/方式/);
 const html=fs.readFileSync('src/team/tips/templates/rule-editor.html','utf8');assert.match(html,/name="contributorShareMode" value="average"/);assert.match(html,/name="contributorShareMode" value="custom"/);assert.doesNotMatch(html,/id="contributorSharesEnabled"/);
-const editor=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');assert.match(editor,/if\(!silent\)deductEmployeeShares\[cardId\]=\{version:1,mode:'weights'/);
+const editor=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');assert.match(editor,/if \(!silent\) deductAllocationMethods\[cardId\] = 'source'/);
 console.log('PASS average modes: dynamic roster, exact equal cents, cap without transfer, snapshot, invalid mode and two options');
