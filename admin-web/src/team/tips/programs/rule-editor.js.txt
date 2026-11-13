@@ -2591,6 +2591,7 @@ var poolSalesDeductions = {};
         el.style.transition = 'opacity 0.3s';
         setTimeout(() => {
           el.remove();
+          document.querySelectorAll('#poolRulesContainer > .pool-rule-card .num').forEach(function(num, i) { num.textContent = String(i + 1).padStart(2, '0'); });
           delete poolRuleConditions[ruleId];
           delete poolSalesDeductions[ruleId];
           if (isMultiInstancePoolType(baseType)) {
@@ -3702,12 +3703,12 @@ var poolSalesDeductions = {};
       var drawerName = isSalesLikePoolType(type) ? 'salesDrawer' : (type === 'tips' ? 'tipsDrawer' : (type === 'manual' ? 'manualDrawer' : 'surchargeDrawer'));
       var condBtnHtml = '';
       if (isSalesLikePoolType(type) || type === 'tips' || type === 'surcharge') {
-        condBtnHtml = '<button class="btn btn-sm" onclick="openDrawerForRule(\'' + drawerName + '\',\'' + ruleId + '\')">设置取值条件 <span style="color:var(--danger)">*</span></button>';
+        condBtnHtml = '<button class="btn-link pool-source-condition-trigger" type="button" onclick="openDrawerForRule(\'' + drawerName + '\',\'' + ruleId + '\')">＋ 设置取值条件</button>';
       } else if (type === 'manual') {
-        condBtnHtml = '<button class="btn btn-sm" onclick="openDrawerForRule(\'manualDrawer\',\'manual\')">设置取值条件</button>';
+        condBtnHtml = '<button class="btn-link pool-source-condition-trigger" type="button" onclick="openDrawerForRule(\'manualDrawer\',\'manual\')">＋ 设置取值条件</button>';
       }
-      var count = document.querySelectorAll('.pool-rule-card').length;
-      var numChar = poolNumChars[count] || (count + 1);
+      var count = document.querySelectorAll('#poolRulesContainer > .pool-rule-card').length;
+      var numChar = String(count + 1).padStart(2, '0');
 
       var card = document.createElement('div');
       card.className = 'pool-rule-card';
@@ -3715,16 +3716,16 @@ var poolSalesDeductions = {};
       card.dataset.ruleId = ruleId;
       card.dataset.ruleType = type;
       var typeTag = '<span class="pool-rule-type-tag ' + type + '">' + baseNames[type] + '</span>';
-      var titleHtml = '<input type="text" class="pool-rule-name" placeholder="规则名称" value="' + (opt.name || displayName) + '" style="width:140px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px">';
+      var titleHtml = '<label class="pool-source-name"><span>自定义名称：</span><input type="text" class="pool-rule-name" aria-label="来源自定义名称" placeholder="来源名称" value="' + (opt.name || displayName) + '" style="width:140px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px"><span aria-hidden="true">✎</span></label>';
       card.innerHTML = '<div class="pool-rule-header">' +
         '<div class="pool-rule-label"><span class="num">' + numChar + '</span> ' + typeTag + titleHtml +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px">' +
+        '<div class="pool-source-controls"><div class="pool-source-rate">' +
         (type === 'custom' ? '<span style="font-size:13px;color:var(--text-secondary)">金额</span><input type="number" value="0" class="pool-custom-amount" placeholder="0" style="width:80px;height:28px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px;text-align:center"><span style="font-size:13px;color:var(--text-secondary)">$</span><span style="font-size:13px;color:var(--text-secondary);margin-left:8px">占比</span><input type="number" value="100" class="pool-custom-pct" placeholder="100" style="width:80px;height:28px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px;text-align:center"><span style="font-size:13px;color:var(--text-secondary)">%</span>' : '<span style="font-size:13px;color:var(--text-secondary)">占比</span><input type="number" value="' + (opt.pct != null ? opt.pct : 100) + '" style="width:80px;height:28px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px;text-align:center"><span style="font-size:13px;color:var(--text-secondary)">%</span>') +
-        condBtnHtml +
-        '<button class="btn btn-sm btn-text-danger" onclick="removePoolRule(\'rule-' + ruleId + '\')" style="font-size:18px;padding:0 4px">×</button>' +
+        '</div>' +
+        '<button onclick="removePoolRule(\'rule-' + ruleId + '\')" class="pool-source-delete" aria-label="删除金额来源" title="删除金额来源"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8M14 10v8"/></svg></button>' +
         '</div></div>' +
-        (hasConditionRow ? '<div class="pool-rule-conditions empty' + (type === 'manual' ? ' manual-pool-conditions' : '') + '" id="rule-' + ruleId + '-conditions" data-rule-id="' + ruleId + '"><span class="cond-label">取值条件' + (type === 'manual' ? '：</span>' : '<span style="color:var(--danger);margin-left:2px">*</span>：</span>') + '<span class="cond-text">未设置</span></div>' : '');
+        (hasConditionRow ? '<div class="pool-rule-conditions pool-source-condition empty' + (type === 'manual' ? ' manual-pool-conditions' : '') + '" id="rule-' + ruleId + '-conditions" data-rule-id="' + ruleId + '"><span class="cond-label">取值条件' + (type === 'manual' ? '' : '<span style="color:var(--danger);margin-left:2px">*</span>') + '</span><span class="cond-text" hidden>未设置</span>' + condBtnHtml + '</div>' : '');
 
       document.getElementById('poolRulesContainer').appendChild(card);
       if(type==='sales')poolSalesDeductions[ruleId]=JSON.parse(JSON.stringify(opt.deduction||{version:1,role:'',employees:[],store:getRuleEditorStoreName()}));
