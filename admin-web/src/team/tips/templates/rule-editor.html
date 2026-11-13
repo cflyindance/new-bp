@@ -419,8 +419,8 @@
           <section class="form-section tipout-form-card" id="ruleSectionPoolKind" aria-labelledby="rulePoolKindTitle">
             <h2 class="tipout-rule-group-title" id="rulePoolKindTitle">小费池类型</h2>
             <div class="rule-pool-kind-options" role="radiogroup" aria-labelledby="rulePoolKindTitle">
-              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="tip" checked data-native-onchange="requestRulePoolKindChange('tip')"><span><strong>小费池</strong><small>配置小费、销售额等来源的小费分配规则</small></span></label>
-              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="surcharge" data-native-onchange="requestRulePoolKindChange('surcharge')"><span><strong>加收服务费池</strong><small>配置现金／信用卡加收服务费的分配规则</small></span></label>
+              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="tip" checked data-native-onchange="requestRulePoolKindChange('tip')"><span><strong>小费池</strong></span></label>
+              <label class="rule-pool-kind-option"><input type="radio" name="rulePoolKind" value="surcharge" data-native-onchange="requestRulePoolKindChange('surcharge')"><span><strong>加收服务费池</strong></span></label>
             </div>
           </section>
 
@@ -549,7 +549,7 @@
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
             <div class="form-section-title">
-              <div><span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">接收方规则</span><p class="receiver-section-description">一行可选择多个角色。组份额合计100%；员工权重是倍数，不是最终比例</p></div><button type="button" class="btn receiver-add-button" data-native-onclick="addReceiverRow()">＋ 新增接收方</button>
+              <div><span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">接收方规则</span></div><button type="button" class="btn receiver-add-button" data-native-onclick="addReceiverRow()">＋ 新增接收方</button>
               <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
             </div>
             <table class="receiver-table" id="receiverTable">
@@ -605,7 +605,7 @@
           </div>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
-<div class="contributor-section-heading"><div><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 小费贡献设置</h2><p class="contributor-section-subtitle">贡献员工与接收员工分别配置，接收打卡要求不决定贡献资格</p></div>            <div class="add-option-dropdown" id="deductAddOptionWrap">
+<div class="contributor-section-heading"><div><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 小费贡献设置</h2></div>            <div class="add-option-dropdown" id="deductAddOptionWrap">
               <button type="button" class="btn" data-native-onclick="toggleDeductAddMenu()" id="deductAddMenuBtn">
                 新增贡献方 <span aria-hidden="true">⌄</span>
               </button>
