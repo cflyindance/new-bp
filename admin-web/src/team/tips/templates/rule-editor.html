@@ -548,7 +548,7 @@
           <!-- Receiver Rules -->
           <div class="form-section tipout-form-card" id="legacyReceiversSection">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">小费接收方规则</span>
+              <div><span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">接收方规则</span><p class="receiver-section-description">一行可选择多个角色。组份额合计100%；员工权重是倍数，不是最终比例</p></div><button type="button" class="btn receiver-add-button" data-native-onclick="addReceiverRow()">＋ 新增接收方</button>
               <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
             </div>
             <table class="receiver-table" id="receiverTable">
@@ -562,9 +562,7 @@
               <tbody id="receiverTableBody">
               </tbody>
             </table>
-            <button class="btn btn-sm" data-native-onclick="addReceiverRow()">
-              <span style="font-size:14px">+</span> 新增角色
-            </button>
+
           </div>
           </div>
 <div id="orderTipAllocationSection" style="display:none">
@@ -628,7 +626,7 @@
           </section>
 
           <!-- Employee Weight -->
-          <!-- 
+          <!--
           <div class="form-section">
             <div class="form-section-title">员工权重</div>
             <div class="radio-group">

@@ -211,3 +211,29 @@
 .tipout-page-rule-editor #deductRulesContainer .contributor-condition-trigger{color:var(--primary);background:transparent;border:0;padding:8px 0;white-space:nowrap}
 .tipout-page-rule-editor #deductRulesContainer .contributor-method-settings{margin-top:16px;padding:16px;background:var(--bg-primary,#fff);border-radius:12px;border:0}
 @media(max-width:640px){.tipout-page-rule-editor #contributorRulesGroup .contributor-section-heading{align-items:flex-start;flex-wrap:wrap}.tipout-page-rule-editor #deductRulesContainer .contributor-rule-header{flex-wrap:wrap}.tipout-page-rule-editor .contributor-rule-actions{margin-left:auto}.tipout-page-rule-editor .contributor-condition-field{flex-wrap:wrap}}
+
+/* Receiver cards: retain table row contracts used by validation and serialization. */
+.tipout-page-rule-editor #legacyReceiversSection .form-section-title{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.tipout-page-rule-editor .receiver-section-description{margin:4px 0 0;font-size:12px;font-weight:400;color:var(--text-tertiary)}
+.tipout-page-rule-editor .receiver-add-button{margin-left:auto;color:var(--primary,#1677ff);background:var(--bg-secondary,#f5f5f5);border:0}
+.tipout-page-rule-editor #receiverTable{width:100%;table-layout:fixed;border-spacing:0 16px}
+.tipout-page-rule-editor #receiverTable>thead{display:none}
+.tipout-page-rule-editor #receiverTable .receiver-primary-row>td{vertical-align:top;padding:16px 12px!important}
+.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:first-child{width:auto}
+.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:nth-child(2){width:136px}
+.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:nth-child(3){width:190px}
+.tipout-page-rule-editor .receiver-field-label{display:block;margin-bottom:10px;font-size:12px;font-weight:500;color:var(--text-primary,#1f1f1f)}
+.tipout-page-rule-editor #receiverTable .receiver-role-select{width:100%!important;min-width:0}
+.tipout-page-rule-editor #receiverTable .multi-select-input{min-height:42px;border-radius:10px}
+.tipout-page-rule-editor #receiverTable .multi-select-tags{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+.tipout-page-rule-editor #receiverTable .multi-select-tag{flex-shrink:0}
+.tipout-page-rule-editor #receiverTable .receiver-row-weights:empty{display:none}
+.tipout-page-rule-editor .receiver-percent-control{display:flex;align-items:center;gap:8px;background:var(--bg-primary,#fff);border:1px solid var(--border-color,#d9d9d9);border-radius:10px;padding:0 10px;height:42px}
+.tipout-page-rule-editor #receiverTable .receiver-percent-control input{width:100%;min-width:0;border:0;background:transparent;box-shadow:none;padding:0}
+.tipout-page-rule-editor .receiver-actions{display:flex;gap:16px;align-items:flex-start}
+.tipout-page-rule-editor .receiver-actions>div{min-width:48px;text-align:center}
+.tipout-page-rule-editor .receiver-actions .weight-link,.tipout-page-rule-editor .receiver-actions a[title="删除接收方"]{display:inline-flex;align-items:center;justify-content:center;min-height:42px;min-width:32px;margin:0!important}
+.tipout-page-rule-editor .receiver-actions a[data-planning-hint]{font-size:11px!important;margin:0 4px 0 0!important}
+@media(max-width:700px){.tipout-page-rule-editor #receiverTable .receiver-primary-row{display:flex;flex-wrap:wrap;background:var(--bg-secondary,#f7f7f7);border-radius:12px}.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:first-child{width:100%}.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:nth-child(2){flex:1}.tipout-page-rule-editor #receiverTable .receiver-primary-row>td:nth-child(3){width:190px}}
+
+.tipout-page-rule-editor #legacyReceiversSection .form-section-title>span:last-child{order:2;margin-left:auto!important}.tipout-page-rule-editor #legacyReceiversSection .receiver-add-button{order:3;margin-left:0}
