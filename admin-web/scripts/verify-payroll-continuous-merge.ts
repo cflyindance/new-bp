@@ -20,10 +20,10 @@ assert.deepEqual(resolveCaliforniaPayroll({confirmed:true,californiaOvertimeSnap
 const summary=renderCaliforniaSummary(result,false);assert.match(summary,/连勤加班/);assert.doesNotMatch(summary,/法定第7天|累计超50/);
 assert.equal((summary.match(/data-ca-continuous-help/g)||[]).length,1);
 assert.match(summary,/连勤加班 · 5天/);
-const tip=renderContinuousBreakdown(result);assert.doesNotMatch(tip,/连勤加班|满5天/);for(const t of ['第5天起计薪','50至60','3倍','4倍','10.00 h','3.00 h','$600.00','$240.00'])assert.ok(tip.includes(t),t);
+const tip=renderContinuousBreakdown(result);assert.doesNotMatch(tip,/连勤加班|满5天|起计薪/);for(const t of ['50至60','3倍','4倍','10.00 h','3.00 h','$600.00','$240.00'])assert.ok(tip.includes(t),t);
 const tenDay={...result,continuousRule:{...rule,dayNumber:10}};
 assert.match(renderCaliforniaSummary(tenDay,false),/连勤加班 · 10天/);
-assert.match(renderContinuousBreakdown(tenDay),/第10天起计薪/);
+assert.doesNotMatch(renderContinuousBreakdown(tenDay),/起计薪/);
 const lower=mergeContinuousOvertime(base,{...input,continuous:{rule:{...rule,wageMultiplier:1,secondaryWageMultiplier:1},history:days}});
 if(lower.status!=='ready')throw Error('ready');assert.equal(lower.totalAmount,base.totalAmount);
 console.log('PASS highest multiplier, no duplication, no retroactivity, continuous tooltip and statutory distinction.');
