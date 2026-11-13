@@ -6,17 +6,13 @@ const window = {};
 vm.runInNewContext(fs.readFileSync("dist/Configuration center/assets/buffet-rule-list-view.js", "utf8"), { window });
 const view = window.BuffetRuleListView;
 const column = view.columnDefinitions().find(item => item.id === "period");
-assert.ok(column, "字段设置必须包含限购周期");
-assert.equal(column.label, "限购周期");
-assert.equal(column.defaultVisible, false);
-assert.equal(column.fixed, false);
-assert.equal(column.width, 140);
-assert.equal(view.columnDefinitions().length, 12);
+assert.equal(column, undefined, "字段设置不展示独立限购周期列");
+assert.equal(view.columnDefinitions().length, 9);
 assert.equal(view.defaultVisibleColumns().length, 7);
 assert.ok(!view.defaultVisibleColumns().includes("period"));
 for (const version of [1, 2]) {
   const pref = view.normalizeColumnPreference({ version, visible: ["name", "period", "period", "removed"] });
-  assert.equal(pref.visible.join(","), "name,period,status,actions");
+  assert.equal(pref.visible.join(","), "name,status,actions");
   assert.equal(view.normalizeColumnPreference({ version, visible: ["name", "description"] }).visible.includes("period"), false);
 }
 function periodCell(config) {

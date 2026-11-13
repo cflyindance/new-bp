@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const window = {};
+for (const name of ['brand-menu-structure-picker','buffet-rule-policy','buffet-list-query','buffet-rule-list-view']) {
+  vm.runInNewContext(fs.readFileSync(`dist/Configuration center/assets/${name}.js`,'utf8'), { window });
+}
+const view=window.BuffetRuleListView;
+assert.equal(view.columnDefinitions().length,9);
+assert.equal(view.columnDefinitions().find(c=>c.id==='productScope').label,'渠道');
+assert.equal(view.columnDefinitions().filter(c=>['period','partyRanges','roundRanges'].includes(c.id)).length,0);
+assert.equal(view.normalizeColumnPreference({version:2,visible:['name','period','partyRanges','roundRanges','productScope']}).visible.join(','),'name,productScope,status,actions');
+const profile={periodTemplates:[{id:'party-round-basic',name:'每人＋每轮限购'}]};
+const c={buffetTemplateId:'party-round-basic',subject:'party_size',enabledPeriods:['per_round'],targetType:'dish_set',partyRanges:[{min:1,max:3},{min:4,max:null}],participatingStoreIds:['a','b'],deployStoreIds:['a'],storeConfigs:{a:{dishSetMembers:[{productLineId:'kiosk',dishId:'unknown-product'}]},b:{dishSetMembers:[{productLineId:'emenu',dishId:'unknown-product'}]}}};
+const record={id:'test',status:'disabled',authoringConfig:c};
+const before=JSON.stringify(record);
+const cells=view.projectColumns(view.createViewModel(record,profile,[]));
+assert.equal(cells.strategy.main,'每人＋每轮限购 · 按人数限购 · 每轮 · 按菜品集限购');
+assert.equal(cells.productScope.main,'Kiosk、eMenu');
+c.storeConfigs.b.dishSetMembers.push({productLineId:'kiosk',dishId:'another'});
+assert.equal(view.projectColumns(view.createViewModel(record,profile,[])).productScope.main,'Kiosk、eMenu');
+assert.equal(JSON.stringify({...record,authoringConfig:JSON.parse(before).authoringConfig}),before);
+assert.equal(window.BuffetListQuery.channelSummary({config:{}}),'—');
+c.storeConfigs.b.dishSetMembers.push({productLineId:'unknown-line',dishId:'another'});
+assert.match(window.BuffetListQuery.channelSummary({config:c}),/未知产线（unknown-line）/);
+delete c.buffetTemplateId;
+assert.match(view.projectColumns(view.createViewModel(record,profile,[])).strategy.main,/^— · /);
+c.buffetTemplateId='missing';
+assert.match(view.projectColumns(view.createViewModel(record,profile,[])).strategy.main,/^无法识别模板 · /);
+const scenario={subject:'order',targetType:'dish',enabledPeriods:['multi_round'],roundRanges:[{rangeId:'r1',min:1,max:2},{rangeId:'r2',min:3,max:null}],storeConfigs:{a:{dishTargets:[{productLineId:'obsolete',dishId:'x'}],scenarioTargets:{multi_round:{'0|0':{dishTargets:[{productLineId:'kiosk',dishId:'a'}]},'0|1':{dishTargets:[{productLineId:'emenu',dishId:'b'}]}}}}}};
+assert.equal(window.BuffetListQuery.channelSummary({config:scenario}),'Kiosk、eMenu');
+scenario.storeConfigs.a.scenarioTargets.multi_round['0|1']={dishTargets:[]};
+assert.equal(window.BuffetListQuery.channelSummary({config:scenario}),'Kiosk');
+console.log('PASS list fields: nine columns, removed preferences, four strategy parts, cross-store channels, unknown/empty and no implicit template');
