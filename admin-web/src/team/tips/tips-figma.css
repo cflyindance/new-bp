@@ -191,3 +191,23 @@
 .tipout-page-rule-editor .contributor-method-preview th,.tipout-page-rule-editor .contributor-method-preview td{padding:12px;text-align:right;border-bottom:1px solid var(--border-color,#ededed);white-space:nowrap}
 .tipout-page-rule-editor .contributor-method-preview th{font-weight:500;background:var(--tips-config-muted,#f7f7f7)}
 .tipout-page-rule-editor .contributor-method-preview th:first-child,.tipout-page-rule-editor .contributor-method-preview td:first-child{text-align:left}
+/* Contributor rules: section action, compact rule header and condition entry. */
+.tipout-page-rule-editor #contributorRulesGroup .contributor-section-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px}
+.tipout-page-rule-editor .contributor-section-heading h2{margin:0!important}
+.tipout-page-rule-editor .contributor-section-subtitle{margin:4px 0 0;color:var(--text-secondary);font-size:12px}
+.tipout-page-rule-editor #contributorRulesGroup #deductAddMenuBtn{display:flex;align-items:center;gap:8px;color:var(--primary);background:var(--tips-config-canvas);border:0;white-space:nowrap}
+.tipout-page-rule-editor #contributorRulesGroup #deductAddOptionMenu{right:0;left:auto}
+.tipout-page-rule-editor #deductRulesSection{margin:0;padding:0;background:transparent;border:0}
+.tipout-page-rule-editor #deductRulesContainer .deduct-basis-card{padding:16px;background:var(--tips-config-muted);border:0;border-radius:14px;margin-bottom:16px}
+.tipout-page-rule-editor #deductRulesContainer .contributor-rule-header{padding:0;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tipout-page-rule-editor #deductRulesContainer .pool-rule-label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tipout-page-rule-editor #deductRulesContainer .num{display:inline-grid;place-items:center;min-width:28px;height:28px;margin:0;background:var(--text-primary,#434343);color:var(--bg-primary,#fff);border-radius:6px;font-size:12px;font-weight:500}
+.tipout-page-rule-editor .contributor-rule-actions{display:flex;align-items:center;gap:16px;flex-shrink:0}
+.tipout-page-rule-editor .contributor-rate-control{display:flex;align-items:center;gap:6px;background:var(--bg-primary,#fff);border:1px solid var(--border-color,#ddd);border-radius:12px;padding:8px 12px;color:var(--text-secondary);font-size:12px}
+.tipout-page-rule-editor #deductRulesContainer .contributor-rate-control input{border:0!important;background:transparent;min-height:20px;height:24px;width:52px;padding:0;text-align:center;border-radius:0;font-size:13px;color:var(--text-primary);box-shadow:none}
+.tipout-page-rule-editor #deductRulesContainer .contributor-delete{display:grid;place-items:center;color:var(--danger,#ff4d4f);background:transparent;border:0;padding:10px}
+.tipout-page-rule-editor .contributor-condition-field{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px;padding:16px;background:var(--bg-primary,#fff);border-radius:12px}
+.tipout-page-rule-editor .contributor-required{color:var(--danger,#ff4d4f)}
+.tipout-page-rule-editor #deductRulesContainer .contributor-condition-trigger{color:var(--primary);background:transparent;border:0;padding:8px 0;white-space:nowrap}
+.tipout-page-rule-editor #deductRulesContainer .contributor-method-settings{margin-top:16px;padding:16px;background:var(--bg-primary,#fff);border-radius:12px;border:0}
+@media(max-width:640px){.tipout-page-rule-editor #contributorRulesGroup .contributor-section-heading{align-items:flex-start;flex-wrap:wrap}.tipout-page-rule-editor #deductRulesContainer .contributor-rule-header{flex-wrap:wrap}.tipout-page-rule-editor .contributor-rule-actions{margin-left:auto}.tipout-page-rule-editor .contributor-condition-field{flex-wrap:wrap}}
