@@ -4,6 +4,7 @@ import {createPlatformState,saveRegion} from '../src/marketing-display/domain';
 const initial=defaults(),home=initial.find(s=>s.code==='home')!;
 assert.equal(available(initial,'Kiosk').length,2);assert.equal(available(initial,'eMenu').length,0);
 assert.deepEqual(home.specs!.map(s=>[s.width,s.height]),[[1080,1250],[1440,1080]]);
+const waitlist=available(initial,'Waitlist');assert.equal(waitlist.length,1);assert.equal(waitlist[0].code,'screensaver');assert.deepEqual(waitlist[0].specs!.map(s=>[s.width,s.height]),[[1080,1920],[1920,1080]]);assert.equal(available(initial,'Kiosk').some(s=>s.productLine==='Waitlist'),false);
 const unbound={...structuredClone(home),id:'emenu-home',productLine:'eMenu',bindings:{}};
 assert.equal(available([unbound],'eMenu').length,0);
 assert.throws(()=>updateContract(home,{...home,productLine:'eMenu'}),/不可修改/);
