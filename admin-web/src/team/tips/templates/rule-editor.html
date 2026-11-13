@@ -606,23 +606,22 @@
           </div>
           </section>
           <section class="tipout-editor-rule-group tipout-settings-group" id="contributorRulesGroup" aria-labelledby="contributorRulesTitle" style="display:none">
-            <div class="tipout-rule-group-heading"><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 小费贡献设置</h2><details class="distribution-method-help"><summary aria-label="查看贡献规则说明">？</summary><div class="distribution-method-help-content"><p>配置哪些员工贡献及扣除多少小费。贡献员工与接收员工分别配置；接收员工的打卡要求不决定贡献资格。</p></div></details></div>
-          <!-- Deduction Rules -->
-          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则</span></div>
-            <div id="contributorEmployeeSettings">
-            <div id="deductRulesContainer"></div>
-            <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
-            <div class="add-option-dropdown" id="deductAddOptionWrap">
+<div class="contributor-section-heading"><div><h2 class="tipout-rule-group-title" id="contributorRulesTitle">4. 小费贡献设置</h2><p class="contributor-section-subtitle">贡献员工与接收员工分别配置，接收打卡要求不决定贡献资格</p></div>            <div class="add-option-dropdown" id="deductAddOptionWrap">
               <button type="button" class="btn" data-native-onclick="toggleDeductAddMenu()" id="deductAddMenuBtn">
-                <span style="font-size:16px">+</span> 新增选项
+                新增贡献方 <span aria-hidden="true">⌄</span>
               </button>
               <div class="add-option-menu" id="deductAddOptionMenu">
                 <div class="add-option-menu-item" data-basis="sales_pct" data-native-onclick="addDeductRule('sales_pct')">按照销售额占比</div>
                 <div class="add-option-menu-item" data-basis="personal_sales_pct" style="border:1px solid #ff4d4f;border-radius:6px" data-native-onclick="addDeductRule('personal_sales_pct')" data-planning-hint="标记红色边框的代表未来需求的规划场景或者测试使用">按照个人销售额占比</div>
                 <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
               </div>
-            </div>
+            </div></div>
+          <!-- Deduction Rules -->
+          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
+            <div id="contributorEmployeeSettings">
+            <div id="deductRulesContainer"></div>
+            <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
+
             </div>
           </div>
 

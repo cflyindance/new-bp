@@ -3040,28 +3040,22 @@ var poolSalesDeductions = {};
         deductValueConditions[cardId] = getDefaultDeductValueConditions(basis);
       }
       var count = container.querySelectorAll('.deduct-basis-card').length;
-      var numChar = poolNumChars[count] || (count + 1);
+      var numChar = String(count + 1).padStart(2, '0');
       var label = DEDUCT_BASIS_LABELS[basis];
       var defaultPct = opt.ratePct != null ? opt.ratePct : getDefaultDeductRatePct(basis);
-      var rateHtml = '<span style="font-size:13px;color:var(--text-secondary)">占比<span style="color:var(--danger);margin-left:2px">*</span></span>' +
-        '<input type="number" id="deduct-rate-' + cardId + '" class="deduct-rate" min="0" step="0.01" value="' + defaultPct + '" placeholder="0" required style="width:80px;height:28px;padding:2px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:13px;text-align:center">' +
-        '<span style="font-size:13px;color:var(--text-secondary)">%</span>';
+      var rateHtml = '<label class="contributor-rate-control"><span>占比</span><input type="number" id="deduct-rate-' + cardId + '" class="deduct-rate" min="0" max="100" step="0.01" value="' + defaultPct + '" placeholder="0" required aria-label="贡献比例"><span>%</span></label>';
       var card = document.createElement('div');
       card.className = 'pool-rule-card deduct-basis-card';
       card.id = 'deduct-card-' + cardId;
       card.dataset.basis = basis;
       card.dataset.deductId = cardId;
       card.innerHTML =
-        '<div class="pool-rule-header">' +
-        '<div class="pool-rule-label"><span class="num">' + numChar + '</span> ' +
-        '<span class="pool-rule-type-tag deduct">' + label + '</span></div>' +
-        '<div style="display:flex;align-items:center;gap:8px">' + rateHtml +
-        '<button type="button" class="btn btn-sm" onclick="openDeductConditionsDrawer(\'' + cardId + '\')">设置取值条件 <span style="color:var(--danger)">*</span></button>' +
-        '<button type="button" class="btn btn-sm btn-text-danger" onclick="removeDeductRule(\'' + cardId + '\')" style="font-size:18px;padding:0 4px">×</button>' +
+        '<div class="pool-rule-header contributor-rule-header">' +
+        '<div class="pool-rule-label"><span class="num">' + numChar + '</span><span class="pool-rule-type-tag deduct">' + label + '</span></div>' +
+        '<div class="contributor-rule-actions">' + rateHtml +
+        '<button type="button" class="btn contributor-delete" aria-label="删除贡献规则" title="删除贡献规则" onclick="removeDeductRule(\'' + cardId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>' +
         '</div></div>' +
-        '<div class="pool-rule-conditions empty" id="deduct-card-' + cardId + '-conditions">' +
-        '<span class="cond-label">取值条件<span style="color:var(--danger);margin-left:2px">*</span>：</span>' +
-        '<span class="cond-text">未设置</span></div>' +
+        '<div class="contributor-condition-field"><span>取值条件 <span class="contributor-required">*</span></span><button type="button" class="btn contributor-condition-trigger" onclick="openDeductConditionsDrawer(\'' + cardId + '\')"><span aria-hidden="true">＋</span> 设置取值条件</button></div>' +
         '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" style="display:none" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
       if (!silent) deductAllocationMethods[cardId] = 'source';
@@ -3109,32 +3103,11 @@ var poolSalesDeductions = {};
       var cards = document.querySelectorAll('#deductRulesContainer .deduct-basis-card');
       cards.forEach(function(card, i) {
         var num = card.querySelector('.num');
-        if (num) num.textContent = poolNumChars[i] || (i + 1);
+        if (num) num.textContent = String(i + 1).padStart(2, '0');
       });
     }
 
-    function formatDeductCardCondText(cardId) {
-      var basis = parseDeductCardBasis(cardId);
-      var cond = deductValueConditions[cardId] || {};
-      var parts = [];
-      var ratePct = readDeductRatePct(cardId);
-      if (isFinite(ratePct)) parts.push('占比: ' + ratePct + '%');
-      else parts.push('占比: 未填');
-      if (basis === 'tip_income' && Array.isArray(cond.tipTypes) && cond.tipTypes.length) {
-        parts.push(tipTerm('小费类型: ') + cond.tipTypes.join(', '));
-      }
-      var scText = basis === 'tip_income' ? formatTipsCondForDisplay(cond || {}) : formatSalesCondForDisplay(cond || {}, true);
-      if (scText) parts.push(scText);
-      return parts.join(' | ');
-    }
-
     function updateDeductCardConditionDisplay(cardId) {
-      var el = document.getElementById('deduct-card-' + cardId + '-conditions');
-      if (!el) return;
-      var text = formatDeductCardCondText(cardId);
-      var textEl = el.querySelector('.cond-text');
-      if (textEl) textEl.textContent = text || '未设置';
-      el.classList.toggle('empty', !text);
       if (typeof updateContributorWeightsSummary === 'function') updateContributorWeightsSummary(cardId);
       if (typeof updateContributorSharesSummary === 'function') updateContributorSharesSummary(cardId);
       if (typeof renderContributorAllocationMethod === 'function') renderContributorAllocationMethod(cardId);
