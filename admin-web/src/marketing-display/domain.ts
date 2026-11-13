@@ -1,9 +1,9 @@
-import {defaults,updateContract,type AdSpec,type SlotRevision} from './ad-slot-catalog';
+import {CHANNELS,defaults,updateContract,type AdSpec,type SlotRevision} from './ad-slot-catalog';
 /** Display region/content/publication contract. No browser state or UI dependencies. */
 export const CONTENTS_PATH='/marketing/display-content/contents';
 export const PLACEMENTS_PATH='/marketing/display-content/placements';
 export const REGIONS_PATH='/m-platform/display-regions';
-export const DISPLAY_TERMINALS=['Kiosk','eMenu','CDS','OO','SDI','取餐屏'] as const;
+export const DISPLAY_TERMINALS=CHANNELS;
 export type MediaKind='image'|'video';
 export type Parameter='interval'|'idle'|'transition';
 export interface TerminalBinding { minimumVersion:string; mediaKinds:MediaKind[] }

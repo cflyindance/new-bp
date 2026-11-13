@@ -36,7 +36,7 @@ var KioskAdSlots = (() => {
     validateSpecs: () => validateSpecs,
     withDefaults: () => withDefaults
   });
-  var CHANNELS = ["Kiosk", "eMenu", "CDS", "OO", "SDI", "\u53D6\u9910\u5C4F"];
+  var CHANNELS = ["Kiosk", "eMenu", "CDS", "OO", "SDI", "\u53D6\u9910\u5C4F", "Waitlist"];
   var PLATFORM_KEY = "menusifu:display-regions:v1";
   var canonical = (value) => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).sort().reduce((out, key) => ({ ...out, [key]: v[key] }), {}) : v);
   var copy = (x) => structuredClone(x);
@@ -74,7 +74,7 @@ var KioskAdSlots = (() => {
     }
   }
   function defaults() {
-    return ["screensaver", "home"].map((code) => ({ id: "ad-kiosk-" + code, name: code === "home" ? "\u9996\u9875\u5E7F\u544A" : "\u5C4F\u4FDD", code, productLine: "Kiosk", scene: code === "home" ? "\u9996\u9875" : "\u5F85\u673A", description: code === "home" ? "Kiosk\u9996\u9875\u5E7F\u544A\u533A\u57DF" : "Kiosk\u65E0\u64CD\u4F5C\u65F6\u5C55\u793A\uFF0C\u8FDB\u5165\u9000\u51FA\u7531\u7EC8\u7AEF\u63A7\u5236\u3002", enabled: true, builtin: true, ratio: code === "home" ? "108:125 / 4:3" : "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: code === "home" ? ["interval", "transition"] : ["interval", "idle", "transition"], bindings: { Kiosk: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: code === "home" ? [newSpec("portrait", 1080, 1250), newSpec("landscape", 1440, 1080)] : [newSpec(), newSpec("landscape", 1920, 1080)] }));
+    return ["screensaver", "home"].map((code) => ({ id: "ad-kiosk-" + code, name: code === "home" ? "\u9996\u9875\u5E7F\u544A" : "\u5C4F\u4FDD", code, productLine: "Kiosk", scene: code === "home" ? "\u9996\u9875" : "\u5F85\u673A", description: code === "home" ? "Kiosk\u9996\u9875\u5E7F\u544A\u533A\u57DF" : "Kiosk\u65E0\u64CD\u4F5C\u65F6\u5C55\u793A\uFF0C\u8FDB\u5165\u9000\u51FA\u7531\u7EC8\u7AEF\u63A7\u5236\u3002", enabled: true, builtin: true, ratio: code === "home" ? "108:125 / 4:3" : "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: code === "home" ? ["interval", "transition"] : ["interval", "idle", "transition"], bindings: { Kiosk: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: code === "home" ? [newSpec("portrait", 1080, 1250), newSpec("landscape", 1440, 1080)] : [newSpec(), newSpec("landscape", 1920, 1080)] })).concat([{ id: "ad-waitlist-screensaver", name: "\u5C4F\u4FDD", code: "screensaver", productLine: "Waitlist", scene: "\u5F85\u673A", description: "Waitlist\u5C4F\u4FDD\u5C55\u793A\u533A\u57DF", enabled: true, builtin: true, ratio: "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: ["interval", "idle", "transition"], bindings: { Waitlist: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: [newSpec(), newSpec("landscape", 1920, 1080)] }]);
   }
   function withDefaults(platform) {
     const next = copy(platform);

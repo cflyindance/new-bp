@@ -1,5 +1,5 @@
 /** Shared contract for M-platform slot configuration and native advertising pages. */
-export const CHANNELS = ['Kiosk','eMenu','CDS','OO','SDI','取餐屏'] as const;
+export const CHANNELS = ['Kiosk','eMenu','CDS','OO','SDI','取餐屏','Waitlist'] as const;
 export const PLATFORM_KEY = 'menusifu:display-regions:v1';
 export type Kind = 'image'|'video';
 export interface AdSpec {
@@ -39,7 +39,7 @@ export function validateSpecs(specs:AdSpec[]):void {
   }
 }
 export function defaults():AdSlot[] {
-  return ['screensaver','home'].map(code=>({id:'ad-kiosk-'+code,name:code==='home'?'首页广告':'屏保',code,productLine:'Kiosk',scene:code==='home'?'首页':'待机',description:code==='home'?'Kiosk首页广告区域':'Kiosk无操作时展示，进入退出由终端控制。',enabled:true,builtin:true,ratio:code==='home'?'108:125 / 4:3':'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:code==='home'?['interval','transition']:['interval','idle','transition'],bindings:{Kiosk:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:code==='home'?[newSpec('portrait',1080,1250),newSpec('landscape',1440,1080)]:[newSpec(),newSpec('landscape',1920,1080)]}));
+  return ['screensaver','home'].map((code):AdSlot=>({id:'ad-kiosk-'+code,name:code==='home'?'首页广告':'屏保',code,productLine:'Kiosk',scene:code==='home'?'首页':'待机',description:code==='home'?'Kiosk首页广告区域':'Kiosk无操作时展示，进入退出由终端控制。',enabled:true,builtin:true,ratio:code==='home'?'108:125 / 4:3':'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:code==='home'?['interval','transition']:['interval','idle','transition'],bindings:{Kiosk:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:code==='home'?[newSpec('portrait',1080,1250),newSpec('landscape',1440,1080)]:[newSpec(),newSpec('landscape',1920,1080)]})).concat([{id:'ad-waitlist-screensaver',name:'屏保',code:'screensaver',productLine:'Waitlist',scene:'待机',description:'Waitlist屏保展示区域',enabled:true,builtin:true,ratio:'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:['interval','idle','transition'],bindings:{Waitlist:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:[newSpec(),newSpec('landscape',1920,1080)]}] as AdSlot[]);
 }
 export function withDefaults<T extends {regions:AdSlot[]}>(platform:T):T {
   const next=copy(platform);for(const slot of defaults())if(!next.regions.some(r=>r.id===slot.id||r.productLine===slot.productLine&&r.code===slot.code))next.regions.push(slot);return next;
