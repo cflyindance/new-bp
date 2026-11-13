@@ -2649,6 +2649,7 @@ var poolSalesDeductions = {};
     /** 按卡片 id 存取值条件 */
     var deductValueConditions = {};
     var deductEmployeeShares = {};
+    var deductAllocationMethods = {};
 
     function getDeductBasisBlock(basis) {
       return document.getElementById('deduct-panel-' + basis);
@@ -2900,7 +2901,8 @@ var poolSalesDeductions = {};
         delete sc.tipTypes;
         entry.salesConditions = sc;
       }
-      if (deductEmployeeShares[cardId]) {
+      if (deductAllocationMethods[cardId] && entry.scopeType === 'role') { entry.allocationMethod = deductAllocationMethods[cardId]; entry.id = cardId; }
+      if (!entry.allocationMethod && deductEmployeeShares[cardId]) {
         entry.employeeShares = JSON.parse(JSON.stringify(deductEmployeeShares[cardId]));
         entry.id = cardId;
       }
@@ -3060,6 +3062,7 @@ var poolSalesDeductions = {};
         '<span class="cond-text">未设置</span></div>' +
         '<div class="contributor-share-entry" id="deduct-share-entry-' + cardId + '" style="display:none" hidden><span id="deduct-share-summary-' + cardId + '">员工承担：未设置</span><button type="button" class="btn btn-sm" id="deduct-share-button-' + cardId + '" onclick="openContributorSharesDrawer(\'' + cardId + '\')">设置员工承担比例</button></div>';
       container.appendChild(card);
+      if (!silent) deductAllocationMethods[cardId] = 'source';
       var rateInpEl = getDeductRateInput(cardId);
       if (rateInpEl) {
         rateInpEl.addEventListener('input', function() {
@@ -3085,6 +3088,7 @@ var poolSalesDeductions = {};
             card.remove();
             delete deductValueConditions[cardId];
             delete deductEmployeeShares[cardId];
+            delete deductAllocationMethods[cardId];
             syncExistingDeductFlags();
             if (basis === 'personal_sales_pct' && !hasDeductBasis('personal_sales_pct')) {
               personalSalesPctConditions = { revenueType: 'Net Sales (税前营业额)', role: [] };
@@ -3129,6 +3133,7 @@ var poolSalesDeductions = {};
       el.classList.toggle('empty', !text);
       if (typeof updateContributorWeightsSummary === 'function') updateContributorWeightsSummary(cardId);
       if (typeof updateContributorSharesSummary === 'function') updateContributorSharesSummary(cardId);
+      if (typeof renderContributorAllocationMethod === 'function') renderContributorAllocationMethod(cardId);
     }
 
     function parkDeductPanel(basis) {
@@ -3190,6 +3195,7 @@ var poolSalesDeductions = {};
       if (container) container.innerHTML = '';
       deductValueConditions = {};
       deductEmployeeShares = {};
+      deductAllocationMethods = {};
       deductRuleCounter = { sales_pct: 0, tip_income: 0, personal_sales_pct: 0 };
       DEDUCT_BASIS_LIST.forEach(function(basis) {
         existingDeductRules[basis] = false;
@@ -3336,6 +3342,8 @@ var poolSalesDeductions = {};
     function applyDeductScopeEntry(cardId, entry) {
       if (!entry) return;
       var basis = parseDeductCardBasis(cardId);
+      if (entry.allocationMethod != null) deductAllocationMethods[cardId] = entry.allocationMethod;
+      else delete deductAllocationMethods[cardId];
       if (entry.employeeShares && entry.employeeShares.mode !== 'weights') deductEmployeeShares[cardId] = JSON.parse(JSON.stringify(entry.employeeShares));
       deductValueConditions[cardId] = conditionsFromDeductEntry(entry, basis);
       if (basis === 'personal_sales_pct') {
@@ -4506,6 +4514,7 @@ var poolSalesDeductions = {};
           sc.revenueType = 'Net Sales (税前营业额)';
         }
         if ((sc.employee || []).length && (!deductEmployeeShares[cardId] || deductEmployeeShares[cardId].mode !== 'weights')) delete deductEmployeeShares[cardId];
+        if ((sc.employee || []).length || !(sc.role || []).length) delete deductAllocationMethods[cardId];
         deductValueConditions[cardId] = sc;
         if (basis === 'personal_sales_pct') {
           personalSalesPctConditions = sc;
@@ -4574,6 +4583,7 @@ var poolSalesDeductions = {};
         else condition.tipTypes = condition.tipType ? [condition.tipType] : [];
         delete condition.tipType; delete condition.revenueType;
         if ((condition.employee || []).length && (!deductEmployeeShares[cardId] || deductEmployeeShares[cardId].mode !== 'weights')) delete deductEmployeeShares[cardId];
+        if ((condition.employee || []).length || !(condition.role || []).length) delete deductAllocationMethods[cardId];
         deductValueConditions[cardId] = condition;
         updateDeductCardConditionDisplay(cardId);
         closeDrawer('tipsDrawer'); showNotification('取值条件已保存'); return;
@@ -5002,6 +5012,7 @@ var poolSalesDeductions = {};
       }
       if(typeof validatePoolSalesDeductions==='function'&&!validatePoolSalesDeductions())return;
       if (!validateWorkHoursConfig()) return;
+      if (contributionMode !== 'merchant' && !validateContributorAllocationMethods()) return;
       if (contributionMode !== 'merchant' && typeof validateContributorSharesBeforeSave === 'function' && !validateContributorSharesBeforeSave()) return;
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {

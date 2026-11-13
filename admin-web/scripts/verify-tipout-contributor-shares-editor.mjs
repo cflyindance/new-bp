@@ -5,7 +5,7 @@ const ctx={window,document:{addEventListener(){},getElementById:id=>nodes[id],qu
 getRuleEditorStoreName:()=>store,showNotification:m=>messages.push(m),parseDeductCardBasis:()=> 'sales_pct',
 readDeductRatePct:()=>10,
 listDeductCardIds:()=>['sales_pct_1'],getEditParams:()=>({}),ruleData:{getRules:()=>[]},
-deductValueConditions:{sales_pct_1:{role:['R1','R2']}},deductEmployeeShares:{},
+deductValueConditions:{sales_pct_1:{role:['R1','R2']}},deductEmployeeShares:{},deductAllocationMethods:{},
 escapeHtmlAttr:String,escapeHtmlText:String};
 window.TipOutRosterDirectory={listEmployees:()=>members};
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-funding.js.txt','utf8'),ctx);
@@ -26,4 +26,6 @@ assert.equal(nodes['deduct-share-entry-sales_pct_1'].hidden,true,'roles cleared:
 store='';ctx.updateContributorSharesSummary('sales_pct_1');assert.equal(nodes['deduct-share-button-sales_pct_1'].disabled,false,'missing store must allow click to show notice');
 ctx.openContributorSharesDrawer('sales_pct_1');assert.equal(messages.at(-1),'请先选择门店');store='S';
 delete ctx.deductEmployeeShares.sales_pct_1;const old=ctx.entryFromDeductValueConditions('sales_pct_1');assert.equal(old.employeeShares,undefined);assert.equal(old.id,undefined);
+ctx.deductValueConditions.sales_pct_1.role=['R1','R2'];ctx.deductAllocationMethods.sales_pct_1='hours';
+const byHours=ctx.entryFromDeductValueConditions('sales_pct_1');assert.equal(byHours.allocationMethod,'hours');assert.equal(byHours.employeeShares,undefined);assert.equal(byHours.id,'sales_pct_1');
 console.log('PASS editor shares: disabled/no-role, summary, serialization, store/role/roster stale guards and legacy untouched');

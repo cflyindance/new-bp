@@ -1,0 +1,57 @@
+    function contributorAllocationLabels(cardId) {
+      return {source:parseDeductCardBasis(cardId)==='tip_income'?'按个人小费收入占比':'按个人销售额占比',average:'按人数平均',hours:'按有效打卡工时占比',orders:'按个人订单数占比'};
+    }
+    function renderContributorAllocationMethod(cardId) {
+      var card=document.getElementById('deduct-card-'+cardId);if(!card)return;
+      var cond=deductValueConditions[cardId]||{},roles=cond.role||[],host=document.getElementById('deduct-method-'+cardId);
+      if(!roles.length){if(host)host.remove();return;}
+      if(!host){host=document.createElement('div');host.id='deduct-method-'+cardId;host.className='contributor-method-settings';card.appendChild(host);}
+      var labels=contributorAllocationLabels(cardId),method=deductAllocationMethods[cardId],legacy=!method;
+      host.innerHTML='<div class="form-section-title">员工承担方式 <details class="distribution-method-help"><summary aria-label="查看员工承担方式示例">？</summary><div class="distribution-method-help-content"><p>所有选中角色的有效贡献员工合并计算。余额不足只扣可扣金额，差额不转扣。</p><p>'+escapeHtmlText(contributorAllocationExample(cardId,method||'source'))+'</p></div></details></div>'+
+        '<div class="contributor-method-choices">'+Object.keys(labels).map(function(key){return '<label class="contributor-method-choice"><input type="radio" name="contributor-method-'+escapeHtmlAttr(cardId)+'" value="'+key+'"'+(method===key?' checked':'')+' data-native-onchange="setContributorAllocationMethod(\''+cardId+'\',this.value)"><span>'+labels[key]+'</span></label>';}).join('')+'</div>'+
+        (legacy?'<p class="contributor-method-legacy">当前保留已保存规则的扣除口径；选择承担方式后应用新设置。</p>':'')+
+        '<details class="contributor-method-preview"><summary>员工扣除试算</summary><div class="contributor-method-preview-controls"><label for="method-date-'+cardId+'">试算日期</label><input class="form-control" type="date" id="method-date-'+cardId+'" value="'+new Date().toLocaleDateString('en-CA')+'"><button type="button" class="btn btn-sm" data-native-onclick="previewContributorAllocationMethod(\''+cardId+'\')">试算</button></div><div id="method-result-'+cardId+'" aria-live="polite"></div></details>';
+    }
+    function contributorAllocationExample(cardId,method) {
+      if(method==='average')return '示例：应贡献$100，两名有效打卡员工，各应扣$50。';
+      if(method==='hours')return '示例：应贡献$100，A有效工时4小时、B为6小时，分别应扣$40和$60。';
+      if(method==='orders')return '示例：应贡献$100，A有10单、B有30单，分别应扣$25和$75。';
+      return parseDeductCardBasis(cardId)==='tip_income'?'示例：应贡献$100，A小费$80、B为$120，分别应扣$40和$60。':'示例：应贡献$100，A销售额$1,000、B为$3,000，分别应扣$25和$75。';
+    }
+    function setContributorAllocationMethod(cardId,method) {
+      if(['source','average','hours','orders'].indexOf(method)<0)return;
+      deductAllocationMethods[cardId]=method;delete deductEmployeeShares[cardId];
+      renderContributorAllocationMethod(cardId);
+      var radio=document.querySelector('#deduct-method-'+cardId+' input[value="'+method+'"]');if(radio)radio.focus();
+    }
+    function validateContributorAllocationMethods() {
+      try{
+        var active=Object.keys(deductAllocationMethods).filter(function(id){return document.getElementById('deduct-card-'+id)&&((deductValueConditions[id]||{}).role||[]).length;});
+        if(!active.length)return true;
+        var mode=(document.querySelector('input[name="allocationMode"]:checked')||{}).value||'legacy_pool';
+        var range=(document.querySelector('input[name="allocationScope"]:checked')||{}).value||'day';
+        var params=getEditParams(),existing=ruleData.getRules().find(function(r){return String(r.id)===String(params.id);});
+        if(existing&&existing.funding)throw new Error('当前旧资金归集配置暂不支持员工承担方式');
+        if(mode!=='legacy_pool'||range!=='day')throw new Error('员工承担方式暂仅支持按整日的普通小费池分配');
+        if(listDeductCardIds('sales_pct').some(function(id){return !deductAllocationMethods[id]&&!deductEmployeeShares[id]&&!((deductValueConditions[id]||{}).employee||[]).length;}))throw new Error('请为本规则全部销售额贡献项明确选择员工承担方式');
+        active.forEach(function(id){if(['source','average','hours','orders'].indexOf(deductAllocationMethods[id])<0)throw new Error('员工承担方式无效');});return true;
+      }catch(error){showNotification(error.message,'error');return false;}
+    }
+    function previewContributorAllocationMethod(cardId) {
+      var host=document.getElementById('method-result-'+cardId);
+      try{
+        var store=getRuleEditorStoreName(),date=document.getElementById('method-date-'+cardId).value,method=deductAllocationMethods[cardId];
+        if(!store)throw new Error('请先选择门店');
+        if(!method)throw new Error('请先选择员工承担方式');
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('请选择有效试算日期');
+        var pct=readDeductRatePct(cardId);if(!Number.isFinite(pct)||pct<=0||pct>100)throw new Error('请填写大于0且不超过100%的贡献比例');
+        var entry=entryFromDeductValueConditions(cardId);entry.rate=pct/100;
+        var config={};config[deductBasisConfigKey(parseDeductCardBasis(cardId))]=entry;
+        var view=window.TipOutFunding.previewIndependent({allocationMode:'legacy_pool',deductConfig:config},window.TipOutScenarioSource.day(date,store),date,0);
+        var line=view.contributionRules[0],labels=contributorAllocationLabels(cardId);
+        host.innerHTML='<p class="contributor-method-legacy">'+escapeHtmlText(labels[method])+' · 本条独立试算，未扣除其他规则占用，不产生正式扣除</p><div class="tipout-table-wrap"><table class="detail-table"><thead><tr><th>员工／角色</th><th>依据值</th><th>承担比例</th><th>应扣金额</th><th>可扣余额</th><th>实际扣除</th></tr></thead><tbody>'+line.employees.map(function(e){
+          var value=method==='source'?'$'+(e.basisValue/100).toFixed(2):method==='hours'?e.basisValue+' h':method==='orders'?e.basisValue+' 单':'1 人';
+          return '<tr><td>'+escapeHtmlText(e.name)+' / '+escapeHtmlText(e.role)+'</td><td>'+value+'</td><td>'+Number(e.pct).toFixed(2)+'%</td><td>$'+e.due.toFixed(2)+'</td><td>$'+e.available.toFixed(2)+'</td><td>$'+e.amount.toFixed(2)+'</td></tr>';
+        }).join('')+'</tbody></table></div><p>应贡献 $'+line.plannedContribution.toFixed(2)+' · 实际贡献 $'+line.actualContribution.toFixed(2)+(line.shortfall>0?' · 少扣 $'+line.shortfall.toFixed(2)+'（差额不转扣）':'')+'</p>';
+      }catch(error){host.innerHTML='<p class="contributor-method-error" role="alert">'+escapeHtmlText(error.message||'无法试算')+'</p>';}
+    }

@@ -97,7 +97,7 @@
         if(configured.length){
           var params=getEditParams(),existing=ruleData.getRules().find(function(r){return String(r.id)===String(params.id);});
           if(existing&&existing.funding)throw new Error('旧资金归集模式暂不支持员工自定义承担比例');
-          if(listDeductCardIds('sales_pct').some(function(id){return !deductEmployeeShares[id]&&!((deductValueConditions[id]||{}).employee||[]).length;}))throw new Error('请为当前规则所有销售额贡献项明确设置员工承担比例，避免转换旧算法');
+          if(listDeductCardIds('sales_pct').some(function(id){return !deductAllocationMethods[id]&&!deductEmployeeShares[id]&&!((deductValueConditions[id]||{}).employee||[]).length;}))throw new Error('请为当前规则所有销售额贡献项明确设置员工承担比例，避免转换旧算法');
         }
         Object.keys(deductEmployeeShares).forEach(function(id){
           if(!document.getElementById('deduct-card-'+id))return;

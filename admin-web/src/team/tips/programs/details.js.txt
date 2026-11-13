@@ -1504,7 +1504,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var shortage = Number(rule.shortfall) > 0;
         var explanation = (rule.employees || []).filter(function(e) { return Number(e.shortfall) > 0; }).map(function(e) { return escHtml(e.name) + '应扣' + money(e.due) + '，可扣余额' + money(e.available) + '，实际扣除' + money(e.amount); }).join('；');
         return '<div class="detail-contribution-rule"><h4>' + label + ' 小费贡献方规则 · ' + escHtml(rule.label || '贡献规则') + ' · ' + (Number(rule.rate) * 100).toFixed(2) + '%</h4>' +
-          '<p class="contributor-shares-note">' + prefix + '实际扣除 <strong>' + money(rule.actualContribution) + '</strong></p>' + table(rule.employees || []) +
+          '<p class="contributor-shares-note">' + (String(rule.shareMode||'').indexOf('method_')===0 ? escHtml(({method_source:rule.basis==='tipIncome'?'按个人小费收入占比':'按个人销售额占比',method_average:'按人数平均',method_hours:'按有效打卡工时占比',method_orders:'按个人订单数占比'})[rule.shareMode]) + ' · ' : '') + prefix + '实际扣除 <strong>' + money(rule.actualContribution) + '</strong></p>' + table(rule.employees || []) +
           (shortage ? '<details class="tipout-funding-excess contribution-shortage"><summary><span>可扣余额不足，少扣 ' + money(rule.shortfall) + '</span><span aria-label="查看少扣明细">?</span></summary><p>' + explanation + '。差额不转由其他员工承担。实际贡献按实际扣除计算，最终分配及老板补足仍按P/C规则计算；少扣金额不等于老板补足金额。</p></details>' : '') + '</div>';
       }).join('') + '<p class="tipout-funding-source">' + (confirmed ? '' : '预计试算，尚未形成正式扣除。') + '</p></section>';
     }

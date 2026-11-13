@@ -1,3 +1,4 @@
+import contributorMethods from "./programs/contributor-methods-editor.js.txt?raw";
 import { tipoutDashboardAssets } from "./tips-dashboard-assets";
 import { bindTipsPlanningHints } from "./tips-planning-hints";
 import { readTipOutSchedule } from "./tips-schedule-source";
@@ -79,7 +80,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
-    programs[view], view === "distribution" ? autoAllocation + "\n" + dashboardModel + "\n" + summaryAutoAllocation + "\n" + storeSummaryAutoAllocation : "", view === "rule-editor" ? contributorSharesEditor : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
+    programs[view], view === "distribution" ? autoAllocation + "\n" + dashboardModel + "\n" + summaryAutoAllocation + "\n" + storeSummaryAutoAllocation : "", view === "rule-editor" ? contributorSharesEditor + "\n" + contributorMethods : "", (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
     "return {prepareQuickSnapshot:function(system){return system?prepareSystemAllocationSnapshot():prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
