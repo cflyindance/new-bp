@@ -34,6 +34,9 @@ import { saveLocalPageRegistration } from './local-page-registration';
 import { syncPageRegistrationType } from './page-registration-create-ui';
 import { currentMAccess } from '../permissions/m-platform-store';
 import { mPageKey } from '../permissions/m-platform-catalog';
+import {setOperationActor,appendOperation} from './operation-log';
+import {currentMAccount} from '../permissions/m-platform-store';
+import {renderOperationLog,bindOperationLog} from './operation-log-ui';
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function currentUser(): MenuEditorUser {
@@ -292,6 +295,7 @@ function clearFullscreenEnvironment(onMount: () => void): void {
 }
 
 export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string {
+  if(view==='menu-log'||view==='registry-log')return renderOperationLog(view==='menu-log'?'menu':'registry');
   const { state } = jsonMenuEditorStore;
   if (state.status === "idle" || state.status === "loading") return `<div class="grid min-h-[680px] flex-1 place-items-center rounded-2xl bg-white shadow-[0_2px_14px_rgba(15,23,42,0.04)]"><div class="text-center"><div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-teal-700 border-t-transparent"></div><p class="mt-4 text-sm font-medium text-slate-800">正在读取当前菜单配置…</p><p class="mt-1 text-xs text-slate-500">优先恢复共享草稿</p></div></div>`;
   if (!state.document) return `<div class="grid min-h-[680px] flex-1 place-items-center rounded-2xl border border-red-100 bg-white shadow-[0_2px_14px_rgba(15,23,42,0.04)]"><div class="text-center"><h2 class="font-semibold text-red-900">菜单配置加载失败</h2><p class="mt-2 text-sm text-red-700">${escapeHtml(state.message)}</p><button type="button" data-jme-retry class="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm text-white">重新加载</button></div></div>`;
@@ -544,7 +548,7 @@ function commitCurrentDialog(): boolean {
 }
 
 async function publishCurrentMenu(onMount: () => void): Promise<boolean> {
-  if (!commitCurrentDialog()) { onMount(); return false; }
+  if (!commitCurrentDialog()) { appendOperation({scope:'menu',action:'发布',stage:'发布',before:jsonMenuEditorStore.state.document,after:jsonMenuEditorStore.state.document,result:'failure',reason:dialogState?.error??'页面校验未通过'}); onMount(); return false; }
   let result = await jsonMenuEditorStore.publish(currentUser(), false);
   if (result.needsWarningConfirmation) {
     const ok = await openConfirmDialog({ title: "确认发布", message: `当前有 ${jsonMenuEditorStore.state.issues.filter((issue) => issue.severity === "warning").length} 个兼容警告，确认仍要发布？`, confirmLabel: "确认发布" });
@@ -572,7 +576,11 @@ function downloadJson(content: string, name: string): void {
 }
 
 let bound = false;
+let operationWarningBound = false;
 export function bindJsonMenuEditor(mount: () => void): void {
+  if(!operationWarningBound){operationWarningBound=true;window.addEventListener('menusifu:operation-log-warning',event=>showAppToast((event as CustomEvent<string>).detail,{variant:'error'}));}
+  setOperationActor(()=>{const account=currentMAccount();return account ? `${account.employeeId}（本地账号）`:'未知本地账号';});
+  bindOperationLog(mount);
   // Right-panel edits, picker close/confirm and other direct refresh paths all
   // replace the tree DOM. Preserve its viewport independently of detail scroll.
   const onMount = () => rerenderPreservingJsonMenuTreeScroll(mount);
@@ -838,7 +846,7 @@ export function bindJsonMenuEditor(mount: () => void): void {
     if (target.closest("[data-jme-delete]")) { const node = jsonMenuEditorStore.selectedNode(); if (!node) return; const menuName = node.name || "菜单"; const count = walkMenuNodes(node.children ?? []).length; void (async () => { const ok = await openConfirmDialog({ title: `删除“${menuName}”？`, message: `该菜单${count ? `及其 ${count} 个下级` : ""}将被永久删除，请准确输入菜单名称“${menuName}”以确认。`, confirmLabel: "删除", danger: true, requireText: menuName }); if (!ok) return; if (!jsonMenuEditorStore.deleteSelected()) showAppToast("包含兼容保留节点的子树不能删除。", { variant: "error" }); dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); })(); return; }
     if (target.closest("[data-jme-save]")) { void jsonMenuEditorStore.saveDraft(currentUser()).then(() => { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); return; }
     if (target.closest("[data-jme-publish], [data-jme-publish-current]")) { void publishCurrentMenu(onMount); return; }
-    if (target.closest("[data-jme-export]")) { const content = jsonMenuEditorStore.exportJson(); if (!content) { showAppToast("顶部配置不完整，无法导出。", { variant: "error" }); return; } downloadJson(content, jsonMenuEditorStore.state.document?.name ?? "menu-config"); return; }
+    if (target.closest("[data-jme-export]")) { const before=jsonMenuEditorStore.state.document; const content=jsonMenuEditorStore.exportJson(); if(!content){appendOperation({scope:"menu",action:"导出 JSON",stage:"导出",before,after:before,result:"failure",reason:"顶部配置不完整"});showAppToast("顶部配置不完整，无法导出。",{variant:"error"});return;} try{downloadJson(content,before?.name??"menu-config");appendOperation({scope:"menu",action:"导出 JSON",stage:"导出",before,after:before,force:true});}catch(error){appendOperation({scope:"menu",action:"导出 JSON",stage:"导出",before,after:before,result:"failure",reason:"生成导出文件失败"});showAppToast("导出失败",{variant:"error"});}return; }
     if (target.closest("[data-jme-discard]")) { void (async () => { const ok = await openConfirmDialog({ title: "放弃修改", message: "确定放弃当前未保存修改？将重新读取共享草稿；没有草稿时恢复发布版本。", confirmLabel: "确认放弃", danger: true }); if (ok) void jsonMenuEditorStore.discard().then(() => { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); })(); return; }
     if (target.closest("[data-jme-retry]")) { void jsonMenuEditorStore.load().then(() => { expandAll(); dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); return; }
     if (target.closest("[data-jme-next-issue]")) { const located = jsonMenuEditorStore.state.issues.filter((issue) => issue.path); if (located.length) { jsonMenuEditorStore.select(located[issueCursor++ % located.length]!.path!); onMount(); } }
@@ -886,8 +894,18 @@ export function bindJsonMenuEditor(mount: () => void): void {
   document.body.addEventListener("drop", markMenuSearchUserIntent, true);
   document.body.addEventListener("compositionstart", markMenuSearchUserIntent, true);
 
-  document.body.addEventListener("change", (event) => {
+  document.body.addEventListener("change", async (event) => {
     const input = event.target as HTMLInputElement | HTMLSelectElement;
+    if(input.matches('[data-jme-import]')) {
+      const file=(input as HTMLInputElement).files?.[0];if(!file)return;
+      try {if(currentMAccess(mPageKey('routing'))!=='edit')throw new Error('暂无导入权限');
+        const text=await file.text();const parsed=JSON.parse(text);
+        const ok=await openConfirmDialog({title:'导入菜单配置',message:'导入会替换当前编辑配置，尚未发布的输入将被替换；导入本身不会发布。',confirmLabel:'确认导入',danger:true});if(!ok)return;
+        if(currentMAccess(mPageKey('routing'))!=='edit')throw new Error('暂无导入权限');
+        if(!jsonMenuEditorStore.importDocument(parsed)){showAppToast(jsonMenuEditorStore.state.message,{variant:'error'});return;}
+        expandAll();dialogState=buildEditFormState(jsonMenuEditorStore.state.selectedPath);onMount();
+      }catch(error){appendOperation({scope:'menu',action:'导入 JSON',stage:'编辑配置',before:jsonMenuEditorStore.state.document,after:jsonMenuEditorStore.state.document,result:'failure',reason:error instanceof SyntaxError?'JSON 格式无效':error instanceof Error?error.message:'导入失败'});showAppToast('导入失败，当前菜单保持不变',{variant:'error'});}finally{input.value='';}return;
+    }
     if (input.matches('[data-page-registration-type]')) { const form = input.closest<HTMLFormElement>('form'); if (form) syncPageRegistrationType(form); return; }
     if (input.matches("[data-page-registry-status]")) { registrationUi.status = input.value; const rows = document.querySelector<HTMLElement>("[data-page-registry-rows]"); if (rows) rows.innerHTML = registryRows(); return; }
     if (input.dataset.jmeRootField) { jsonMenuEditorStore.updateRoot((document) => (document as unknown as Record<string, unknown>)[input.dataset.jmeRootField!] = input.value); onMount(); return; }

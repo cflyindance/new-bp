@@ -18,6 +18,7 @@ import {
 } from "./json-menu-document-domain";
 import { serializeMenuDocument, stringifyMenuDocument } from "./json-menu-document-serializer";
 import { getMenuDocumentRepository, type MenuDocumentRepository } from "./json-menu-document-repository";
+import { withMenuOperationLog } from './menu-operation-log';
 
 export interface JsonMenuEditorState {
   status: "idle" | "loading" | "ready" | "saving" | "publishing" | "error";
@@ -193,6 +194,21 @@ export class JsonMenuEditorStore {
 
   setLocale(locale: MenuLocale): void { this.state.locale = locale; }
 
+  importDocument(input: unknown): boolean {
+    try {
+      if(!input||typeof input!=='object'||!Array.isArray((input as MenuDocument).menu))throw new Error('导入文件不是有效菜单文档');
+      const next=structuredClone(input as MenuDocument);
+      const issues=validateMenuDocument(next,this.state.published);
+      if(issues.some(i=>i.severity==='error'))throw new Error(issues.find(i=>i.severity==='error')!.message);
+      for(const visit of walkMenuNodes(this.state.document?.menu??[])) {
+        if(!isCompatibilityProtected(this.state.document!.menu,visit.path))continue;
+        const candidate=walkMenuNodes(next.menu).find(v=>v.node.id===visit.node.id)?.node;
+        if(JSON.stringify(candidate)!==JSON.stringify(visit.node))throw new Error('导入不能覆盖兼容保护节点');
+      }
+      this.state.document=next;this.state.selectedPath=next.menu.length?[0]:[];this.markDirty('已导入编辑配置，尚未发布');return true;
+    } catch(error) {this.state.message=error instanceof Error?error.message:'导入失败';return false;}
+  }
+
   async saveDraft(user: MenuEditorUser): Promise<boolean> {
     if (!this.state.document) return false;
     this.state.status = "saving";
@@ -263,4 +279,4 @@ export class JsonMenuEditorStore {
   }
 }
 
-export const jsonMenuEditorStore = new JsonMenuEditorStore();
+export const jsonMenuEditorStore = withMenuOperationLog(new JsonMenuEditorStore());
