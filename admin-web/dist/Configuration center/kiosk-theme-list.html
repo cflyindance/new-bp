@@ -9,6 +9,7 @@
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-validation.js"></script>
   <script>
@@ -1327,6 +1328,7 @@
               openPublishBlockModal(formatPublishOverlapMessage(block.conflicts, th));
               return;
             }
+            KioskAdTargetPolicy.markPublished(th);
             th.publishStatus = 'published';
             saveThemes(themes);
             render();
@@ -1340,6 +1342,7 @@
             var themes = getThemes();
             var th = themes.find(function(x) { return x.id === id; });
             if (!th) return;
+            KioskAdTargetPolicy.preserveHistory(th, th);
             th.publishStatus = 'draft';
             saveThemes(themes);
             render();

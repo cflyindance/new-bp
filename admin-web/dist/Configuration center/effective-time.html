@@ -10,6 +10,7 @@
   <script src="assets/kiosk-ad-slot-context.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-ad-slot-validation.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
@@ -491,8 +492,9 @@
             var themes = raw ? JSON.parse(raw) : [];
             var theme = themes.filter(function(t) { return t.id === themeId; })[0];
             if (theme) {
-            theme.distributeTime = '--';
-            theme.publishStatus = 'draft';
+              KioskAdTargetPolicy.preserveHistory(theme, theme);
+              theme.distributeTime = '--';
+              theme.publishStatus = 'draft';
               var selectedChannels = [];
               try {
                 selectedChannels = JSON.parse(localStorage.getItem('selected_channels_for_distribute') || '[]');

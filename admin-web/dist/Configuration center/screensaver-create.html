@@ -11,6 +11,7 @@
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
   <script>
@@ -390,6 +391,7 @@
       }
 
       function renderPreviews(role) {
+        if (adPositionEditor) adPositionEditor.refreshCompatibility();
         var list = role === 'portrait' ? portraitList : landscapeList;
         var containerId = role === 'portrait' ? 'portraitPreviews' : 'landscapePreviews';
         var inputId = role === 'portrait' ? 'filePortrait' : 'fileLandscape';
@@ -705,6 +707,7 @@
             carouselIntervalSec: carouselIntervalSec,
             portraitImages: [],
             landscapeImages: [],
+            publicationHistory: 'never',
             publishStatus: oldTheme && oldTheme.publishStatus ? oldTheme.publishStatus : 'draft'
           };
           if (oldTheme) {
@@ -726,9 +729,11 @@
               if (createDraftThemeId && oldTheme) {
                 var idx = list.findIndex(function(t) { return t.id === createDraftThemeId; });
                 if (idx >= 0) {
+                  adPositionEditor.assertSave();
+                  theme = KioskAdTargetPolicy.prepareSave(list[idx], theme);
                   list[idx] = theme;
                 } else {
-                  list.unshift(theme);
+                  throw Error('广告已被删除，请返回列表刷新');
                 }
               } else {
                 list.unshift(theme);
@@ -741,7 +746,7 @@
               window.location.href = window.appendMenusifuEmbeddedParam(url);
             } catch (err) {
               console.error('保存失败:', err);
-              Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的广告后重试。');
+              Toast.error(err.message || '保存失败，请重试');
             }
           }).catch(function(err) {
             console.error('图片处理失败:', err);
@@ -1090,6 +1095,7 @@
         if (createDraftThemeId) {
           var list = getThemes();
           var doomed = list.filter(function(t) { return t.id === createDraftThemeId; })[0];
+          if (doomed && !KioskAdTargetPolicy.canEditTarget(doomed)) { window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html'); return; }
           var refs = doomed && window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported() ? collectVideoMediaRefs(doomed) : [];
           var nextList = list.filter(function(t) { return t.id !== createDraftThemeId; });
           function go() {
