@@ -1,8 +1,27 @@
 import assert from 'node:assert/strict';
-import {defaults,available,snapshot,validateSnapshot,updateContract,newSpec,validateSpecs,validateMedia,samePosition} from '../src/marketing-display/ad-slot-catalog';
+import {CHANNELS,withDefaults,displayName,defaults,available,snapshot,validateSnapshot,updateContract,newSpec,validateSpecs,validateMedia,samePosition} from '../src/marketing-display/ad-slot-catalog';
 import {createPlatformState,saveRegion} from '../src/marketing-display/domain';
 const initial=defaults(),home=initial.find(s=>s.code==='home')!;
-assert.equal(available(initial,'Kiosk').length,2);assert.equal(available(initial,'eMenu').length,0);
+assert.deepEqual(CHANNELS,['Kiosk','eMenu','CDS','取餐屏','Waitlist']);
+for(const channel of CHANNELS){const screen=available(initial,channel).find(s=>s.code==='screensaver')!;assert.ok(screen);assert.equal(screen.productLine,channel);assert.deepEqual(screen.specs!.map(s=>[s.width,s.height]),[[1080,1920],[1920,1080]]);}
+assert.equal(new Set(initial.map(s=>s.id)).size,initial.length);
+assert.equal(home.name,'首页');
+const oldHome={...structuredClone(home),name:'首页广告'};
+const custom={...structuredClone(initial.find(s=>s.productLine==='eMenu')!),id:'custom-screen',enabled:false,specs:[newSpec('portrait',300,600)],bindings:{}};
+const persisted={regions:[oldHome,custom]};const merged=withDefaults(persisted);
+assert.equal(persisted.regions[0].name,'首页广告','read must not rewrite stored history');
+assert.equal(merged.regions.find(s=>s.id===home.id)!.name,'首页');
+assert.equal(displayName(oldHome),'首页');assert.equal(displayName({...oldHome,productLine:'eMenu'}),'首页广告');
+assert.equal(merged.regions.filter(s=>s.productLine==='eMenu'&&s.code==='screensaver').length,1);
+assert.equal(merged.regions.find(s=>s.id==='custom-screen')!.enabled,false);
+assert.equal(merged.regions.find(s=>s.id==='custom-screen')!.specs![0].width,300);
+assert.deepEqual(merged.regions.find(s=>s.id==='custom-screen')!.bindings,{});
+validateSnapshot(merged.regions,snapshot(oldHome));
+const retired={...structuredClone(initial[0]),id:'retired-oo',productLine:'OO',bindings:{OO:{minimumVersion:'1.0.0',mediaKinds:['image' as const]}}};
+const retained=withDefaults({regions:[retired]});assert.deepEqual(retained.regions.find(s=>s.id===retired.id),retired);validateSnapshot(retained.regions,snapshot(retired));
+
+
+assert.equal(available(initial,'Kiosk').length,2);assert.equal(available(initial,'eMenu').length,1);
 assert.deepEqual(home.specs!.map(s=>[s.width,s.height]),[[1080,1250],[1440,1080]]);
 const waitlist=available(initial,'Waitlist');assert.equal(waitlist.length,1);assert.equal(waitlist[0].code,'screensaver');assert.deepEqual(waitlist[0].specs!.map(s=>[s.width,s.height]),[[1080,1920],[1920,1080]]);assert.equal(available(initial,'Kiosk').some(s=>s.productLine==='Waitlist'),false);
 const unbound={...structuredClone(home),id:'emenu-home',productLine:'eMenu',bindings:{}};

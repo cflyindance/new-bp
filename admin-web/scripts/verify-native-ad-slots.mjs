@@ -14,3 +14,13 @@ assert.equal(JSON.parse(data.get('kiosk_themes'))[0].adSlot.version,1,'failed fi
 for(const name of ['screensaver-create.html','screensaver-edit.html','effective-time.html','kiosk-theme-list.html','store-select.html'])for(const [,code] of readFileSync(new URL(name,base),'utf8').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new Script(code,{filename:name});
 for(const name of ['kiosk-theme-position-editor.js','kiosk-ad-slot-context.js'])new Script(readFileSync(new URL('assets/'+name,base),'utf8'),{filename:name});
 console.log('PASS native slot bundle: final validation, wrong channel, disabled slot, saved-data preservation and changed page/script syntax');
+
+// Context pages must load the shared label helper and render legacy snapshots without rewriting them.
+for(const page of ['store-select.html','effective-time.html'])assert.match(readFileSync(new URL(page,base),'utf8'),/kiosk-ad-slot-catalog\.js/);
+const handlers=[],summaries=[];
+context.document={addEventListener:(_event,callback)=>handlers.push(callback),createElement:()=>({}),querySelector:()=>({after:line=>summaries.push(line.textContent)})};
+ad.adSlot.name='首页广告';data.set('kiosk_themes',JSON.stringify([ad]));
+runInNewContext(readFileSync(new URL('assets/kiosk-ad-slot-context.js',base),'utf8'),context);handlers.forEach(callback=>callback());
+assert.equal(summaries[0],'投放渠道：Kiosk　展示位置：首页');
+assert.equal(JSON.parse(data.get('kiosk_themes'))[0].adSlot.name,'首页广告');
+console.log('PASS native context label and historical snapshot preservation');

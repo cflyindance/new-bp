@@ -25,6 +25,7 @@ var KioskAdSlots = (() => {
     PLATFORM_KEY: () => PLATFORM_KEY,
     available: () => available,
     defaults: () => defaults,
+    displayName: () => displayName,
     newSpec: () => newSpec,
     ratio: () => ratio,
     readCatalog: () => readCatalog,
@@ -36,7 +37,7 @@ var KioskAdSlots = (() => {
     validateSpecs: () => validateSpecs,
     withDefaults: () => withDefaults
   });
-  var CHANNELS = ["Kiosk", "eMenu", "CDS", "OO", "SDI", "\u53D6\u9910\u5C4F", "Waitlist"];
+  var CHANNELS = ["Kiosk", "eMenu", "CDS", "\u53D6\u9910\u5C4F", "Waitlist"];
   var PLATFORM_KEY = "menusifu:display-regions:v1";
   var canonical = (value) => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).sort().reduce((out, key) => ({ ...out, [key]: v[key] }), {}) : v);
   var copy = (x) => structuredClone(x);
@@ -73,11 +74,19 @@ var KioskAdSlots = (() => {
       for (const [v, max, label] of [[s.imageMaxMB, 100, "\u56FE\u7247\u5927\u5C0F"], [s.videoMaxMB, 500, "\u89C6\u9891\u5927\u5C0F"], [s.videoMaxSeconds, 3600, "\u89C6\u9891\u65F6\u957F"], [s.maxImages, 20, "\u56FE\u7247\u6570\u91CF"], [s.maxVideos, 1, "\u89C6\u9891\u6570\u91CF"]]) if (!Number.isInteger(v) || v < 1 || v > max) fail(`${label}\u987B\u4E3A1\uFF5E${max}\u7684\u6574\u6570`);
     }
   }
+  function displayName(slot) {
+    return slot.productLine === "Kiosk" && slot.code === "home" && slot.name === "\u9996\u9875\u5E7F\u544A" ? "\u9996\u9875" : slot.name;
+  }
   function defaults() {
-    return ["screensaver", "home"].map((code) => ({ id: "ad-kiosk-" + code, name: code === "home" ? "\u9996\u9875\u5E7F\u544A" : "\u5C4F\u4FDD", code, productLine: "Kiosk", scene: code === "home" ? "\u9996\u9875" : "\u5F85\u673A", description: code === "home" ? "Kiosk\u9996\u9875\u5E7F\u544A\u533A\u57DF" : "Kiosk\u65E0\u64CD\u4F5C\u65F6\u5C55\u793A\uFF0C\u8FDB\u5165\u9000\u51FA\u7531\u7EC8\u7AEF\u63A7\u5236\u3002", enabled: true, builtin: true, ratio: code === "home" ? "108:125 / 4:3" : "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: code === "home" ? ["interval", "transition"] : ["interval", "idle", "transition"], bindings: { Kiosk: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: code === "home" ? [newSpec("portrait", 1080, 1250), newSpec("landscape", 1440, 1080)] : [newSpec(), newSpec("landscape", 1920, 1080)] })).concat([{ id: "ad-waitlist-screensaver", name: "\u5C4F\u4FDD", code: "screensaver", productLine: "Waitlist", scene: "\u5F85\u673A", description: "Waitlist\u5C4F\u4FDD\u5C55\u793A\u533A\u57DF", enabled: true, builtin: true, ratio: "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: ["interval", "idle", "transition"], bindings: { Waitlist: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: [newSpec(), newSpec("landscape", 1920, 1080)] }]);
+    const screens = CHANNELS.map((line) => ({ id: "ad-" + { "Kiosk": "kiosk", "eMenu": "emenu", "CDS": "cds", "\u53D6\u9910\u5C4F": "pickup", "Waitlist": "waitlist" }[line] + "-screensaver", name: "\u5C4F\u4FDD", code: "screensaver", productLine: line, scene: "\u5F85\u673A", description: line + "\u5C4F\u4FDD\u5C55\u793A\u533A\u57DF", enabled: true, builtin: true, ratio: "9:16 / 16:9", mediaKinds: ["image", "video"], maxItems: 20, parameters: ["interval", "idle", "transition"], bindings: { [line]: { minimumVersion: "0.0.0", mediaKinds: ["image", "video"] } }, generation: 0, specVersion: 1, specHistory: [], specs: [newSpec(), newSpec("landscape", 1920, 1080)] }));
+    const home = { ...copy(screens[0]), id: "ad-kiosk-home", name: "\u9996\u9875", code: "home", scene: "\u9996\u9875", description: "Kiosk\u9996\u9875\u5E7F\u544A\u533A\u57DF", ratio: "108:125 / 4:3", parameters: ["interval", "transition"], specs: [newSpec("portrait", 1080, 1250), newSpec("landscape", 1440, 1080)] };
+    return [screens[0], home, ...screens.slice(1)];
   }
   function withDefaults(platform) {
     const next = copy(platform);
+    next.regions.forEach((slot) => {
+      slot.name = displayName(slot);
+    });
     for (const slot of defaults()) if (!next.regions.some((r) => r.id === slot.id || r.productLine === slot.productLine && r.code === slot.code)) next.regions.push(slot);
     return next;
   }
@@ -98,7 +107,7 @@ var KioskAdSlots = (() => {
   }
   function snapshot(slot) {
     if (!slot.productLine || !slot.specs?.length) fail("\u5E7F\u544A\u4F4D\u5C1A\u672A\u914D\u7F6E\u4EA7\u7EBF\u4E0E\u89C4\u683C");
-    return { id: slot.id, name: slot.name, code: slot.code, productLine: slot.productLine, version: slot.specVersion ?? 1, specs: copy(slot.specs) };
+    return { id: slot.id, name: displayName(slot), code: slot.code, productLine: slot.productLine, version: slot.specVersion ?? 1, specs: copy(slot.specs) };
   }
   function validateSnapshot(slots, value) {
     const slot = slots.find((s) => s.id === value?.id);
