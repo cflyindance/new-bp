@@ -4,7 +4,7 @@ import { M_RESOURCES } from '../src/permissions/m-platform-catalog';
 import { mResolve, mRoleState, type MRole } from '../src/permissions/m-platform-domain';
 
 const catalog = buildMEditorCatalog();
-assert.deepEqual([...catalog.resources.keys()].sort(), [...M_RESOURCES.keys()].sort());
+assert.ok([...M_RESOURCES.keys()].every(key=>catalog.resources.has(key)), 'presentation retains all original resources');
 assert.ok([...catalog.resources.keys()].every(key => key.startsWith('m:')));
 assert.deepEqual(mEditorChoices('m:page:devices').map(x => x[0]), ['hidden', 'read']);
 assert.deepEqual(mEditorChoices('m:page:stores').map(x => x[0]), ['hidden', 'read', 'edit']);

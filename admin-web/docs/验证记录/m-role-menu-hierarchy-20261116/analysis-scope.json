@@ -1,0 +1,149 @@
+{
+  "rootCauseStatus": "confirmed",
+  "analysisScopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": [
+    "/m-platform/permissions/roles/edit/:roleId"
+  ],
+  "workspace": {
+    "status": "clean",
+    "evidence": [
+      "new independent worktree at main@fef93770; git status clean before changes"
+    ]
+  },
+  "references": [
+    {
+      "path": "src/shell/m-platform-shell.ts",
+      "symbol": "renderMPlatformSidebar",
+      "relation": "entry_point",
+      "impact": "not_affected"
+    },
+    {
+      "path": "src/permissions/m-platform-runtime.ts",
+      "symbol": "renderMNavigation",
+      "relation": "producer",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/m-platform-navigation.ts",
+      "symbol": "groupMNavigation",
+      "relation": "shared_caller",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/m-platform-catalog.ts",
+      "symbol": "M_MODULES/M_RESOURCES",
+      "relation": "data_source",
+      "impact": "not_affected"
+    },
+    {
+      "path": "src/config/menu-routing-navigation.ts",
+      "symbol": "MENU_ROUTING_PAGES",
+      "relation": "data_source",
+      "impact": "not_affected"
+    },
+    {
+      "path": "src/permissions/m-platform-editor.ts",
+      "symbol": "buildMEditorCatalog/renderMRolePermissionEditor",
+      "relation": "definition",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/m-platform-ui.ts",
+      "symbol": "editor",
+      "relation": "direct_caller",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/center-editor.ts",
+      "symbol": "renderPermissionEditor",
+      "relation": "shared_caller",
+      "impact": "affected"
+    },
+    {
+      "path": "src/permissions/provider-access-ui.ts",
+      "symbol": "renderPermissionEditor",
+      "relation": "consumer",
+      "impact": "not_affected"
+    },
+    {
+      "path": "src/permissions/center-ui.ts",
+      "symbol": "renderPermissionEditor",
+      "relation": "consumer",
+      "impact": "not_affected"
+    },
+    {
+      "path": "scripts/verify-m-role-editor.ts",
+      "symbol": "M editor checks",
+      "relation": "test",
+      "impact": "affected"
+    },
+    {
+      "path": "scripts/verify-activity-navigation.ts",
+      "symbol": "groupMNavigation checks",
+      "relation": "test",
+      "impact": "not_affected"
+    },
+    {
+      "path": "src/permissions/m-editor-tree.ts",
+      "symbol": "buildMEditorCatalog/mEditorValue",
+      "relation": "definition",
+      "impact": "affected"
+    }
+  ],
+  "deepReadPaths": [
+    "src/permissions/m-platform-runtime.ts",
+    "src/permissions/m-platform-navigation.ts",
+    "src/permissions/m-platform-editor.ts",
+    "src/permissions/m-platform-ui.ts",
+    "src/permissions/center-editor.ts",
+    "scripts/verify-m-role-editor.ts",
+    "src/permissions/m-platform-catalog.ts",
+    "src/config/menu-routing-navigation.ts",
+    "src/permissions/m-editor-tree.ts"
+  ],
+  "sharedCallers": [
+    "src/permissions/m-platform-runtime.ts",
+    "src/permissions/m-platform-ui.ts",
+    "src/permissions/m-platform-editor.ts",
+    "src/permissions/provider-access-ui.ts",
+    "src/permissions/center-ui.ts"
+  ],
+  "sharedCallersComplete": true,
+  "dataFlow": [
+    {
+      "from": "src/permissions/m-platform-catalog.ts",
+      "to": "src/permissions/m-platform-editor.ts",
+      "evidence": "old buildMEditorCatalog maps M_MODULES directly to 2-level tree"
+    },
+    {
+      "from": "src/config/menu-routing-navigation.ts",
+      "to": "src/permissions/m-platform-runtime.ts",
+      "evidence": "sidebar adds routing groups, role group and preset aliases after permission filtering"
+    },
+    {
+      "from": "src/permissions/m-platform-editor.ts",
+      "to": "src/permissions/m-platform-ui.ts",
+      "evidence": "role edit builds editor catalog and renders common editor"
+    }
+  ],
+  "wikiQueries": [
+    {
+      "question": "M platform sidebar hierarchy and role-editor data origin",
+      "mode": "wiki_bypass",
+      "reason": "wiki_not_configured",
+      "pages": []
+    }
+  ],
+  "expansions": [
+    {
+      "question": "where nested sidebar layers originate",
+      "trigger": "data_origin_unknown",
+      "addedPaths": [
+        "src/permissions/m-platform-runtime.ts",
+        "src/config/menu-routing-navigation.ts"
+      ],
+      "expectedEvidence": "runtime-created nested navigation groups and aliases"
+    }
+  ]
+}

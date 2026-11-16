@@ -7,7 +7,7 @@ import { bindPermissionAudit } from './permission-audit-ui';
 import {bindProviderAccess} from './provider-access-ui';
 import './center.css';
 import './m-platform.css';
-import {buildMEditorCatalog,renderMRolePermissionEditor,applyMEditorGrant} from './m-platform-editor';
+import {buildMEditorCatalog,mEditorValue,renderMRolePermissionEditor,applyMEditorGrant} from './m-platform-editor';
 import { PERMISSION_ROLE_LABELS, M_MODULES, M_PAGES, mModuleKey, mPageKey, mActionKey, type MAccess } from './m-platform-catalog';
 import { mResolve, mRoleState, mIsAdministrator, type MRole, type MState } from './m-platform-domain';
 import { currentMAccess, readMState, saveMState, requireMAction } from './m-platform-store';
@@ -70,7 +70,7 @@ export function bindMCenter(onMount: () => void): void {
   const editorCatalog = buildMEditorCatalog();
   function editor(): string {
     if (preview || employeeId) {
-      const keys = [...editorCatalog.resources.values()].filter(r => r.type !== 'action' && access(r.key) !== 'hidden').map(r => r.key);
+      const keys = [...editorCatalog.resources.values()].filter(r => r.type !== 'action' && mEditorValue(editorCatalog,r.key,access) !== 'hidden').map(r => r.key);
       if (!keys.includes(selected)) selected = keys[0] ?? '';
     }
     return renderMRolePermissionEditor({catalog:editorCatalog,selected,preview:preview||!!employeeId,

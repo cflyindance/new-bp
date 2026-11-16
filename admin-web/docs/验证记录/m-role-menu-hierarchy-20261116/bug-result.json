@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "配置树只读取权限资源的两层结构，遗漏实际侧栏动态生成的中间分组与复用入口。",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "not_required",
+  "changedFiles": [
+    "docs/项目文档/M平台内部权限业务规格说明书（研发交付版）.md",
+    "docs/项目文档/M平台内部权限产品权威需求文档.md",
+    "docs/项目文档/M平台内部权限需求文档（个人规范版）.md",
+    "scripts/verify-m-role-editor.ts",
+    "scripts/verify-m-role-menu-hierarchy.browser.cjs",
+    "scripts/verify-m-role-menu-hierarchy.ts",
+    "src/permissions/center-editor.ts",
+    "src/permissions/m-editor-tree.ts",
+    "src/permissions/m-platform-editor.ts",
+    "src/permissions/m-platform-navigation.ts",
+    "src/permissions/m-platform-runtime.ts",
+    "src/permissions/m-platform-ui.ts"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "verify-m-role-menu-hierarchy.ts failed: 菜单配置 middle level missing"
+    ],
+    "greenEvidence": [
+      "verify-m-role-menu-hierarchy.ts passed: hierarchy/sidebar parity, grant identity and ordering"
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "用户可见配置树和共享导航展示转换调整",
+    "evidence": [
+      "docs/验证记录/m-role-menu-hierarchy-20261116/e2e-result.json",
+      "scripts/verify-m-role-menu-hierarchy.browser.cjs:26 actual sidebar leaves; no pageerror"
+    ]
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "未触及依赖、构建、动态导入或发布边界；类型检查与必要E2E通过"
+  },
+  "unverifiedScopes": [
+    "生产后端权限服务",
+    "历史全量异常与完整逐操作截图",
+    "CI与部署"
+  ]
+}
