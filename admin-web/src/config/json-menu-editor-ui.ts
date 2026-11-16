@@ -596,6 +596,13 @@ export function bindJsonMenuEditor(mount: () => void): void {
 
   document.body.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
+    const copyPath=target.closest<HTMLElement>('[data-page-copy-path]');
+    if(copyPath){
+      const path=copyPath.dataset.pageCopyPath??'';
+      if(!navigator.clipboard){showAppToast('当前环境不支持复制，请手动选择路径复制',{variant:'error'});return;}
+      if(path)void navigator.clipboard.writeText(path).then(()=>showAppToast('路径已复制')).catch(()=>showAppToast('复制失败，请手动选择路径复制',{variant:'error'}));
+      return;
+    }
     if (target.closest('[data-page-register]')) {
       if (currentMAccess(mPageKey('routing')) !== 'edit') return;
       registrationUi.create = true; onMount();
