@@ -20,7 +20,8 @@ try {
  assert.equal(await page.locator('[data-operation-log] tbody tr').count(),8);
  await page.locator('[data-log-detail]').first().click();
  await page.getByRole('dialog',{name:'操作记录详情'}).waitFor();
- assert.match(await page.getByRole('dialog').innerText(),/测试数据/);
+ assert.doesNotMatch(await page.getByRole('dialog').innerText(),/测试数据|涉及对象/);
+ assert.equal(await page.getByRole('dialog').locator('details').count(),0);
  await page.locator('[data-log-close]').first().click();
  await page.locator('[data-log-reset]').click();
  assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 40 条/);
@@ -42,7 +43,7 @@ try {
  assert.ok(fixtures.rows.every(e=>e.changes.every(c=>JSON.stringify(c.before)!==JSON.stringify(c.after))));
  assert.ok(fixtures.rows.filter(e=>e.action==='注册页面').every(e=>e.before===null));
  assert.ok(fixtures.rows.filter(e=>e.action==='删除页面').every(e=>e.after===null));
- assert.doesNotMatch(await page.locator('[data-operation-log]').innerText(),/示例操作员|演示记录|示例页面/);
+ assert.doesNotMatch(await page.locator('[data-operation-log]').innerText(),/示例操作员|演示记录|示例页面|测试数据/);
  const domain=await page.evaluate(async()=>{
   const {belongsToProject}=await import('/src/config/registry-log-view.ts');
   const entry={objects:[{id:'page1'}],before:{assignments:[{pageId:'page1',projectId:'p1'}]},after:null};
