@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { seedBusinessRegistries } from '../src/config/page-registry-business-seeds';
+import { validateWorkspace, type RegistryWorkspace } from '../src/config/page-registry-projects';
+const initial:RegistryWorkspace={version:2,projects:[],directories:[],pages:[],assignments:[]};
+const next=seedBusinessRegistries(initial);validateWorkspace(next,[]);
+assert.deepEqual(next.projects.map(p=>p.name),['促销中心','会员中心','支付中心','订单中心']);
+assert.equal(initial.projects.length,0);assert.deepEqual(seedBusinessRegistries(next),next);
+for(const p of next.projects)assert.ok(next.directories.some(d=>d.projectId===p.id));
+next.directories[0].name='保留修改';assert.equal(seedBusinessRegistries(next).directories[0].name,'保留修改');
+console.log(`PASS ${next.projects.length} projects, ${next.directories.length} hierarchy nodes, ${next.pages.length} pages; validated, idempotent, no overwrite`);

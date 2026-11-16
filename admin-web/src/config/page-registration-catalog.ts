@@ -24,7 +24,9 @@ export function getBuiltInPageRegistrations(): readonly PageRegistration[] {
 /** Local records are read afresh so successful registration is immediately selectable. */
 export function getPageRegistrations(): readonly PageRegistration[] {
   const builtIn = getBuiltInPageRegistrations();
-  return [...builtIn, ...readRegistryWorkspace(builtIn).workspace.pages];
+  const {workspace:w}=readRegistryWorkspace(builtIn);
+  const disabled = new Set(w.projects.filter(p=>p.status==='disabled').map(p=>p.id));
+  return [...builtIn, ...w.pages.map(p=>w.assignments.some(a=>a.pageId===p.id&&disabled.has(a.projectId))?{...p,status:'retired' as const}:p)];
 }
 export function getLocalPageRegistrationError(): string | undefined {
   return readRegistryWorkspace(getBuiltInPageRegistrations()).error;
