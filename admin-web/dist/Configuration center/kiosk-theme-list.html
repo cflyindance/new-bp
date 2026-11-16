@@ -641,7 +641,7 @@
           return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(channelChipLabel(ch)) + '</span>';
         }).join('');
         var selectedPositions = KioskThemePositions.savedForTheme(theme);
-        var positionOptions = theme.adSlot ? [{value:theme.adSlot.code,label:theme.adSlot.name}] : KioskThemePositions.options;
+        var positionOptions = theme.adSlot ? [{value:theme.adSlot.code,label:KioskAdSlots.displayName(theme.adSlot)}] : KioskThemePositions.options;
         var positionTags = positionOptions.filter(function(option) {
           return selectedPositions.indexOf(option.value) >= 0;
         }).map(function(option) {

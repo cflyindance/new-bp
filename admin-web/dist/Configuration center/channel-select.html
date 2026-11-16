@@ -46,7 +46,7 @@
   </div>
   <script>
     (function() {
-      var channels = ['Kiosk', 'eMenu', 'CDS', 'OO', 'SDI', '取餐屏', 'Waitlist'];
+      var channels = ['Kiosk', 'eMenu', 'CDS', '取餐屏', 'Waitlist'];
       (function hydrateChannelsFromTheme() {
         try {
           var raw = localStorage.getItem('selected_channels_for_distribute');
@@ -99,7 +99,7 @@
         try {
           var raw = localStorage.getItem('selected_channels_for_distribute');
           var parsed = raw ? JSON.parse(raw) : [];
-          return Array.isArray(parsed) ? parsed : [];
+          return Array.isArray(parsed) ? parsed.filter(function(ch) { return channels.indexOf(ch) >= 0; }) : [];
         } catch (e) {
           return [];
         }

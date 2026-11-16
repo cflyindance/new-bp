@@ -54,7 +54,7 @@
       document.getElementById('adChannelGrid').innerHTML=api.CHANNELS.map(function(c){return radio('adChannel',c,c,c===channel);}).join('');
       var options=api.available(slots,channel);document.getElementById('adSlotGrid').innerHTML=!channel?'<p class="col-span-2 text-sm text-gray-500">请先选择渠道</p>':options.length?options.map(function(s){return radio('adSlot',s.id,s.name,selected&&s.id===selected.id);}).join(''):'<p class="col-span-2 text-sm text-gray-500">该渠道暂无可用广告位，请联系平台管理员配置并登记接入</p>';
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
-      summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+selected.name:'未选择渠道与广告位';
+      summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
       summary.querySelector('button').hidden=!existing||!editable();
       notice.hidden=!existing||editable();
       if(!notice.hidden){notice.textContent=latest()&&policy.history(latest())==='published'?'已投放广告的渠道与位置不可修改。':'历史投放状态无法确认，渠道与位置不可修改。';var link=document.createElement('a');link.textContent='复制广告';link.className='ml-3 text-primary';link.href=(window.appendMenusifuEmbeddedParam||function(v){return v;})('screensaver-create.html?copyFrom='+encodeURIComponent(theme.id));notice.append(link);}
@@ -64,7 +64,7 @@
       var progress=document.querySelector('.step-progress-inner');if(progress)progress.style.width=picking?'25%':'50%';
     }
     section.addEventListener('change',async function(event){
-      var input=event.target;if(!editable()){cancelChange();refresh();return;}flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;selected=null;bank={};active={};catalogError='';}
+      var input=event.target;if(!editable()){cancelChange();refresh();return;}flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected&&Object.values(bank).some(function(v){return v.length;})){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;var defaultScreen=api.available(slots,channel).find(function(s){return s.code==='screensaver';});selected=defaultScreen?api.snapshot(defaultScreen):null;bank=selected?cache[selected.id+'@'+selected.version]||{}:{};active={};catalogError='';}
       else if(input.name==='adSlot'){var slot=slots.find(function(s){return s.id===input.value;});if(slot){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;selected=api.snapshot(slot);bank=cache[selected.id+'@'+selected.version]||{};active={};}}
       refresh();
     });

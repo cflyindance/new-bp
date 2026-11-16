@@ -1,5 +1,5 @@
 /** Shared contract for M-platform slot configuration and native advertising pages. */
-export const CHANNELS = ['Kiosk','eMenu','CDS','OO','SDI','取餐屏','Waitlist'] as const;
+export const CHANNELS = ['Kiosk','eMenu','CDS','取餐屏','Waitlist'] as const;
 export const PLATFORM_KEY = 'menusifu:display-regions:v1';
 export type Kind = 'image'|'video';
 export interface AdSpec {
@@ -38,11 +38,19 @@ export function validateSpecs(specs:AdSpec[]):void {
     for(const [v,max,label] of [[s.imageMaxMB,100,'图片大小'],[s.videoMaxMB,500,'视频大小'],[s.videoMaxSeconds,3600,'视频时长'],[s.maxImages,20,'图片数量'],[s.maxVideos,1,'视频数量']] as const)if(!Number.isInteger(v)||v<1||v>max)fail(`${label}须为1～${max}的整数`);
   }
 }
+export function displayName(slot:Pick<AdSlot,'productLine'|'code'|'name'>):string {
+  return slot.productLine==='Kiosk'&&slot.code==='home'&&slot.name==='首页广告'?'首页':slot.name;
+}
 export function defaults():AdSlot[] {
-  return ['screensaver','home'].map((code):AdSlot=>({id:'ad-kiosk-'+code,name:code==='home'?'首页广告':'屏保',code,productLine:'Kiosk',scene:code==='home'?'首页':'待机',description:code==='home'?'Kiosk首页广告区域':'Kiosk无操作时展示，进入退出由终端控制。',enabled:true,builtin:true,ratio:code==='home'?'108:125 / 4:3':'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:code==='home'?['interval','transition']:['interval','idle','transition'],bindings:{Kiosk:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:code==='home'?[newSpec('portrait',1080,1250),newSpec('landscape',1440,1080)]:[newSpec(),newSpec('landscape',1920,1080)]})).concat([{id:'ad-waitlist-screensaver',name:'屏保',code:'screensaver',productLine:'Waitlist',scene:'待机',description:'Waitlist屏保展示区域',enabled:true,builtin:true,ratio:'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:['interval','idle','transition'],bindings:{Waitlist:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:[newSpec(),newSpec('landscape',1920,1080)]}] as AdSlot[]);
+  const screens=CHANNELS.map((line):AdSlot=>({id:'ad-'+({'Kiosk':'kiosk','eMenu':'emenu','CDS':'cds','取餐屏':'pickup','Waitlist':'waitlist'}[line])+'-screensaver',name:'屏保',code:'screensaver',productLine:line,scene:'待机',description:line+'屏保展示区域',enabled:true,builtin:true,ratio:'9:16 / 16:9',mediaKinds:['image','video'],maxItems:20,parameters:['interval','idle','transition'],bindings:{[line]:{minimumVersion:'0.0.0',mediaKinds:['image','video']}},generation:0,specVersion:1,specHistory:[],specs:[newSpec(),newSpec('landscape',1920,1080)]}));
+  const home:AdSlot={...copy(screens[0]),id:'ad-kiosk-home',name:'首页',code:'home',scene:'首页',description:'Kiosk首页广告区域',ratio:'108:125 / 4:3',parameters:['interval','transition'],specs:[newSpec('portrait',1080,1250),newSpec('landscape',1440,1080)]};
+  return [screens[0],home,...screens.slice(1)];
 }
 export function withDefaults<T extends {regions:AdSlot[]}>(platform:T):T {
-  const next=copy(platform);for(const slot of defaults())if(!next.regions.some(r=>r.id===slot.id||r.productLine===slot.productLine&&r.code===slot.code))next.regions.push(slot);return next;
+  const next=copy(platform);
+  next.regions.forEach(slot=>{slot.name=displayName(slot);});
+  for(const slot of defaults())if(!next.regions.some(r=>r.id===slot.id||r.productLine===slot.productLine&&r.code===slot.code))next.regions.push(slot);
+  return next;
 }
 export function readCatalog(storage:Pick<Storage,'getItem'>):AdSlot[] {
   const raw=storage.getItem(PLATFORM_KEY);if(!raw)return defaults();
@@ -51,7 +59,7 @@ export function readCatalog(storage:Pick<Storage,'getItem'>):AdSlot[] {
   return withDefaults(value).regions;
 }
 export function available(slots:AdSlot[],line:string):AdSlot[]{return slots.filter(s=>s.enabled&&s.productLine===line&&s.bindings[line]&&s.specs?.length)}
-export function snapshot(slot:AdSlot):SlotSnapshot {if(!slot.productLine||!slot.specs?.length)fail('广告位尚未配置产线与规格');return {id:slot.id,name:slot.name,code:slot.code,productLine:slot.productLine,version:slot.specVersion??1,specs:copy(slot.specs)}}
+export function snapshot(slot:AdSlot):SlotSnapshot {if(!slot.productLine||!slot.specs?.length)fail('广告位尚未配置产线与规格');return {id:slot.id,name:displayName(slot),code:slot.code,productLine:slot.productLine,version:slot.specVersion??1,specs:copy(slot.specs)}}
 export function validateSnapshot(slots:AdSlot[],value:SlotSnapshot):AdSlot {
   const slot=slots.find(s=>s.id===value?.id);if(!slot||!slot.enabled||slot.productLine!==value.productLine||slot.code!==value.code||!slot.bindings[value.productLine])fail('广告位不可用或尚未接入，请返回选择渠道与广告位');
   const revision=(slot.specVersion??1)===value.version?slot.specs:slot.specHistory?.find(v=>v.version===value.version)?.specs;
