@@ -11,6 +11,7 @@
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
@@ -418,6 +419,7 @@
       }
 
       function renderPreviews(role) {
+        if (adPositionEditor) adPositionEditor.refreshCompatibility();
         var list = role === 'portrait' ? portraitList : landscapeList;
         var containerId = role === 'portrait' ? 'portraitPreviews' : 'landscapePreviews';
         var inputId = role === 'portrait' ? 'filePortrait' : 'fileLandscape';
@@ -985,6 +987,10 @@
             try {
               var list = getThemes();
               var idx = list.findIndex(function(t) { return t.id === id; });
+              if (idx < 0) throw Error('广告已被删除，请返回列表刷新');
+              adPositionEditor.assertSave();
+              var original = list[idx];
+              list[idx] = JSON.parse(JSON.stringify(original));
               if (idx >= 0) {
                 list[idx].adSlot=result.slot;
                 list[idx].adSlotAssets=result.bySpec;
@@ -998,6 +1004,7 @@
                 list[idx].carouselIntervalSec = carouselIntervalSec;
                 list[idx].portraitImages = portraitImages;
                 list[idx].landscapeImages = landscapeImages;
+                list[idx] = KioskAdTargetPolicy.prepareSave(original, list[idx]);
                 saveThemes(list);
               }
               if (!saveAsDraft) {
@@ -1011,7 +1018,7 @@
               window.location.href = window.appendMenusifuEmbeddedParam(redirectUrl);
             } catch (err) {
               console.error('保存失败:', err);
-              Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的广告后重试。');
+              Toast.error(err.message || '保存失败，请重试');
             }
           }).catch(function(err) {
             console.error('图片处理失败:', err);
@@ -1032,6 +1039,7 @@
 
       if (editBackBtn) {
         editBackBtn.addEventListener('click', function() {
+          if (adPositionEditor.back()) return;
           openEditBackConfirmModal();
         });
       }

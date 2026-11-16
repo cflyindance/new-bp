@@ -10,12 +10,28 @@
     try{slots=api.readCatalog(localStorage);}catch(e){catalogError=e.message;}
     if(!config.copy&&theme&&theme.adSlot){try{api.validateSnapshot(slots,theme.adSlot);selected=theme.adSlot;channel=selected.productLine;}catch(e){catalogError=e.message;channel=theme.adSlot.productLine||'';}}
     if(!channel&&theme){var oldChannels=theme.distributeChannels||theme.lastDistributePrefs&&theme.lastDistributePrefs.channels||[];if(oldChannels.length===1)channel=oldChannels[0];}
-    var picking=!selected;
+    var policy=KioskAdTargetPolicy, existing=!!theme&&!config.copy, staged=null, orphaned=[];
+    var opened=theme?JSON.parse(JSON.stringify(theme)):null, compatibilityRevision=0, compatibilityTimer;
+    function latest(){return JSON.parse(localStorage.getItem('kiosk_themes')||'[]').find(function(t){return theme&&t.id===theme.id;});}
+    function editable(){var current=existing?latest():null;return !existing||!!current&&policy.canEditTarget(current);}
+    function assertSave(){if(existing)policy.assertSave(latest(),opened,selected||{});}
+    var picking=!selected&&editable();
     var section=document.createElement('section');section.className='mx-auto w-full max-w-2xl rounded-2xl border border-[#f0f0f0] bg-white p-8 shadow-sm';
     section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div id="adSlotGrid" class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="展示位置"></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
-    var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span>';form.prepend(summary);
+    var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
+    var notice=document.createElement('div');notice.className='mb-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-600';summary.after(notice);
+    var validationNotice=document.createElement('p');validationNotice.className='mb-4 text-sm text-red-500';validationNotice.setAttribute('role','alert');notice.after(validationNotice);
+    function scheduleCompatibility(){clearTimeout(compatibilityTimer);var revision=++compatibilityRevision;compatibilityTimer=setTimeout(function(){checkCompatibility(revision);},80);}
+    async function checkCompatibility(revision){flush();var errors=[];for(var target of selected?selected.specs:[]){var items=bank[target.id]||[],types=Array.from(new Set(items.map(function(v){return v.type||'image';})));if(types.length>1)errors.push(target.name+'不能混用图片与视频，请删除或替换素材');if(items.length>(types[0]==='video'?target.maxVideos:target.maxImages))errors.push(target.name+'素材数量超过上限，请删除多余素材');for(var item of items){try{var meta=await metadata(item);if(allowedKinds(target).indexOf(meta.kind)<0)throw Error('不支持此素材类型');var warnings=api.validateMedia(target,meta);errors=errors.concat(warnings.map(function(w){return target.name+'：'+w;}));}catch(e){errors.push(target.name+'：'+e.message+'，请删除或替换该素材');}}}if(revision===compatibilityRevision)validationNotice.textContent=errors.join('；');}
+    var materialNotice=document.createElement('div');materialNotice.className='mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm';notice.after(materialNotice);materialNotice.hidden=true;
+    var cancel=document.createElement('button');cancel.type='button';cancel.textContent='取消修改';cancel.id='cancelTargetChange';cancel.className='mr-4 rounded-xl border px-5 py-3 text-sm';next.before(cancel);
+    function cloneBank(value){var out={};Object.keys(value).forEach(function(k){out[k]=Array.isArray(value[k])?value[k].slice():value[k];});return out;}
+    function cancelChange(){if(!staged)return false;selected=staged.selected;channel=staged.channel;bank=staged.bank;cache=staged.cache;active=staged.active;orphaned=staged.orphaned;staged=null;picking=false;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();return true;}
+    cancel.onclick=cancelChange;
+    summary.querySelector('button').onclick=function(){if(!editable())return;flush();staged={selected:selected,channel:channel,bank:cloneBank(bank),cache:Object.assign({},cache),active:Object.assign({},active),orphaned:orphaned.slice()};picking=true;refresh();};
+    function renderOrphans(){materialNotice.hidden=!orphaned.length;if(!orphaned.length)return;materialNotice.innerHTML='<p>目标位置不支持部分素材方向，'+orphaned.length+' 个素材尚未分配。请移除后重新上传符合目标规格的素材。</p><button type="button" class="mt-2 text-primary">移除不适用素材</button>';materialNotice.querySelector('button').onclick=async function(){if(await confirmChange('移除不适用于目标位置的素材？原广告在保存前保持不变。')){orphaned=[];renderOrphans();}};}
     function roleFor(spec){return spec.height>spec.width?'portrait':'landscape';}
     function specs(role){return selected?selected.specs.filter(function(s){return roleFor(s)===role;}):[];}
     function spec(role){var list=specs(role);return list.find(function(s){return s.id===active[role];})||list[0]||api.newSpec(role,role==='portrait'?1080:1920,role==='portrait'?1920:1080);}
@@ -39,15 +55,21 @@
       var options=api.available(slots,channel);document.getElementById('adSlotGrid').innerHTML=!channel?'<p class="col-span-2 text-sm text-gray-500">请先选择渠道</p>':options.length?options.map(function(s){return radio('adSlot',s.id,s.name,selected&&s.id===selected.id);}).join(''):'<p class="col-span-2 text-sm text-gray-500">该渠道暂无可用广告位，请联系平台管理员配置并登记接入</p>';
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
       summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+selected.name:'未选择渠道与广告位';
+      summary.querySelector('button').hidden=!existing||!editable();
+      notice.hidden=!existing||editable();
+      if(!notice.hidden){notice.textContent=latest()&&policy.history(latest())==='published'?'已投放广告的渠道与位置不可修改。':'历史投放状态无法确认，渠道与位置不可修改。';var link=document.createElement('a');link.textContent='复制广告';link.className='ml-3 text-primary';link.href=(window.appendMenusifuEmbeddedParam||function(v){return v;})('screensaver-create.html?copyFrom='+encodeURIComponent(theme.id));notice.append(link);}
+      cancel.hidden=!picking||!staged;
+      if(!selected&&!editable()){action.disabled=true;catalogError='该广告缺少有效投放配置，请复制广告重新配置';notice.hidden=false;}
+      renderOrphans();
       var progress=document.querySelector('.step-progress-inner');if(progress)progress.style.width=picking?'25%':'50%';
     }
     section.addEventListener('change',async function(event){
-      var input=event.target;flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;selected=null;bank={};active={};catalogError='';}
+      var input=event.target;if(!editable()){cancelChange();refresh();return;}flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;selected=null;bank={};active={};catalogError='';}
       else if(input.name==='adSlot'){var slot=slots.find(function(s){return s.id===input.value;});if(slot){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;selected=api.snapshot(slot);bank=cache[selected.id+'@'+selected.version]||{};active={};}}
       refresh();
     });
-    next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length&&!bank[spec(role).id])bank[spec(role).id]=cache.__legacy[role];});delete cache.__legacy;}picking=false;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();});
-    window.addEventListener('storage',function(event){if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
+    next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length){var carried=cache.__legacy[role]||[],targetItems=bank[spec(role).id]||[];carried.forEach(function(item){if(!targetItems.some(function(v){return v===item||(v.mediaRef&&v.mediaRef===item.mediaRef)||(v.url&&v.url===item.url);}))targetItems.push(item);});bank[spec(role).id]=targetItems;}else orphaned=orphaned.concat(cache.__legacy[role]||[]);});delete cache.__legacy;}picking=false;staged=null;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();scheduleCompatibility();});
+    window.addEventListener('storage',function(event){if(event.key==='kiosk_themes'){if(!editable())cancelChange();refresh();}if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
     refresh();
     async function loadItems(items){var list=await hooks.load(items);if(config.copy){for(var item of list){if(item.type==='video'&&item.mediaRef){var blob=await KioskThemeMediaIdb.get(item.mediaRef);if(!blob)throw Error('源视频已失效，无法复制');item.file=blob;delete item.mediaRef;}}}return list;}
     async function metadata(item){
@@ -57,7 +79,7 @@
       try{return await new Promise(function(resolve,reject){var el=kind==='video'?document.createElement('video'):new Image();var timeout=setTimeout(function(){reject(Error('素材读取超时，请重新上传'));},15000);function done(){clearTimeout(timeout);resolve({kind:kind,mime:blob.type,bytes:blob.size,width:kind==='video'?el.videoWidth:el.naturalWidth,height:kind==='video'?el.videoHeight:el.naturalHeight,duration:kind==='video'?el.duration:undefined});}if(kind==='video'){el.preload='metadata';el.onloadedmetadata=done;}else el.onload=done;el.onerror=function(){clearTimeout(timeout);reject(Error('素材无法解码，请重新上传'));};el.src=objectUrl;});}finally{URL.revokeObjectURL(objectUrl);}
     }
     async function serialize(process){
-      if(!selected)throw Error('请选择渠道与广告位');var current=api.readCatalog(localStorage),slot=api.validateSnapshot(current,selected);flush();
+      assertSave();validationNotice.textContent='';if(orphaned.length)throw Error('请先移除未分配到目标规格的素材');if(!selected)throw Error('请选择渠道与广告位');var current=api.readCatalog(localStorage),slot=api.validateSnapshot(current,selected);flush();
       var bySpec={},portrait=[],landscape=[],count=0,warnings=[];
       for(var i=0;i<selected.specs.length;i++){
         var s=selected.specs[i],items=bank[s.id]||[];if(!items.length)continue;count+=items.length;
@@ -91,8 +113,8 @@
         else if(th){cache.__legacy={portrait:await loadItems(th.portraitImages||[]),landscape:await loadItems(th.landscapeImages||[])};}
         if(selected)['portrait','landscape'].forEach(function(role){hooks.set(role,bank[spec(role).id]||[]);});renderMedia();
       },
-      serialize:serialize,
-      back:function(){if(config.formId==='editForm'||picking)return false;flush();picking=true;refresh();return true;}
+      refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
+      back:function(){if(staged)return cancelChange();if(existing||config.formId==='editForm'||picking)return false;flush();picking=true;refresh();return true;}
     };
   }
   root.KioskThemePositionEditor={mount:mount,escape:esc};
