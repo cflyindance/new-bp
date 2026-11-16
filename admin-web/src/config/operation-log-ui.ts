@@ -4,9 +4,10 @@ import {getBuiltInPageRegistrations} from './page-registration-catalog';
 import {belongsToProject,registryLogFixtures,operationTargetKind,operationProjectName} from './registry-log-view';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {renderOperationChanges,renderOperationActionTag} from './operation-log-presentation';
+import {menuOperationFixtures} from './menu-operation-fixtures';
 const projectLog=()=>location.hash.split('?')[0]==='#/m-platform/nav-blueprint/page-registry/project-logs';
 const registryWorkspace=()=>readRegistryWorkspace(getBuiltInPageRegistrations());
-const logState=()=>{const state=readOperationLog();const registry=registryWorkspace();return {...state,entries:[...state.entries,...(!state.error&&!registry.error?registryLogFixtures(registry.workspace):[])].sort((a,b)=>b.time.localeCompare(a.time))};};
+const logState=()=>{const state=readOperationLog();const registry=registryWorkspace();return {...state,entries:[...state.entries,...(!state.error?menuOperationFixtures():[]),...(!state.error&&!registry.error?registryLogFixtures(registry.workspace):[])].sort((a,b)=>b.time.localeCompare(a.time))};};
 const esc=(v:unknown)=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const control='h-12 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 interface Filter {q:string;actor:string;action:string;result:string;kind:string;from:string;to:string;page:number}
