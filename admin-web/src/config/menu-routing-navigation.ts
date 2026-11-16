@@ -8,6 +8,7 @@ export const MENU_ROUTING_PAGES = [
   { view: "projects", title: "项目管理", path: `${MENU_ROUTING_ROOT}/page-registry/projects` },
   { view: "pages", title: "页面管理", path: `${MENU_ROUTING_ROOT}/page-registry/pages` },
   { view: "registry-log", title: "操作记录", path: `${MENU_ROUTING_ROOT}/page-registry/logs` },
+  { view: "project-table", title: "项目页面管理", path: `${MENU_ROUTING_ROOT}/page-registry/project-pages` },
 ] as const;
 export type MenuRoutingView = typeof MENU_ROUTING_PAGES[number]["view"];
 

@@ -37,6 +37,7 @@ import { mPageKey } from '../permissions/m-platform-catalog';
 import {setOperationActor,appendOperation} from './operation-log';
 import {currentMAccount} from '../permissions/m-platform-store';
 import {renderOperationLog,bindOperationLog} from './operation-log-ui';
+import {renderProjectPageTable,bindProjectPageTable} from './project-page-table';
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function currentUser(): MenuEditorUser {
@@ -295,6 +296,7 @@ function clearFullscreenEnvironment(onMount: () => void): void {
 }
 
 export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string {
+  if(view==='project-table')return renderProjectPageTable();
   if(view==='menu-log'||view==='registry-log')return renderOperationLog(view==='menu-log'?'menu':'registry');
   const { state } = jsonMenuEditorStore;
   if (state.status === "idle" || state.status === "loading") return `<div class="grid min-h-[680px] flex-1 place-items-center rounded-2xl bg-white shadow-[0_2px_14px_rgba(15,23,42,0.04)]"><div class="text-center"><div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-teal-700 border-t-transparent"></div><p class="mt-4 text-sm font-medium text-slate-800">正在读取当前菜单配置…</p><p class="mt-1 text-xs text-slate-500">优先恢复共享草稿</p></div></div>`;
@@ -578,6 +580,7 @@ function downloadJson(content: string, name: string): void {
 let bound = false;
 let operationWarningBound = false;
 export function bindJsonMenuEditor(mount: () => void): void {
+  bindProjectPageTable(mount);
   if(!operationWarningBound){operationWarningBound=true;window.addEventListener('menusifu:operation-log-warning',event=>showAppToast((event as CustomEvent<string>).detail,{variant:'error'}));}
   setOperationActor(()=>{const account=currentMAccount();return account ? `${account.employeeId}（本地账号）`:'未知本地账号';});
   bindOperationLog(mount);

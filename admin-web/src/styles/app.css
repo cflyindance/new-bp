@@ -275,3 +275,7 @@ html[data-product-version="future"] [data-future-version-diff] [data-future-vers
     background: transparent;
   }
 }
+/* Project-scoped fullscreen tree table: suppress shell entrance animation and native details marker. */
+main:has([data-project-page-table]) { animation: none; }
+[data-pt-more] > summary { list-style: none; }
+[data-pt-more] > summary::-webkit-details-marker { display: none; }
