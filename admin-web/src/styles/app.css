@@ -279,3 +279,4 @@ html[data-product-version="future"] [data-future-version-diff] [data-future-vers
 main:has([data-project-page-table]) { animation: none; }
 [data-pt-more] > summary { list-style: none; }
 [data-pt-more] > summary::-webkit-details-marker { display: none; }
+main:has([data-project-log-fullscreen]) { animation: none; }

@@ -297,6 +297,7 @@ function clearFullscreenEnvironment(onMount: () => void): void {
 
 export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string {
   if(view==='project-table')return renderProjectPageTable();
+  if(view==='project-log')return renderOperationLog('registry');
   if(view==='menu-log'||view==='registry-log')return renderOperationLog(view==='menu-log'?'menu':'registry');
   const { state } = jsonMenuEditorStore;
   if (state.status === "idle" || state.status === "loading") return `<div class="grid min-h-[680px] flex-1 place-items-center rounded-2xl bg-white shadow-[0_2px_14px_rgba(15,23,42,0.04)]"><div class="text-center"><div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-teal-700 border-t-transparent"></div><p class="mt-4 text-sm font-medium text-slate-800">正在读取当前菜单配置…</p><p class="mt-1 text-xs text-slate-500">优先恢复共享草稿</p></div></div>`;
