@@ -1,4 +1,4 @@
-export const JSON_MENU_FORM_SECTIONS = ["basic", "page", "localization", "status", "extra"] as const;
+export const JSON_MENU_FORM_SECTIONS = ["localization", "basic", "page", "status", "extra"] as const;
 export type JsonMenuFormSection = (typeof JSON_MENU_FORM_SECTIONS)[number];
 
 export function resolveActiveJsonMenuFormSection(
@@ -7,7 +7,7 @@ export function resolveActiveJsonMenuFormSection(
   atBottom = false,
 ): JsonMenuFormSection {
   if (atBottom) return "extra";
-  let active: JsonMenuFormSection = "basic";
+  let active: JsonMenuFormSection = "localization";
   for (const section of JSON_MENU_FORM_SECTIONS) {
     if (sectionTops[section] <= threshold) active = section;
   }
