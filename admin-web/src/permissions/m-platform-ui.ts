@@ -7,7 +7,8 @@ import { bindPermissionAudit } from './permission-audit-ui';
 import {bindProviderAccess} from './provider-access-ui';
 import './center.css';
 import './m-platform.css';
-import { PERMISSION_ROLE_LABELS, M_MODULES, M_PAGES, mModuleKey, mPageKey, mActionKey, type MAccess, type MPage } from './m-platform-catalog';
+import {buildMEditorCatalog,renderMRolePermissionEditor,applyMEditorGrant} from './m-platform-editor';
+import { PERMISSION_ROLE_LABELS, M_MODULES, M_PAGES, mModuleKey, mPageKey, mActionKey, type MAccess } from './m-platform-catalog';
 import { mResolve, mRoleState, mIsAdministrator, type MRole, type MState } from './m-platform-domain';
 import { currentMAccess, readMState, saveMState, requireMAction } from './m-platform-store';
 import * as accounts from './enterprise-staff-account-store';
@@ -39,7 +40,7 @@ export function bindMCenter(onMount: () => void): void {
   const staffView = path.includes('/staff');
   const roleId = path.startsWith(`${prefix}/roles/edit/`) ? decodeId(path.slice(`${prefix}/roles/edit/`.length)) : '';
   const employeeId = path.startsWith(`${prefix}/staff/`) ? decodeId(path.slice(`${prefix}/staff/`.length)) : '';
-  let draft = structuredClone(state), dirty = false, selected = M_PAGES[0].id, preview = false, query = '';
+  let draft = structuredClone(state), dirty = false, selected = mModuleKey(M_MODULES[0].id), preview = false, query = '', editingSelection = selected;
   const role = () => draft.roles.find(r => r.id === roleId);
   const account = () => accounts.listStaffLoginAccounts().find(a => a.employeeId === employeeId);
   const allowed = (page: string, action: string) => currentMAccess(mActionKey(page, action)) === 'edit';
@@ -66,35 +67,27 @@ export function bindMCenter(onMount: () => void): void {
     }
     return '历史权限';
   };
-  const options = (key: string, values: [MAccess, string][], editable: boolean) => `<div class="pc-segment" role="group" aria-label="${mEsc(resourceTitle(key))}权限">${values.map(([value, text]) => `<button type="button" data-mp-grant="${mEsc(key)}" data-value="${value}" aria-pressed="${(role()?.grants[key] ?? 'hidden') === value}" ${editable ? '' : 'disabled'}>${text}</button>`).join('')}</div>`;
+  const editorCatalog = buildMEditorCatalog();
   function editor(): string {
-    const visiblePages = M_PAGES.filter(p => !preview && !employeeId || access(mPageKey(p.id)) !== 'hidden');
-    if (!visiblePages.some(p => p.id === selected)) selected = visiblePages[0]?.id ?? '';
-    const selectedPage = visiblePages.find(p => p.id === selected);
-    const readonly = preview || !!employeeId || !allowed('roles', 'edit');
-    const tree = M_MODULES.map(module => {
-      const pages = visiblePages.filter(p => p.moduleId === module.id && (!query || `${module.title} ${p.title}`.includes(query)));
-      if (!pages.length) return '';
-      return `<div class="mp-module"><div class="mp-module-heading"><strong>${mEsc(module.title)}</strong>${readonly ? '' : options(mModuleKey(module.id), [['hidden', '不可见'], ['read', '可见']], true)}</div>${pages.map(p => `<button type="button" data-mp-page="${p.id}" class="pc-tree-item ${selected === p.id ? 'active' : ''}">${mEsc(p.title)}</button>`).join('')}</div>`;
-    }).join('');
-    const detail = (p: MPage) => {
-      const gate = access(mModuleKey(M_PAGES.find(entry => entry.id === p.id)!.moduleId)) !== 'hidden';
-      const label = (value: MAccess) => value === 'hidden' ? '不可见' : value === 'read' ? '可见不可编辑' : '可编辑';
-      return `<header class="pc-detail-heading"><h2>${mEsc(p.title)}</h2>${readonly ? `<span class="pc-tag">${label(access(mPageKey(p.id)))}</span>` : options(mPageKey(p.id), p.editable ? [['hidden', '不可见'], ['read', '可见不可编辑'], ['edit', '可编辑']] : [['hidden', '不可见'], ['read', '可见']], gate)}</header>${!gate ? '<p class="pc-notice">上级菜单不可见，下级配置保留但不生效。</p>' : ''}<table><thead><tr><th>页面操作</th><th>${readonly ? '最终权限' : '授权'}</th></tr></thead><tbody>${p.actions.map(a => `<tr><td>${mEsc(a.title)}${a.write ? '' : '（输出操作）'}</td><td>${readonly ? `<span class="pc-tag">${access(mActionKey(p.id, a.id)) === 'edit' ? '允许' : '禁止'}</span>` : options(mActionKey(p.id, a.id), [['hidden', '禁止'], ['edit', '允许']], gate && access(mPageKey(p.id)) !== 'hidden' && (!a.write || access(mPageKey(p.id)) === 'edit'))}</td></tr>`).join('') || '<tr><td colspan="2">本页按页面权限控制，无独立操作。</td></tr>'}</tbody></table>`;
-    };
-    return `<div class="pc-editor"><aside class="pc-tree" data-mp-scroll="tree"><label class="pc-search">搜索菜单<input data-mp-menu-search value="${mEsc(query)}" placeholder="搜索 M 平台菜单"></label>${tree || '<p class="pc-empty">没有可见菜单</p>'}</aside><section class="pc-detail" data-mp-scroll="detail">${selectedPage ? detail(selectedPage) : '<p class="pc-empty">该员工暂无可访问菜单</p>'}</section></div>`;
+    if (preview || employeeId) {
+      const keys = [...editorCatalog.resources.values()].filter(r => r.type !== 'action' && access(r.key) !== 'hidden').map(r => r.key);
+      if (!keys.includes(selected)) selected = keys[0] ?? '';
+    }
+    return renderMRolePermissionEditor({catalog:editorCatalog,selected,preview:preview||!!employeeId,
+      readonly:preview||!!employeeId||!allowed('roles','edit'),search:query,
+      own:key=>role()?.grants[key]??'hidden',value:access});
   }
   function logs(): string {
     return `<table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th><th>变更详情</th></tr></thead><tbody>${state.logs.map(log => `<tr><td>${mEsc(new Date(log.at).toLocaleString())}</td><td>${mEsc(log.actor)}</td><td>${mEsc(log.action)}</td><td>${mEsc(log.object)}</td><td><details><summary>查看前后值</summary><p>变更前</p><pre class="pc-log-json">${mEsc(log.before)}</pre><p>变更后</p><pre class="pc-log-json">${mEsc(log.after)}</pre></details></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
   }
   function render(): void {
-    const positions = [...host.querySelectorAll<HTMLElement>('[data-mp-scroll]')].map(el => [el.dataset.mpScroll!, el.scrollTop] as const);
+    const positions = [...host.querySelectorAll<HTMLElement>('[data-scroll]')].map(el => [el.dataset.scroll!, el.scrollTop] as const);
     const message = '<p class="pc-error" data-mp-error role="alert"></p>';
     if (roleId || employeeId) {
       const object = roleId ? role() : account();
       if (!object) { host.innerHTML = renderStandalonePageHeader({titleHtml:'角色或员工不存在',backHtml:button('返回','data-mp-do="back"')}); return; }
       const name = roleId ? role()!.name : account()!.employeeName;
-      host.innerHTML = `<div class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:`${roleId ? '编辑权限' : '员工权限'} · ${mEsc(name)}`,backHtml:button('返回', 'data-mp-do="back"'),subtitleHtml:`<p class="pc-muted">${roleId ? '设置角色可以访问、查看和设置的 M 平台菜单。' : '最终权限由已分配角色合并计算。'}</p>`,actionsHtml:roleId ? button(preview ? '返回编辑' : '效果预览', 'data-mp-do="preview"')+button('保存', 'data-mp-do="save-grants"', allowed('roles', 'edit') && dirty, true) : button('分配角色', `data-mp-assign="${mEsc(employeeId)}"`, allowed('staff', 'assign'))})}${message}${employeeId ? `<div class="mp-role-summary">${(draft.employees.find(e => e.id === employeeId)?.roleIds ?? []).map(id => `<span class="pc-tag">${mEsc(draft.roles.find(r => r.id === id)?.name ?? '失效角色')}</span>`).join('') || '尚未分配角色'}${account()?.enabled ? '' : '<span class="pc-tag">账号已停用，全部权限不生效</span>'}</div>` : ''}<div class="pc-content">${editor()}</div><footer class="pc-footer"><span>${dirty ? '有未保存的修改' : ''}</span></footer></div>`;
+      host.innerHTML = `<div class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:`${roleId ? '编辑权限' : '员工权限'} · ${mEsc(name)}`,backHtml:button('返回', 'data-mp-do="back"'),subtitleHtml:`<p class="pc-muted">${roleId ? '设置角色可以访问、查看和设置的 M 平台菜单。' : '最终权限由已分配角色合并计算。'}</p>`,actionsHtml:roleId ? button(preview ? '返回编辑' : '权限预览', 'data-mp-do="preview"')+button('保存授权', 'data-mp-do="save-grants"', allowed('roles', 'edit') && dirty, true) : button('分配角色', `data-mp-assign="${mEsc(employeeId)}"`, allowed('staff', 'assign'))})}${message}${employeeId ? `<div class="mp-role-summary">${(draft.employees.find(e => e.id === employeeId)?.roleIds ?? []).map(id => `<span class="pc-tag">${mEsc(draft.roles.find(r => r.id === id)?.name ?? '失效角色')}</span>`).join('') || '尚未分配角色'}${account()?.enabled ? '' : '<span class="pc-tag">账号已停用，全部权限不生效</span>'}</div>` : ''}<div class="pc-content">${editor()}</div><footer class="pc-footer"><span>${dirty ? '有未保存的修改' : '无未保存修改'}</span></footer></div>`;
     } else if (path.endsWith('/roles') || path.endsWith('/roles/new')) {
       const rows = state.roles.map(r => {
         const employeeIds = uniqueRoleEmployeeIds(members(r.id).map(e => e.id));
@@ -119,7 +112,7 @@ export function bindMCenter(onMount: () => void): void {
       const stats = [['角色', state.roles.length], ['员工账号', accounts.listStaffLoginAccounts().length], ['已授权员工', state.employees.filter(e => e.roleIds.length).length], ['可授权菜单页', M_PAGES.length]];
       host.innerHTML = `<h1>权限总览</h1><p class="pc-muted">通过角色管理服务商内部员工的 M 平台菜单与操作权限。</p>${message}<div class="pc-stats">${stats.map(([label, count]) => `<div class="pc-card">${label}<strong>${count}</strong></div>`).join('')}</div><section class="pc-card"><h2>最近变更</h2>${logs()}</section>`;
     }
-    for (const [id, top] of positions) { const el = host.querySelector<HTMLElement>(`[data-mp-scroll="${id}"]`); if (el) el.scrollTop = top; }
+    for (const [id, top] of positions) { const el = host.querySelector<HTMLElement>(`[data-scroll="${id}"]`); if (el) el.scrollTop = top; }
   }
   function dialog(title: string, body: string, save: (form: HTMLFormElement) => void): void {
     const modal = document.createElement('dialog'); modal.className = 'pc-dialog mp-permission-dialog';
@@ -165,9 +158,9 @@ export function bindMCenter(onMount: () => void): void {
   host.addEventListener('click', event => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('button'); if (!target || target.hasAttribute('disabled')) return;
     try {
-      if (target.dataset.mpPage) { selected = target.dataset.mpPage; render(); }
-      if (target.dataset.mpGrant && role()) {
-        requireMAction('roles', 'edit'); role()!.grants[target.dataset.mpGrant] = target.dataset.value as MAccess; mark(); render();
+      if (target.dataset.page) { selected = target.dataset.page; render(); }
+      if (target.dataset.grant && role() && !preview) {
+        requireMAction('roles', 'edit'); applyMEditorGrant(role()!,target.dataset.grant,target.dataset.value,access); mark(); render();
       }
       if (target.dataset.mpEdit) editRole(target.dataset.mpEdit);
       if (target.dataset.mpCopy) editRole(target.dataset.mpCopy, true);
@@ -193,7 +186,10 @@ export function bindMCenter(onMount: () => void): void {
       switch (target.dataset.mpDo) {
         case 'new-role': editRole(); break;
         case 'new-account': editAccount(); break;
-        case 'preview': preview = !preview; render(); break;
+        case 'preview':
+          if (!preview) { editingSelection = selected; preview = true; }
+          else { preview = false; selected = editingSelection; }
+          render(); break;
         case 'back': location.hash = `${prefix}/${employeeId ? 'staff' : 'roles'}`; break;
         case 'save-grants': {
           if (!dirty) break;
@@ -207,8 +203,8 @@ export function bindMCenter(onMount: () => void): void {
   });
   host.addEventListener('input', event => {
     const input = event.target as HTMLInputElement;
-    if (!input.matches('[data-mp-menu-search],[data-mp-staff-search]')) return;
-    const pos = input.selectionStart, attr = input.hasAttribute('data-mp-menu-search') ? 'data-mp-menu-search' : 'data-mp-staff-search';
+    if (!input.matches('[data-menu-search],[data-mp-staff-search]')) return;
+    const pos = input.selectionStart, attr = input.hasAttribute('data-menu-search') ? 'data-menu-search' : 'data-mp-staff-search';
     query = input.value; render(); const next = host.querySelector<HTMLInputElement>(`[${attr}]`); next?.focus(); next?.setSelectionRange(pos, pos);
   });
   render();

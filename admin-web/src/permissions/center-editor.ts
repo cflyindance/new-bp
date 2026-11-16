@@ -10,7 +10,9 @@ import {FOH_PERMISSION_PAGES} from './center-foh-pages';
 import {effectiveMenuView} from './center-effective-menu';
 import {pageMode} from './center-page-mode';
 export const esc = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export interface EditorOptions { catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; grantedOnly?: boolean; emptyMessage?: string; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
+/** Optional presentation policy for catalogs with their own permission semantics. */
+export interface EditorPresentation { control: (resource:Resource, compact?:boolean)=>string }
+export interface EditorOptions { presentation?:EditorPresentation; catalog: Catalog; page: string; group: string; preview: boolean; readonly: boolean; staff: boolean; effectiveOnly?: boolean; grantedOnly?: boolean; emptyMessage?: string; value: (key:string)=>Access; own: (key:string)=>Access|'inherit'; parentInherited?:(key:string)=>boolean; search: string }
 export function renderPermissionEditor(o: EditorOptions): string {
   if(o.effectiveOnly){
     const view=effectiveMenuView(o.catalog,o.value,o.page);
@@ -35,12 +37,13 @@ export function renderPermissionEditor(o: EditorOptions): string {
     if(!matches) return false;
     return true;
   };
-  const menuStatus=(key:string):string=>`<span class="pc-tag" data-menu-access="${o.value(key)}">${o.value(key)==='hidden'?'不可见':'可见'}</span>`;
+  const menuStatus=(key:string):string=>o.presentation&&catalog.resources.has(key)?o.presentation.control(catalog.resources.get(key)!):`<span class="pc-tag" data-menu-access="${o.value(key)}">${o.value(key)==='hidden'?'不可见':'可见'}</span>`;
   const tree = (nodes:MenuNode[],ancestorMatch=false):string => nodes.filter(n=>visible(n,ancestorMatch)).map(n=> {
     const matches=ancestorMatch||!o.search||n.title.toLowerCase().includes(o.search.toLowerCase());
     return n.children.length ? `<details data-menu-node="${esc(n.id)}" open><summary class="pc-tree-menu-row">${n.key?`<button type="button" class="pc-tree-group-label ${o.page===n.key?'active':''}" data-page="${esc(n.key)}" title="${esc(n.title)}">${esc(n.title)}</button>`:`<span class="pc-tree-group-label" title="${esc(n.title)}">${esc(n.title)}</span>`}${n.key&&!o.preview?`<span class="pc-menu-controls">${o.readonly?menuStatus(n.key):control(catalog.resources.get(n.key)!,true)}</span>`:''}</summary><div class="pc-tree-children">${tree(n.children,matches)}</div></details>` : `<button type="button" class="pc-tree-item ${o.page===n.key?'active':''}" data-page="${esc(n.key)}">${esc(n.title)}</button>`;
   }).join('');
   function control(resource:Resource, compact=false): string {
+    if(o.presentation)return o.presentation.control(resource,compact);
     const vals: [Access|'inherit',string][] = resource.type==='action' ? [['hidden','禁止'],['edit','允许']] : resource.type==='setting' ? [['hidden',resource.path==='/team/shift-scheduling/rules'?'不可见':'隐藏'],['read','可见不可编辑'],['edit','可编辑']] : resource.type==='content'||resource.type==='field' ? [['hidden','不可见'],['read','可见']] : [['hidden','不可查看'],['read','可查看']];
     if(resource.type==='setting')vals[0][1]='不可见';
     if(['module','navigation','page'].includes(resource.type)){vals[0][1]='不可见';vals[1][1]='可见';}
@@ -81,6 +84,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const categories=groups.map(g=>{const section=g.section!==lastSection?`<h4>${esc(g.section)}</h4>`:'';lastSection=g.section;return `${section}<button type="button" data-group="${esc(g.id)}" class="${g.id===active?.id?'active':''}">${esc(g.title)}</button>`}).join('');
   const table=(title:string,rows:string)=>`<table><thead><tr><th>${title}</th><th>${o.preview?'效果':'授权'}</th></tr></thead><tbody>${rows}</tbody></table>`;
   const submenuRow=(r:Resource):string=>{
+    if(o.presentation)return `<tr><th scope="row">${esc(r.title)}</th><td>${control(r)}</td></tr>`;
     const mode=r.type==='page'?pageMode(catalog,r.key,o.value):o.value(r.key),blocked=o.value(o.page)==='hidden';
     const choices:[string,string][]=r.type==='page'?[['hidden','不可见'],['read','可见不可编辑'],['edit','可编辑']]:[['hidden','不可见'],['read','可见']];
     const buttons=o.readonly||o.preview?`<span class="pc-tag">${esc(choices.find(([v])=>v===mode)?.[1]??'不可见')}</span>`:`<div class="pc-segment" role="group" aria-label="${esc(r.title)}权限">${choices.map(([v,label])=>`<button type="button" data-submenu-mode="${esc(r.key)}" data-value="${v}" aria-pressed="${mode===v}" ${blocked&&v!=='hidden'?'disabled title="上级导航不可见，不能开启子导航"':''}>${label}</button>`).join('')}</div>`;
@@ -109,7 +113,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const authorizationBody=visibleContents.filter(r=>!sensitive(r)).map(r=>unifiedByContent.has(r.key)?unifiedRow(unifiedByContent.get(r.key)!):row(r)).join('')+shownActions.filter(r=>!mergedActions.has(r.key)).map(row).join('');
   const sensitiveBody=visibleContents.filter(sensitive).map(row).join('');
   const categoryHasAuthorization=visibleContents.length>0||shownActions.some(r=>!mergedActions.has(r.key));
-  const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:'';
+  const authorizationSection=categoryHasAuthorization?`<h3>功能授权</h3>${o.preview&&shownContents.length?'<p class="pc-muted">以下为示例内容，不读取真实业务数据。</p>':''}${authorizationBody?table('功能 / 内容',authorizationBody):'<p class="pc-empty">没有可显示的内容或可操作功能</p>'}${sensitiveBody?'<h3>敏感字段权限</h3>'+table('敏感字段',sensitiveBody):''}`:o.presentation?'<p class="pc-muted">本页按页面权限控制，无独立操作。</p>':'';
   const settingKeys=active?.keys.filter(k=>catalog.resources.get(k)?.type==='setting')??[];
   const categoryBody=pageSections?`${active?`<h3>${esc(active.title)}</h3>`:'<p class="pc-empty">没有可显示的分类</p>'}${authorizationSection}${settingKeys.length?table('功能设置项',settingKeys.filter(k=>!(o.preview||o.grantedOnly)||featureVisible(k)).map(k=>row(catalog.resources.get(k)!)).join('')):''}`:`${authorizationSection}${active?table('功能设置项',active.keys.filter(k=>!(o.preview||o.grantedOnly)||featureVisible(k)).map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}`;
   const standalonePage=!!page?.path&&!hasModuleSettingsCategorySidebar(page.path);
@@ -125,7 +129,7 @@ const submenus=[...catalog.resources.values()].filter(r=>r.parent===o.page&&!r.c
   const settingsLayout=flatStorePage
     ? `<div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${authorizationSection}${flatKeys.length?table('功能设置项',flatKeys.map(k=>row(catalog.resources.get(k)!)).join('')):'<p class="pc-empty">没有可显示的设置项</p>'}</div>`
     : `<div class="pc-settings"><nav class="pc-categories" data-scroll="categories" tabindex="0" aria-label="${pageSections?esc(page?.title)+'分类':'设置分类'}">${categories}</nav><div class="pc-setting-items" data-scroll="settings" tabindex="0" role="region" aria-label="功能设置项">${categoryControls}${categoryBody}</div></div>`;
-  const headerControls=page&&(page.type==='module'||page.type==='navigation')?(o.preview||o.readonly?menuStatus(o.page):control(page)):buffetPage&&policy?.row?unifiedRow(policy.row,true):page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag" data-menu-access="${o.value(o.page)}">${pageMode(catalog,o.page,o.value)==='hidden'?'不可见':pageMode(catalog,o.page,o.value)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
+  const headerControls=page&&o.presentation?control(page):page&&(page.type==='module'||page.type==='navigation')?(o.preview||o.readonly?menuStatus(o.page):control(page)):buffetPage&&policy?.row?unifiedRow(policy.row,true):page?.settingPageGate?o.preview||o.readonly?`<span class="pc-tag" data-menu-access="${o.value(o.page)}">${pageMode(catalog,o.page,o.value)==='hidden'?'不可见':pageMode(catalog,o.page,o.value)==='edit'?'可编辑':'可见不可编辑'}</span>`:control(catalog.resources.get(page.settingPageGate)!):policy?.row?unifiedRow(policy.row,true):policy?.kind==='single'
     ? policy.row?unifiedRow(policy.row,true):!o.preview&&!o.readonly?control(policy.setting!):`<span class="pc-tag">${o.value(policy.setting!.key)==='hidden'?'不可见':o.value(policy.setting!.key)==='edit'?'可编辑':'可见不可编辑'}</span>`
     : page?.type!=='page'||policy?.kind==='complex'||o.preview||o.readonly?menuStatus(o.page):page?control(page):'';
   let blockedAncestor:Resource|undefined,ancestorKey=page?.parent;const checkedAncestors=new Set<string>();
