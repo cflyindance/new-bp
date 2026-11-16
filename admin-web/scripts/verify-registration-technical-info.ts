@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {renderRegistrationTechnicalInfo} from '../src/config/page-registration-technical-info';
+import type {RegistryWorkspace} from '../src/config/page-registry-projects';
+const page={id:'page',title:'商品<script>',module:'模块',status:'active' as const,source:'测试',routing:{type:'micro-app' as const,path:'/products/list'}};
+const w:RegistryWorkspace={version:2,projects:[{id:'p',name:'商品中心'}],directories:[],pages:[page],assignments:[{pageId:'page',projectId:'p',directoryId:null}]};
+const html=renderRegistrationTechnicalInfo(page,w);
+assert.equal((html.match(/<dt /g)??[]).length,3);
+assert.ok(html.indexOf('所属项目')<html.indexOf('页面名称'));
+assert.ok(html.includes('商品中心'));assert.ok(html.includes('商品&lt;script&gt;'));assert.ok(html.includes('/products/list'));
+assert.ok(!html.includes('完整页面路由参数 JSON'));
+assert.ok(renderRegistrationTechnicalInfo(page,{...w,projects:[],assignments:[]}).includes('未归类'));
+console.log('PASS only project, page name and path, correct order, escaping and unclassified fallback');
