@@ -1,6 +1,6 @@
 /**
 
- * M 平台 · 菜单路由配置（系统预设 / 自定义 双模块）
+ * M 平台 · 菜单与页面管理（系统预设 / 自定义 双模块）
 
  */
 
@@ -686,7 +686,7 @@ export function findNavBlueprintPageTitle(path: string): { title: string; module
 
   if (edit) return { title: "菜单路由可视化编辑器", module: "M 平台" };
 
-  return { title: menuRoutingPage(path).title, module: "菜单路由配置" };
+  return { title: menuRoutingPage(path).title, module: "菜单与页面管理" };
 
 }
 

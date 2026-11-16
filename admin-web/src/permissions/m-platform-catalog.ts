@@ -14,7 +14,7 @@ const page = (id: string, title: string, path: string, editable = true, actions:
 const merchants = '/m-platform/merchants';
 const permissions = '/m-platform/permissions';
 export const M_MODULES: MModule[] = [
-  { id: 'routing', title: '菜单路由配置', pages: [page('routing', '菜单路由配置', '/m-platform/nav-blueprint', true, [
+  { id: 'routing', title: '菜单与页面管理', pages: [page('routing', '菜单与页面管理', '/m-platform/nav-blueprint', true, [
     action('publish', '发布路由', '[data-nb-publish],[data-nb-publish-sync]'),
     action('restore', '恢复默认路由', '[data-nb-restore-custom],[data-nb-restore-system]'),
     action('sync', '同步平台预设', '[data-nb-sync-presets]'),
