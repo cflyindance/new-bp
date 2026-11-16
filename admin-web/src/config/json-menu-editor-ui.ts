@@ -301,14 +301,14 @@ export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string 
   const ancestors = selectedAncestors();
   if (!dialogState && selected) dialogState = buildEditFormState(state.selectedPath);
   return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] bg-[#f7f8fa] px-6 pb-3 pt-6" data-json-menu-editor>
-    <header class="shrink-0 bg-transparent pb-6">
+    ${view === "nav" ? `<header class="shrink-0 bg-transparent pb-6">
       <div class="flex items-center justify-between gap-5">
         <div class="min-w-0"><div class="flex items-center gap-2.5"><h1 class="text-2xl font-bold tracking-tight text-slate-900">${MENU_ROUTING_PAGES.find(page => page.view === view)!.title}</h1></div></div>
         <div class="flex shrink-0 items-center gap-3"><details class="relative"><summary class="cursor-pointer list-none rounded-xl bg-slate-100 px-5 py-3 text-sm font-semibold text-blue-600 hover:bg-slate-200">操作⌄</summary><div class="absolute right-0 z-40 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" data-jme-fullscreen-open class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50">商家菜单预览</button><button type="button" data-jme-export class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50">导出 JSON</button><label class="block cursor-pointer rounded-lg px-3 py-2 text-sm hover:bg-slate-50">导入 JSON<input type="file" accept="application/json,.json" data-jme-import class="hidden"></label></div></details></div>
       </div>
       <div class="mt-1.5 flex items-center"><span class="text-sm text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span></div>
       ${state.message ? `<div class="mt-2 rounded-lg ${state.status === "error" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"} px-3 py-2 text-xs">${escapeHtml(state.message)}</div>` : ""}
-    </header>
+    </header>` : ""}
     ${view === "projects" ? renderRegistryProjects() : view === "registry" || view === "pages" ? registryView() : `<div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_0_rgba(15,23,42,0.035)]">
       ${renderJsonMenuTree(document, state.selectedPath, state.issues, searchValue, expandedPaths)}
       ${renderJsonMenuNodeFormPanel(document, dialogState, state.issues, state.published)}
