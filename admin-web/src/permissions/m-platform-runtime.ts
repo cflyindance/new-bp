@@ -5,8 +5,8 @@ import {getEnterpriseMerchantSnapshot} from '../config/enterprise-merchant-store
 import { bindNavigationSubmenuActions } from '../shell/navigation-submenu-actions';
 import { M_MODULES, M_PAGES, mPageForPath, mPageKey, mModuleKey, mActionKey, type MModule } from './m-platform-catalog';
 import { currentMAccess, currentMAccount } from './m-platform-store';
-import { groupMNavigation } from './m-platform-navigation';
-import { MENU_ROUTING_PAGES, menuRoutingPage } from '../config/menu-routing-navigation';
+import { buildMNavigationModules, mNavigationHasChildren } from './m-platform-navigation';
+import { menuRoutingPage } from '../config/menu-routing-navigation';
 const decodeTarget=(id:string)=>{try{return decodeURIComponent(id);}catch{return '';}};
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export function mCanVisit(path: string): boolean {
@@ -39,23 +39,10 @@ const mNavigationIcons: Record<string, keyof typeof NAV_MODULE_ICONS> = {
 };
 const mNavigationIcon = (id: string) => `<span class="mb-nav-icon" aria-hidden="true">${NAV_MODULE_ICONS[mNavigationIcons[id] ?? 'settings']}</span>`;
 export function renderMNavigation(path: string): string {
-  const modules = groupMNavigation(M_MODULES.map(module => ({ ...module, pages: module.pages.filter(p => currentMAccess(mPageKey(p.id)) !== 'hidden'||p.id==='permission-log'&&currentMAccess(mPageKey('provider-roles'))!=='hidden') })).filter(module => module.pages.length && currentMAccess(mModuleKey(module.id)) !== 'hidden'));
-  // Two destinations, one existing permission resource: no new grants or role migration.
-  const routing = modules.find(module => module.id === 'routing');
-  if (routing) {
-    const resource = routing.pages[0];
-    modules.push({ id:'menu-config-nav', title:'菜单配置', pages: MENU_ROUTING_PAGES.filter(p=>p.view==='nav'||p.view==='menu-log').map(page=>({...resource,title:page.title,path:page.path})) });
-    routing.pages = MENU_ROUTING_PAGES.filter(p => p.view === 'menu-root' || p.view === 'registry').map(page => ({ ...resource, title: page.title, path: page.path }));
-    modules.push({ id: 'registry-nav', title: '页面注册中心', pages: MENU_ROUTING_PAGES.filter(p => p.view === 'projects' || p.view === 'pages' || p.view === 'registry-log').map(page => ({ ...resource, title: page.title, path: page.path })) });
-  }
-  const presetIndex=modules.findIndex(module=>module.pages.some(p=>p.id==='presets'));
-  if(presetIndex>=0){const page=modules[presetIndex].pages.find(p=>p.id==='presets')!;modules.splice(presetIndex,0,{id:'display-regions-nav',title:'展示区域管理',pages:[{...page,title:'展示区域管理',path:'/m-platform/display-regions'}]});}
-  if(presetIndex>=0){const page=modules[presetIndex].pages.find(p=>p.id==='presets')!;modules.splice(presetIndex,0,{id:'business-menu-template-nav',title:'业态与菜单模板',pages:[{...page,title:'业态与菜单模板',path:'/m-platform/business-menu-templates'}]});}
-  const rolePages = modules.find(m=>m.id==='permissions')?.pages.filter(p=>['roles','provider-roles'].includes(p.id)) ?? [];
-  rolePages.sort((a,b)=>Number(b.id==='roles')-Number(a.id==='roles'));
-  if(rolePages.length) modules.push({id:'role-permissions-nav',title:'角色与权限',pages:rolePages});
+  const modules = buildMNavigationModules(M_MODULES.map(module => ({ ...module, pages: module.pages.filter(p => currentMAccess(mPageKey(p.id)) !== 'hidden'||p.id==='permission-log'&&currentMAccess(mPageKey('provider-roles'))!=='hidden') })).filter(module => module.pages.length && currentMAccess(mModuleKey(module.id)) !== 'hidden'));
+  const rolePages = modules.find(m=>m.id==='role-permissions-nav')?.pages ?? [];
   const providerActive = rolePages.some(p=>path.split('?')[0]===p.path||path.startsWith(p.path+'/')&&!path.startsWith(p.path+'/change-log'));
-  const hasChildren = (module: MModule) => module.id === 'menu-config-nav' || module.id === 'registry-nav' || module.id === 'routing' || module.id === 'activity-analysis' || (M_MODULES.find(original => original.id === module.id)?.pages.length ?? module.pages.length) > 1 || module.id === 'permissions';
+  const hasChildren = mNavigationHasChildren;
   const active = mPageForPath(path);
   const registryActive = path.split('?')[0].startsWith('/m-platform/nav-blueprint/page-registry');
   const menuActive = active?.id==='routing'&&!registryActive;
