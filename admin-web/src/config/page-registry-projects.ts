@@ -2,6 +2,7 @@ import { buildLocalPageRegistration, readLocalPageRegistrations, type LocalPageR
 import { validatePageRegistrations, type PageRegistration } from './page-registration-domain';
 import { seedProductRegistry } from './page-registry-product-seed';
 import { seedBusinessRegistries } from './page-registry-business-seeds';
+import {appendOperation} from './operation-log';
 
 export const REGISTRY_PROJECTS_KEY = 'menusifu:page-registry:v2';
 export interface RegistryProject { id: string; name: string; microName?: string; microUrl?: string; microRoute?: string; status?: 'active' | 'disabled' }
@@ -59,8 +60,21 @@ export function readRegistryWorkspace(builtIn: readonly PageRegistration[], targ
 export function updateRegistryWorkspace(builtIn: readonly PageRegistration[], mutate: (w: RegistryWorkspace) => void, target: RegistrationStorage = storage()): RegistryWorkspace {
   const state = readRegistryWorkspace(builtIn, target);
   if (state.error) throw new Error(state.error);
-  const next = structuredClone(state.workspace); mutate(next); validateWorkspace(next, builtIn);
-  try { target.setItem(REGISTRY_PROJECTS_KEY, JSON.stringify(next)); } catch { throw new Error('本地保存失败，输入内容已保留，请检查存储空间或权限。'); }
+  const next = structuredClone(state.workspace);
+  try {
+    mutate(next); validateWorkspace(next, builtIn);
+    try {target.setItem(REGISTRY_PROJECTS_KEY, JSON.stringify(next));} catch {throw new Error('本地保存失败，输入内容已保留，请检查存储空间或权限。');}
+  } catch(error) {
+    appendOperation({scope:'registry',action:'提交配置',stage:'本地保存',before:state.workspace,after:next,result:'failure',reason:error instanceof Error?error.message:'本地保存失败'});
+    throw error;
+  }
+  const added=next.projects.length+next.directories.length+next.pages.length>state.workspace.projects.length+state.workspace.directories.length+state.workspace.pages.length;
+  const removed=next.projects.length+next.directories.length+next.pages.length<state.workspace.projects.length+state.workspace.directories.length+state.workspace.pages.length;
+  const statusChanged=next.projects.find(p=>(p.status??'active')!==(state.workspace.projects.find(o=>o.id===p.id)?.status??'active'));
+  const copied=next.directories.some(d=>!state.workspace.directories.some(o=>o.id===d.id)&&d.name.includes('副本'))||next.pages.some(p=>!state.workspace.pages.some(o=>o.id===p.id)&&p.id.includes('_copy_'));
+  const moved=next.directories.some(d=>state.workspace.directories.some(o=>o.id===d.id&&o.parentId!==d.parentId))||next.assignments.some(a=>state.workspace.assignments.some(o=>o.pageId===a.pageId&&o.directoryId!==a.directoryId));
+  const sorted=!added&&!removed&&!moved&&(JSON.stringify(next.directories.map(d=>d.id))!==JSON.stringify(state.workspace.directories.map(d=>d.id))||JSON.stringify(next.assignments.map(a=>a.pageId))!==JSON.stringify(state.workspace.assignments.map(a=>a.pageId)));
+  appendOperation({scope:'registry',action:statusChanged?(statusChanged.status==='disabled'?'停用':'启用'):added?(copied?'复制及子级':'新增'):removed?'删除':moved?'移动':sorted?'排序':'编辑',stage:'本地保存',before:state.workspace,after:next});
   return next;
 }
 export function registerProjectPage(input: LocalPageRegistrationInput, projectId: string, directoryId: string | null, builtIn: readonly PageRegistration[], target?: RegistrationStorage, replaceId?: string, nodeId?: string): PageRegistration {

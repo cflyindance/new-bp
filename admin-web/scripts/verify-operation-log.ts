@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {appendOperation,readOperationLog,redactOperationValue,OPERATION_LOG_KEY,resetOperationLogSessionForTest,setOperationActor} from '../src/config/operation-log';
+const values=new Map<string,string>();const storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v);}};
+resetOperationLogSessionForTest();setOperationActor(()=> '测试员工');
+const before={projects:[{id:'p',name:'项目'}],directories:[],pages:[],assignments:[]};
+const after={...before,projects:[{id:'p',name:'项目改名'}]};
+const record=appendOperation({scope:'registry',action:'编辑',stage:'本地保存',before,after},storage)!;
+assert.equal(record.actor,'测试员工');assert.equal(record.persistent,true);assert.equal(record.objects[0].name,'项目改名');assert.ok(record.changes.some(c=>c.field.endsWith('.name')));
+assert.equal(appendOperation({scope:'registry',action:'编辑',stage:'本地保存',before,after:before},storage),null);
+assert.equal(readOperationLog(storage).entries.length,1);
+appendOperation({scope:'menu',action:'发布',stage:'发布',before:null,after:{menu:[]},result:'failure',reason:'失败'},storage);assert.equal(readOperationLog(storage).entries.filter(e=>e.scope==='menu').length,1);
+assert.deepEqual(redactOperationValue({token:'secret',url:'https://user:pass@example.com/a?token=secret#hash'}),{token:'[已隐藏]',url:'https://example.com/a'});
+const raw=values.get(OPERATION_LOG_KEY);appendOperation({scope:'registry',action:'删除',stage:'本地保存',before:after,after:before},{...storage,setItem:()=>{throw Error('quota');}});assert.equal(values.get(OPERATION_LOG_KEY),raw);assert.ok(readOperationLog(storage).entries.some(e=>!e.persistent));
+values.set(OPERATION_LOG_KEY,'{broken');assert.ok(readOperationLog(storage).error);appendOperation({scope:'menu',action:'发布',stage:'发布',before:null,after:{menu:[]},force:true},storage);assert.equal(values.get(OPERATION_LOG_KEY),'{broken');
+resetOperationLogSessionForTest();console.log('PASS operation log persistence, differences, actor, module scopes, no-op, redaction, quota session fallback and corrupt storage protection');
