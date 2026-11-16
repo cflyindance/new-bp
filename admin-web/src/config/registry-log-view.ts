@@ -1,6 +1,20 @@
 import type {OperationEntry} from './operation-log';
 import type {RegistryWorkspace} from './page-registry-projects';
 
+/** The first affected object is the operation target; remaining objects supply context. */
+export function operationTargetKind(entry:OperationEntry):string {
+ const target=entry.objects[0];
+ if(!target)return '';
+ // The page tree also stores a structural node for each registered page.
+ // Classify changes to that node as page operations, not pure directory operations.
+ if(target.kind==='目录'&&[entry.before,entry.after].some(snapshot=>{
+  if(!snapshot||typeof snapshot!=='object')return false;
+  const directories=(snapshot as Partial<RegistryWorkspace>).directories;
+  return Array.isArray(directories)&&directories.some(d=>d.id===target.id&&Boolean(d.pageId));
+ }))return '页面';
+ return target.kind;
+}
+
 export function belongsToProject(entry:OperationEntry,projectId:string):boolean {
  if(entry.objects.some(o=>o.id===projectId))return true;
  return [entry.before,entry.after].some(snapshot=>{
