@@ -16,7 +16,7 @@ export function renderPickerTree(query: string, pending: string): string {
   function page(p:PageRegistration,depth:number):string {
     if (w.projects.some(project=>project.id===pickerTree.project&&project.status==='disabled')) p={...p,status:'retired'};
     if(!matches.has(p.id))return '';
-    return `<button type="button" data-page-pick="${esc(p.id)}" ${p.status==='retired'?'disabled':''} aria-pressed="${pending===p.id}" class="my-1 flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left disabled:opacity-40 ${pending===p.id?'border-blue-500 bg-blue-50':'border-transparent hover:bg-slate-50'}" style="padding-left:${16+depth*20}px"><span class="text-blue-600">${pending===p.id?'●':'○'}</span><span class="min-w-0 flex-1"><span class="block text-sm font-medium">${esc(p.title)}</span><span class="block break-all text-xs text-slate-400">${esc(p.routing.path)}</span></span></button>`;
+    return `<button type="button" data-page-pick="${esc(p.id)}" ${p.status==='retired'?'disabled':''} aria-pressed="${pending===p.id}" class="my-1 flex min-h-16 w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${pending===p.id?'border-blue-500 bg-blue-50 text-blue-800':'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'}"><span aria-hidden="true" class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blue-50 text-blue-500">▤</span><span class="min-w-0 flex-1"><span class="block text-sm font-medium">${esc(p.title)}</span><span class="mt-1 block break-all text-xs text-slate-400">${esc(p.routing.path)}</span></span><span aria-hidden="true" class="h-4 w-4 shrink-0 rounded-full border ${pending===p.id?'border-[5px] border-blue-500':'border-slate-300'}"></span></button>`;
   }
   const linked = new Set(w.directories.flatMap(d=>d.pageId?[d.pageId]:[]));
   function nodes(parent:string|null,depth:number):string {
@@ -27,7 +27,10 @@ export function renderPickerTree(query: string, pending: string): string {
       const ownRow=own?page(own,depth):'';
       if(query.trim()&&!ownRow&&!descendants)continue;
       const expanded=query.trim()||!pickerTree.collapsed.has(d.id);
-      html+=`<div><div class="flex items-center"><button type="button" data-picker-tree-toggle="${esc(d.id)}" aria-label="展开或收起 ${esc(d.name)}" aria-expanded="${Boolean(expanded)}" class="h-8 w-8 shrink-0 text-xl text-slate-400">${expanded?'⌄':'›'}</button>${ownRow||`<span class="py-3 text-sm font-medium text-slate-600" style="padding-left:${depth*20}px">${esc(d.name)}</span>`}</div>${expanded?descendants:''}</div>`;
+      const hasChildren=Boolean(descendants);
+      const toggle=hasChildren?`<button type="button" data-picker-tree-toggle="${esc(d.id)}" aria-label="展开或收起 ${esc(d.name)}" aria-expanded="${Boolean(expanded)}" class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xl text-slate-500 hover:bg-slate-200">${expanded?'⌄':'›'}</button>`:'<span class="w-8 shrink-0" aria-hidden="true"></span>';
+      const row=ownRow?`<div class="flex items-center gap-1">${toggle}${ownRow}</div>`:`<div class="my-1 flex min-h-12 items-center gap-2 rounded-xl bg-slate-100 px-2">${toggle}<span aria-hidden="true" class="text-slate-400">▰</span><span class="min-w-0 flex-1 py-3 text-sm font-semibold text-slate-700">${esc(d.name)}</span><span class="pr-2 text-xs text-slate-400">${depth+1} 级</span></div>`;
+      html+=`<div class="relative" data-picker-tree-node="${esc(d.id)}">${row}${expanded&&descendants?`<div class="relative ml-4 border-l border-slate-200 pl-5" data-picker-tree-children><span aria-hidden="true" class="absolute left-0 top-8 w-4 border-t border-slate-200"></span>${descendants}</div>`:''}</div>`;
     }
     for(const a of w.assignments.filter(a=>a.projectId===pickerTree.project&&a.directoryId===parent&&!linked.has(a.pageId))) {const p=w.pages.find(p=>p.id===a.pageId);if(p)html+=page(p,depth);}
     return html;
