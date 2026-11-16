@@ -5,15 +5,19 @@ import { LOCAL_PAGE_REGISTRATION_SOURCE } from './local-page-registration';
 import { renderPageRegistrationCreateDialog } from './page-registration-create-ui';
 import { renderRegistryWorkspace, registryPageIds } from './page-registry-workspace-ui';
 import { renderPickerTree } from './page-registration-picker-tree';
+import { getBuiltInPageRegistrations } from './page-registration-catalog';
+import { readRegistryWorkspace } from './page-registry-projects';
+import { renderRegistrationTechnicalInfo } from './page-registration-technical-info';
 
 export const registrationUi = { query: "", status: "all", picker: false, pickerQuery: "", pending: "", detail: "", spec: false, create: false };
 export const pageHtml = (s: string): string => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const button = "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600";
 const field = "mt-3 h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-blue-500";
 export function registeredPageSection(node: MenuNode): string {
+  const registry = readRegistryWorkspace(getBuiltInPageRegistrations());
   const p = matchRegisteredPage(node, getPageRegistrations());
   const legacy = Boolean(node.path || node.url || node.targetKey || node.microAppConfig);
-  return `<div class="mt-5 max-w-5xl rounded-xl border border-slate-200 p-5" data-page-binding><div class="flex flex-wrap items-center gap-4"><span class="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-xl text-blue-600">▦</span><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-slate-900">${p ? pageHtml(p.title) : legacy ? "未关联注册页面" : "选择要打开的页面"}</p><p class="mt-1 break-all text-xs text-slate-400">${p ? pageHtml(p.id) : legacy ? "当前使用自定义配置，可选择注册页面进行关联。" : "选择研发已注册的页面，无需填写路由和加载参数。"}</p></div>${p ? `<span class="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-700">${p.status === "retired" ? "已停用 · 保留已有配置" : "已匹配"}</span>` : ""}<button type="button" data-page-picker-open class="${button}">${p ? "更换页面" : "选择页面"}</button></div></div>${p ? `<details class="mt-4 rounded-lg border border-slate-100 p-3"><summary class="cursor-pointer text-xs text-blue-600">技术信息（只读）</summary><dl class="mt-3 space-y-2 break-all font-mono text-xs text-slate-500"><div>页面标识：${pageHtml(p.id)}</div><div>路由：${pageHtml(p.routing.path)}</div><div>类型：${pageHtml(p.routing.type)}</div><div>维护模块：${pageHtml(p.module)}</div></dl></details>` : ""}`;
+  return `<div class="mt-5 max-w-5xl rounded-xl border border-slate-200 p-5" data-page-binding><div class="flex flex-wrap items-center gap-4"><span class="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-xl text-blue-600">▦</span><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-slate-900">${p ? pageHtml(p.title) : legacy ? "未关联注册页面" : "选择要打开的页面"}</p><p class="mt-1 break-all text-xs text-slate-400">${p ? pageHtml(p.id) : legacy ? "当前使用自定义配置，可选择注册页面进行关联。" : "选择研发已注册的页面，无需填写路由和加载参数。"}</p></div>${p ? `<span class="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-700">${p.status === "retired" ? "已停用 · 保留已有配置" : "已匹配"}</span>` : ""}<button type="button" data-page-picker-open class="${button}">${p ? "更换页面" : "选择页面"}</button></div></div>${p ? renderRegistrationTechnicalInfo(p, registry.workspace, registry.error) : ""}`;
 }
 export function registryRows(): string {
   const ids = registryPageIds();
