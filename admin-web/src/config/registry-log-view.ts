@@ -1,6 +1,21 @@
 import type {OperationEntry} from './operation-log';
 import type {RegistryWorkspace} from './page-registry-projects';
 
+/** Historical ownership only; never infer past names from today's registry. */
+export function operationProjectName(entry:OperationEntry):string {
+ const target=entry.objects[0];if(!target)return '未记录';
+ for(const snapshot of [entry.after,entry.before]){
+  if(!snapshot||typeof snapshot!=='object')continue;
+  const w=snapshot as Partial<RegistryWorkspace>;
+  const projects=Array.isArray(w.projects)?w.projects:[];
+  const directories=Array.isArray(w.directories)?w.directories:[];
+  const assignments=Array.isArray(w.assignments)?w.assignments:[];
+  const id=target.kind==='项目'?target.id:directories.find(d=>d.id===target.id)?.projectId??assignments.find(a=>a.pageId===target.id)?.projectId;
+  const project=projects.find(p=>p.id===id);if(project)return project.name;
+ }
+ return (target.kind==='项目'?target:entry.objects.find(o=>o.kind==='项目'))?.name??'未记录';
+}
+
 /** The first affected object is the operation target; remaining objects supply context. */
 export function operationTargetKind(entry:OperationEntry):string {
  const target=entry.objects[0];

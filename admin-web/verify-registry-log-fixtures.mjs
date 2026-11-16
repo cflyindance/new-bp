@@ -14,7 +14,19 @@ try {
  });
  await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/logs');
  await page.locator('[data-operation-log]').waitFor();
+ assert.deepEqual(await page.locator('[data-operation-log] thead th').allTextContents(),['操作时间','操作人','所属项目','操作对象','对象名称','操作类型','操作结果']);
+ assert.equal(await page.locator('[data-operation-log] tbody tr').first().locator('td').count(),7);
+ assert.equal(await page.locator('[data-log-date-range] input[type=date]').count(),2);
+ assert.match(await page.locator('[data-log-project]').first().innerText(),/订单中心/);
+ assert.equal(await page.locator('[data-log-object-kind]').first().innerText(),'页面');
+ assert.match(await page.locator('[data-log-detail]').first().locator('..').innerText(),/成功\s*查看详情/);
+ assert.doesNotMatch(await page.locator('[data-operation-log] tbody').innerText(),/等 \d+ 项/);
  assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 40 条/);
+ await page.locator('[name=from]').fill('2026-11-17');
+ await page.locator('[name=to]').fill('2026-11-16');
+ await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
+ assert.match(await page.locator('[data-operation-log]').innerText(),/开始日期不能晚于结束日期/);
+ await page.locator('[data-log-reset]').click();
  assert.doesNotMatch(await page.locator('[data-operation-log] thead').innerText(),/阶段/);
  assert.match(await page.locator('[data-log-filter]').innerText(),/操作对象/);
  await page.locator('[name=kind]').selectOption('项目');
@@ -65,11 +77,12 @@ try {
  assert.ok(fixtures.rows.filter(e=>e.action==='删除页面').every(e=>e.after===null));
  assert.doesNotMatch(await page.locator('[data-operation-log]').innerText(),/示例操作员|演示记录|示例页面|测试数据/);
  const domain=await page.evaluate(async()=>{
-  const {belongsToProject,operationTargetKind}=await import('/src/config/registry-log-view.ts');
+  const {belongsToProject,operationTargetKind,operationProjectName}=await import('/src/config/registry-log-view.ts');
   const entry={objects:[{id:'page1'}],before:{assignments:[{pageId:'page1',projectId:'p1'}]},after:null};
-  return [belongsToProject(entry,'p1'),belongsToProject(entry,'p2'),operationTargetKind({objects:[{id:'n1',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n1',pageId:'page1'}]},after:null}),operationTargetKind({objects:[{id:'n2',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n2'}]},after:null})];
+  const historical=operationProjectName({objects:[{id:'page1',kind:'页面'}],before:{projects:[{id:'p1',name:'历史商品中心'}],assignments:[{pageId:'page1',projectId:'p1'}]},after:{projects:[],assignments:[]}});
+  return [belongsToProject(entry,'p1'),belongsToProject(entry,'p2'),operationTargetKind({objects:[{id:'n1',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n1',pageId:'page1'}]},after:null}),operationTargetKind({objects:[{id:'n2',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n2'}]},after:null}),historical];
  });
- assert.deepEqual(domain,[true,false,'页面','目录']);
+ assert.deepEqual(domain,[true,false,'页面','目录','历史商品中心']);
  await page.screenshot({path:'output/playwright/registry-log-fixtures.png',fullPage:true});
  console.log('PASS: all-project 40 fixtures, per-project 8, filter/reset, details, refresh idempotence, no real-store writes, page ownership');
 } finally {await browser.close();}

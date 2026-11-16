@@ -15,6 +15,9 @@ try {
  await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/projects');
  await page.locator('tr').filter({hasText:'商品中心'}).getByRole('link',{name:'查看记录'}).click();
  await page.locator('[data-project-log-fullscreen]').waitFor();
+ assert.deepEqual(await page.locator('[data-operation-log] thead th').allTextContents(),['操作时间','操作人','操作对象','对象名称','操作类型','操作结果']);
+ assert.equal(await page.locator('[data-log-project]').count(),0);
+ assert.equal(await page.locator('[data-operation-log] tbody tr').first().locator('td').count(),6);
  assert.match(page.url(),/project-logs\?object=registry-test-product-center/);
  assert.equal(await page.locator('[data-operation-log] h1').innerText(),'商品中心 · 操作记录');
  const box=await page.locator('[data-project-log-fullscreen]').boundingBox();
