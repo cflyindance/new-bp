@@ -14,6 +14,7 @@ export function renderPickerTree(query: string, pending: string): string {
   if(pickerTree.project&&!w.projects.some(p=>p.id===pickerTree.project))pickerTree.project='';
   const matches=new Set(searchPageRegistrations(getPageRegistrations(),query).map(p=>p.id));
   function page(p:PageRegistration,depth:number):string {
+    if (w.projects.some(project=>project.id===pickerTree.project&&project.status==='disabled')) p={...p,status:'retired'};
     if(!matches.has(p.id))return '';
     return `<button type="button" data-page-pick="${esc(p.id)}" ${p.status==='retired'?'disabled':''} aria-pressed="${pending===p.id}" class="my-1 flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left disabled:opacity-40 ${pending===p.id?'border-blue-500 bg-blue-50':'border-transparent hover:bg-slate-50'}" style="padding-left:${16+depth*20}px"><span class="text-blue-600">${pending===p.id?'●':'○'}</span><span class="min-w-0 flex-1"><span class="block text-sm font-medium">${esc(p.title)}</span><span class="block break-all text-xs text-slate-400">${esc(p.routing.path)}</span></span></button>`;
   }

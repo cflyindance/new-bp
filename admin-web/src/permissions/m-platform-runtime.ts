@@ -97,7 +97,7 @@ function deniedControl(target: Element, type: string): boolean {
   if (page.id === 'presets' && path.split('?')[0] === '/m-platform/display-regions' && target.closest('[data-display-action="bindings"],[data-display-action="copy-code"],#display-search,#display-status-filter,[data-display-action="reset"],[data-display-action="next"],[data-display-action="previous"]')) return false;
   if (!mCanVisit(path)) return true;
     // Registry controls only inspect the code catalog, including for routing read-only roles.
-    if (target.closest('[data-page-registry-search],[data-page-registry-status],[data-page-detail],[data-page-spec],[data-page-close]') || target.matches('[data-page-overlay]')) return false;
+    if (target.closest('[data-page-registry-search],[data-page-registry-status],[data-page-detail],[data-page-spec],[data-page-close],[data-project-filter],[data-project-reset],[data-project-close]') || target.matches('[data-page-overlay]')) return false;
   const control = target.closest('button,input,select,textarea,a,form,[draggable="true"]');
   if (!control) return false;
   const anchor = target.closest<HTMLAnchorElement>('a[href^="#/m-platform/"]');
