@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { seedProductRegistry, PRODUCT_TEST_PROJECT } from '../src/config/page-registry-product-seed';
+import { validateWorkspace, type RegistryWorkspace } from '../src/config/page-registry-projects';
+const initial:RegistryWorkspace={version:2,projects:[],directories:[],pages:[],assignments:[]};
+const seeded=seedProductRegistry(initial);validateWorkspace(seeded,[]);
+assert.equal(initial.projects.length,0);
+assert.equal(seeded.projects[0].name,'商品中心');
+assert.deepEqual(seeded.directories.filter(d=>d.parentId===null).map(d=>d.name),['商品管理','品牌菜单','门店管理']);
+assert.ok(seeded.pages.length>10);
+assert.deepEqual(seedProductRegistry(seeded),seeded);
+seeded.directories[0].name='自定义名称';assert.equal(seedProductRegistry(seeded).directories[0].name,'自定义名称');
+assert.ok(seeded.projects.some(p=>p.id===PRODUCT_TEST_PROJECT));
+console.log(`PASS product seed: ${seeded.directories.length} tree nodes, ${seeded.pages.length} pages, idempotent and no overwrites`);
