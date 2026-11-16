@@ -1,5 +1,18 @@
 import {operationObjects,type OperationEntry} from './operation-log';
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+/** Shared display only: never change the stored action or filtering value. */
+export function renderOperationActionTag(action:string):string {
+ const tone=/删除/.test(action)?'danger':/停用|禁用/.test(action)?'warning':/启用|发布/.test(action)?'success':/移动|排序|上移|下移/.test(action)?'move':/新增|创建|注册|编辑|修改|复制|保存|导入/.test(action)?'info':'neutral';
+ const styles={
+  danger:'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-200',
+  warning:'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  success:'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  move:'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200',
+  info:'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
+  neutral:'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+ };
+ return `<span data-log-action-tag="${tone}" class="inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-medium leading-5 break-words ${styles[tone]}">${esc(action||'其他操作')}</span>`;
+}
 const labels:Record<string,string>={
  name:'名称',title:'页面名称',titleEn:'英文名称',module:'维护模块',status:'启用状态',path:'路径地址',url:'应用入口地址',
  projects:'项目',pages:'页面',directories:'目录',assignments:'页面归属',menu:'菜单',children:'下级菜单',routing:'页面配置',

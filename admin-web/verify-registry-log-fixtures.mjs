@@ -15,13 +15,33 @@ try {
  await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/logs');
  await page.locator('[data-operation-log]').waitFor();
  assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 40 条/);
+ assert.doesNotMatch(await page.locator('[data-operation-log] thead').innerText(),/阶段/);
+ assert.match(await page.locator('[data-log-filter]').innerText(),/操作对象/);
+ await page.locator('[name=kind]').selectOption('项目');
+ await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
+ assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 20 条/);
+ assert.doesNotMatch(await page.locator('[data-operation-log] tbody').innerText(),/注册页面|编辑页面|移动页面|删除页面/);
+ await page.locator('[name=kind]').selectOption('页面');
+ await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
+ assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 20 条/);
+ assert.doesNotMatch(await page.locator('[data-operation-log] tbody').innerText(),/新增项目|编辑项目|停用项目|启用项目/);
+ await page.locator('[data-log-reset]').click();
  await page.locator('[name=project]').selectOption('registry-test-product-center');
  await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
  assert.equal(await page.locator('[data-operation-log] tbody tr').count(),8);
+ assert.equal(await page.locator('[data-log-action-tag=warning]').filter({hasText:'停用项目'}).count(),1);
+ assert.equal(await page.locator('[data-log-action-tag=success]').filter({hasText:'启用项目'}).count(),1);
+ assert.equal(await page.locator('[data-log-action-tag=danger]').filter({hasText:'删除页面'}).count(),1);
+ assert.equal(await page.locator('[data-log-action-tag=move]').filter({hasText:'移动页面'}).count(),1);
+ await page.locator('[name=action]').selectOption('停用项目');
+ await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
+ assert.equal(await page.locator('[data-operation-log] tbody tr').count(),1);
+ assert.equal(await page.locator('[data-log-action-tag=warning]').innerText(),'停用项目');
  await page.locator('[data-log-detail]').first().click();
  await page.getByRole('dialog',{name:'操作记录详情'}).waitFor();
  assert.doesNotMatch(await page.getByRole('dialog').innerText(),/测试数据|涉及对象/);
  assert.equal(await page.getByRole('dialog').locator('details').count(),0);
+ assert.equal(await page.getByRole('dialog').locator('[data-log-action-tag=warning]').innerText(),'停用项目');
  await page.locator('[data-log-close]').first().click();
  await page.locator('[data-log-reset]').click();
  assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 40 条/);
@@ -45,11 +65,11 @@ try {
  assert.ok(fixtures.rows.filter(e=>e.action==='删除页面').every(e=>e.after===null));
  assert.doesNotMatch(await page.locator('[data-operation-log]').innerText(),/示例操作员|演示记录|示例页面|测试数据/);
  const domain=await page.evaluate(async()=>{
-  const {belongsToProject}=await import('/src/config/registry-log-view.ts');
+  const {belongsToProject,operationTargetKind}=await import('/src/config/registry-log-view.ts');
   const entry={objects:[{id:'page1'}],before:{assignments:[{pageId:'page1',projectId:'p1'}]},after:null};
-  return [belongsToProject(entry,'p1'),belongsToProject(entry,'p2')];
+  return [belongsToProject(entry,'p1'),belongsToProject(entry,'p2'),operationTargetKind({objects:[{id:'n1',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n1',pageId:'page1'}]},after:null}),operationTargetKind({objects:[{id:'n2',kind:'目录'},{id:'p1',kind:'项目'}],before:{directories:[{id:'n2'}]},after:null})];
  });
- assert.deepEqual(domain,[true,false]);
+ assert.deepEqual(domain,[true,false,'页面','目录']);
  await page.screenshot({path:'output/playwright/registry-log-fixtures.png',fullPage:true});
  console.log('PASS: all-project 40 fixtures, per-project 8, filter/reset, details, refresh idempotence, no real-store writes, page ownership');
 } finally {await browser.close();}
