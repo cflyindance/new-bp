@@ -1,6 +1,7 @@
 import { buildLocalPageRegistration, readLocalPageRegistrations, type LocalPageRegistrationInput, type RegistrationStorage } from './local-page-registration';
 import { validatePageRegistrations, type PageRegistration } from './page-registration-domain';
 import { seedProductRegistry } from './page-registry-product-seed';
+import { seedBusinessRegistries } from './page-registry-business-seeds';
 
 export const REGISTRY_PROJECTS_KEY = 'menusifu:page-registry:v2';
 export interface RegistryProject { id: string; name: string; microName?: string; microUrl?: string; microRoute?: string }
@@ -48,10 +49,10 @@ export function readRegistryWorkspace(builtIn: readonly PageRegistration[], targ
   try {
     target ??= storage();
     const raw = target.getItem(REGISTRY_PROJECTS_KEY);
-    if (raw !== null) { const workspace = JSON.parse(raw) as RegistryWorkspace; validateWorkspace(workspace, builtIn); const seeded=seedProductRegistry(workspace); validateWorkspace(seeded,builtIn); return { workspace: seeded }; }
+    if (raw !== null) { const workspace = JSON.parse(raw) as RegistryWorkspace; validateWorkspace(workspace, builtIn); const seeded=seedBusinessRegistries(seedProductRegistry(workspace)); validateWorkspace(seeded,builtIn); return { workspace: seeded }; }
     const legacy = readLocalPageRegistrations(builtIn, target);
     if (legacy.error) throw new Error(legacy.error);
-    const workspace=seedProductRegistry({ ...empty(), pages: legacy.pages }); validateWorkspace(workspace,builtIn); return { workspace };
+    const workspace=seedBusinessRegistries(seedProductRegistry({ ...empty(), pages: legacy.pages })); validateWorkspace(workspace,builtIn); return { workspace };
   } catch { return { workspace: empty(), error: '注册中心数据无法读取，原数据已保留；请修复存储后重试，当前禁止新增。' }; }
 }
 export function updateRegistryWorkspace(builtIn: readonly PageRegistration[], mutate: (w: RegistryWorkspace) => void, target: RegistrationStorage = storage()): RegistryWorkspace {
