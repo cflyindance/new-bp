@@ -31,6 +31,7 @@ export function rerenderPreservingJsonMenuTreeScroll(
   const state = captureJsonMenuTreeScroll(root);
   render();
   const restore = (): void => applyJsonMenuTreeScroll(state, root);
+  restore();
   schedule(() => {
     restore();
     schedule(restore);
