@@ -1,7 +1,7 @@
 import { buildNavRouteRegistry } from "./nav-route-registry";
 import { PAGE_REGISTRATIONS } from "./page-registrations";
 import { validatePageRegistrations, type PageRegistration } from "./page-registration-domain";
-import { readLocalPageRegistrations } from './local-page-registration';
+import { readRegistryWorkspace } from './page-registry-projects';
 
 let cached: readonly PageRegistration[] | undefined;
 export function getBuiltInPageRegistrations(): readonly PageRegistration[] {
@@ -24,8 +24,8 @@ export function getBuiltInPageRegistrations(): readonly PageRegistration[] {
 /** Local records are read afresh so successful registration is immediately selectable. */
 export function getPageRegistrations(): readonly PageRegistration[] {
   const builtIn = getBuiltInPageRegistrations();
-  return [...builtIn, ...readLocalPageRegistrations(builtIn).pages];
+  return [...builtIn, ...readRegistryWorkspace(builtIn).workspace.pages];
 }
 export function getLocalPageRegistrationError(): string | undefined {
-  return readLocalPageRegistrations(getBuiltInPageRegistrations()).error;
+  return readRegistryWorkspace(getBuiltInPageRegistrations()).error;
 }

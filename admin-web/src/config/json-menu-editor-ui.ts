@@ -28,6 +28,8 @@ import { getPageRegistrations, getBuiltInPageRegistrations } from "./page-regist
 import { bindRegisteredPage, matchRegisteredPage } from "./page-registration-domain";
 import { registrationUi, registryView, registryRows, registrationModal, pickerRows } from "./page-registration-ui";
 import { MENU_ROUTING_PAGES, type MenuRoutingView } from "./menu-routing-navigation";
+import { bindRegistryWorkspace, renderRegistryProjects } from './page-registry-workspace-ui';
+import { pickerTree, focusPickerPage } from './page-registration-picker-tree';
 import { saveLocalPageRegistration } from './local-page-registration';
 import { syncPageRegistrationType } from './page-registration-create-ui';
 import { currentMAccess } from '../permissions/m-platform-store';
@@ -307,7 +309,7 @@ export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string 
       <div class="mt-1.5 flex items-center"><span class="text-sm text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span></div>
       ${state.message ? `<div class="mt-2 rounded-lg ${state.status === "error" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"} px-3 py-2 text-xs">${escapeHtml(state.message)}</div>` : ""}
     </header>
-    ${view === "registry" ? registryView() : `<div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_rgba(15,23,42,0.035)]">
+    ${view === "projects" ? renderRegistryProjects() : view === "registry" || view === "pages" ? registryView() : `<div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_0_rgba(15,23,42,0.035)]">
       ${renderJsonMenuTree(document, state.selectedPath, state.issues, searchValue, expandedPaths)}
       ${renderJsonMenuNodeFormPanel(document, dialogState, state.issues, state.published)}
     </div>`}
@@ -571,6 +573,7 @@ function downloadJson(content: string, name: string): void {
 
 let bound = false;
 export function bindJsonMenuEditor(onMount: () => void): void {
+  bindRegistryWorkspace(onMount);
   const editorExists = Boolean(document.querySelector("[data-json-menu-editor]"));
   if ((jsonMenuEditorStore.state.status === "idle" || jsonMenuEditorStore.state.status === "error") && !editorExists) void jsonMenuEditorStore.load().then(() => { expandAll(); onMount(); });
   if (bound) return;
@@ -588,11 +591,17 @@ export function bindJsonMenuEditor(onMount: () => void): void {
       return;
     }
     if (target.closest("[data-page-picker-open]") && dialogState) {
+      if (dialogState.pageMode !== 'micro-app') return;
       registrationUi.picker = true; registrationUi.pickerQuery = "";
       registrationUi.pending = matchRegisteredPage(dialogState.draft, getPageRegistrations())?.id ?? "";
+      focusPickerPage(registrationUi.pending);
       rerenderPreservingMenuFormScroll(onMount);
       requestAnimationFrame(() => document.querySelector<HTMLInputElement>("[data-page-picker-search]")?.focus()); return;
     }
+    const projectPick = target.closest<HTMLElement>('[data-picker-project]');
+    if (projectPick) { pickerTree.project = projectPick.dataset.pickerProject!; registrationUi.pending = ''; const rows = document.querySelector<HTMLElement>('[data-page-picker-rows]'); if(rows) rows.innerHTML=pickerRows(); document.querySelector<HTMLButtonElement>('[data-page-confirm]')?.setAttribute('disabled',''); return; }
+    const togglePick = target.closest<HTMLElement>('[data-picker-tree-toggle]');
+    if(togglePick) { const id=togglePick.dataset.pickerTreeToggle!; pickerTree.collapsed.has(id)?pickerTree.collapsed.delete(id):pickerTree.collapsed.add(id); const rows=document.querySelector<HTMLElement>('[data-page-picker-rows]'); if(rows)rows.innerHTML=pickerRows(); return; }
     const pagePick = target.closest<HTMLElement>("[data-page-pick]")?.dataset.pagePick;
     if (pagePick) {
       if (!getPageRegistrations().some(p => p.id === pagePick && p.status === "active")) return;
