@@ -86,7 +86,7 @@ function textareaField(label: string, name: string, inputValue = "", placeholder
 }
 
 function purposeButtons(state: MenuNodeDialogState, canBeDirectory: boolean, locked: boolean): string {
-  const items: Array<[MenuPageMode, string]> = [["inner", "项目内页面"], ["iframe", "iframe 嵌入"], ["link", "链接菜单"], ["external", "外部链接"], ["micro-app", "微应用"]];
+  const items: Array<[MenuPageMode, string]> = [["inner", "项目内页面"], ["micro-app", "微应用"], ["iframe", "iframe"], ["link", "链接菜单"], ["external", "外部链接"]];
   return items.map(([mode, text]) => `<button type="button" data-jme-page-mode="${mode}" ${locked ? "disabled" : ""} class="rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${state.pageMode === mode ? "bg-white text-slate-900 shadow-[0_1px_4px_rgba(15,23,42,0.18)] ring-1 ring-slate-200" : "text-slate-600 hover:bg-white/70 hover:text-slate-900"}">${text}</button>`).join("");
 }
 
@@ -333,9 +333,8 @@ export function renderJsonMenuNodeFormPanel(
         ${ownIssues.length ? `<div class="mb-4 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div>` : ""}
         <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<button type="button" data-jme-icon-picker-open class="mt-1.5 flex h-12 w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-left text-sm text-slate-600 hover:border-blue-400 hover:bg-blue-50"><span class="grid h-7 w-7 place-items-center rounded-lg bg-white text-base text-slate-700">${escapeHtml(MENU_ICON_OPTIONS.find(([name]) => name === node.icon)?.[1] ?? "⌁")}</span><span class="truncate">${escapeHtml(node.icon || "选择图标")}</span></button></label></div><details class="mt-5 max-w-5xl rounded-xl border border-slate-100 p-4"><summary class="cursor-pointer text-xs text-slate-500">系统标识（自动生成${identityLocked ? " · 已发布锁定" : ""}）</summary><div class="mt-3 grid grid-cols-2 gap-5">${field("菜单 Key", "key", node.key, "自动生成", false, true, true)}${field("节点 ID", "id", node.id, "自动生成", false, true, true)}</div></details></section>${renderIconPicker(state)}
         ${node.children?.length ? "" : `<section class="border-b border-slate-100 py-8" data-jme-form-section="page"><h3 class="text-base font-bold text-slate-900">关联页面</h3>
-          ${registeredPageSection(node)}
-          <button type="button" data-page-special-toggle aria-expanded="${Boolean(state.specialPageOpen)}" class="mt-5 text-xs text-slate-500 hover:text-blue-600">特殊接入 / 兼容配置 ${state.specialPageOpen ? "⌃" : "⌄"}</button>
-          ${state.specialPageOpen ? `<div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs leading-6 text-slate-500">外链、iframe、微应用和历史手工路由使用原有配置规则。展开不会改写现有数据。</p><div class="mt-3" data-jme-menu-purpose><div class="inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>${pageModeFields(document, state)}</div>` : ""}
+          <div class="mt-4" data-jme-menu-purpose><div class="inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
+          ${state.pageMode === "micro-app" ? registeredPageSection(node) : pageModeFields(document, state)}
         </section>`}
         <section class="max-w-5xl py-6" data-jme-advanced-settings>
           <section class="border-b border-slate-100 py-7" data-jme-advanced-group="localization" data-jme-form-section="localization">

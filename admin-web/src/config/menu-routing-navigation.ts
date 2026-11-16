@@ -3,6 +3,8 @@ export const MENU_ROUTING_ROOT = "/m-platform/nav-blueprint";
 export const MENU_ROUTING_PAGES = [
   { view: "nav", title: "导航编排", path: `${MENU_ROUTING_ROOT}/navigation` },
   { view: "registry", title: "页面注册中心", path: `${MENU_ROUTING_ROOT}/page-registry` },
+  { view: "projects", title: "项目管理", path: `${MENU_ROUTING_ROOT}/page-registry/projects` },
+  { view: "pages", title: "页面管理", path: `${MENU_ROUTING_ROOT}/page-registry/pages` },
 ] as const;
 export type MenuRoutingView = typeof MENU_ROUTING_PAGES[number]["view"];
 
