@@ -329,6 +329,10 @@ export function renderJsonMenuNodeFormPanel(
         ${renderMenuFormAnchors(Boolean(node.children?.length))}
       </header>
       <div class="min-h-0 flex-1 px-8 pb-12 pt-8">
+        <section class="border-b border-slate-100 pb-8" data-jme-form-section="localization">
+          <h3 class="text-base font-bold text-slate-900">多语言名称</h3>
+          <div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"], "", true)}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}${field("i18nKey", "i18nKey", node.i18nKey, "app.menu.key", false, true)}</div>
+        </section>
         ${state.error ? `<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">${escapeHtml(state.error)}</div>` : ""}
         ${ownIssues.length ? `<div class="mb-4 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div>` : ""}
         <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<button type="button" data-jme-icon-picker-open class="mt-1.5 flex h-12 w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-left text-sm text-slate-600 hover:border-blue-400 hover:bg-blue-50"><span class="grid h-7 w-7 place-items-center rounded-lg bg-white text-base text-slate-700">${escapeHtml(MENU_ICON_OPTIONS.find(([name]) => name === node.icon)?.[1] ?? "⌁")}</span><span class="truncate">${escapeHtml(node.icon || "选择图标")}</span></button></label></div><details class="mt-5 max-w-5xl rounded-xl border border-slate-100 p-4"><summary class="cursor-pointer text-xs text-slate-500">系统标识（自动生成${identityLocked ? " · 已发布锁定" : ""}）</summary><div class="mt-3 grid grid-cols-2 gap-5">${field("菜单 Key", "key", node.key, "自动生成", false, true, true)}${field("节点 ID", "id", node.id, "自动生成", false, true, true)}</div></details></section>${renderIconPicker(state)}
@@ -337,10 +341,6 @@ export function renderJsonMenuNodeFormPanel(
           ${state.pageMode === "micro-app" ? registeredPageSection(node) : pageModeFields(document, state)}
         </section>`}
         <section class="max-w-5xl py-6" data-jme-advanced-settings>
-          <section class="border-b border-slate-100 py-7" data-jme-advanced-group="localization" data-jme-form-section="localization">
-            <h4 class="text-base font-bold text-slate-900">多语言名称</h4>
-            <div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"], "", true)}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}${field("i18nKey", "i18nKey", node.i18nKey, "app.menu.key", false, true)}</div>
-          </section>
           <section class="border-b border-slate-100 py-7" data-jme-advanced-group="status-permission" data-jme-form-section="status">
             <h4 class="text-base font-bold text-slate-900">状态与权限</h4>
             <div class="mt-5 grid max-w-5xl grid-cols-3 gap-5">${triState("是否显示", "display", node.display)}${triState("是否禁用", "disabled", node.disabled)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div>
