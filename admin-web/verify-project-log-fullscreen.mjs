@@ -1,0 +1,46 @@
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);
+const {chromium}=require('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const base=process.env.PREVIEW_URL??'http://127.0.0.1:65279';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+try {
+ await page.goto(base);
+ await page.evaluate(async()=>{
+  (await import('/src/auth/login.ts')).setAuthenticated('demo.menusifu.cn');
+  (await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('demo.menusifu.cn');
+  (await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();
+ });
+ await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/projects');
+ await page.locator('tr').filter({hasText:'商品中心'}).getByRole('link',{name:'查看记录'}).click();
+ await page.locator('[data-project-log-fullscreen]').waitFor();
+ assert.match(page.url(),/project-logs\?object=registry-test-product-center/);
+ assert.equal(await page.locator('[data-operation-log] h1').innerText(),'商品中心 · 操作记录');
+ const box=await page.locator('[data-project-log-fullscreen]').boundingBox();
+ assert.equal(box.x,0);assert.equal(box.y,0);assert.equal(box.width,1440);assert.equal(box.height,1000);
+ assert.equal(await page.locator('[name=project]').count(),0);
+ assert.equal(await page.locator('[data-operation-log] tbody tr').count(),8);
+ await page.locator('[data-log-reset]').click();
+ assert.match(page.url(),/object=registry-test-product-center/);
+ assert.equal(await page.locator('[data-operation-log] tbody tr').count(),8);
+ await page.locator('[name=q]').fill('不存在的测试页面');
+ await page.locator('[data-log-filter]').getByRole('button',{name:'查询',exact:true}).click();
+ assert.match(await page.locator('[data-operation-log] tbody').innerText(),/暂无操作记录/);
+ await page.locator('[data-log-reset]').click();
+ await page.locator('[data-log-detail]').first().click();
+ await page.getByRole('dialog',{name:'操作记录详情'}).waitFor();
+ await page.locator('[data-log-close]').first().click();
+ await page.reload();
+ await page.locator('[data-project-log-fullscreen]').waitFor();
+ await page.screenshot({path:'output/playwright/project-log-fullscreen.png',fullPage:true});
+ await page.getByRole('link',{name:'返回项目管理',exact:true}).click();
+ await page.waitForURL('**/page-registry/projects');
+ await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/logs');
+ await page.locator('[data-operation-log]').waitFor();
+ assert.equal(await page.locator('[data-project-log-fullscreen]').count(),0);
+ assert.match(await page.locator('[data-operation-log] footer').innerText(),/共 40 条/);
+ await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/project-logs');
+ await page.locator('[data-project-log-fullscreen] [role=alert]').waitFor();
+ console.log('PASS: project entry, fullscreen bounds, project scope/reset/search, detail, refresh/back, aggregate unchanged, invalid entry');
+} finally {await browser.close();}
