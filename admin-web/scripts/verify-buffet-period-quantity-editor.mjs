@@ -89,6 +89,7 @@ const modernDraft = {
 };
 const rendered = api.renderBuffetV4QuantityEditor(modernDraft, ["ny-midtown", "flushing"]);
 assert.doesNotMatch(rendered, /data-buffet-quantity-store/);
+assert.doesNotMatch(rendered, /olf-v4-quantity-toolbar|olf-v4-store-summary/, 'remove the entire outer store summary and its spacing');
 assert.doesNotMatch(rendered, /data-buffet-store-copy/);
 assert.match(rendered, /data-period-section="order_lifetime"[\s\S]*data-period-section="per_round"[\s\S]*data-period-section="multi_round"/);
 const orderSection = rendered.match(/data-period-section="order_lifetime"[\s\S]*?(?=data-period-section="per_round")/)?.[0] ?? "";
