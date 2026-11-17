@@ -8,7 +8,6 @@ import { intervalSeconds, formatIntervalDuration, combineIntervalParts } from ".
 
 import {
   BRAND_MENU_LINE_OPTIONS,
-  selectedBrandMenuDishNamesByLine,
   selectedBrandMenuDishesByLine,
   bindBrandMenuStructurePicker,
   coerceBrandMenuStructureByLine,
@@ -163,17 +162,14 @@ export function isGuestMenuOrderIntervalSeq(seq: number): boolean {
 }
 
 function renderRuleRow(rule: MenuOrderIntervalRule): string {
-  const selectedCount = countBrandMenuStructureDishesByLine(
-    rule.structureByLine,
-  );
+  const selectedProducts = selectedBrandMenuDishesByLine(rule.structureByLine);
+  const selectedCount = selectedProducts.length;
   const applicableLines =
     BRAND_MENU_LINE_OPTIONS.filter(
-      (line) => rule.structureByLine[line.id].length > 0,
+      (line) => selectedProducts.some(product => product.lineId === line.id),
     )
       .map((line) => line.label)
       .join("、") || "未选产线";
-  const names = selectedBrandMenuDishNamesByLine(rule.structureByLine);
-  const summary = names.slice(0, 3).join("、") + (names.length > 3 ? "等" : "");
   const productHint =
     selectedCount === 0
       ? `<span class="text-muted-foreground">未选商品（规则暂不生效）</span>`
@@ -181,7 +177,8 @@ function renderRuleRow(rule: MenuOrderIntervalRule): string {
           type="button"
           class="${BTN_LINK} tabular-nums"
           data-menu-order-interval-products-view
-        >查看商品（${selectedCount} 个）</button>`;
+          aria-label="查看已选商品，共 ${selectedCount} 个"
+        >${selectedCount} 个商品 <span aria-hidden="true">›</span></button>`;
   return `
     <div
       class="space-y-2 rounded-md border border-border/60 bg-muted/20 p-3"
@@ -190,11 +187,10 @@ function renderRuleRow(rule: MenuOrderIntervalRule): string {
     >
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div class="min-w-0 space-y-1.5">
-          <p class="m-0 text-sm font-medium text-foreground">指定商品下单间隔 ${formatIntervalDuration(ruleSeconds(rule))}</p>
+          <p class="m-0 text-sm font-medium text-foreground">商品下单间隔 ${formatIntervalDuration(ruleSeconds(rule))}</p>
           <p class="m-0 text-sm leading-relaxed">
-            <span class="text-muted-foreground">适用产线：</span>${escapeHtml(applicableLines)}<span class="text-muted-foreground"> · 适用商品：</span>${productHint}
+            <span class="text-muted-foreground">${escapeHtml(applicableLines)} · </span>${productHint}
           </p>
-          ${summary ? `<p class="m-0 text-xs text-muted-foreground">${escapeHtml(summary)}</p>` : ""}
         </div>
         <div class="flex shrink-0 flex-wrap items-center gap-3">
           <button type="button" class="${BTN_LINK}" data-menu-order-interval-edit>编辑</button>
@@ -272,7 +268,7 @@ function renderDeleteConfirmDialog(): string {
 function renderDialogBody(rule: MenuOrderIntervalRule | null): string {
   const seconds = ruleSeconds(rule);
   const byLine = rule?.structureByLine ?? emptyBrandMenuStructureByLine();
-  return `<section class="product-picker-section"><h4>下单时间间隔</h4><div class="product-picker-interval-row"><span>指定商品下单间隔</span><div class="order-duration-parts"><label><input id="menu-order-interval-dialog-minutes" type="number" min="0" max="${INTERVAL_MAX}" step="1" value="${Math.floor(seconds/60)}" data-menu-order-interval-dialog-minutes aria-label="商品下单间隔 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${seconds%60}" data-menu-order-interval-dialog-seconds aria-label="商品下单间隔 秒"><span>秒</span></label></div><span>小于间隔再次下单时需服务员授权</span></div></section><section class="product-picker-section"><h4>适用商品</h4>${renderBrandMenuStructurePickerHtml([], undefined, undefined, { enableLines: true, selectionByLine: byLine, searchable: true })}</section>`;
+  return `<section class="product-picker-section"><h4>下单时间间隔</h4><div class="product-picker-interval-row"><span>指定商品下单间隔</span><div class="order-duration-parts"><label><input id="menu-order-interval-dialog-minutes" type="number" min="0" max="${INTERVAL_MAX}" step="1" value="${Math.floor(seconds/60)}" data-menu-order-interval-dialog-minutes aria-label="商品下单间隔 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${seconds%60}" data-menu-order-interval-dialog-seconds aria-label="商品下单间隔 秒"><span>秒</span></label></div></div></section><section class="product-picker-section"><h4>适用商品</h4>${renderBrandMenuStructurePickerHtml([], undefined, undefined, { enableLines: true, selectionByLine: byLine, searchable: true })}</section>`;
 }
 
 function renderRulesEditorHtml(): string {
