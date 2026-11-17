@@ -36,11 +36,14 @@ const AUTH_SETTINGS: SettingMeta[] = [
     sceneDesc:
       "各产线分别控制命中规则后是否允许授权放行；关闭仍执行限制，开启后设置授权范围与有效范围。",
   },
+];
+
+const VIEWONLY_SETTINGS: SettingMeta[] = [
   {
     seq: 595,
     title: "可看不可点菜加购方式",
     sceneDesc:
-      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置是否可看不可点菜加购方式，关闭时需密码授权。",
+      "各产线独立选择是否允许直接加购；不允许时再设置服务员授权放行及有效范围。",
   },
   {
     seq: 596,
@@ -68,19 +71,25 @@ type SettingsSection = { key: string; title: string; desc: string; settings: Set
 export const MENU_ORDER_OTHER_SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: "interval",
-    title: "下单时间间隔",
+    title: "下单间隔",
     desc: "配置订单级与菜品级提交间隔，以及间隔内是否允许加购及授权触发条件。",
     settings: INTERVAL_SETTINGS,
   },
   {
     key: "auth",
-    title: "命中后授权",
-    desc: "配置限制命中后的统一授权方式，以及「可看不可点」菜品在购物车中的行为。",
+    title: "规则授权",
+    desc: "配置一般下单规则命中后的授权入口、授权范围与有效范围。",
     settings: AUTH_SETTINGS,
   },
   {
+    key: "viewonly",
+    title: "可看不可点商品",
+    desc: "独立配置可看不可点商品的直接加购、服务员授权与放行有效范围。",
+    settings: VIEWONLY_SETTINGS,
+  },
+  {
     key: "points",
-    title: "积分菜限制",
+    title: "积分商品规则",
     desc: "配置积分菜兑换授权与纯积分订单是否允许直接下单。",
     settings: POINTS_SETTINGS,
   },

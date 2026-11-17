@@ -123,7 +123,7 @@ function lineSummaries(id: Line): string[] {
 function renderViewonlyDishCard(line: Line, label: string, direct: boolean, staff: boolean): string {
   const validity = readViewValidity()[line];
   return `<article class="order-rule-card" data-order-viewonly-card>
-    <header><div class="order-rule-title">可看不可点菜处理<button type="button" class="order-rule-help" aria-label="可看不可点菜处理说明" title="先设置是否允许直接加购。不允许时可独立设置服务员授权放行，与“命中规则后允许授权放行”无关；其他规则仍需分别校验。">?</button></div></header>
+    <header><div class="order-rule-title">可看不可点商品加购设置<button type="button" class="order-rule-help" aria-label="可看不可点商品加购设置说明" title="先设置是否允许直接加购。不允许时可独立设置服务员授权放行，与“命中规则后允许授权放行”无关；其他规则仍需分别校验。">?</button></div></header>
     <div class="order-rule-body">
       <div class="order-card-field" data-module-setting-row-seq="595"><span>加购方式</span><div class="order-card-choices" role="radiogroup" aria-label="${esc(label)} 可看不可点菜加购方式">
         ${[["direct", "允许直接加购"], ["restricted", "不允许直接加购"]].map(([value, text]) => `<label><input type="radio" name="viewonly-cart-${line}" data-order-viewonly-direct data-line="${line}" value="${value}" ${direct === (value === "direct") ? "checked" : ""}><span>${text}</span></label>`).join("")}
@@ -164,8 +164,10 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
             ? [2]
             : [0, 1]
           : category === "auth"
-            ? [3, 4, 5]
-            : [6, 7];
+            ? [3]
+            : category === "viewonly"
+              ? [4, 5]
+              : [6, 7];
       const expanded = expandedLines.get(stateKey)!.has(id);
       const summary = lineSummaries(id);
       const detailsId = `order-line-${category}-${scene ?? "rules"}-${id}`;
