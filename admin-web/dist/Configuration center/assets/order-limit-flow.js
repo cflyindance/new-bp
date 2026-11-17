@@ -357,6 +357,7 @@
       alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>',
       close: '<path d="m6 6 12 12M18 6 6 18"/>',
       trash: '<path d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m3 0-1 14H7L6 7"/>',
+      store: '<path d="M3 10l2-6h14l2 6M4 10v10h16V10M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M10 20v-7h4v7"/>',
       plus: '<path d="M12 5v14M5 12h14"/>',
       users: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-17a3 3 0 0 1 0 6m3 11v-3a6 6 0 0 0-3-5"/>',
       list: '<path d="M9 5h12M9 12h12M9 19h12M3 4h1v3M3 11h2l-2 3h2M3 18h2v3H3"/>',
@@ -832,6 +833,7 @@
   }
 
   function effectiveBusinessHourSlots(conditions) {
+    if (conditions.scopeTimeVersion === 1 && window.BuffetEffectiveScope) return window.BuffetEffectiveScope.rows(conditions);
     var perSlot = conditions.businessHourSetupMode === "per_slot";
     return (conditions.businessHourSlots || []).map(function (slot) {
       if (perSlot && slot.mode === "custom" && slot.from && slot.to) {
@@ -852,6 +854,11 @@
 
   function normalizeBusinessHourTimeConditions(conditions) {
     if (!conditions || typeof conditions !== "object") return;
+    if (conditions.scopeTimeVersion === 1 && window.BuffetEffectiveScope) {
+      window.BuffetEffectiveScope.normalize(conditions);
+      syncLegacyBusinessHourFields(conditions);
+      return;
+    }
     if (!Array.isArray(conditions.businessHourSlots)) {
       var legacyId = conditions.businessHour;
       if (legacyId !== "all" && legacyId !== "lunch" && legacyId !== "dinner") legacyId = "dinner";
@@ -914,6 +921,7 @@
   }
 
   function formatBusinessHourSlotLabel(slot) {
+    if (slot.name != null) return slot.name + " " + slot.from + "–" + slot.to;
     var bounds = businessHourBounds(slot.id);
     if (slot.mode === "custom" && slot.from && slot.to) return bounds.label + " " + slot.from + "–" + slot.to;
     if (slot.id === "all") return "全天生效";
@@ -927,6 +935,7 @@
   }
 
   function validateBusinessHourSlots(conditions) {
+    if (isBuffetProfile() && window.BuffetEffectiveScope) return window.BuffetEffectiveScope.validate(conditions);
     var slots = conditions.businessHourSlots || [];
     if (!slots.length) return "请至少选择一个活动时段";
     if (conditions.businessHourSetupMode !== "per_slot") return null;
@@ -1388,7 +1397,7 @@
   }
 
   function createBuffetQuantityWorkbenchState() {
-    return { storeId: "", lineId: "", categoryId: "", status: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [], copyPanelOpen: false, copyTargetStoreIds: [] };
+    return { storeId: "", lineId: "", categoryId: "", status: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [] };
   }
 
   function normalizeBuffetQuantityWorkbenchState(draft) {
@@ -1405,11 +1414,6 @@
     state.status = ["configured", "unconfigured", "forbidden"].indexOf(state.status) >= 0 ? state.status : "";
     state.selectionMode = state.selectionMode === "filtered" ? "filtered" : "page";
     if (!Array.isArray(state.selectedIds)) state.selectedIds = [];
-    state.copyPanelOpen = !!state.copyPanelOpen;
-    if (!Array.isArray(state.copyTargetStoreIds)) state.copyTargetStoreIds = [];
-    state.copyTargetStoreIds = state.copyTargetStoreIds.filter(function (storeId) {
-      return availableStores.indexOf(storeId) >= 0 && storeId !== draft.activeStoreId;
-    });
     return state;
   }
 
@@ -2525,6 +2529,7 @@
       }
     }
     if (stepNumber === 5) {
+      if (isBuffetProfile() && !draft.conditions.effectiveFrom) return "请填写开始时间";
       if (!draft.deployStoreIds.length) return "请至少选择一家生效门店";
       if (draft.deployStoreIds.some(function (storeId) { return addedStoreIds(draft).indexOf(storeId) < 0; })) return "未添加商品的门店不能生效";
       if (modernBuffet) {
@@ -5028,30 +5033,14 @@
     return true;
   }
 
-  function renderV4StoreCopy(draft, configuredStores, workbenchState) {
-    if (configuredStores.length < 2) return "";
-    var targets = configuredStores.filter(function (storeId) { return storeId !== draft.activeStoreId; });
-    var selectedTargets = workbenchState.copyTargetStoreIds || [];
-    var trigger = '<button type="button" class="olf-button olf-button--small olf-v4-store-copy-toggle" data-buffet-store-copy-toggle>' + (workbenchState.copyPanelOpen ? '收起复制' : '复制到其他门店') + '</button>';
-    if (!workbenchState.copyPanelOpen) return trigger;
-    return trigger + '<div class="olf-v4-store-copy" data-buffet-store-copy-panel><strong>复制当前门店数量</strong><label class="olf-field"><span class="olf-label">目标门店</span><select class="olf-select" data-buffet-store-copy-target multiple aria-label="目标门店（可多选）">' + targets.map(function (storeId) {
-      var store = stores.find(function (item) { return item.id === storeId; });
-      return '<option value="' + esc(storeId) + '"' + (selectedTargets.indexOf(storeId) >= 0 ? ' selected' : '') + '>' + esc(store ? store.name : storeId) + '</option>';
-    }).join("") + '</select></label><label class="olf-v4-copy-overwrite"><input type="checkbox" data-buffet-store-copy-overwrite>覆盖目标门店已有配置</label><button type="button" class="olf-button olf-button--primary olf-button--small" data-buffet-store-copy' + (selectedTargets.length ? '' : ' disabled') + '>预览并复制</button><small>默认只填充目标门店的未配置项，执行前展示差异预览。</small></div>';
-  }
-
   function renderBuffetV4QuantityEditor(draft, configuredStores) {
     normalizeActiveDimensions(draft, true);
     var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
     if (!editorState || !editorState.quantitySceneDialog) workbenchState.storeId = draft.activeStoreId;
     var config = storeConfigFor(draft, draft.activeStoreId, true);
     var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
-    var storeOptions = configuredStores.map(function (storeId) {
-      var item = stores.find(function (candidate) { return candidate.id === storeId; });
-      return '<option value="' + esc(storeId) + '"' + (storeId === draft.activeStoreId ? " selected" : "") + '>' + esc(item ? item.name : storeId) + '</option>';
-    }).join("");
     var rangeSummary = config.productLines.length + " 条产线 · " + (draft.targetType === "dish_set" ? config.dishSetMembers.length : config.targetIds.length) + " 个" + (draft.targetType === "category" ? "分类" : "商品");
-    return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><label class="olf-field"><span class="olf-label">配置门店</span><select class="olf-select" data-buffet-quantity-store>' + storeOptions + '</select></label><div class="olf-v4-store-summary"><strong>商品范围</strong><span>' + esc(rangeSummary) + '</span></div>' + renderV4StoreCopy(draft, configuredStores, workbenchState) + '</div>' +
+    return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><div class="olf-v4-store-summary"><strong>' + esc(store ? store.name : '') + ' · 商品范围</strong><span>' + esc(rangeSummary) + '</span></div></div>' +
       draft.enabledPeriods.slice().sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); }).map(function (period) {
         return renderV4PeriodSection(draft, config, period) + renderV4PendingTargetNotice(config, period);
       }).join("") + '</section>' + renderQuantitySceneDialog(draft, config);
@@ -5370,10 +5359,35 @@
       renderBuffetAllSceneSummaryDialog(draft);
   }
 
+  function renderBuffetScopeChoice(field, value, title, copy, selected) {
+    return '<button type="button" class="olf-scope-choice' + (selected ? ' is-selected' : '') + '" data-choice-field="' + field + '" data-choice-value="' + value + '" aria-pressed="' + selected + '"><i aria-hidden="true"></i><span><strong>' + esc(title) + '</strong><small>' + esc(copy) + '</small></span></button>';
+  }
+
+  function renderBuffetEffectiveScope(draft) {
+    var c = draft.conditions, added = addedStoreIds(draft);
+    c.daysOfWeek = (c.daysOfWeek || []).map(function (day) { return /^[1-7]$/.test(String(day)) ? weekdays[Number(day) - 1].id : day; });
+    var cycle = c.activityCycle, selectedCount = stores.filter(function (s) { return added.indexOf(s.id) >= 0 && draft.deployStoreIds.indexOf(s.id) >= 0; }).length;
+    var cycleDetail = cycle === 'weekly' ? '<div class="olf-scope-inset olf-scope-checks">' + renderChecks('daysOfWeek', weekdays, c.daysOfWeek) + '</div>' : '';
+    if (cycle === 'monthly') cycleDetail = '<div class="olf-scope-inset"><span class="olf-label olf-required">每月天数</span><div class="olf-scope-month-days">' + monthDayOptions().map(function (d) {
+      var checked = c.daysOfMonth.indexOf(d.id) >= 0;
+      return '<label class="olf-scope-day' + (checked ? ' is-selected' : '') + '"><input type="checkbox" name="daysOfMonth" value="' + d.id + '" aria-label="每月' + d.id + '日"' + (checked ? ' checked' : '') + ' /><span>' + String(d.id).padStart(2, '0') + '</span></label>';
+    }).join('') + '</div></div>';
+    var slotRows = window.BuffetEffectiveScope.rows(c).map(function (slot, index) {
+      return '<div class="olf-scope-slot"><input class="olf-input" maxlength="30" data-scope-slot-name="' + esc(slot.id) + '" aria-label="时段' + (index + 1) + '名称" value="' + esc(slot.name) + '" /><div class="olf-scope-time-range"><input type="time" data-scope-slot-from="' + esc(slot.id) + '" aria-label="时段' + (index + 1) + '开始时间" value="' + esc(slot.from) + '" /><span aria-hidden="true">→</span><input type="time" data-scope-slot-to="' + esc(slot.id) + '" aria-label="时段' + (index + 1) + '结束时间" value="' + esc(slot.to) + '" /></div><button type="button" class="olf-scope-remove" data-scope-slot-remove="' + esc(slot.id) + '" aria-label="删除时段' + (index + 1) + '">' + icon('trash', 18) + '</button></div>';
+    }).join('');
+    var storeCards = stores.map(function (store) {
+      var available = added.indexOf(store.id) >= 0, checked = available && draft.deployStoreIds.indexOf(store.id) >= 0;
+      return '<label class="olf-scope-store' + (available ? '' : ' is-disabled') + '"><input type="checkbox" data-effective-store="' + esc(store.id) + '" aria-label="生效门店：' + esc(store.name) + '"' + (checked ? ' checked' : '') + (available ? '' : ' disabled') + ' /><span class="olf-scope-store-icon" aria-hidden="true">' + icon('store', 22) + '</span><span class="olf-scope-store-copy"><strong>' + esc(store.name) + '</strong><small>' + esc(store.mid) + ' | ' + esc(store.address) + '</small></span><span class="olf-store-status ' + (available ? 'is-added' : 'is-missing') + '"><i aria-hidden="true"></i>' + (available ? '已添加' : '未添加') + '</span></label>';
+    }).join('');
+    return '<div class="olf-effective-scope"><h2 class="olf-scope-sr" tabindex="-1">设置生效范围</h2><section class="olf-scope-card"><header><h3>设置生效时间</h3><p>结束时间不填写表示长期生效</p></header><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">开始时间</span><input class="olf-input" type="date" data-condition="effectiveFrom" aria-label="开始时间" value="' + esc(c.effectiveFrom) + '" /></label><label class="olf-field"><span class="olf-label">结束时间</span><input class="olf-input" type="date" data-condition="effectiveTo" aria-label="结束时间" value="' + esc(c.effectiveTo) + '" /></label></div><div class="olf-scope-group"><h4>活动周期</h4><div class="olf-scope-cycle">' +
+      renderBuffetScopeChoice('activityCycle', 'daily', '每天', '有效期内每日生效', cycle === 'daily') + renderBuffetScopeChoice('activityCycle', 'weekly', '每周', '按选定的星期重复', cycle === 'weekly') + renderBuffetScopeChoice('activityCycle', 'monthly', '每月', '按选定的日期重复；当月无该日则跳过', cycle === 'monthly') + '</div>' + cycleDetail + '</div><div class="olf-scope-group"><div class="olf-scope-section-head"><div><h4>活动时段</h4><p>时间段不能重叠</p></div><button type="button" class="olf-scope-add" data-scope-slot-add>' + icon('plus', 16) + ' 添加</button></div><div class="olf-scope-inset olf-scope-slots">' + (slotRows || '<span class="olf-hint">未添加</span>') + '</div><p class="olf-scope-error" role="status">' + esc(editorState.scopeTimeError || '') + '</p></div></section><section class="olf-scope-card"><header><h3>设置会员范围</h3><p>确定规则面向全部顾客，还是仅对已识别会员生效</p></header><div class="olf-scope-member">' + renderBuffetScopeChoice('memberMode', 'all', '全部顾客', '会员与非会员订单均参与规则判断', c.memberMode === 'all') + renderBuffetScopeChoice('memberMode', 'specified', '指定会员等级', '仅选中的会员等级适用', c.memberMode === 'specified') + '</div>' + (c.memberMode === 'specified' ? '<div class="olf-scope-inset olf-scope-checks">' + renderChecks('memberLevelIds', memberLevels, c.memberLevelIds) + '</div>' : '') + '</section><section class="olf-scope-card olf-effective-stores"><div class="olf-scope-section-head"><header><h3>生效门店</h3><p>仅可选择已添加商品的门店；保存后规则默认禁用</p></header><span class="olf-scope-count">已选 ' + selectedCount + '/' + stores.length + '</span></div><div class="olf-scope-inset olf-scope-store-grid">' + storeCards + '</div></section></div>';
+  }
+
   function renderStepFive(draft) {
     normalizeStoreDraft(draft);
     normalizeBusinessHourTimeConditions(draft.conditions);
     normalizeActivityCycleConditions(draft.conditions);
+    if (isBuffetProfile()) return renderBuffetEffectiveScope(draft);
     var condition = draft.conditions;
     var added = addedStoreIds(draft);
     var effectiveRows = stores.map(function (store) {
@@ -5913,6 +5927,7 @@
     var scrollY = window.scrollY || window.pageYOffset || 0;
     document.getElementById("stepNav").innerHTML = renderEditorNav();
     document.getElementById("editorContent").innerHTML = renderEditorContent();
+    document.getElementById("editorContent").classList.toggle("olf-content--effective-scope", isBuffetProfile() && editorState.currentStep === 4);
     var quantityDialog = document.getElementById("quantitySceneDialog");
     var summaryDialog = document.getElementById("buffetAllSceneSummaryDialog");
     var rangeDialog = document.getElementById("rangeCollectionDialog");
@@ -7008,6 +7023,17 @@
       } else closeQuantitySceneDialog(sceneAction.hasAttribute("data-quantity-scene-cancel"));
       return;
     }
+    var scopeAction = event.target && event.target.closest && event.target.closest('[data-scope-slot-add], [data-scope-slot-remove]');
+    if (scopeAction && isBuffetProfile()) {
+      var scopeConditions = editorState.rule.editorDraft.conditions;
+      window.BuffetEffectiveScope.activate(scopeConditions);
+      if (scopeAction.hasAttribute('data-scope-slot-add')) {
+        scopeConditions.businessHourSlots.push({ id: 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: '自定义时间段' + (scopeConditions.businessHourSlots.length + 1), mode: 'custom', from: '00:00', to: '23:59' });
+      } else scopeConditions.businessHourSlots = scopeConditions.businessHourSlots.filter(function (s) { return s.id !== scopeAction.getAttribute('data-scope-slot-remove'); });
+      editorState.scopeTimeError = '';
+      syncLegacyBusinessHourFields(scopeConditions);
+      markEditorDirty(); renderEditor(); return;
+    }
     if (editorState && editorState.businessHourDropdownOpen) {
       var insideBhDropdown = event.target && event.target.closest && event.target.closest("[data-business-hour-dropdown]");
       var bhRemoveEl = event.target && event.target.closest && event.target.closest("[data-business-hour-slot-remove]");
@@ -7161,49 +7187,6 @@
       var templateId = button.getAttribute("data-buffet-template");
       if (buffetPresetOnly(editorState.rule.editorDraft) && !visibleBuffetPeriodTemplates().some(function (template) { return template.id === templateId && template.id !== "custom"; })) return;
       requestBuffetStructureChange("应用模板", function (nextDraft) { applyBuffetTemplate(nextDraft, templateId); }, button);
-      return;
-    }
-    if (button.hasAttribute("data-buffet-store-copy-toggle")) {
-      var copyPanelState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
-      copyPanelState.copyPanelOpen = !copyPanelState.copyPanelOpen;
-      if (!copyPanelState.copyPanelOpen) copyPanelState.copyTargetStoreIds = [];
-      renderEditor();
-      return;
-    }
-    if (button.hasAttribute("data-buffet-store-copy")) {
-      var copyPanelWorkbenchState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
-      var copyTargetStoreIds = copyPanelWorkbenchState.copyTargetStoreIds.slice();
-      var copyDraft = editorState.rule.editorDraft;
-      copyTargetStoreIds = copyTargetStoreIds.filter(function (storeId) { return addedStoreIds(copyDraft).indexOf(storeId) >= 0; });
-      if (!copyTargetStoreIds.length) {
-        toast("请至少选择一个要接收数量的参与门店", true);
-        return;
-      }
-      var sourceStore = stores.find(function (item) { return item.id === copyDraft.activeStoreId; });
-      var overwriteControl = root.querySelector("[data-buffet-store-copy-overwrite]");
-      var copyPreview = previewBuffetStoreCopy(copyDraft, copyDraft.activeStoreId, copyTargetStoreIds, { overwriteConfigured: !!(overwriteControl && overwriteControl.checked) });
-      var copySummary = copyPreview.summary;
-      var copyDescription = "来源：“" + (sourceStore ? sourceStore.name : copyDraft.activeStoreId) + "”；目标门店 " + copyTargetStoreIds.length + " 家。将填充 " + copySummary.fill + " 项" + (copySummary.overwrite ? "、覆盖 " + copySummary.overwrite + " 项" : "") + "，保留已有配置 " + copySummary.preserved + " 项，跳过未匹配商品 " + copySummary.missing + " 项。";
-      openDialog(
-        copyPreview.overwriteConfigured && copySummary.overwrite ? "确认覆盖目标门店已有配置？" : "确认复制门店数量？",
-        copyDescription,
-        "确认复制",
-        function () {
-          var copyResult = applyBuffetStoreCopyPreview(copyDraft, copyPreview);
-          deriveBuffetQuantityBlocks(copyDraft);
-          closeDialog(false);
-          copyPanelWorkbenchState.copyPanelOpen = false;
-          copyPanelWorkbenchState.copyTargetStoreIds = [];
-          markEditorDirty();
-          renderEditor();
-          toast("已向 " + copyTargetStoreIds.length + " 家门店应用 " + copyResult.applied + " 项" + (copyResult.missing ? "，跳过 " + copyResult.missing + " 项未匹配商品" : ""));
-        },
-        { returnFocus: button, cancelLabel: "取消", onCancel: function () {
-          copyPanelWorkbenchState.copyPanelOpen = false;
-          copyPanelWorkbenchState.copyTargetStoreIds = [];
-          renderEditor();
-        } }
-      );
       return;
     }
     if (button.hasAttribute("data-v4-exception-add-member")) {
@@ -7814,27 +7797,6 @@
       }
       markEditorDirty(); renderEditor(); return;
     }
-    if (target.hasAttribute("data-buffet-quantity-store")) {
-      if (event.type !== "change") return;
-      if (addedStoreIds(draft).indexOf(target.value) < 0) { renderEditor(); return; }
-      draft.activeStoreId = target.value;
-      normalizeActiveDimensions(draft, true);
-      clearBuffetQuantitySelection();
-      var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
-      workbenchState.copyPanelOpen = false;
-      workbenchState.copyTargetStoreIds = [];
-      markEditorDirty(); renderEditor(); return;
-    }
-    if (target.hasAttribute("data-buffet-store-copy-target")) {
-      if (event.type !== "change") return;
-      var copyTargetState = normalizeBuffetQuantityWorkbenchState(draft);
-      copyTargetState.copyTargetStoreIds = Array.from(target.selectedOptions).map(function (option) { return option.value; }).filter(function (storeId) {
-        return addedStoreIds(draft).indexOf(storeId) >= 0 && storeId !== draft.activeStoreId;
-      });
-      var copyAction = root.querySelector("[data-buffet-store-copy]");
-      if (copyAction) copyAction.disabled = !copyTargetState.copyTargetStoreIds.length;
-      return;
-    }
     if (target.hasAttribute("data-v4-exception-dish")) {
       if (event.type !== "change" || !isBuffetV4Draft(draft)) return;
       var exceptionConfig = activeStoreConfig(draft);
@@ -8089,6 +8051,19 @@
       limitCells[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
       markEditorDirty(); return;
     }
+    if (isBuffetProfile() && (target.hasAttribute('data-scope-slot-name') || target.hasAttribute('data-scope-slot-from') || target.hasAttribute('data-scope-slot-to'))) {
+      var scopeId = target.getAttribute('data-scope-slot-name') || target.getAttribute('data-scope-slot-from') || target.getAttribute('data-scope-slot-to');
+      window.BuffetEffectiveScope.activate(draft.conditions);
+      var scopeSlot = findBusinessHourSlot(draft.conditions.businessHourSlots, scopeId);
+      if (!scopeSlot) return;
+      var scopeField = target.hasAttribute('data-scope-slot-name') ? 'name' : target.hasAttribute('data-scope-slot-from') ? 'from' : 'to';
+      scopeSlot[scopeField] = target.value;
+      syncLegacyBusinessHourFields(draft.conditions);
+      editorState.scopeTimeError = event.type === 'change' ? window.BuffetEffectiveScope.validate(draft.conditions) || '' : '';
+      var scopeError = document.querySelector('.olf-scope-error');
+      if (scopeError) scopeError.textContent = editorState.scopeTimeError;
+      markEditorDirty(); syncNextButtonState(); return;
+    }
     if (target.hasAttribute("data-business-hour-slot-toggle")) {
       if (event.type !== "change") return;
       var toggleId = target.getAttribute("data-business-hour-slot-toggle");
@@ -8159,6 +8134,7 @@
     if (target.hasAttribute("data-condition")) {
       draft.conditions[target.getAttribute("data-condition")] = target.value;
       markEditorDirty();
+      if (isBuffetProfile()) syncNextButtonState();
       return;
     }
     if (target.hasAttribute("data-auth-enabled")) { draft.authorization.enabled = target.checked; markEditorDirty(); renderEditor(); return; }

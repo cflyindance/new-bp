@@ -7,7 +7,6 @@ const flow = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.
 // v4 数量页必须从旧的扁平商品规则列表切换为按门店、按周期的编辑器。
 for (const marker of [
   "data-period-section",
-  "data-buffet-quantity-store",
   "整个订单",
   "每轮菜品总数",
   "商品限购数量",
@@ -89,8 +88,8 @@ const modernDraft = {
   participatingStoreIds: ["ny-midtown", "flushing"]
 };
 const rendered = api.renderBuffetV4QuantityEditor(modernDraft, ["ny-midtown", "flushing"]);
-assert.match(rendered, /data-buffet-quantity-store/);
-assert.match(rendered, /data-buffet-store-copy/);
+assert.doesNotMatch(rendered, /data-buffet-quantity-store/);
+assert.doesNotMatch(rendered, /data-buffet-store-copy/);
 assert.match(rendered, /data-period-section="order_lifetime"[\s\S]*data-period-section="per_round"[\s\S]*data-period-section="multi_round"/);
 const orderSection = rendered.match(/data-period-section="order_lifetime"[\s\S]*?(?=data-period-section="per_round")/)?.[0] ?? "";
 assert.match(orderSection, /data-quantity-scene-open/);
