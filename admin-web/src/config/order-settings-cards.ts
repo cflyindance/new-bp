@@ -27,6 +27,8 @@ import {
   writeGuestMenuIntervalAllowCartByLine as writeMenu,
 } from "./module-settings-guest-menu-interval-allow-cart-ui";
 import {
+  renderRuleHitPasswordAuthFields,
+  ruleHitPasswordAuthExplanation,
   readRuleHitPasswordAuthByLine as readAuth,
   writeRuleHitPasswordAuthByLine as writeAuth,
 } from "./module-settings-rule-hit-password-auth-ui";
@@ -49,7 +51,7 @@ const titles = [
   "订单下单时间间隔",
   "间隔时间内允许加购",
   "间隔时间内允许加购",
-  "命中规则后密码授权",
+  "命中规则后的授权方式",
   "允许可看不可点菜直接加入购物车",
   "可看不可点菜需服务员授权",
   "积分菜兑换需要权限",
@@ -59,7 +61,7 @@ const help = [
   "两次订单提交的最小间隔。",
   "设置订单间隔内是否直接允许加购；不设置加购授权或数量阈值。",
   "设置商品间隔内是否直接允许加购；不设置加购授权或数量阈值。",
-  "设置规则命中后的密码授权频次。",
+  "设置同时命中多条规则时的授权范围与有效范围。",
   "关闭时，添加可看不可点菜需密码授权。",
   "设置可看不可点菜是否需要服务员授权。",
   "兑换积分菜须服务员输入密码授权。",
@@ -107,7 +109,7 @@ function lineSummaries(id: Line): string[] {
     interval.enabled ? `订单间隔 ${formatIntervalDuration(interval.seconds)}` : "订单间隔未启用",
     readOrder()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
     readMenu()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
-    auth.enabled ? (auth.mode === "auth-once" ? "授权一次后本单放行" : "每次命中均需授权") : "命中授权未启用",
+    auth.enabled ? `${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中授权未启用",
     readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜加购需授权",
     readView(596).includes(id) ? "可看不可点菜需服务员授权" : "未启用服务员授权要求",
     readPoints().includes(id) ? "积分菜兑换需授权" : "积分菜兑换无需授权",
@@ -166,16 +168,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
               ],
             )}</div>`;
           }
-          if (i === 3)
-            body = `<div class="order-card-field"><span>授权模式</span>${choices(
-              id,
-              i,
-              auth[id].mode,
-              [
-                ["auth-every", "每次命中均需授权"],
-                ["auth-once", "授权一次后本单放行"],
-              ],
-            )}</div>`;
+          if (i === 3) body = renderRuleHitPasswordAuthFields(id, auth[id]);
           return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
         })
         .join("")}</div></section>`;
@@ -272,6 +265,18 @@ export function bindOrderSettingsCards(root: ParentNode): void {
   });
   host.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
+    if (input.matches("[data-rule-hit-password-auth-field]")) {
+      const line = input.dataset.line as Line;
+      if (!lines.some(item => item.id === line)) return;
+      const config = readAuth();
+      if (!config[line].enabled) return;
+      if (input.dataset.ruleHitPasswordAuthField === "authorizationScope" && (input.value === "per-rule" || input.value === "combined")) config[line].authorizationScope = input.value;
+      if (input.dataset.ruleHitPasswordAuthField === "validity" && (input.value === "operation" || input.value === "order")) config[line].validity = input.value;
+      writeAuth(config);
+      const note = input.closest("article")?.querySelector("[data-rule-hit-password-auth-note]");
+      if (note) note.textContent = ruleHitPasswordAuthExplanation(config[line]);
+      refreshSummaries(); return;
+    }
     if (input.matches("[data-order-duration-part]")) {
       const line = input.dataset.line as Line;
       if (!lines.some(l => l.id === line)) return;
@@ -318,8 +323,6 @@ export function bindOrderSettingsCards(root: ParentNode): void {
     if (rule === 3) {
       const config = readAuth();
       if (isToggle) config[line].enabled = input.checked;
-      else if (input.value === "auth-every" || input.value === "auth-once")
-        config[line].mode = input.value;
       writeAuth(config);
     }
     if (rule >= 4) {

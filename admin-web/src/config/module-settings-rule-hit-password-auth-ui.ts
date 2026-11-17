@@ -1,6 +1,6 @@
 /**
- * 前厅 · 食客端·下单与规则：seq 646 命中任意规则后,弹出密码授权
- * （主开关 + 按产线启用与授权模式，结构对齐 591 间隔内允许加购·菜品）。
+ * 前厅 · 下单规则：seq 646，按产线设置授权范围和有效范围。
+ * 本模块维护后台配置，不执行点餐端的规则授权。
  */
 
 import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
@@ -29,12 +29,18 @@ export const RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES = MENU_ORDER_LIMIT_OTHER_PRODU
 
 export type RuleHitPasswordAuthProductLineId = MenuOrderLimitOtherProductLineId;
 
-/** A：每次命中均需授权；B：本单授权一次后放行 */
+/** @deprecated 旧版时效枚举；不能表达多规则授权范围。 */
 export type RuleHitPasswordAuthMode = "auth-every" | "auth-once";
+
+export type RuleHitAuthorizationScope = "per-rule" | "combined";
+export type RuleHitAuthorizationValidity = "operation" | "order";
 
 export type RuleHitPasswordAuthLineConfig = {
   enabled: boolean;
+  /** @deprecated compatibility mirror of validity; never sufficient for multi-rule execution. */
   mode: RuleHitPasswordAuthMode;
+  authorizationScope: RuleHitAuthorizationScope;
+  validity: RuleHitAuthorizationValidity;
 };
 
 export type RuleHitPasswordAuthByLine = Record<
@@ -52,11 +58,11 @@ const MODE_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "auth-every",
-    label: "每次命中均需授权",
+    label: "仅本次操作",
   },
   {
     value: "auth-once",
-    label: "授权一次后本单放行",
+    label: "已授权规则本单内有效",
   },
 ];
 
@@ -111,7 +117,7 @@ export function ensureRuleHitPasswordAuthToggleMigrated(): void {
 }
 
 function defaultLineConfig(enabled = true): RuleHitPasswordAuthLineConfig {
-  return { enabled, mode: MODE_DEFAULT };
+  return { enabled, mode: MODE_DEFAULT, authorizationScope: "per-rule", validity: "operation" };
 }
 
 function defaultByLineConfig(enabled = true): RuleHitPasswordAuthByLine {
@@ -120,17 +126,19 @@ function defaultByLineConfig(enabled = true): RuleHitPasswordAuthByLine {
   ) as RuleHitPasswordAuthByLine;
 }
 
-function normalizeByLineConfig(
+export function normalizeRuleHitPasswordAuthByLine(
   raw: Partial<Record<string, Partial<RuleHitPasswordAuthLineConfig>>>,
 ): RuleHitPasswordAuthByLine {
   const base = defaultByLineConfig(false);
   for (const line of RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES) {
     const item = raw[line.id];
     if (!item || typeof item !== "object") continue;
-    const mode = typeof item.mode === "string" && isValidMode(item.mode) ? item.mode : MODE_DEFAULT;
+    const validity = item.validity === undefined ? (item.mode === "auth-once" ? "order" : "operation") : item.validity === "order" ? "order" : "operation";
     base[line.id] = {
       enabled: item.enabled === true,
-      mode,
+      authorizationScope: item.authorizationScope === "combined" ? "combined" : "per-rule",
+      validity,
+      mode: validity === "order" ? "auth-once" : "auth-every",
     };
   }
   return base;
@@ -165,7 +173,7 @@ export function ensureRuleHitPasswordAuthByLineMigrated(): void {
     {},
   );
   if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    writeRuleHitPasswordAuthByLine(normalizeByLineConfig(raw));
+    writeRuleHitPasswordAuthByLine(normalizeRuleHitPasswordAuthByLine(raw));
     return;
   }
 
@@ -190,7 +198,8 @@ export function ensureRuleHitPasswordAuthByLineMigrated(): void {
   );
   for (const line of RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES) {
     config[line.id] = {
-      enabled: enabledSet.has(line.id),
+      ...defaultLineConfig(enabledSet.has(line.id)),
+      validity: mode === "auth-once" ? "order" : "operation",
       mode,
     };
   }
@@ -204,13 +213,13 @@ export function readRuleHitPasswordAuthByLine(): RuleHitPasswordAuthByLine {
     {},
   );
   if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    return normalizeByLineConfig(raw);
+    return normalizeRuleHitPasswordAuthByLine(raw);
   }
   return defaultByLineConfig(false);
 }
 
 export function writeRuleHitPasswordAuthByLine(config: RuleHitPasswordAuthByLine): void {
-  const normalized = normalizeByLineConfig(config);
+  const normalized = normalizeRuleHitPasswordAuthByLine(config);
   writeModuleSettingJson(RULE_HIT_PASSWORD_AUTH_BY_LINE_FIELD_ID, normalized);
   syncLegacyFields(normalized);
 }
@@ -245,7 +254,10 @@ export function writeRuleHitPasswordAuthMode(mode: RuleHitPasswordAuthMode): voi
   const next = isValidMode(mode) ? mode : MODE_DEFAULT;
   const config = readRuleHitPasswordAuthByLine();
   for (const line of RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES) {
-    if (config[line.id].enabled) config[line.id].mode = next;
+    if (config[line.id].enabled) {
+      config[line.id].mode = next;
+      config[line.id].validity = next === "auth-once" ? "order" : "operation";
+    }
   }
   writeRuleHitPasswordAuthByLine(config);
 }
@@ -260,7 +272,7 @@ function syncRowControls(editor: HTMLElement, panelEnabled: boolean): void {
     if (!lineId) return;
     const lineEnabled = panelEnabled && cb.checked;
     const modeRadios = editor.querySelectorAll<HTMLInputElement>(
-      `[data-rule-hit-password-auth-line-mode="${CSS.escape(lineId)}"]`,
+      `[data-rule-hit-password-auth-field][data-line="${CSS.escape(lineId)}"]`,
     );
     modeRadios.forEach((radio) => {
       radio.disabled = !lineEnabled;
@@ -274,26 +286,39 @@ function syncRowControls(editor: HTMLElement, panelEnabled: boolean): void {
 }
 
 function collectByLineFromEditor(editor: HTMLElement): RuleHitPasswordAuthByLine {
-  const config = defaultByLineConfig(false);
-  editor.querySelectorAll<HTMLInputElement>("[data-rule-hit-password-auth-line-enabled]").forEach((cb) => {
-    const lineId = cb.getAttribute(
-      "data-rule-hit-password-auth-line-enabled",
-    ) as RuleHitPasswordAuthProductLineId | null;
-    if (!lineId || !ALL_LINE_IDS.includes(lineId)) return;
-    config[lineId].enabled = cb.checked;
+  const config = readRuleHitPasswordAuthByLine();
+  editor.querySelectorAll<HTMLInputElement>("[data-rule-hit-password-auth-line-enabled]").forEach(cb => {
+    const line = cb.dataset.ruleHitPasswordAuthLineEnabled as RuleHitPasswordAuthProductLineId;
+    if (ALL_LINE_IDS.includes(line)) config[line].enabled = cb.checked;
   });
-  editor
-    .querySelectorAll<HTMLInputElement>("[data-rule-hit-password-auth-line-mode]:checked")
-    .forEach((radio) => {
-      const lineId = radio.getAttribute(
-        "data-rule-hit-password-auth-line-mode",
-      ) as RuleHitPasswordAuthProductLineId | null;
-      if (!lineId || !ALL_LINE_IDS.includes(lineId)) return;
-      if (isValidMode(radio.value)) config[lineId].mode = radio.value;
-    });
+  editor.querySelectorAll<HTMLInputElement>("[data-rule-hit-password-auth-field]:checked").forEach(radio => {
+    const line = radio.dataset.line as RuleHitPasswordAuthProductLineId;
+    if (!ALL_LINE_IDS.includes(line)) return;
+    if (radio.dataset.ruleHitPasswordAuthField === "authorizationScope" && (radio.value === "per-rule" || radio.value === "combined")) config[line].authorizationScope = radio.value;
+    if (radio.dataset.ruleHitPasswordAuthField === "validity" && (radio.value === "operation" || radio.value === "order")) config[line].validity = radio.value;
+  });
   writeRuleHitPasswordAuthByLine(config);
   syncRowControls(editor, true);
+  editor.querySelectorAll<HTMLElement>("[data-rule-hit-password-auth-note]").forEach(note => {
+    note.textContent = ruleHitPasswordAuthExplanation(config[note.dataset.line as RuleHitPasswordAuthProductLineId]);
+  });
   return config;
+}
+
+export function ruleHitPasswordAuthExplanation(config: RuleHitPasswordAuthLineConfig): string {
+  const scope = config.authorizationScope === "combined" ? "一次授权覆盖本次命中的全部待授权规则。" : "同一次操作命中的不同规则分别授权。";
+  return scope + (config.validity === "order"
+    ? "仅已授权的具体规则在本单内免重复授权；新命中或配置变化的规则仍需授权。"
+    : "授权仅对本次操作有效；后续操作再次命中时需重新授权。");
+}
+
+export function renderRuleHitPasswordAuthFields(line: RuleHitPasswordAuthProductLineId, config: RuleHitPasswordAuthLineConfig, disabled = false): string {
+  const lineLabel = RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES.find(item => item.id === line)?.label ?? line;
+  const fields = [
+    { key: "authorizationScope", label: "授权范围", value: config.authorizationScope, options: [["per-rule", "逐条规则授权"], ["combined", "合并授权"]] },
+    { key: "validity", label: "有效范围", value: config.validity, options: [["operation", "仅本次操作"], ["order", "本单内有效"]] },
+  ];
+  return fields.map(field => `<div class="order-card-field"><span>${field.label}</span><div class="order-card-choices" role="radiogroup" aria-label="${escapeHtml(lineLabel)} ${field.label}">${field.options.map(([value, label]) => `<label class="inline-flex items-center gap-2 text-sm"><input type="radio" name="rule-auth-${field.key}-${line}" data-rule-hit-password-auth-field="${field.key}" data-line="${line}" value="${value}" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" ${field.value === value ? "checked" : ""} ${disabled ? "disabled" : ""}><span>${label}</span></label>`).join("")}</div></div>`).join("") + `<p class="mt-4 text-xs leading-5 text-muted-foreground" data-rule-hit-password-auth-note data-line="${line}">${ruleHitPasswordAuthExplanation(config)}</p>`;
 }
 
 function renderByLineEditorHtml(enabled: boolean): string {
@@ -301,24 +326,6 @@ function renderByLineEditorHtml(enabled: boolean): string {
   const rows = RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES.map((line) => {
     const item = config[line.id];
     const lineControlsOn = enabled && item.enabled;
-    const radios = MODE_OPTIONS.map((opt) => {
-      const checked = item.mode === opt.value;
-      return `
-        <label class="inline-flex items-start gap-2 text-sm text-foreground ${lineControlsOn ? "cursor-pointer" : "cursor-not-allowed opacity-50"}">
-          <input
-            type="radio"
-            name="rule-hit-password-auth-mode-${escapeHtml(line.id)}"
-            value="${escapeHtml(opt.value)}"
-            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} mt-0.5"
-            data-rule-hit-password-auth-line-mode="${escapeHtml(line.id)}"
-            ${checked ? "checked" : ""}
-            ${lineControlsOn ? "" : "disabled"}
-            aria-label="${escapeHtml(line.label)} ${escapeHtml(opt.label)}"
-          />
-          <span class="leading-snug">${escapeHtml(opt.label)}</span>
-        </label>`;
-    }).join("");
-
     return `
     <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
       <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">${escapeHtml(line.label)}</td>
@@ -335,13 +342,7 @@ function renderByLineEditorHtml(enabled: boolean): string {
         </label>
       </td>
       <td class="px-3 py-2.5 align-top">
-        <div
-          class="flex flex-col gap-2.5"
-          role="radiogroup"
-          aria-label="${escapeHtml(line.label)} 授权模式"
-        >
-          ${radios}
-        </div>
+        ${renderRuleHitPasswordAuthFields(line.id, item, !lineControlsOn)}
       </td>
     </tr>`;
   }).join("");
@@ -357,7 +358,7 @@ function renderByLineEditorHtml(enabled: boolean): string {
             <tr>
               <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
               <th class="px-3 py-2 font-medium w-[4.5rem]">启用</th>
-              <th class="px-3 py-2 font-medium">授权模式</th>
+              <th class="px-3 py-2 font-medium">授权方式</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -415,7 +416,7 @@ export function bindRuleHitPasswordAuthUi(root: ParentNode = document): void {
       const target = e.target as HTMLElement;
       if (
         !target.matches(
-          "[data-rule-hit-password-auth-line-enabled], [data-rule-hit-password-auth-line-mode]",
+          "[data-rule-hit-password-auth-line-enabled], [data-rule-hit-password-auth-field]",
         )
       ) {
         return;

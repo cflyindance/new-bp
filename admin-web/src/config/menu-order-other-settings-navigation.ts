@@ -32,9 +32,9 @@ const INTERVAL_SETTINGS: SettingMeta[] = [
 const AUTH_SETTINGS: SettingMeta[] = [
   {
     seq: 646,
-    title: "命中任意规则后,弹出密码授权",
+    title: "命中规则后的授权方式",
     sceneDesc:
-      "各产线可分别启用，并选择「每次命中均需授权」或「授权一次后本单放行」。",
+      "各产线分别启用，设置逐条或合并授权，以及仅本次操作或已授权规则本单内有效。",
   },
   {
     seq: 595,
