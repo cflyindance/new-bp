@@ -148,7 +148,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
       const expanded = expandedLines.get(stateKey)!.has(id);
       const summary = lineSummaries(id);
       const detailsId = `order-line-${category}-${scene ?? "rules"}-${id}`;
-      return `<section class="order-line-card" data-order-line="${id}" data-order-expansion-key="${esc(stateKey)}"><header><button type="button" class="order-line-disclosure" data-order-line-disclosure aria-expanded="${expanded}" aria-controls="${detailsId}" aria-label="${line.label} 规则设置"><span class="order-line-badge">${line.label}</span><span class="order-line-summary">${indices.map(i => `<span data-order-summary-rule="${i}" data-module-setting-row-seq="${seqs[i]}">${esc(summary[i])}</span>`).join("")}</span><svg class="order-line-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></header><div id="${detailsId}" class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
+      return `<section class="order-line-card" data-order-line="${id}" data-order-expansion-key="${esc(stateKey)}"><header><button type="button" class="order-line-disclosure" data-order-line-disclosure aria-expanded="${expanded}" aria-controls="${detailsId}" aria-label="${line.label} 规则设置"><span class="order-line-badge">${line.label}</span><span class="order-line-summary">${indices.map(i => `<span data-order-summary-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}>${esc(summary[i])}</span>`).join("")}</span><svg class="order-line-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></header><div id="${detailsId}" class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
         .map((title, i) => {
           if (!indices.includes(i)) return "";
           let body = "";
@@ -176,7 +176,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
                 ["auth-once", "授权一次后本单放行"],
               ],
             )}</div>`;
-          return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}"><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
+          return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
         })
         .join("")}</div></section>`;
     })
@@ -224,10 +224,16 @@ export function bindOrderSettingsCards(root: ParentNode): void {
     }
   };
   const refreshSummaries = () => {
+    const intervals = readInterval();
     host.querySelectorAll<HTMLElement>("[data-order-line]").forEach(card => {
-      const values = lineSummaries(card.dataset.orderLine as Line);
+      const line = card.dataset.orderLine as Line;
+      const values = lineSummaries(line);
+      const addOn = card.querySelector<HTMLElement>('[data-order-rule="1"]');
+      if (addOn) addOn.hidden = !intervals[line].enabled;
       card.querySelectorAll<HTMLElement>("[data-order-summary-rule]").forEach(node => {
-        node.textContent = values[Number(node.dataset.orderSummaryRule)];
+        const rule = Number(node.dataset.orderSummaryRule);
+        node.textContent = values[rule];
+        if (rule === 1) node.hidden = !intervals[line].enabled;
       });
     });
   };
@@ -299,6 +305,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       writeInterval(config);
     }
     if (rule === 1 || rule === 2) {
+      if (rule === 1 && !readInterval()[line].enabled) return;
       const config = rule === 1 ? readOrder() : readMenu();
       if (isToggle) config[line].enabled = input.checked;
       else if (input.hasAttribute("data-order-card-mode")) {
