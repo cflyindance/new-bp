@@ -33,6 +33,10 @@ import {
   writeRuleHitPasswordAuthByLine as writeAuth,
 } from "./module-settings-rule-hit-password-auth-ui";
 import {
+  resolveViewonlyDishBehavior,
+  readViewonlyDishAuthorizationValidity as readViewValidity,
+  writeViewonlyDishAuthorizationValidity as writeViewValidity,
+  type ViewonlyDishAuthorizationValidity,
   readViewonlyDishRuleLines as readView,
   writeViewonlyDishRuleLines as writeView,
 } from "./module-settings-viewonly-dish-rules-ui";
@@ -110,11 +114,26 @@ function lineSummaries(id: Line): string[] {
     readOrder()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
     readMenu()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
     auth.enabled ? `允许授权放行 · ${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中规则后不可授权放行",
-    readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜加购需授权",
-    readView(596).includes(id) ? "可看不可点菜需服务员授权" : "未启用服务员授权要求",
+    readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜",
+    resolveViewonlyDishBehavior(readView(595).includes(id), readView(596).includes(id)) === "authorize" ? `需服务员授权后加购 · ${readViewValidity()[id] === "order" ? "本单内有效" : "仅本次操作"}` : "禁止加购",
     readPoints().includes(id) ? "积分菜兑换需授权" : "积分菜兑换无需授权",
     readOnly(527).includes(id) ? "允许纯积分订单兑换" : "不允许纯积分订单兑换",
   ];
+}
+function renderViewonlyDishCard(line: Line, label: string, direct: boolean, staff: boolean): string {
+  const validity = readViewValidity()[line];
+  return `<article class="order-rule-card" data-order-viewonly-card>
+    <header><div class="order-rule-title">可看不可点菜处理<button type="button" class="order-rule-help" aria-label="可看不可点菜处理说明" title="先设置是否允许直接加购。不允许时可独立设置服务员授权放行，与“命中规则后允许授权放行”无关；其他规则仍需分别校验。">?</button></div></header>
+    <div class="order-rule-body">
+      <div class="order-card-field" data-module-setting-row-seq="595"><span>加购方式</span><div class="order-card-choices" role="radiogroup" aria-label="${esc(label)} 可看不可点菜加购方式">
+        ${[["direct", "允许直接加购"], ["restricted", "不允许直接加购"]].map(([value, text]) => `<label><input type="radio" name="viewonly-cart-${line}" data-order-viewonly-direct data-line="${line}" value="${value}" ${direct === (value === "direct") ? "checked" : ""}><span>${text}</span></label>`).join("")}
+      </div></div>
+      <div data-module-setting-row-seq="596" data-order-viewonly-auth-row ${direct ? "hidden" : ""}>
+        <fieldset data-order-viewonly-auth-fieldset class="m-0 mt-5 border-0 p-0"><div class="order-card-field"><label for="viewonly-staff-${line}">允许服务员授权放行</label><input id="viewonly-staff-${line}" type="checkbox" role="switch" class="order-setting-switch" data-order-viewonly-staff data-line="${line}" aria-label="${esc(label)} 可看不可点菜允许服务员授权放行" ${staff ? "checked" : ""}></div></fieldset>
+        <div class="mt-5" data-order-viewonly-validity-row ${staff ? "" : "hidden"}><div class="order-card-field"><span>放行有效范围</span><div class="order-card-choices" role="radiogroup" aria-label="${esc(label)} 可看不可点菜放行有效范围">${[["operation", "仅本次操作"], ["order", "本单内有效"]].map(([value, text]) => `<label><input type="radio" name="viewonly-validity-${line}" data-order-viewonly-validity data-line="${line}" value="${value}" ${validity === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></div></div>
+      </div>
+    </div>
+  </article>`;
 }
 function renderCategoryCards(category: string, scene?: IntervalScene): string {
   const stateKey = expansionKey(category, scene);
@@ -150,9 +169,10 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
       const expanded = expandedLines.get(stateKey)!.has(id);
       const summary = lineSummaries(id);
       const detailsId = `order-line-${category}-${scene ?? "rules"}-${id}`;
-      return `<section class="order-line-card" data-order-line="${id}" data-order-expansion-key="${esc(stateKey)}"><header><button type="button" class="order-line-disclosure" data-order-line-disclosure aria-expanded="${expanded}" aria-controls="${detailsId}" aria-label="${line.label} 规则设置"><span class="order-line-badge">${line.label}</span><span class="order-line-summary">${indices.map(i => `<span data-order-summary-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}>${esc(summary[i])}</span>`).join("")}</span><svg class="order-line-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></header><div id="${detailsId}" class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
+      return `<section class="order-line-card" data-order-line="${id}" data-order-expansion-key="${esc(stateKey)}"><header><button type="button" class="order-line-disclosure" data-order-line-disclosure aria-expanded="${expanded}" aria-controls="${detailsId}" aria-label="${line.label} 规则设置"><span class="order-line-badge">${line.label}</span><span class="order-line-summary">${indices.map(i => `<span data-order-summary-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${(i === 1 && !interval[id].enabled) || (i === 5 && selections[0].includes(id)) ? "hidden" : ""}>${esc(summary[i])}</span>`).join("")}</span><svg class="order-line-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></header><div id="${detailsId}" class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
         .map((title, i) => {
-          if (!indices.includes(i)) return "";
+          if (!indices.includes(i) || i === 5) return "";
+          if (i === 4) return renderViewonlyDishCard(id, line.label, selections[0].includes(id), selections[1].includes(id));
           let body = "";
           if (i === 0)
             body = `<div class="order-card-field"><div>最小间隔</div>${orderIntervalInput(id, interval[id].seconds, `${line.label} 最小间隔`)}</div>`;
@@ -218,6 +238,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
   };
   const refreshSummaries = () => {
     const intervals = readInterval();
+    const directLines = readView(595), staffLines = readView(596);
     host.querySelectorAll<HTMLElement>("[data-order-line]").forEach(card => {
       const line = card.dataset.orderLine as Line;
       const values = lineSummaries(line);
@@ -227,7 +248,14 @@ export function bindOrderSettingsCards(root: ParentNode): void {
         const rule = Number(node.dataset.orderSummaryRule);
         node.textContent = values[rule];
         if (rule === 1) node.hidden = !intervals[line].enabled;
+        if (rule === 5) node.hidden = directLines.includes(line);
       });
+      const flow = card.querySelector<HTMLElement>("[data-order-viewonly-card]");
+      if (flow) {
+        const direct = directLines.includes(line), staff = staffLines.includes(line);
+        flow.querySelector<HTMLElement>("[data-order-viewonly-auth-row]")!.hidden = direct;
+        flow.querySelector<HTMLElement>("[data-order-viewonly-validity-row]")!.hidden = !staff;
+      }
     });
   };
   host.addEventListener("click", (event) => {
@@ -265,6 +293,24 @@ export function bindOrderSettingsCards(root: ParentNode): void {
   });
   host.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
+    if (input.matches("[data-order-viewonly-validity]")) {
+      const line = input.dataset.line as Line;
+      if (!lines.some(item => item.id === line) || readView(595).includes(line) || !readView(596).includes(line)) return;
+      if (input.value !== "operation" && input.value !== "order") return;
+      const validity = readViewValidity(); validity[line] = input.value;
+      writeViewValidity(validity); refreshSummaries(); return;
+    }
+    if (input.matches("[data-order-viewonly-direct],[data-order-viewonly-staff]")) {
+      const line = input.dataset.line as Line;
+      if (!lines.some(item => item.id === line)) return;
+      const directChange = input.hasAttribute("data-order-viewonly-direct");
+      if (!directChange && readView(595).includes(line)) return;
+      const seq = directChange ? 595 : 596;
+      const current = readView(seq);
+      const on = directChange ? input.value === "direct" : input.checked;
+      writeView(seq, lines.map(item => item.id).filter(id => id === line ? on : current.includes(id)));
+      refreshSummaries(); return;
+    }
     if (input.matches("[data-rule-hit-password-auth-field]")) {
       const line = input.dataset.line as Line;
       if (!lines.some(item => item.id === line)) return;

@@ -38,15 +38,15 @@ const AUTH_SETTINGS: SettingMeta[] = [
   },
   {
     seq: 595,
-    title: "允许可看不可点的菜添加至购物车",
+    title: "可看不可点菜加购方式",
     sceneDesc:
-      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置是否允许可看不可点的菜添加至购物车，关闭时需密码授权。",
+      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置是否可看不可点菜加购方式，关闭时需密码授权。",
   },
   {
     seq: 596,
-    title: "可看不可点的菜弹出服务员授权",
+    title: "可看不可点菜允许服务员授权放行",
     sceneDesc:
-      "在所选产线（POS、PayPad、POS GO、eMenu、SDI）设置可看不可点的菜是否弹出服务员授权。",
+      "仅不允许直接加购时展示，独立决定是否允许服务员授权放行，不依赖命中规则后的授权设置。",
   },
 ];
 

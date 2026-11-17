@@ -13,6 +13,13 @@ import {
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
+export type ViewonlyDishBehavior = "direct" | "authorize" | "blocked";
+/** Effective behavior for the current configuration; no terminal authorization is executed here. */
+export function resolveViewonlyDishBehavior(allowDirect: boolean, allowStaffAuthorization: boolean): ViewonlyDishBehavior {
+  if (allowDirect) return "direct";
+  return allowStaffAuthorization ? "authorize" : "blocked";
+}
+
 export const VIEWONLY_DISH_CART_SEQ = 595;
 export const VIEWONLY_DISH_AUTH_SEQ = 596;
 
@@ -28,6 +35,16 @@ export type ViewonlyDishRulesProductLineId = MenuOrderLimitOtherProductLineId;
 const ALL_LINE_IDS: ViewonlyDishRulesProductLineId[] = [
   ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
 ];
+
+export type ViewonlyDishAuthorizationValidity = "operation" | "order";
+export const VIEWONLY_DISH_AUTH_VALIDITY_FIELD_ID = "596-viewonly-dish-auth-validity-by-line";
+export function readViewonlyDishAuthorizationValidity(): Record<ViewonlyDishRulesProductLineId, ViewonlyDishAuthorizationValidity> {
+  const raw = readModuleSettingJson<Partial<Record<ViewonlyDishRulesProductLineId, unknown>>>(VIEWONLY_DISH_AUTH_VALIDITY_FIELD_ID, {});
+  return Object.fromEntries(ALL_LINE_IDS.map(line => [line, raw?.[line] === "order" ? "order" : "operation"])) as Record<ViewonlyDishRulesProductLineId, ViewonlyDishAuthorizationValidity>;
+}
+export function writeViewonlyDishAuthorizationValidity(config: Record<ViewonlyDishRulesProductLineId, ViewonlyDishAuthorizationValidity>): void {
+  writeModuleSettingJson(VIEWONLY_DISH_AUTH_VALIDITY_FIELD_ID, Object.fromEntries(ALL_LINE_IDS.map(line => [line, config[line] === "order" ? "order" : "operation"])));
+}
 
 const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
   [VIEWONLY_DISH_CART_SEQ]: "允许可看不可点菜加购适用产线",
@@ -94,7 +111,8 @@ export function readViewonlyDishRuleLines(seq: number): ViewonlyDishRulesProduct
   ensureViewonlyDishRuleToggleMigrated(seq);
   const stored = readModuleSettingJson<unknown>(linesStorageId(seq), null);
   const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  // An explicitly saved empty selection must not revive a legacy global toggle.
+  if (Array.isArray(stored)) return normalized;
 
   if (readLegacyToggleOn(seq)) {
     const all = [...ALL_LINE_IDS];
