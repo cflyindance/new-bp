@@ -5,7 +5,7 @@ const source = readFileSync(new URL("../dist/Configuration center/assets/order-l
 assert.match(source, /function buffetSelectedTargets\(/);
 assert.match(source, /function currentBuffetWorkbenchTargets\(/);
 assert.match(source, /data-buffet-workbench-page-size[\s\S]{0,300}clearBuffetQuantitySelection/);
-assert.match(source, /data-buffet-quantity-store[\s\S]{0,350}clearBuffetQuantitySelection/);
+assert.doesNotMatch(source, /data-buffet-quantity-store/, 'outer store filter is removed; scene filter is separate');
 assert.match(source, /data-party-tab[\s\S]{0,150}clearBuffetQuantitySelection/);
 assert.match(source, /data-round-tab[\s\S]{0,150}clearBuffetQuantitySelection/);
 console.log("buffet product table selection boundaries verified");

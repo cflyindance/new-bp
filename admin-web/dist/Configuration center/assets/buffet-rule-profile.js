@@ -930,6 +930,12 @@
     if (conditions.memberMode === "specified" && (!Array.isArray(conditions.memberLevelIds) || !conditions.memberLevelIds.length)) return { valid: false, message: "请至少选择一个会员等级" };
     if (conditions.effectiveTo && conditions.effectiveFrom && conditions.effectiveFrom > conditions.effectiveTo) return { valid: false, message: "结束日期不能早于开始日期" };
     var slots = Array.isArray(conditions.businessHourSlots) ? conditions.businessHourSlots : [];
+    if (conditions.scopeTimeVersion === 1) {
+      if (!conditions.effectiveFrom) return { valid: false, message: "请填写开始时间" };
+      if (!window.BuffetEffectiveScope) return { valid: false, message: "活动时段组件未加载，请刷新后重试" };
+      var scopeError = window.BuffetEffectiveScope.validate(conditions);
+      if (scopeError) return { valid: false, message: scopeError };
+    }
     if (slots.some(function (slot) { return slot && slot.mode === "custom" && (!/^\d{2}:\d{2}$/.test(String(slot.from || "")) || !/^\d{2}:\d{2}$/.test(String(slot.to || "")) || String(slot.from) >= String(slot.to)); })) return { valid: false, message: "营业时间段无效" };
     return { valid: true, message: "" };
   }
