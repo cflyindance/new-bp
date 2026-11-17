@@ -36,6 +36,7 @@ export type RuleHitAuthorizationScope = "per-rule" | "combined";
 export type RuleHitAuthorizationValidity = "operation" | "order";
 
 export type RuleHitPasswordAuthLineConfig = {
+  /** Whether rule hits may expose an authorization override; false never bypasses a rule. */
   enabled: boolean;
   /** @deprecated compatibility mirror of validity; never sufficient for multi-rule execution. */
   mode: RuleHitPasswordAuthMode;
@@ -116,11 +117,11 @@ export function ensureRuleHitPasswordAuthToggleMigrated(): void {
   }
 }
 
-function defaultLineConfig(enabled = true): RuleHitPasswordAuthLineConfig {
+function defaultLineConfig(enabled = false): RuleHitPasswordAuthLineConfig {
   return { enabled, mode: MODE_DEFAULT, authorizationScope: "per-rule", validity: "operation" };
 }
 
-function defaultByLineConfig(enabled = true): RuleHitPasswordAuthByLine {
+function defaultByLineConfig(enabled = false): RuleHitPasswordAuthByLine {
   return Object.fromEntries(
     RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(enabled)]),
   ) as RuleHitPasswordAuthByLine;
@@ -271,6 +272,8 @@ function syncRowControls(editor: HTMLElement, panelEnabled: boolean): void {
     const lineId = cb.getAttribute("data-rule-hit-password-auth-line-enabled");
     if (!lineId) return;
     const lineEnabled = panelEnabled && cb.checked;
+    const methods = editor.querySelector<HTMLElement>(`[data-rule-hit-password-auth-methods][data-line="${CSS.escape(lineId)}"]`);
+    if (methods) methods.hidden = !lineEnabled;
     const modeRadios = editor.querySelectorAll<HTMLInputElement>(
       `[data-rule-hit-password-auth-field][data-line="${CSS.escape(lineId)}"]`,
     );
@@ -305,6 +308,10 @@ function collectByLineFromEditor(editor: HTMLElement): RuleHitPasswordAuthByLine
   return config;
 }
 
+export function ruleHitPasswordAuthGateDescription(enabled: boolean): string {
+  return enabled ? "命中允许授权的规则后，可通过授权继续操作。" : "命中限制后仅显示原因，不提供授权入口；规则仍然生效。";
+}
+
 export function ruleHitPasswordAuthExplanation(config: RuleHitPasswordAuthLineConfig): string {
   const scope = config.authorizationScope === "combined" ? "一次授权覆盖本次命中的全部待授权规则。" : "同一次操作命中的不同规则分别授权。";
   return scope + (config.validity === "order"
@@ -337,12 +344,13 @@ function renderByLineEditorHtml(enabled: boolean): string {
             ${item.enabled ? "checked" : ""}
             ${enabled ? "" : "disabled"}
             data-rule-hit-password-auth-line-enabled="${escapeHtml(line.id)}"
-            aria-label="${escapeHtml(line.label)} 启用命中规则密码授权"
+            aria-label="${escapeHtml(line.label)} 命中规则后允许授权放行"
           />
         </label>
       </td>
       <td class="px-3 py-2.5 align-top">
-        ${renderRuleHitPasswordAuthFields(line.id, item, !lineControlsOn)}
+        <div class="mb-3 inline-flex items-center gap-2 text-sm">允许授权放行<button type="button" class="order-rule-help" aria-label="允许授权放行说明" title="${escapeHtml(ruleHitPasswordAuthGateDescription(true) + ruleHitPasswordAuthGateDescription(false))}">?</button></div>
+        <div data-rule-hit-password-auth-methods data-line="${line.id}" ${lineControlsOn ? "" : "hidden"}><h4 class="mb-3 text-sm font-medium">授权方式</h4>${renderRuleHitPasswordAuthFields(line.id, item, !lineControlsOn)}</div>
       </td>
     </tr>`;
   }).join("");
@@ -357,7 +365,7 @@ function renderByLineEditorHtml(enabled: boolean): string {
           <thead class="bg-muted/40 text-xs text-muted-foreground">
             <tr>
               <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
-              <th class="px-3 py-2 font-medium w-[4.5rem]">启用</th>
+              <th class="px-3 py-2 font-medium w-[4.5rem]">允许授权</th>
               <th class="px-3 py-2 font-medium">授权方式</th>
             </tr>
           </thead>

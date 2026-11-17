@@ -51,7 +51,7 @@ const titles = [
   "订单下单时间间隔",
   "间隔时间内允许加购",
   "间隔时间内允许加购",
-  "命中规则后的授权方式",
+  "命中规则后允许授权放行",
   "允许可看不可点菜直接加入购物车",
   "可看不可点菜需服务员授权",
   "积分菜兑换需要权限",
@@ -61,7 +61,7 @@ const help = [
   "两次订单提交的最小间隔。",
   "设置订单间隔内是否直接允许加购；不设置加购授权或数量阈值。",
   "设置商品间隔内是否直接允许加购；不设置加购授权或数量阈值。",
-  "设置同时命中多条规则时的授权范围与有效范围。",
+  "命中允许授权的规则后，可通过授权继续操作。关闭时不提供授权入口，规则仍然生效；不能覆盖规则本身禁止授权的限制。",
   "关闭时，添加可看不可点菜需密码授权。",
   "设置可看不可点菜是否需要服务员授权。",
   "兑换积分菜须服务员输入密码授权。",
@@ -109,7 +109,7 @@ function lineSummaries(id: Line): string[] {
     interval.enabled ? `订单间隔 ${formatIntervalDuration(interval.seconds)}` : "订单间隔未启用",
     readOrder()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
     readMenu()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
-    auth.enabled ? `${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中授权未启用",
+    auth.enabled ? `允许授权放行 · ${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中规则后不可授权放行",
     readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜加购需授权",
     readView(596).includes(id) ? "可看不可点菜需服务员授权" : "未启用服务员授权要求",
     readPoints().includes(id) ? "积分菜兑换需授权" : "积分菜兑换无需授权",
@@ -168,7 +168,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
               ],
             )}</div>`;
           }
-          if (i === 3) body = renderRuleHitPasswordAuthFields(id, auth[id]);
+          if (i === 3) body = `<h4 class="mb-4 text-sm font-medium">授权方式</h4>${renderRuleHitPasswordAuthFields(id, auth[id])}`;
           return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
         })
         .join("")}</div></section>`;
