@@ -464,3 +464,5 @@
 .order-authorization-help:not(:has([data-help-dismissed])):hover .order-authorization-tooltip,
 .order-authorization-help:not(:has([data-help-dismissed])):focus-within .order-authorization-tooltip,
 .order-authorization-help:has([aria-expanded="true"]) .order-authorization-tooltip { display: block; }
+
+.order-settings-save [data-order-save-state]:empty { display: none; }

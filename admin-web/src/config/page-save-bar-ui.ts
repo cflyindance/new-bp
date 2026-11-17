@@ -29,7 +29,7 @@ function headerStateKey(pageKey: string): string {
   return `${resolveAutoDeploymentScope()?.storeIds[0] ?? "default"}:${pageKey}`;
 }
 function headerSaveState(pageKey: string, dirty: boolean): string {
-  return dirty ? "有未保存修改" : savedHeaderPages.has(headerStateKey(pageKey)) ? "已保存" : "暂无待保存修改";
+  return dirty ? "" : savedHeaderPages.has(headerStateKey(pageKey)) ? "已保存" : "暂无待保存修改";
 }
 
 function escapeHtml(s: string): string {
