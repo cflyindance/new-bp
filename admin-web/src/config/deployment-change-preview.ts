@@ -1,3 +1,6 @@
+import { formatIntervalDuration } from "./interval-display";
+import { MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES } from "./menu-order-limit-product-lines";
+import "./deployment-change-preview.css";
 /**
  * 配置变更前后对比预览（下发记录 / 保存并下发确认共用）
  */
@@ -228,7 +231,7 @@ function changePreviewKindBadgeClass(kind: ChangePreviewKind): string {
   return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
 }
 
-const CHANGE_ARROW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+
 
 export const CHANGE_CLOSE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
 
@@ -247,27 +250,7 @@ function resolveGroupPathForChange(change: DeploymentConfigChange): string[] {
 }
 
 function renderDetailRows(details: ChangeDetailRow[]): string {
-  return details
-    .map((row) => {
-      const rowKind = resolveChangePreviewKind(
-        { label: "", before: row.before, after: row.after },
-        [row],
-      );
-      const afterClass =
-        rowKind === "add"
-          ? "font-medium text-emerald-700 dark:text-emerald-400"
-          : rowKind === "delete"
-            ? "font-medium text-red-700 dark:text-red-400"
-            : "font-medium text-primary";
-      return `
-      <div class="grid grid-cols-1 gap-2 border-t border-border/60 py-2 first:border-t-0 first:pt-0 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start sm:gap-3">
-        <div class="text-xs font-medium text-muted-foreground sm:pt-1.5">${escapeHtml(row.label)}</div>
-        <div class="rounded-md bg-muted/50 px-2.5 py-1.5 text-sm text-muted-foreground">${escapeHtml(row.before || "—")}</div>
-        <div class="hidden items-center justify-center text-muted-foreground sm:flex" aria-hidden="true">${CHANGE_ARROW_ICON}</div>
-        <div class="rounded-md bg-primary/5 px-2.5 py-1.5 text-sm ${afterClass}">${escapeHtml(row.after || "—")}</div>
-      </div>`;
-    })
-    .join("");
+  return `<div class="change-compare-scroll"><table class="change-compare-table"><thead><tr><th scope="col">配置项</th><th scope="col">修改前</th><th scope="col">修改后</th></tr></thead><tbody>${details.map(row => `<tr><th scope="row">${escapeHtml(row.label)}</th><td class="change-compare-before">${escapeHtml(row.before || "—")}</td><td class="change-compare-after">${escapeHtml(row.after || "—")}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function entityOpToPreviewKind(op: EntityChangeOp): ChangePreviewKind {
@@ -339,7 +322,25 @@ function summarizeEntityOpsBadge(entities: EntityChangeBlock[]): string {
   return parts.join(" · ") || "修改";
 }
 
-function renderSettingChangeCard(change: DeploymentConfigChange): string {
+/** Presentation only: never rewrite stored change records or their dedupe keys. */
+function compactConfirmationChange(change: DeploymentConfigChange): DeploymentConfigChange {
+  const parts = change.label.split(" · ").filter(part => part !== "按产线配置");
+  if (parts[0] === "订单间隔" && parts[1] === "订单下单时间间隔") parts.shift();
+  if (parts[0] === "商品间隔" && parts[1] === "菜品下单时间间隔") parts.splice(0, 2, "商品下单间隔");
+  const label = [...new Set(parts)].join(" · ");
+  const lineLabels = new Map<string, string>(MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES.map(line => [line.id, line.label]));
+  const details = change.details?.map(row => {
+    const isOrderDuration = change.fieldKey === "588-order-place-interval-by-line" && /(^|\.)seconds$/.test(row.key);
+    const segments = row.label.split(" · ").filter(part => part !== "按产线配置");
+    const rowLabel = segments.map(part => lineLabels.get(part) ?? part).join(" · ");
+    const duration = (value: string) => /^\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value)) ? formatIntervalDuration(Number(value)) : value;
+    return { ...row, label: isOrderDuration ? rowLabel.replace(/（秒）|\(秒\)/g, "") : rowLabel, before: isOrderDuration ? duration(row.before) : row.before, after: isOrderDuration ? duration(row.after) : row.after };
+  });
+  return { ...change, label, details };
+}
+
+function renderSettingChangeCard(change: DeploymentConfigChange, compact = false): string {
+  if (compact) change = compactConfirmationChange(change);
   if (change.entities?.length) {
     return renderCollectionChangeCard(change);
   }
@@ -350,19 +351,20 @@ function renderSettingChangeCard(change: DeploymentConfigChange): string {
 
   const kind = resolveChangePreviewKind(normalized, details);
   const badge = change.operation?.trim() || changePreviewKindLabel(kind);
+  const showBadge = !compact || kind !== "edit" || !["修改", "修改配置", "修改数值"].includes(badge);
 
   return `
     <article class="rounded-lg border border-border bg-card p-3 sm:p-3.5">
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <h4 class="m-0 text-sm font-semibold text-card-foreground">${escapeHtml(normalized.label)}</h4>
-        <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${changePreviewKindBadgeClass(kind)}">${escapeHtml(badge)}</span>
+        ${showBadge ? `<span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${changePreviewKindBadgeClass(kind)}">${escapeHtml(badge)}</span>` : ""}
       </div>
       <div class="space-y-0">${renderDetailRows(details)}</div>
     </article>`;
 }
 
 /** 变更预览主体：按导航分组 + 设置项逐行对比 */
-export function renderChangePreviewSections(changes: DeploymentConfigChange[]): string {
+export function renderChangePreviewSections(changes: DeploymentConfigChange[], compact = false): string {
   if (changes.length === 0) {
     return `<p class="m-0 py-8 text-center text-sm text-muted-foreground">暂无变更明细</p>`;
   }
@@ -378,11 +380,11 @@ export function renderChangePreviewSections(changes: DeploymentConfigChange[]): 
 
   const sections = [...groups.values()]
     .map(({ title, items }) => {
-      const cards = items.map(renderSettingChangeCard).filter(Boolean).join("");
+      const cards = items.map(change => renderSettingChangeCard(change, compact)).filter(Boolean).join("");
       if (!cards) return "";
       return `
         <section class="space-y-3">
-          <h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">${escapeHtml(title)}</h3>
+          ${compact && groups.size === 1 ? "" : `<h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">${escapeHtml(title)}</h3>`}
           <div class="space-y-3">${cards}</div>
         </section>`;
     })
@@ -422,7 +424,7 @@ export function renderChangePreviewDialog(options: RenderChangePreviewDialogOpti
     title = mode === "confirm" ? "确认变更" : "变更记录",
     subtitle =
       mode === "confirm"
-        ? "请确认以下配置变更后再保存并下发。"
+        ? "确认后将保存并下发以下配置。"
         : "展示本次下发的配置变更前后对比",
     confirmLabel = "确认下发",
     closeAttr = "data-change-preview-close",
@@ -431,63 +433,19 @@ export function renderChangePreviewDialog(options: RenderChangePreviewDialogOpti
     zClass = "z-[70]",
   } = options;
 
-  const headerActions =
-    mode === "confirm"
-      ? `
-          <div class="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              ${closeAttr}
-              class="rounded-lg border border-border px-3 py-1.5 text-sm text-card-foreground hover:bg-muted"
-            >取消</button>
-            <button
-              type="button"
-              ${confirmAttr}
-              class="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >${escapeHtml(confirmLabel)}</button>
-          </div>`
-      : `
-          <div class="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              ${closeAttr}
-              class="rounded-lg border border-border px-3 py-1.5 text-sm text-card-foreground hover:bg-muted"
-            >关闭</button>
-            <button
-              type="button"
-              ${closeAttr}
-              class="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="关闭"
-            >${CHANGE_CLOSE_ICON}</button>
-          </div>`;
+  const headerActions = mode === "confirm"
+    ? `<button type="button" ${confirmAttr} class="change-preview-primary">${escapeHtml(confirmLabel)}</button>`
+    : `<button type="button" ${closeAttr} class="change-preview-primary">关闭</button>`;
 
-  return `
-    <div
-      id="${escapeHtml(dialogId)}"
-      class="fixed inset-0 ${zClass} flex items-end justify-center p-3 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="${escapeHtml(dialogId)}-title"
-      tabindex="-1"
-    >
-      <button
-        type="button"
-        class="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
-        ${backdropAttr}
-        aria-label="关闭"
-      ></button>
-      <div class="relative z-[1] flex max-h-[min(92dvh,40rem)] w-full max-w-3xl min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl animate-fade-in">
-        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
-          <div class="min-w-0">
-            <h2 id="${escapeHtml(dialogId)}-title" class="text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
-          </div>
-          ${headerActions}
-        </div>
-        <div class="min-h-0 flex-1 overflow-auto px-4 py-4 sm:px-5">
-          <h3 class="mb-4 text-sm font-semibold text-card-foreground">变更预览</h3>
-          <div class="space-y-5">${renderChangePreviewSections(changes)}</div>
-        </div>
-      </div>
-    </div>`;
+  return `<div id="${escapeHtml(dialogId)}" class="change-preview-overlay fixed inset-0 ${zClass}" role="dialog" aria-modal="true" aria-labelledby="${escapeHtml(dialogId)}-title" aria-describedby="${escapeHtml(dialogId)}-description" tabindex="-1">
+    <button type="button" class="change-preview-backdrop" ${backdropAttr} aria-label="关闭" tabindex="-1"></button>
+    <section class="change-preview-surface">
+      <header class="change-preview-header">
+        <button type="button" ${closeAttr} class="change-preview-close" aria-label="${mode === "confirm" ? "取消变更确认" : "关闭变更明细"}">${CHANGE_CLOSE_ICON}</button>
+        <div class="change-preview-heading"><h2 id="${escapeHtml(dialogId)}-title">${escapeHtml(title)}</h2><p id="${escapeHtml(dialogId)}-description">${escapeHtml(subtitle)}</p></div>
+        ${headerActions}
+      </header>
+      <div class="change-preview-body">${renderChangePreviewSections(changes, mode === "confirm")}</div>
+    </section>
+  </div>`;
 }
