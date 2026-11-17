@@ -60,8 +60,8 @@ const migratedOutV16 = [
 /** v1.5 迁出会员 hub catalog → 前厅（终端菜单展示与纯积分单下单） */
 const migratedOutV15 = [
   { seq: 509, to: "前厅 · `guest-menu-global`", note: "展示账户积分，C 端首页/菜单 chrome" },
-  { seq: 525, to: "前厅 · `guest-menu-structure`", note: "菜单页面展示积分菜" },
-  { seq: 526, to: "前厅 · `guest-menu-structure`", note: "菜单页面积分菜展示位置（顶部/尾部）" },
+  { seq: 525, to: "前厅 · `guest-menu-structure`", note: "菜单页面展示积分商品" },
+  { seq: 526, to: "前厅 · `guest-menu-structure`", note: "菜单页面积分商品展示位置（顶部/尾部）" },
   { seq: 527, to: "前厅 · `guest-order-rules`", note: "订单仅有积分商品可以兑换" },
 ];
 

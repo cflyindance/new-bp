@@ -165,7 +165,7 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
   [646, "命中任意规则后弹授权已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
   [595, "可看不可点加购已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
   [596, "可看不可点弹授权已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
-  [594, "积分菜授权已迁前厅 · /operations/queue-call/menu-order-limits/points"],
+  [594, "积分商品授权已迁前厅 · /operations/queue-call/menu-order-limits/points"],
   [527, "纯积分单兑换已迁前厅 · /operations/queue-call/menu-order-limits/points"],
   [
     563,

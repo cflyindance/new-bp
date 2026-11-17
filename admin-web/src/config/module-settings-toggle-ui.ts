@@ -243,7 +243,7 @@ export const HOTPOT_BASE_ORDER_MODE_TOGGLE_SEQ: readonly number[] = [574];
 /** 前厅 · 同一锅型相同锅底过半加收（575 主开关 + 规则列表，见 hotpot-half-surcharge-ui） */
 export const HOTPOT_HALF_SURCHARGE_TOGGLE_SEQ: readonly number[] = [575];
 
-/** 前厅 · 需要权限下单的积分菜（594 主开关 + eMenu 产线，见 points-dish-auth-order-ui） */
+/** 前厅 · 需要权限下单的积分商品（594 主开关 + eMenu 产线，见 points-dish-auth-order-ui） */
 export const POINTS_DISH_AUTH_ORDER_TOGGLE_SEQ: readonly number[] = [594];
 
 /** 前厅 · 命中任意规则后弹出密码授权（646 主开关 + 按产线启用/授权模式，见 rule-hit-password-auth-ui） */

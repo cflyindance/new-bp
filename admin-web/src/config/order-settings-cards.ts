@@ -58,7 +58,7 @@ const titles = [
   "命中规则后允许授权放行",
   "允许可看不可点菜直接加入购物车",
   "可看不可点菜需服务员授权",
-  "积分菜兑换需要权限",
+  "积分商品兑换需要权限",
   "允许纯积分商品订单兑换",
 ];
 const help = [
@@ -68,7 +68,7 @@ const help = [
   "命中允许授权的规则后，可通过授权继续操作。关闭时不提供授权入口，规则仍然生效；不能覆盖规则本身禁止授权的限制。",
   "关闭时，添加可看不可点菜需密码授权。",
   "设置可看不可点菜是否需要服务员授权。",
-  "兑换积分菜须服务员输入密码授权。",
+  "兑换积分商品须服务员输入密码授权。",
   "允许订单仅含积分商品时直接下单兑换。",
 ];
 const seqs = [588, 589, 591, 646, 595, 596, 594, 527];
@@ -116,7 +116,7 @@ function lineSummaries(id: Line): string[] {
     auth.enabled ? `允许授权放行 · ${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中规则后不可授权放行",
     readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜",
     resolveViewonlyDishBehavior(readView(595).includes(id), readView(596).includes(id)) === "authorize" ? `需服务员授权后加购 · ${readViewValidity()[id] === "order" ? "本单内有效" : "仅本次操作"}` : "禁止加购",
-    readPoints().includes(id) ? "积分菜兑换需授权" : "积分菜兑换无需授权",
+    readPoints().includes(id) ? "积分商品兑换需授权" : "积分商品兑换无需授权",
     readOnly(527).includes(id) ? "允许纯积分订单兑换" : "不允许纯积分订单兑换",
   ];
 }

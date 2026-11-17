@@ -56,8 +56,8 @@ const VIEWONLY_SETTINGS: SettingMeta[] = [
 const POINTS_SETTINGS: SettingMeta[] = [
   {
     seq: 594,
-    title: "需要权限下单的积分菜",
-    sceneDesc: "勾选产线后，食客兑换积分菜须服务员输入密码授权。",
+    title: "需要权限下单的积分商品",
+    sceneDesc: "勾选产线后，食客兑换积分商品须服务员输入密码授权。",
   },
   {
     seq: 527,
@@ -90,7 +90,7 @@ export const MENU_ORDER_OTHER_SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: "points",
     title: "积分商品规则",
-    desc: "配置积分菜兑换授权与纯积分订单是否允许直接下单。",
+    desc: "配置积分商品兑换授权与纯积分订单是否允许直接下单。",
     settings: POINTS_SETTINGS,
   },
 ];

@@ -1,5 +1,5 @@
 /**
- * 前厅 · 食客端·下单与规则：seq 594 需要权限下单的积分菜（主开关 + 多产线多选）。
+ * 前厅 · 食客端·下单与规则：seq 594 需要权限下单的积分商品（主开关 + 多产线多选）。
  */
 
 import {
@@ -94,7 +94,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
       class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-points-dish-auth-order-lines="${POINTS_DISH_AUTH_ORDER_SEQ}"
       role="group"
-      aria-label="需要权限下单的积分菜适用产线"
+      aria-label="需要权限下单的积分商品适用产线"
     >
       ${cells}
     </div>`;

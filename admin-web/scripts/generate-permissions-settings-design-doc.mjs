@@ -44,7 +44,7 @@ function inferArea(nav, mod, title) {
   if (t.includes("登出") || t.includes("登录") || t.includes("密码") || t.includes("授权")) return "安全授权";
   if (t.includes("角色") || t.includes("员工") || t.includes("钱箱")) return "员工权限";
   if (t.includes("下单限制") || t.includes("次数") || t.includes("时长") || t.includes("间隔")) return "下单限制";
-  if (t.includes("可看不可点") || t.includes("积分菜") || t.includes("服务员授权")) return "流程控制";
+  if (t.includes("可看不可点") || t.includes("积分商品") || t.includes("服务员授权")) return "流程控制";
   return "权限";
 }
 
@@ -151,7 +151,7 @@ push(
   "|---------------|--------------|",
   "| 账户安全与授权 | 系统安全、基本设置（登录规则）、iPad密码权限、授权设置 |",
   "| 角色与员工权限 | 员工工时、角色、钱箱权限、只读菜权限 |",
-  "| 下单操作限制与授权 | 自定义点单、用户设置（前置授权）、可看不可点与积分菜授权 |",
+  "| 下单操作限制与授权 | 自定义点单、用户设置（前置授权）、可看不可点与积分商品授权 |",
   "| 食客下单限制规则 | eMenu/全局下单限制（时长、次数、每轮数量、间隔） |",
   "",
   "---",

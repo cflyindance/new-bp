@@ -214,7 +214,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     594,
-    "开启后，在选定产线（eMenu）兑换积分菜须服务员输入密码授权。",
+    "开启后，在选定产线（eMenu）兑换积分商品须服务员输入密码授权。",
   ],
   [
     507,

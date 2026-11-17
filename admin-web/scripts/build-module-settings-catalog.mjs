@@ -89,6 +89,12 @@ const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
   "/settings/advanced": "系统设置",
 };
 
+// Preserve catalog identities when only points-product display terminology changes.
+const POINTS_CATALOG_STABLE_IDS = new Map([
+  [525, "s525-foh-guest-menu-body-菜单页面展示积分菜"],
+  [526, "s526-foh-guest-menu-body-菜单页面积分菜展示位置"],
+]);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const repoDocs = path.join(root, "..", "docs");
@@ -307,7 +313,7 @@ function buildCatalog(rows, mapping) {
     }
     ts += `    items: [\n`;
     for (const it of bucket.items) {
-      const id = `s${it.seq}-${it.groupKey}-${slugify(it.title)}`.slice(0, 80);
+      const id = POINTS_CATALOG_STABLE_IDS.get(it.seq) ?? `s${it.seq}-${it.groupKey}-${slugify(it.title)}`.slice(0, 80);
       ts += `      { id: ${JSON.stringify(id)}, groupTitle: ${JSON.stringify(it.groupTitle)}, groupKey: ${JSON.stringify(it.groupKey)}, sceneDesc: ${JSON.stringify(it.sceneDesc)}, moduleName: ${JSON.stringify(it.moduleName)}, feature: ${JSON.stringify(it.feature)}, title: ${JSON.stringify(it.title)}, seq: ${it.seq} },\n`;
     }
     ts += `    ],\n`;

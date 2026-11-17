@@ -1,8 +1,8 @@
 /**
  * 会员中心 / 前厅 · 积分规则与兑换商品
- * — 525 菜单页面展示积分菜：产线多选（样式对齐 509 展示账户积分），无总开关、默认展开
+ * — 525 菜单页面展示积分商品：产线多选（样式对齐 509 展示账户积分），无总开关、默认展开
  * — 527 纯积分订单：默认开启（无总开关）+ 产线多选（POS / PayPad / POS GO / eMenu / SDI）
- * — 526 积分菜展示位置：按产线单选顶部/尾部（Kiosk / eMenu / SDI / Online Order）
+ * — 526 积分商品展示位置：按产线单选顶部/尾部（Kiosk / eMenu / SDI / Online Order）
  * seq 509 展示账户积分已迁至 guest-menu-line-toggle-ui（前厅·食客端·首页与版式）。
  */
 
@@ -37,7 +37,7 @@ export const MEMBER_SHOW_POINTS_DISHES_SEQ = 525;
 export const MEMBER_POINTS_DISH_POSITION_SEQ = 526;
 export const MEMBER_POINTS_ONLY_ORDER_SEQ = 527;
 
-/** 526 积分菜展示位置适用产线（不含 POS / PayPad） */
+/** 526 积分商品展示位置适用产线（不含 POS / PayPad） */
 export const MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES = getGuestMenuBodyProductLines(
   MEMBER_POINTS_DISH_POSITION_SEQ,
 );
@@ -291,7 +291,7 @@ export function renderMemberShowPointsDishesPanelHtml(): string {
         class="flex w-full max-w-2xl overflow-hidden rounded-md border border-border bg-muted/40"
         data-member-show-points-dishes-lines
         role="group"
-        aria-label="菜单页面展示积分菜适用产线"
+        aria-label="菜单页面展示积分商品适用产线"
       >
         ${cells}
       </div>
@@ -397,13 +397,13 @@ export function renderMemberPointsDishPositionByLineEditorHtml(): string {
             class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
             data-member-points-dish-position-enabled-line="${escapeHtml(line.id)}"
             ${enabled ? "checked" : ""}
-            aria-label="启用 ${escapeHtml(line.label)} 积分菜展示位置"
+            aria-label="启用 ${escapeHtml(line.label)} 积分商品展示位置"
           />
           <span>${escapeHtml(line.label)}</span>
         </label>
       </td>
       <td class="px-3 py-2.5">
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="radiogroup" aria-label="${escapeHtml(line.label)} 积分菜展示位置">${radios}</div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="radiogroup" aria-label="${escapeHtml(line.label)} 积分商品展示位置">${radios}</div>
       </td>
     </tr>`;
   }).join("");
