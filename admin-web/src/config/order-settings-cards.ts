@@ -1,3 +1,4 @@
+import { AUTHORIZATION_VALIDITY_OPTIONS, renderAuthorizationValidityLabel, POINTS_AUTHORIZATION_VALIDITY_HELP, VIEWONLY_AUTHORIZATION_VALIDITY_HELP } from "./authorization-validity-ui";
 import { readScopeFilters } from "../auth/session-scope";
 import { combineIntervalParts, formatIntervalDuration } from "./interval-display";
 import { renderPageStorePickerBar } from "../shell/page-store-picker";
@@ -41,6 +42,8 @@ import {
   writeViewonlyDishRuleLines as writeView,
 } from "./module-settings-viewonly-dish-rules-ui";
 import {
+  readPointsDishAuthorizationValidity as readPointsValidity,
+  writePointsDishAuthorizationValidity as writePointsValidity,
   readPointsDishAuthOrderLines as readPoints,
   writePointsDishAuthOrderLines as writePoints,
 } from "./module-settings-points-dish-auth-order-ui";
@@ -58,7 +61,7 @@ const titles = [
   "命中规则后允许授权放行",
   "允许可看不可点菜直接加入购物车",
   "可看不可点菜需服务员授权",
-  "积分商品兑换需要权限",
+  "积分商品兑换需服务员授权",
   "允许纯积分商品订单兑换",
 ];
 const help = [
@@ -113,10 +116,10 @@ function lineSummaries(id: Line): string[] {
     interval.enabled ? `订单间隔 ${formatIntervalDuration(interval.seconds)}` : "订单间隔未启用",
     readOrder()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
     readMenu()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
-    auth.enabled ? `允许授权放行 · ${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效（已授权规则）" : "仅本次操作"}` : "命中规则后不可授权放行",
+    auth.enabled ? `允许授权放行 · ${auth.authorizationScope === "combined" ? "合并授权" : "逐条规则授权"} · ${auth.validity === "order" ? "本单内有效" : "仅本次操作"}` : "命中规则后不可授权放行",
     readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜",
     resolveViewonlyDishBehavior(readView(595).includes(id), readView(596).includes(id)) === "authorize" ? `需服务员授权后加购 · ${readViewValidity()[id] === "order" ? "本单内有效" : "仅本次操作"}` : "禁止加购",
-    readPoints().includes(id) ? "积分商品兑换需授权" : "积分商品兑换无需授权",
+    readPoints().includes(id) ? `积分商品兑换需授权 · ${readPointsValidity()[id] === "order" ? "本单内有效" : "仅本次操作"}` : "积分商品兑换无需授权",
     readOnly(527).includes(id) ? "允许纯积分订单兑换" : "不允许纯积分订单兑换",
   ];
 }
@@ -130,7 +133,7 @@ function renderViewonlyDishCard(line: Line, label: string, direct: boolean, staf
       </div></div>
       <div data-module-setting-row-seq="596" data-order-viewonly-auth-row ${direct ? "hidden" : ""}>
         <fieldset data-order-viewonly-auth-fieldset class="m-0 mt-5 border-0 p-0"><div class="order-card-field"><label for="viewonly-staff-${line}">允许服务员授权放行</label><input id="viewonly-staff-${line}" type="checkbox" role="switch" class="order-setting-switch" data-order-viewonly-staff data-line="${line}" aria-label="${esc(label)} 可看不可点菜允许服务员授权放行" ${staff ? "checked" : ""}></div></fieldset>
-        <div class="mt-5" data-order-viewonly-validity-row ${staff ? "" : "hidden"}><div class="order-card-field"><span>放行有效范围</span><div class="order-card-choices" role="radiogroup" aria-label="${esc(label)} 可看不可点菜放行有效范围">${[["operation", "仅本次操作"], ["order", "本单内有效"]].map(([value, text]) => `<label><input type="radio" name="viewonly-validity-${line}" data-order-viewonly-validity data-line="${line}" value="${value}" ${validity === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></div></div>
+        <div class="mt-5" data-order-viewonly-validity-row ${staff ? "" : "hidden"}><div class="order-card-field">${renderAuthorizationValidityLabel(`viewonly-validity-help-${line}`, VIEWONLY_AUTHORIZATION_VALIDITY_HELP)}<div class="order-card-choices" role="radiogroup" aria-label="${esc(label)} 可看不可点商品授权有效范围">${AUTHORIZATION_VALIDITY_OPTIONS.map(([value, text]) => `<label><input type="radio" name="viewonly-validity-${line}" data-order-viewonly-validity data-line="${line}" value="${value}" ${validity === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></div></div>
       </div>
     </div>
   </article>`;
@@ -190,6 +193,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
               ],
             )}</div>`;
           }
+          if (i === 6) body = `<div class="order-card-field">${renderAuthorizationValidityLabel(`points-validity-help-${id}`, POINTS_AUTHORIZATION_VALIDITY_HELP)}<div class="order-card-choices" role="radiogroup" aria-label="${esc(line.label)} 积分商品授权有效范围">${AUTHORIZATION_VALIDITY_OPTIONS.map(([value, text]) => `<label><input type="radio" name="points-validity-${id}" data-order-points-validity data-line="${id}" value="${value}" ${readPointsValidity()[id] === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></div>`;
           if (i === 3) body = `<h4 class="mb-4 text-sm font-medium">授权方式</h4>${renderRuleHitPasswordAuthFields(id, auth[id])}`;
           return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}" ${i === 1 && !interval[id].enabled ? "hidden" : ""}><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
         })
@@ -260,7 +264,26 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       }
     });
   };
+  host.addEventListener("focusin", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-authorization-help]");
+    if (button) delete button.dataset.helpDismissed;
+  });
+  host.addEventListener("pointerover", (event) => {
+    const help = (event.target as HTMLElement).closest<HTMLElement>(".order-authorization-help");
+    if (help && !help.contains((event as PointerEvent).relatedTarget as Node | null)) {
+      help.querySelector<HTMLButtonElement>("[data-authorization-help]")?.removeAttribute("data-help-dismissed");
+    }
+  });
   host.addEventListener("click", (event) => {
+    const helpButton = (event.target as Element).closest<HTMLButtonElement>("[data-authorization-help]");
+    if (helpButton) {
+      const open = helpButton.getAttribute("aria-expanded") !== "true";
+      helpButton.setAttribute("aria-expanded", String(open));
+      if (open) delete helpButton.dataset.helpDismissed;
+      else helpButton.dataset.helpDismissed = "true";
+      return;
+    }
+    host.querySelectorAll('[data-authorization-help][aria-expanded="true"]').forEach(button => button.setAttribute("aria-expanded", "false"));
     const disclosure = (event.target as Element).closest<HTMLButtonElement>("[data-order-line-disclosure]");
     if (disclosure) {
       const card = disclosure.closest<HTMLElement>("[data-order-line]")!;
@@ -279,6 +302,12 @@ export function bindOrderSettingsCards(root: ParentNode): void {
     if (scene === "order" || scene === "product") selectScene(scene);
   });
   host.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && (event.target as Element).matches("[data-authorization-help]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      host.querySelectorAll('[data-authorization-help][aria-expanded="true"]').forEach(button => button.setAttribute("aria-expanded", "false"));
+      host.querySelectorAll<HTMLButtonElement>("[data-authorization-help]").forEach(button => button.dataset.helpDismissed = "true");
+    }
     if (!(event.target as Element).matches("[data-order-interval-scene]"))
       return;
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -295,6 +324,13 @@ export function bindOrderSettingsCards(root: ParentNode): void {
   });
   host.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
+    if (input.matches("[data-order-points-validity]")) {
+      const line = input.dataset.line as Line;
+      if (!lines.some(item => item.id === line) || !readPoints().includes(line)) return;
+      if (input.value !== "operation" && input.value !== "order") return;
+      const validity = readPointsValidity(); validity[line] = input.value;
+      writePointsValidity(validity); refreshSummaries(); return;
+    }
     if (input.matches("[data-order-viewonly-validity]")) {
       const line = input.dataset.line as Line;
       if (!lines.some(item => item.id === line) || readView(595).includes(line) || !readView(596).includes(line)) return;

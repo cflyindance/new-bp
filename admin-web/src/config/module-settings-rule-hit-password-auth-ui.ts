@@ -1,3 +1,4 @@
+import { AUTHORIZATION_VALIDITY_OPTIONS, renderAuthorizationValidityLabel, RULE_AUTHORIZATION_VALIDITY_HELP } from "./authorization-validity-ui";
 /**
  * 前厅 · 下单规则：seq 646，按产线设置授权范围和有效范围。
  * 本模块维护后台配置，不执行点餐端的规则授权。
@@ -63,7 +64,7 @@ const MODE_OPTIONS: ReadonlyArray<{
   },
   {
     value: "auth-once",
-    label: "已授权规则本单内有效",
+    label: "本单内有效",
   },
 ];
 
@@ -323,9 +324,9 @@ export function renderRuleHitPasswordAuthFields(line: RuleHitPasswordAuthProduct
   const lineLabel = RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES.find(item => item.id === line)?.label ?? line;
   const fields = [
     { key: "authorizationScope", label: "授权范围", value: config.authorizationScope, options: [["per-rule", "逐条规则授权"], ["combined", "合并授权"]] },
-    { key: "validity", label: "有效范围", value: config.validity, options: [["operation", "仅本次操作"], ["order", "本单内有效"]] },
+    { key: "validity", label: "授权有效范围", value: config.validity, options: AUTHORIZATION_VALIDITY_OPTIONS },
   ];
-  return fields.map(field => `<div class="order-card-field"><span>${field.label}</span><div class="order-card-choices" role="radiogroup" aria-label="${escapeHtml(lineLabel)} ${field.label}">${field.options.map(([value, label]) => `<label class="inline-flex items-center gap-2 text-sm"><input type="radio" name="rule-auth-${field.key}-${line}" data-rule-hit-password-auth-field="${field.key}" data-line="${line}" value="${value}" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" ${field.value === value ? "checked" : ""} ${disabled ? "disabled" : ""}><span>${label}</span></label>`).join("")}</div></div>`).join("") + `<p class="mt-4 text-xs leading-5 text-muted-foreground" data-rule-hit-password-auth-note data-line="${line}">${ruleHitPasswordAuthExplanation(config)}</p>`;
+  return fields.map(field => `<div class="order-card-field">${field.key === "validity" ? renderAuthorizationValidityLabel(`rule-validity-help-${line}`, RULE_AUTHORIZATION_VALIDITY_HELP) : `<span>${field.label}<button type="button" class="order-rule-help" aria-label="授权范围说明" title="逐条规则授权：本次命中的不同规则分别授权。合并授权：一次授权放行本次命中的全部允许授权的待授权规则。">?</button></span>`}<div class="order-card-choices" role="radiogroup" aria-label="${escapeHtml(lineLabel)} ${field.label}">${field.options.map(([value, label]) => `<label class="inline-flex items-center gap-2 text-sm"><input type="radio" name="rule-auth-${field.key}-${line}" data-rule-hit-password-auth-field="${field.key}" data-line="${line}" value="${value}" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" ${field.value === value ? "checked" : ""} ${disabled ? "disabled" : ""}><span>${label}</span></label>`).join("")}</div></div>`).join("");
 }
 
 function renderByLineEditorHtml(enabled: boolean): string {

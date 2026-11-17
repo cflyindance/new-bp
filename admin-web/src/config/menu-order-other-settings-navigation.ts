@@ -56,7 +56,7 @@ const VIEWONLY_SETTINGS: SettingMeta[] = [
 const POINTS_SETTINGS: SettingMeta[] = [
   {
     seq: 594,
-    title: "需要权限下单的积分商品",
+    title: "积分商品兑换需服务员授权",
     sceneDesc: "勾选产线后，食客兑换积分商品须服务员输入密码授权。",
   },
   {

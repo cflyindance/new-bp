@@ -23,6 +23,16 @@ const ALL_LINE_IDS: PointsDishAuthOrderProductLineId[] = [
   ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
 ];
 
+export type PointsDishAuthorizationValidity = "operation" | "order";
+export const POINTS_DISH_AUTH_VALIDITY_FIELD_ID = "594-points-dish-auth-validity-by-line";
+export function readPointsDishAuthorizationValidity(): Record<PointsDishAuthOrderProductLineId, PointsDishAuthorizationValidity> {
+  const raw = readModuleSettingJson<Partial<Record<PointsDishAuthOrderProductLineId, unknown>>>(POINTS_DISH_AUTH_VALIDITY_FIELD_ID, {});
+  return Object.fromEntries(ALL_LINE_IDS.map(line => [line, raw?.[line] === "order" ? "order" : "operation"])) as Record<PointsDishAuthOrderProductLineId, PointsDishAuthorizationValidity>;
+}
+export function writePointsDishAuthorizationValidity(config: Record<PointsDishAuthOrderProductLineId, PointsDishAuthorizationValidity>): void {
+  writeModuleSettingJson(POINTS_DISH_AUTH_VALIDITY_FIELD_ID, Object.fromEntries(ALL_LINE_IDS.map(line => [line, config[line] === "order" ? "order" : "operation"])));
+}
+
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
