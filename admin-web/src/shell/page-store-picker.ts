@@ -1,3 +1,10 @@
+import { usesInPageStorePicker as showInlineStorePicker } from "../auth/session-scope";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { isPageSavePending } from "../config/page-save-registry";
+import {
+  discardPageDraft,
+  resolvePageSaveKey,
+} from "../config/page-settings-draft";
 /**
  * 品牌多门店视角 · 页内门店选择（顶栏不展示门店下拉，进入二/三级配置页后先选门店）
  */
@@ -18,8 +25,8 @@ import { isFinanceStoreScopedNavigationPath } from "../config/finance-store-scop
 import { isFohStoreScopedNavigationPath } from "../config/foh-store-scope";
 import { isTeamStoreScopedNavigationPath } from "../config/team-store-scope";
 import { getUiLocale, t, tf } from "../i18n";
-import { currentBrandPrincipal } from '../config/brand-access-store';
-import { readAppHashPath } from '../config/app-routes';
+import { currentBrandPrincipal } from "../config/brand-access-store";
+import { readAppHashPath } from "../config/app-routes";
 
 function escapeHtml(s: string): string {
   return s
@@ -46,7 +53,10 @@ export function isStoreConfigNavigationPath(path: string): boolean {
   if (!usesInPageStorePicker()) return false;
   if (isNavHomePath(path)) return false;
   if (path.startsWith("/dashboard")) return false;
-  if (CONFIG_PATH_PREFIX_EXCLUSIONS.some((p) => path === p || path.startsWith(p))) return false;
+  if (
+    CONFIG_PATH_PREFIX_EXCLUSIONS.some((p) => path === p || path.startsWith(p))
+  )
+    return false;
 
   if (getModuleSettingsBasePath(path)) return true;
   if (isFohSettingsPath(path)) return true;
@@ -55,7 +65,8 @@ export function isStoreConfigNavigationPath(path: string): boolean {
   if (isFohStoreScopedNavigationPath(path)) return true;
   if (isFinanceStoreScopedNavigationPath(path)) return true;
 
-  if (path.includes("/settings") && !path.startsWith("/settings/overview")) return true;
+  if (path.includes("/settings") && !path.startsWith("/settings/overview"))
+    return true;
 
   return false;
 }
@@ -74,12 +85,14 @@ function optionLabel(opt: ScopeOption, locale: "zh" | "en"): string {
 
 function resolveSelectedStoreId(stores: ScopeOption[]): string {
   const scope = readScopeFilters();
-  if (scope.store && stores.some((o) => o.value === scope.store)) return scope.store;
+  if (scope.store && stores.some((o) => o.value === scope.store))
+    return scope.store;
   return resolveDefaultScopedStoreId() || stores[0]?.value || "";
 }
 
 /** 页内门店选择条（已选门店时展示在配置区顶部） */
-export function renderPageStorePickerBar(): string {
+export function renderPageStorePickerBar(compact = false): string {
+  if (compact && !showInlineStorePicker()) return "";
   const locale = getUiLocale();
   const stores = listPageStoreOptions();
   const selected = resolveSelectedStoreId(stores);
@@ -91,6 +104,9 @@ export function renderPageStorePickerBar(): string {
       return `<option value="${escapeHtml(o.value)}"${sel}>${lab}</option>`;
     })
     .join("");
+
+  if (compact)
+    return `<div data-page-store-picker class="order-settings-store"><label class="sr-only" for="page-store-picker-select">${escapeHtml(t("header.scopeStore"))}</label><select id="page-store-picker-select" aria-label="${escapeHtml(t("pageStorePicker.selectAria"))}">${options || `<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`}</select></div>`;
 
   return `
     <div
@@ -127,7 +143,10 @@ export function renderPageStorePickerGate(): string {
   const locale = getUiLocale();
   const stores = listPageStoreOptions();
   const options = stores
-    .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(optionLabel(o, locale))}</option>`)
+    .map(
+      (o) =>
+        `<option value="${escapeHtml(o.value)}">${escapeHtml(optionLabel(o, locale))}</option>`,
+    )
     .join("");
 
   return `
@@ -156,10 +175,18 @@ export function renderPageStorePickerGate(): string {
 }
 
 /** 包装配置页主内容：优先默认选店后展示选择条 + 内容 */
-export function wrapPageStoreConfigContent(path: string, contentHtml: string): string {
+export function wrapPageStoreConfigContent(
+  path: string,
+  contentHtml: string,
+): string {
   if (!isStoreConfigNavigationPath(path)) return contentHtml;
   ensureInPageDefaultStoreSelected();
   if (!hasPageStoreSelected()) return renderPageStorePickerGate();
+  if (
+    path === "/operations/queue-call/menu-order-limits/other" ||
+    path.startsWith("/operations/queue-call/menu-order-limits/other/")
+  )
+    return contentHtml;
   return `<div class="flex min-h-0 min-w-0 flex-1 flex-col">${renderPageStorePickerBar()}<div data-page-store-config-body class="flex min-h-0 min-w-0 flex-1 flex-col">${contentHtml}</div></div>`;
 }
 
@@ -171,28 +198,61 @@ function persistPageStore(storeId: string, onMount: () => void): void {
 
 export function bindPageStorePicker(onMount: () => void): void {
   if (!usesInPageStorePicker()) return;
-  if(currentBrandPrincipal() && !isStoreConfigNavigationPath(readAppHashPath()))return;
+  if (
+    currentBrandPrincipal() &&
+    !isStoreConfigNavigationPath(readAppHashPath())
+  )
+    return;
 
   if (ensureInPageDefaultStoreSelected()) {
     onMount();
     return;
   }
 
-  const barSelect = document.getElementById("page-store-picker-select") as HTMLSelectElement | null;
-  const gateSelect = document.getElementById("page-store-picker-gate-select") as HTMLSelectElement | null;
+  const barSelect = document.getElementById(
+    "page-store-picker-select",
+  ) as HTMLSelectElement | null;
+  const gateSelect = document.getElementById(
+    "page-store-picker-gate-select",
+  ) as HTMLSelectElement | null;
   const select = barSelect ?? gateSelect;
   if (!select || select.dataset.pageStorePickerBound === "1") return;
   select.dataset.pageStorePickerBound = "1";
 
   const stores = listPageStoreOptions();
   const selected = resolveSelectedStoreId(stores);
-  if (selected && Array.from(select.options).some((o) => o.value === selected)) {
+  if (
+    selected &&
+    Array.from(select.options).some((o) => o.value === selected)
+  ) {
     select.value = selected;
   }
 
-  select.addEventListener("change", () => {
+  select.addEventListener("change", async () => {
     const storeId = select.value;
     if (!storeId) return;
+    const path = readAppHashPath();
+    const key = resolvePageSaveKey(path);
+    if (
+      key === "/operations/queue-call/menu-order-limits/other" &&
+      isPageSavePending(key)
+    ) {
+      const previous = readScopeFilters().store || selected;
+      select.value = previous;
+      select.disabled = true;
+      try {
+        const confirmed = await openConfirmDialog({
+          title: "切换门店",
+          message: "当前页有未保存的修改，切换门店将放弃这些修改。确定切换吗？",
+          confirmLabel: "放弃并切换",
+          danger: true,
+        });
+        if (!confirmed) return;
+        discardPageDraft(key);
+      } finally {
+        select.disabled = false;
+      }
+    }
     persistPageStore(storeId, onMount);
   });
 }

@@ -4,7 +4,10 @@
  */
 import { getUserSessionContext } from "../auth/session-permissions";
 import { buildPermissionResourceIndex } from "../config/permission-registry";
-import { resolveSnapshotL4SettingAccess, type ResolvedL4SettingAccess } from "./rbac-store";
+import {
+  resolveSnapshotL4SettingAccess,
+  type ResolvedL4SettingAccess,
+} from "./rbac-store";
 
 const resourceIndex = buildPermissionResourceIndex();
 const settingKeyByPathSeq = new Map<string, string>();
@@ -15,11 +18,16 @@ for (const r of resourceIndex.byKey.values()) {
   }
 }
 
-export function permissionKeyForSetting(settingsPath: string, seq: number): string | undefined {
+export function permissionKeyForSetting(
+  settingsPath: string,
+  seq: number,
+): string | undefined {
   return settingKeyByPathSeq.get(`${settingsPath}#${seq}`);
 }
 
-export function resolveCurrentUserL4SettingAccess(permissionKey: string): ResolvedL4SettingAccess {
+export function resolveCurrentUserL4SettingAccess(
+  permissionKey: string,
+): ResolvedL4SettingAccess {
   const ctx = getUserSessionContext();
   if (!ctx) return "editable";
   if (!ctx.roleIds.length) return "editable";
@@ -27,21 +35,27 @@ export function resolveCurrentUserL4SettingAccess(permissionKey: string): Resolv
 }
 
 function setSettingRowReadOnly(row: Element): void {
-  row.querySelectorAll<HTMLElement>(
-    "button[data-module-setting-toggle], input, select, textarea, [contenteditable='true']",
-  ).forEach((el) => {
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-      el.disabled = true;
-      el.readOnly = true;
-    } else if (el instanceof HTMLSelectElement) {
-      el.disabled = true;
-    } else if (el instanceof HTMLButtonElement) {
-      el.disabled = true;
-      el.classList.add("opacity-50", "pointer-events-none", "cursor-not-allowed");
-    } else {
-      el.classList.add("pointer-events-none", "opacity-60");
-    }
-  });
+  row
+    .querySelectorAll<HTMLElement>(
+      "button[data-module-setting-toggle], input, select, textarea, [contenteditable='true']",
+    )
+    .forEach((el) => {
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.disabled = true;
+        el.readOnly = true;
+      } else if (el instanceof HTMLSelectElement) {
+        el.disabled = true;
+      } else if (el instanceof HTMLButtonElement) {
+        el.disabled = true;
+        el.classList.add(
+          "opacity-50",
+          "pointer-events-none",
+          "cursor-not-allowed",
+        );
+      } else {
+        el.classList.add("pointer-events-none", "opacity-60");
+      }
+    });
 }
 
 function hideSettingRow(row: Element): void {
@@ -49,49 +63,56 @@ function hideSettingRow(row: Element): void {
   (row as HTMLElement).setAttribute("aria-hidden", "true");
 }
 
-function findSettingRowForSeq(root: ParentNode, seq: number): Element | null {
-  const byRowAttr = root.querySelector(`[data-module-setting-row-seq="${seq}"]`);
-  if (byRowAttr) return byRowAttr;
-
+function findSettingRowsForSeq(root: ParentNode, seq: number): Element[] {
+  const rows = [
+    ...root.querySelectorAll(`[data-module-setting-row-seq="${seq}"]`),
+  ];
+  if (rows.length) return rows;
   const toggle = root.querySelector(`[data-module-setting-toggle="${seq}"]`);
-  if (toggle) return toggle.closest("li") ?? toggle.closest("[data-module-setting-row-seq]");
-
-  return null;
+  const row =
+    toggle?.closest("li") ?? toggle?.closest("[data-module-setting-row-seq]");
+  return row ? [row] : [];
 }
 
 /** 按当前用户 RBAC 限制设置页 L4 行的开关与表单控件 */
-export function applyModuleSettingsRbacAccess(settingsPath: string, root: ParentNode = document): void {
+export function applyModuleSettingsRbacAccess(
+  settingsPath: string,
+  root: ParentNode = document,
+): void {
   const catalogSeqs = new Set<number>();
-  root.querySelectorAll<HTMLElement>("[data-module-setting-toggle]").forEach((el) => {
-    const seq = Number(el.getAttribute("data-module-setting-toggle"));
-    if (Number.isFinite(seq)) catalogSeqs.add(seq);
-  });
-  root.querySelectorAll<HTMLElement>("[data-module-setting-row-seq]").forEach((el) => {
-    const seq = Number(el.getAttribute("data-module-setting-row-seq"));
-    if (Number.isFinite(seq)) catalogSeqs.add(seq);
-  });
+  root
+    .querySelectorAll<HTMLElement>("[data-module-setting-toggle]")
+    .forEach((el) => {
+      const seq = Number(el.getAttribute("data-module-setting-toggle"));
+      if (Number.isFinite(seq)) catalogSeqs.add(seq);
+    });
+  root
+    .querySelectorAll<HTMLElement>("[data-module-setting-row-seq]")
+    .forEach((el) => {
+      const seq = Number(el.getAttribute("data-module-setting-row-seq"));
+      if (Number.isFinite(seq)) catalogSeqs.add(seq);
+    });
 
   for (const seq of catalogSeqs) {
     const permissionKey = permissionKeyForSetting(settingsPath, seq);
     if (!permissionKey) continue;
 
     const access = resolveCurrentUserL4SettingAccess(permissionKey);
-    const row = findSettingRowForSeq(root, seq);
-    if (!row) continue;
+    for (const row of findSettingRowsForSeq(root, seq)) {
+      row.removeAttribute("data-rbac-l4-access");
+      row.classList.remove("hidden");
+      row.removeAttribute("aria-hidden");
 
-    row.removeAttribute("data-rbac-l4-access");
-    row.classList.remove("hidden");
-    row.removeAttribute("aria-hidden");
+      if (access === "denied") {
+        row.setAttribute("data-rbac-l4-access", "denied");
+        hideSettingRow(row);
+        continue;
+      }
 
-    if (access === "denied") {
-      row.setAttribute("data-rbac-l4-access", "denied");
-      hideSettingRow(row);
-      continue;
-    }
-
-    row.setAttribute("data-rbac-l4-access", access);
-    if (access === "display-only") {
-      setSettingRowReadOnly(row);
+      row.setAttribute("data-rbac-l4-access", access);
+      if (access === "display-only") {
+        setSettingRowReadOnly(row);
+      }
     }
   }
 }

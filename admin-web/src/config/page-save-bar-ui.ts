@@ -54,14 +54,20 @@ function formatDeployedHint(pageKey: string): string {
   }
 }
 
-export function renderPageSaveBar(path: string): string {
+export function renderPageSaveBar(
+  path: string,
+  placement: "footer" | "header" = "footer",
+): string {
   const pageKey = resolvePageSaveKey(path);
   if (!isPageBatchSavePath(pageKey)) return "";
 
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
+  if (placement === "header")
+    return `<div class="order-settings-save" data-page-save-bar data-page-save-key="${escapeHtml(pageKey)}"><button type="button" data-page-save-preview ${dirty ? "" : "disabled hidden"}><span data-page-save-count-num>${count}</span> 项待保存</button><button type="button" data-page-save-commit ${dirty ? "" : "disabled"}>保存设置</button></div>`;
   const deployedHint = formatDeployedHint(pageKey);
-  const classification = pageKey === "/operations/queue-call/classification-settings";
+  const classification =
+    pageKey === "/operations/queue-call/classification-settings";
 
   return `
     <div
@@ -120,17 +126,25 @@ export function wrapPageWithSaveBar(path: string, contentHtml: string): string {
 }
 
 function syncPageSaveBarDom(pageKey: string): void {
-  const bar = document.querySelector<HTMLElement>(`[data-page-save-bar][data-page-save-key="${pageKey}"]`);
+  const bar = document.querySelector<HTMLElement>(
+    `[data-page-save-bar][data-page-save-key="${pageKey}"]`,
+  );
   if (!bar) return;
 
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
 
-  const countWrap = bar.querySelector<HTMLButtonElement>("[data-page-save-preview]");
+  const countWrap = bar.querySelector<HTMLButtonElement>(
+    "[data-page-save-preview]",
+  );
   const countNum = bar.querySelector("[data-page-save-count-num]");
   const sep = bar.querySelector("[data-page-save-count-sep]");
-  const discardBtn = bar.querySelector<HTMLButtonElement>("[data-page-save-discard]");
-  const commitBtn = bar.querySelector<HTMLButtonElement>("[data-page-save-commit]");
+  const discardBtn = bar.querySelector<HTMLButtonElement>(
+    "[data-page-save-discard]",
+  );
+  const commitBtn = bar.querySelector<HTMLButtonElement>(
+    "[data-page-save-commit]",
+  );
 
   if (countNum) countNum.textContent = String(count);
   if (countWrap) {
@@ -144,16 +158,25 @@ function syncPageSaveBarDom(pageKey: string): void {
   if (discardBtn) discardBtn.disabled = !dirty;
   if (commitBtn) {
     commitBtn.disabled = !dirty;
-    if (bar.querySelector("[data-classification-save-state]")) commitBtn.title = dirty ? "保存当前分类管理的变更并下发" : "暂无待保存修改";
+    if (bar.querySelector("[data-classification-save-state]"))
+      commitBtn.title = dirty
+        ? "保存当前分类管理的变更并下发"
+        : "暂无待保存修改";
   }
-  const classificationState = bar.querySelector("[data-classification-save-state]");
-  if (classificationState) classificationState.textContent = dirty ? "修改尚未保存并下发" : "暂无待保存修改";
+  const classificationState = bar.querySelector(
+    "[data-classification-save-state]",
+  );
+  if (classificationState)
+    classificationState.textContent = dirty
+      ? "修改尚未保存并下发"
+      : "暂无待保存修改";
 }
 
 export function refreshPageSaveBar(pageKey?: string): void {
   const key =
     pageKey ??
-    document.querySelector<HTMLElement>("[data-page-save-bar]")?.dataset.pageSaveKey;
+    document.querySelector<HTMLElement>("[data-page-save-bar]")?.dataset
+      .pageSaveKey;
   if (!key) return;
   syncPageSaveBarDom(key);
 }
@@ -195,7 +218,9 @@ export function bindPageSaveBar(remount: () => void): void {
     document.body.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
 
-      const previewBtn = target.closest<HTMLElement>("[data-page-save-preview]");
+      const previewBtn = target.closest<HTMLElement>(
+        "[data-page-save-preview]",
+      );
       if (previewBtn) {
         const bar = previewBtn.closest<HTMLElement>("[data-page-save-bar]");
         const pageKey = bar?.dataset.pageSaveKey;
@@ -218,7 +243,9 @@ export function bindPageSaveBar(remount: () => void): void {
         return;
       }
 
-      const discardBtn = target.closest<HTMLElement>("[data-page-save-discard]");
+      const discardBtn = target.closest<HTMLElement>(
+        "[data-page-save-discard]",
+      );
       if (discardBtn) {
         const bar = discardBtn.closest<HTMLElement>("[data-page-save-bar]");
         const pageKey = bar?.dataset.pageSaveKey;
@@ -227,7 +254,9 @@ export function bindPageSaveBar(remount: () => void): void {
         revertToggleDomToPersisted(pageKey);
         discardPageDraft(pageKey);
         window.dispatchEvent(
-          new CustomEvent("menusifu:page-settings-discard", { detail: { pageKey } }),
+          new CustomEvent("menusifu:page-settings-discard", {
+            detail: { pageKey },
+          }),
         );
         refreshPageSaveBar(pageKey);
         remount();

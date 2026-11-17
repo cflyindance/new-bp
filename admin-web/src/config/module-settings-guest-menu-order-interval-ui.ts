@@ -5,6 +5,7 @@
  */
 
 import {
+  BRAND_MENU_LINE_OPTIONS,
   bindBrandMenuStructurePicker,
   coerceBrandMenuStructureByLine,
   countBrandMenuStructureDishesByLine,
@@ -133,6 +134,7 @@ export function isGuestMenuOrderIntervalSeq(seq: number): boolean {
 
 function renderRuleRow(rule: MenuOrderIntervalRule): string {
   const selectedCount = countBrandMenuStructureDishesByLine(rule.structureByLine);
+  const applicableLines = BRAND_MENU_LINE_OPTIONS.filter(line => rule.structureByLine[line.id].length > 0).map(line => line.label).join("、") || "未选产线";
   const productHint =
     selectedCount === 0
       ? `<span class="text-muted-foreground">未选商品（规则暂不生效）</span>`
@@ -151,7 +153,7 @@ function renderRuleRow(rule: MenuOrderIntervalRule): string {
         <div class="min-w-0 space-y-1.5">
           <p class="m-0 text-sm font-medium text-foreground">指定商品下单间隔 ${rule.intervalMinutes} 分钟</p>
           <p class="m-0 text-sm leading-relaxed">
-            <span class="text-muted-foreground">适用商品：</span>${productHint}
+            <span class="text-muted-foreground">适用产线：</span>${escapeHtml(applicableLines)}<span class="text-muted-foreground"> · 适用商品：</span>${productHint}
           </p>
         </div>
         <div class="flex shrink-0 flex-wrap items-center gap-3">

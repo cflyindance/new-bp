@@ -1,3 +1,4 @@
+import { MENU_ORDER_OTHER_SETTINGS_SECTIONS } from "./menu-order-other-settings-navigation";
 /**
  * 配置变更缓冲：按页面分桶（批量保存）+ 全局 FIFO（即时下发页）
  */
@@ -31,7 +32,9 @@ function ensureSettingTitleCache(): Map<number, string> {
 
 /** 按设置项序号取可读标题 */
 export function getSettingTitleBySeq(seq: number): string {
-  return ensureSettingTitleCache().get(seq) ?? `设置项 #${seq}`;
+  const title = ensureSettingTitleCache().get(seq) ?? MENU_ORDER_OTHER_SETTINGS_SECTIONS.flatMap(section => section.settings).find(setting => setting.seq === seq)?.title ?? `设置项 #${seq}`;
+  const scene = [588, 589].includes(seq) ? "订单间隔" : [590, 591].includes(seq) ? "商品间隔" : "";
+  return scene ? `${scene} · ${title}` : title;
 }
 
 function truncateDisplay(text: string): string {
@@ -45,6 +48,8 @@ export function humanizeConfigKey(key: string): string {
   const known: Record<string, string> = {
     enabled: "启用",
     minutes: "分钟",
+    seconds: "最小间隔（秒）",
+    qtyThreshold: "累计加购商品数阈值",
     guests: "人数",
     name: "名称",
     id: "标识",
