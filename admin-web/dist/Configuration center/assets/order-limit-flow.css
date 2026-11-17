@@ -894,6 +894,78 @@ button { color: inherit; }
 .olf-store-status { display: inline-flex; align-items: center; min-width: 52px; font-weight: 600; }
 .olf-store-status.is-added { color: #16a34a; }
 .olf-store-status.is-missing { color: #ef4444; }
+
+/* Buffet effective range: isolated from the legacy menu-order form. */
+.olf-content.olf-content--effective-scope { padding: 0; background: transparent; border: 0; box-shadow: none; }
+.olf-effective-scope { --scope-inset: #f7f7f7; --scope-day: #e8e8e8; --scope-day-selected: #454545; display: grid; gap: 24px; }
+.olf-scope-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.olf-scope-card { min-width: 0; padding: 24px; border-radius: 16px; background: var(--olf-surface); }
+.olf-scope-card header { margin-bottom: 28px; }
+.olf-scope-card h3 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+.olf-scope-card p { margin: 4px 0 0; color: var(--olf-muted); font-size: 13px; line-height: 20px; }
+.olf-scope-card .olf-label { color: var(--olf-text); font-size: 14px; margin-bottom: 10px; }
+.olf-scope-card .olf-input { min-height: 48px; background: var(--olf-surface); }
+.olf-scope-group { margin-top: 32px; }
+.olf-scope-group h4 { font-size: 15px; line-height: 22px; margin: 0 0 14px; font-weight: 500; }
+.olf-scope-cycle, .olf-scope-member { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.olf-scope-member { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.olf-scope-choice { display: flex; align-items: center; text-align: left; gap: 12px; padding: 12px 15px; min-height: 64px; min-width: 0; border: 1px solid var(--olf-input-border); border-radius: 12px; background: var(--olf-surface); cursor: pointer; }
+.olf-scope-choice.is-selected { border-color: var(--olf-primary); }
+.olf-scope-choice > i { flex: 0 0 16px; width: 16px; height: 16px; border: 1px solid var(--olf-muted); border-radius: 50%; }
+.olf-scope-choice.is-selected > i { border: 5px solid var(--olf-primary); }
+.olf-scope-choice strong { display: block; font-size: 15px; line-height: 22px; font-weight: 500; }
+.olf-scope-choice small { display: block; color: var(--olf-muted); font-size: 12px; line-height: 18px; margin-top: 3px; }
+.olf-scope-choice:focus-visible, .olf-scope-add:focus-visible, .olf-scope-remove:focus-visible { outline: 2px solid var(--olf-primary); outline-offset: 3px; }
+.olf-scope-inset { padding: 16px; border-radius: 14px; background: var(--scope-inset); margin-top: 16px; }
+.olf-scope-checks { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+.olf-scope-checks .olf-check { border: 0; background: transparent; padding: 0; min-height: 24px; }
+.olf-scope-checks .olf-check:has(input:checked) { background: transparent; box-shadow: none; }
+.olf-effective-scope input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--olf-primary); flex-shrink: 0; }
+.olf-scope-month-days { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 8px; }
+.olf-scope-day { position: relative; cursor: pointer; min-width: 0; }
+.olf-scope-day input { position: absolute; opacity: 0; margin: 0; inset: 0; width: 100% !important; height: 100% !important; cursor: pointer; }
+.olf-scope-day span { display: block; padding: 6px 0; text-align: center; border-radius: 8px; background: var(--scope-day); font-size: 14px; }
+.olf-scope-day.is-selected span { color: var(--olf-surface); background: var(--scope-day-selected); }
+.olf-scope-day:focus-within { outline: 2px solid var(--olf-primary); outline-offset: 2px; border-radius: 8px; }
+.olf-scope-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.olf-scope-section-head header { margin-bottom: 0; }
+.olf-scope-section-head h4 { margin-bottom: 0; }
+.olf-scope-add, .olf-scope-remove { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border: 0; background: transparent; color: var(--olf-primary); cursor: pointer; flex-shrink: 0; }
+.olf-scope-remove { color: var(--olf-danger); width: 36px; height: 40px; }
+.olf-scope-slot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; gap: 12px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--olf-border); }
+.olf-scope-slot:first-child { padding-top: 0; }
+.olf-scope-slot:last-child { padding-bottom: 0; border-bottom: 0; }
+.olf-scope-time-range { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--olf-input-border); border-radius: 10px; background: var(--olf-surface); min-height: 48px; min-width: 0; }
+.olf-scope-time-range input { border: 0; background: transparent; width: 0; min-width: 0; flex: 1; padding: 10px 0; color: var(--olf-text); }
+.olf-scope-time-range:focus-within { outline: 2px solid var(--olf-primary); outline-offset: 1px; }
+.olf-scope-time-range input:focus { outline: none; }
+.olf-scope-count { padding: 4px 8px; border-radius: 8px; background: var(--scope-inset); font-size: 13px; white-space: nowrap; }
+.olf-scope-store-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.olf-scope-store { display: flex; gap: 14px; align-items: center; padding: 18px 16px; border-radius: 14px; background: var(--olf-surface); cursor: pointer; min-width: 0; }
+.olf-scope-store.is-disabled { cursor: not-allowed; }
+.olf-scope-store-copy { flex: 1; min-width: 0; }
+.olf-scope-store-copy strong { display: block; font-size: 15px; line-height: 22px; }
+.olf-scope-store-copy small { display: block; font-size: 12px; color: var(--olf-muted); line-height: 18px; margin-top: 4px; overflow-wrap: anywhere; }
+.olf-scope-store-icon { flex-shrink: 0; }
+.olf-scope-store .olf-store-status { padding: 3px 8px; border-radius: 20px; min-width: auto; gap: 4px; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.olf-scope-store .olf-store-status.is-added { color: var(--olf-success); background: var(--olf-success-soft); }
+.olf-scope-store .olf-store-status.is-missing { color: var(--olf-danger); background: var(--olf-danger-soft); }
+.olf-scope-store .olf-store-status i { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+.olf-scope-card p.olf-scope-error { color: var(--olf-danger); }
+.olf-scope-error:empty { display: none; }
+.olf-page:has(.olf-content--effective-scope) #nextButton:disabled { background: var(--olf-input-border); border-color: var(--olf-input-border); color: var(--olf-secondary); opacity: 1; }
+@media (max-width: 900px) {
+  .olf-scope-month-days { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .olf-scope-store-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .olf-scope-card { padding: 20px 16px; }
+  .olf-scope-cycle, .olf-scope-member { grid-template-columns: 1fr; }
+  .olf-scope-slot { grid-template-columns: minmax(0, 1fr) 36px; }
+  .olf-scope-slot > .olf-input { grid-column: 1 / -1; }
+  .olf-scope-month-days { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .olf-scope-store { padding: 14px 10px; gap: 8px; }
+}
 .olf-store-product-config .olf-structure-summary { margin: 4px 0 0; }
 
 .olf-toast-host { position: fixed; z-index: 120; top: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; pointer-events: none; }

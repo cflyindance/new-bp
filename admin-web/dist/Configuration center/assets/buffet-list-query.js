@@ -69,6 +69,7 @@
     return {date:value.slice(0,10),week:d.getUTCDay()||7,day:+m[3],minute:+m[4]*60 + +m[5]};
   }
   function minute(v) {var m=/^(\d{2}):(\d{2})$/.exec(v||"");return m&&+m[1]<24&&+m[2]<60?+m[1]*60 + +m[2]:null;}
+  function weekdayNumber(day) { var n=Number(day); return n>=1&&n<=7?n:["mon","tue","wed","thu","fri","sat","sun"].indexOf(String(day))+1; }
   function timeMatch(c,value) {
     var p=dateParts(value),t=c.conditions||{};
     if(!p)return null;
@@ -78,7 +79,7 @@
     if(p.date<t.effectiveFrom||t.effectiveTo&&p.date>t.effectiveTo)return false;
     if(t.activityCycle==="weekly") {
       if(!array(t.daysOfWeek).length)return null;
-      if(array(t.daysOfWeek).map(Number).indexOf(p.week)<0)return false;
+      if(array(t.daysOfWeek).map(weekdayNumber).indexOf(p.week)<0)return false;
     } else if(t.activityCycle==="monthly") {
       if(!array(t.daysOfMonth).length)return null;
       if(array(t.daysOfMonth).map(Number).indexOf(p.day)<0)return false;
@@ -88,6 +89,7 @@
     if(!slots.length)return null;
     for(var i=0;i<slots.length;i++) {
       var slot=slots[i], bounds={all:[0,1440],lunch:[660,1020],dinner:[1020,1380]}[slot.id];
+      if(t.scopeTimeVersion===1)bounds=[0,1440];
       if(!bounds)return null;
       if(slot.mode==="custom") {
         var from=minute(slot.from),to=minute(slot.to);
@@ -100,8 +102,9 @@
   }
   function timeSummary(c) {
     var t=c.conditions;if(!t||!t.effectiveFrom)return "未设置／无法核对";
-    var cycle=t.activityCycle==="daily"?"每天":t.activityCycle==="weekly"?"每周 "+array(t.daysOfWeek).map(function(d){return ["","一","二","三","四","五","六","日"][d]||"?";}).join("、"):t.activityCycle==="monthly"?"每月 "+array(t.daysOfMonth).join("、")+" 日":"周期无法核对";
+    var cycle=t.activityCycle==="daily"?"每天":t.activityCycle==="weekly"?"每周 "+array(t.daysOfWeek).map(function(d){return ["","一","二","三","四","五","六","日"][weekdayNumber(d)]||"?";}).join("、"):t.activityCycle==="monthly"?"每月 "+array(t.daysOfMonth).join("、")+" 日":"周期无法核对";
     var slots=array(t.businessHourSlots),labels={all:"全天",lunch:"午市",dinner:"晚市"};
+    if(t.scopeTimeVersion===1&&window.BuffetEffectiveScope)return t.effectiveFrom+" 至 "+(t.effectiveTo||"长期")+"；"+cycle+"；"+window.BuffetEffectiveScope.summary(t)+(t.memberMode&&t.memberMode!=="all"?"；限指定会员":"");
     var time=slots.map(function(s){return (labels[s.id]||"未知时段")+(s.mode==="custom"?" "+s.from+"–"+s.to:"");}).join("；")||"时段无法核对";
     return t.effectiveFrom+" 至 "+(t.effectiveTo||"长期")+"；"+cycle+"；"+time+(t.memberMode&&t.memberMode!=="all"?"；限指定会员":"");
   }

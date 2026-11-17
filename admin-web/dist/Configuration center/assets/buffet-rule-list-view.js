@@ -45,6 +45,9 @@
     return [{ id: id, mode: conditions.businessHourTimeMode || "full", from: conditions.businessHourFrom || "", to: conditions.businessHourTo || "" }];
   }
   function normalizeEffectiveTime(conditions) {
+    if (conditions && conditions.scopeTimeVersion === 1 && window.BuffetEffectiveScope) {
+      return { key: JSON.stringify(conditions.businessHourSlots || []), label: window.BuffetEffectiveScope.summary(conditions) };
+    }
     var allowed = ["all", "lunch", "dinner"], labels = { all: "全天", lunch: "午市", dinner: "晚市" }, byId = {};
     slotSource(conditions).forEach(function (slot) {
       if (!slot || allowed.indexOf(slot.id) < 0 || byId[slot.id]) return;
