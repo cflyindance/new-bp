@@ -56,7 +56,7 @@ const titles = [
   "允许纯积分商品订单兑换",
 ];
 const help = [
-  "两次订单提交的最小间隔，小于间隔时需服务员授权。",
+  "两次订单提交的最小间隔。",
   "设置订单间隔内是否直接允许加购；不设置加购授权或数量阈值。",
   "设置商品间隔内是否直接允许加购；不设置加购授权或数量阈值。",
   "设置规则命中后的密码授权频次。",
@@ -82,8 +82,8 @@ function toggle(
 ): string {
   return `<input type="checkbox" role="switch" class="order-setting-switch " data-order-card-toggle="${rule}" data-line="${line}" aria-label="${esc(label)}" ${on ? "checked" : ""}>`;
 }
-function number(line: Line, _rule: number, value: number, max: number, label: string, _unit = ""): string {
-  return `<div class="order-duration-parts"><label><input type="number" min="0" max="${max/60}" step="1" value="${Math.floor(value/60)}" data-order-duration-part="minutes" data-line="${line}" aria-label="${esc(label)} 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${value%60}" data-order-duration-part="seconds" data-line="${line}" aria-label="${esc(label)} 秒"><span>秒</span></label></div>`;
+function orderIntervalInput(line: Line, value: number, label: string): string {
+  return `<div class="order-duration-parts"><label><input type="number" min="0" step="1" value="${Math.floor(value/60)}" data-order-duration-part="minutes" data-line="${line}" aria-label="${esc(label)} 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${value%60}" data-order-duration-part="seconds" data-line="${line}" aria-label="${esc(label)} 秒"><span>秒</span></label></div>`;
 }
 function choices(
   line: Line,
@@ -127,7 +127,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
     readPoints(),
     readOnly(527),
   ];
-  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品间隔规则</h3><p>为指定商品设置两次下单的最小间隔</p></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section><header class="order-settings-heading order-product-policy-heading"><h3>间隔内加购设置</h3></header>` : ""}${lines
+  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品间隔规则</h3></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section><header class="order-settings-heading order-product-policy-heading"><h3>间隔内加购设置</h3></header>` : ""}${lines
     .map((line) => {
       const id = line.id,
         states = [
@@ -153,7 +153,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
           if (!indices.includes(i)) return "";
           let body = "";
           if (i === 0)
-            body = `<div class="order-card-field"><div>最小间隔<small>最长60分钟（3600秒），小于间隔时需服务员授权</small></div>${number(id, i, interval[id].seconds, 3600, `${line.label} 最小间隔`, "秒")}</div>`;
+            body = `<div class="order-card-field"><div>最小间隔</div>${orderIntervalInput(id, interval[id].seconds, `${line.label} 最小间隔`)}</div>`;
           if (i === 1 || i === 2) {
             const item = i === 1 ? order[id] : menu[id];
             body = `<div class="order-card-field"><span>加购策略</span>${choices(
@@ -278,7 +278,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       const minutes = host.querySelector<HTMLInputElement>(`[data-order-duration-part="minutes"][data-line="${line}"]`)!;
       const seconds = host.querySelector<HTMLInputElement>(`[data-order-duration-part="seconds"][data-line="${line}"]`)!;
       const config = readInterval();
-      config[line].seconds = combineIntervalParts(minutes.value, seconds.value, 0, 3600, 60);
+      config[line].seconds = combineIntervalParts(minutes.value, seconds.value, 0, Infinity, 60);
       minutes.value = String(Math.floor(config[line].seconds/60)); seconds.value = String(config[line].seconds%60);
       writeInterval(config); refreshSummaries(); return;
     }

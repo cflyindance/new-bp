@@ -1,3 +1,4 @@
+import { mountProductList } from "./product-list-ui";
 import { intervalSeconds, formatIntervalDuration, combineIntervalParts } from "./interval-display";
 /**
  * 前厅 · 食客下单限流：seq 590 菜品下单时间间隔。
@@ -8,6 +9,7 @@ import { intervalSeconds, formatIntervalDuration, combineIntervalParts } from ".
 import {
   BRAND_MENU_LINE_OPTIONS,
   selectedBrandMenuDishNamesByLine,
+  selectedBrandMenuDishesByLine,
   bindBrandMenuStructurePicker,
   coerceBrandMenuStructureByLine,
   countBrandMenuStructureDishesByLine,
@@ -228,26 +230,17 @@ function renderSettingsDialog(): string {
 }
 
 function renderProductsViewDialog(): string {
-  return `
-    <div
-      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
-      data-menu-order-interval-products-dialog
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="menu-order-interval-products-dialog-title"
-    >
-      <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-products-backdrop tabindex="-1" aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
-          <h3 id="menu-order-interval-products-dialog-title" class="text-base font-semibold text-card-foreground">适用商品</h3>
-          <button type="button" class="text-muted-foreground hover:text-foreground" data-menu-order-interval-products-close aria-label="关闭">×</button>
-        </div>
-        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4" data-menu-order-interval-products-body></div>
-        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
-          <button type="button" class="${BTN_PRIMARY}" data-menu-order-interval-products-close>关闭</button>
-        </div>
-      </div>
-    </div>`;
+  return `<div class="fixed inset-0 z-[110] hidden items-center justify-center p-3" data-menu-order-interval-products-dialog role="dialog" aria-modal="true" aria-labelledby="menu-order-interval-products-dialog-title">
+    <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-products-backdrop tabindex="-1" aria-label="关闭"></button>
+    <div class="mb-product-list-dialog">
+      <header class="mb-product-list-dialog-header">
+        <button type="button" class="mb-product-list-dialog-close" data-menu-order-interval-products-close aria-label="关闭商品列表">×</button>
+        <div class="mb-product-list-dialog-title"><h3 id="menu-order-interval-products-dialog-title">适用商品</h3><p data-product-list-dialog-summary></p></div>
+        <button type="button" class="mb-product-list-dialog-confirm" data-menu-order-interval-products-close>确定</button>
+      </header>
+      <div class="mb-product-list-dialog-body" data-menu-order-interval-products-body></div>
+    </div>
+  </div>`;
 }
 
 function renderDeleteConfirmDialog(): string {
@@ -405,18 +398,9 @@ function openProductsViewDialog(editor: HTMLElement, ruleId: string): void {
   if (!dialog || !body) return;
   if (titleEl)
     titleEl.textContent = `适用商品 · 间隔 ${formatIntervalDuration(ruleSeconds(rule))}`;
-  body.innerHTML = `
-    <p class="m-0 text-xs text-muted-foreground">按产线查看已配置的组 / 类 / 菜（只读）</p>
-    ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
-      enableLines: true,
-      selectionByLine: rule.structureByLine,
-      readOnly: true,
-    })}`;
-  body
-    .querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]")
-    .forEach((picker) => {
-      bindBrandMenuStructurePicker(picker);
-    });
+  const dishes = selectedBrandMenuDishesByLine(rule.structureByLine);
+  dialog.querySelector("[data-product-list-dialog-summary]")!.textContent = `共 ${dishes.length} 个已选商品 · ${new Set(dishes.map(dish => dish.lineId)).size} 条产线`;
+  mountProductList(body, dishes);
   showDialog(dialog);
 }
 

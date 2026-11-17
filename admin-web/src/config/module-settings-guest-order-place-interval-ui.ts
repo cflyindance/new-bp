@@ -45,7 +45,6 @@ const ALL_LINE_IDS: GuestOrderPlaceIntervalProductLineId[] = [
 
 const INTERVAL_DEFAULT = 60;
 const INTERVAL_MIN = 0;
-const INTERVAL_MAX = 3600;
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
@@ -67,7 +66,7 @@ function escapeHtml(s: string): string {
 function clampSeconds(raw: unknown): number {
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(n)) return INTERVAL_DEFAULT;
-  return Math.min(INTERVAL_MAX, Math.max(INTERVAL_MIN, Math.round(n)));
+  return Math.max(INTERVAL_MIN, Math.round(n));
 }
 
 function readLegacyToggleOn(): boolean {
@@ -316,13 +315,12 @@ function renderByLineEditorHtml(enabled: boolean): string {
             class="${NUMBER_INPUT_CLASS}"
             value="${escapeHtml(String(item.seconds))}"
             min="${INTERVAL_MIN}"
-            max="${INTERVAL_MAX}"
             step="1"
             data-guest-order-place-interval-line-seconds="${escapeHtml(line.id)}"
             ${enabled && item.enabled ? "" : "disabled"}
             aria-label="${escapeHtml(line.label)} 订单下单最小时间间隔"
           />
-          <span class="text-xs text-muted-foreground">秒（${INTERVAL_MIN}–${INTERVAL_MAX}，小于间隔时需服务员授权）</span>
+          <span class="text-xs text-muted-foreground">秒</span>
         </div>
       </td>
     </tr>`;

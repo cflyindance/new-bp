@@ -449,26 +449,21 @@ export function keysToSelection(
   return selection;
 }
 
-export function selectedBrandMenuDishNamesByLine(
-  byLine: BrandMenuStructureByLine,
-): string[] {
-  return [
-    ...new Set(
-      BRAND_MENU_LINE_OPTIONS.flatMap((line) => {
-        const tree = resolveTree(line.id),
-          selection = keysToSelection(byLine[line.id] ?? [], tree);
-        return tree.flatMap((group) =>
-          group.categories.flatMap((category) =>
-            category.dishes
-              .filter(
-                (dish) => selection[dishKey(group.id, category.id, dish.id)],
-              )
-              .map((dish) => dish.name),
-          ),
-        );
-      }),
-    ),
-  ];
+/** Flatten only selected leaf dishes; line/group/category remain available as context. */
+export function selectedBrandMenuDishesByLine(byLine: BrandMenuStructureByLine) {
+  return BRAND_MENU_LINE_OPTIONS.flatMap((line) => {
+    const tree = resolveTree(line.id);
+    const selection = keysToSelection(byLine[line.id] ?? [], tree);
+    return tree.flatMap((group) => group.categories.flatMap((category) =>
+      category.dishes.filter(dish => selection[dishKey(group.id, category.id, dish.id)])
+        .map(dish => ({ lineId: line.id, lineName: line.label, groupName: group.name,
+          categoryName: category.name, dishId: dish.id, dishName: dish.name })),
+    ));
+  });
+}
+
+export function selectedBrandMenuDishNamesByLine(byLine: BrandMenuStructureByLine): string[] {
+  return [...new Set(selectedBrandMenuDishesByLine(byLine).map(dish => dish.dishName))];
 }
 
 export function formatBrandMenuStructureSummary(
