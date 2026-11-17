@@ -45,8 +45,8 @@ import "./order-settings-cards.css";
 
 const titles = [
   "订单下单时间间隔",
-  "间隔时间内允许加购（订单）",
-  "间隔时间内允许加购（商品）",
+  "间隔时间内允许加购",
+  "间隔时间内允许加购",
   "命中规则后密码授权",
   "允许可看不可点菜直接加入购物车",
   "可看不可点菜需服务员授权",
@@ -55,8 +55,8 @@ const titles = [
 ];
 const help = [
   "两次订单提交的最小间隔，小于间隔时需服务员授权。",
-  "配置订单间隔内的加购策略及累计数量阈值。",
-  "配置商品间隔内的加购策略及累计数量阈值。",
+  "设置订单间隔内是否直接允许加购；不设置加购授权或数量阈值。",
+  "设置商品间隔内是否直接允许加购；不设置加购授权或数量阈值。",
   "设置规则命中后的密码授权频次。",
   "关闭时，添加可看不可点菜需密码授权。",
   "设置可看不可点菜是否需要服务员授权。",
@@ -144,11 +144,10 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
               i,
               item.mode,
               [
+                ["allowed", "允许加购"],
                 ["blocked", "不允许加购"],
-                ["auth-every", "每次加购需授权"],
-                ["auth-qty", "达到数量后授权"],
               ],
-            )}</div><div class="order-card-field" data-order-qty ${item.mode === "auth-qty" ? "" : "hidden"}><div>累计加购商品数阈值<small>1–99 道</small></div>${number(id, i, item.qtyThreshold, 99, `${line.label} 累计加购商品数阈值`)}</div>`;
+            )}</div>`;
           }
           if (i === 3)
             body = `<div class="order-card-field"><span>授权模式</span>${choices(
@@ -270,22 +269,11 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       const config = rule === 1 ? readOrder() : readMenu();
       if (isToggle) config[line].enabled = input.checked;
       else if (input.hasAttribute("data-order-card-mode")) {
-        if (["blocked", "auth-every", "auth-qty"].includes(input.value))
-          config[line].mode = input.value as
-            "blocked" | "auth-every" | "auth-qty";
-      } else {
-        const v = Number(input.value);
-        config[line].qtyThreshold = Number.isFinite(v)
-          ? Math.max(1, Math.min(99, Math.round(v)))
-          : 1;
-        input.value = String(config[line].qtyThreshold);
+        if (input.value === "blocked" || input.value === "allowed")
+          config[line].mode = input.value;
       }
       if (rule === 1) writeOrder(config);
       else writeMenu(config);
-      const qty = input
-        .closest("article")
-        ?.querySelector<HTMLElement>("[data-order-qty]");
-      if (qty) qty.hidden = config[line].mode !== "auth-qty";
     }
     if (rule === 3) {
       const config = readAuth();
