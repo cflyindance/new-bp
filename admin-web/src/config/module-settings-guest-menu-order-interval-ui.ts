@@ -1,3 +1,4 @@
+import { intervalSeconds, formatIntervalDuration, combineIntervalParts } from "./interval-display";
 /**
  * 前厅 · 食客下单限流：seq 590 菜品下单时间间隔。
  * 列表展示规则摘要；【新增规则】/【编辑】打开设置弹框（结构对齐延迟送厨），
@@ -6,6 +7,7 @@
 
 import {
   BRAND_MENU_LINE_OPTIONS,
+  selectedBrandMenuDishNamesByLine,
   bindBrandMenuStructurePicker,
   coerceBrandMenuStructureByLine,
   countBrandMenuStructureDishesByLine,
@@ -14,7 +16,10 @@ import {
   renderBrandMenuStructurePickerHtml,
   type BrandMenuStructureByLine,
 } from "./brand-menu-structure-picker-ui";
-import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import {
+  readModuleSettingJson,
+  writeModuleSettingJson,
+} from "./module-settings-form-ui";
 import { newRuleId } from "./module-settings-dish-rules-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
@@ -43,6 +48,8 @@ const BTN_LINK = "text-sm font-medium text-primary hover:underline";
 export type MenuOrderIntervalRule = {
   id: string;
   intervalMinutes: number;
+  /** Canonical integer seconds. Legacy minute-only rules remain readable. */
+  intervalSeconds?: number;
   /** 按产线的组/类/菜选中节点 key */
   structureByLine: BrandMenuStructureByLine;
 };
@@ -63,6 +70,10 @@ function normalizeMinutes(raw: unknown): number {
   return Math.min(INTERVAL_MAX, Math.max(INTERVAL_MIN, Math.round(n)));
 }
 
+function ruleSeconds(rule?: Partial<MenuOrderIntervalRule> | null): number {
+  return rule?.intervalSeconds != null ? intervalSeconds(rule.intervalSeconds, "seconds", 1, INTERVAL_MAX * 60, INTERVAL_DEFAULT * 60) : normalizeMinutes(rule?.intervalMinutes ?? INTERVAL_DEFAULT) * 60;
+}
+
 function normalizeRules(raw: unknown): MenuOrderIntervalRule[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item) => {
@@ -73,8 +84,12 @@ function normalizeRules(raw: unknown): MenuOrderIntervalRule[] {
     };
     return {
       id: typeof row.id === "string" && row.id ? row.id : newRuleId(),
-      intervalMinutes: normalizeMinutes(row.intervalMinutes),
-      structureByLine: coerceBrandMenuStructureByLine(row.structureByLine, row.structureKeys),
+      intervalMinutes: ruleSeconds(row) / 60,
+      intervalSeconds: ruleSeconds(row),
+      structureByLine: coerceBrandMenuStructureByLine(
+        row.structureByLine,
+        row.structureKeys,
+      ),
     };
   });
 }
@@ -97,13 +112,19 @@ export function readGuestMenuOrderIntervalRules(): MenuOrderIntervalRule[] {
   return normalized;
 }
 
-export function writeGuestMenuOrderIntervalRules(rules: MenuOrderIntervalRule[]): void {
+export function writeGuestMenuOrderIntervalRules(
+  rules: MenuOrderIntervalRule[],
+): void {
   writeModuleSettingJson(RULES_STORAGE_ID, rules);
 }
 
 function readLegacyToggleOn(): boolean {
   try {
-    return localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ)) === "1";
+    return (
+      localStorage.getItem(
+        moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ),
+      ) === "1"
+    );
   } catch {
     return false;
   }
@@ -113,7 +134,11 @@ export function ensureGuestMenuOrderIntervalToggleMigrated(): void {
   if (toggleMigrated) return;
   toggleMigrated = true;
   try {
-    if (localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ)) !== null) {
+    if (
+      localStorage.getItem(
+        moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ),
+      ) !== null
+    ) {
       return;
     }
   } catch {
@@ -121,7 +146,10 @@ export function ensureGuestMenuOrderIntervalToggleMigrated(): void {
   }
   if (readLegacyToggleOn()) {
     try {
-      localStorage.setItem(moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ), "1");
+      localStorage.setItem(
+        moduleSettingToggleStorageKey(GUEST_MENU_ORDER_INTERVAL_SEQ),
+        "1",
+      );
     } catch {
       /* ignore */
     }
@@ -133,8 +161,17 @@ export function isGuestMenuOrderIntervalSeq(seq: number): boolean {
 }
 
 function renderRuleRow(rule: MenuOrderIntervalRule): string {
-  const selectedCount = countBrandMenuStructureDishesByLine(rule.structureByLine);
-  const applicableLines = BRAND_MENU_LINE_OPTIONS.filter(line => rule.structureByLine[line.id].length > 0).map(line => line.label).join("、") || "未选产线";
+  const selectedCount = countBrandMenuStructureDishesByLine(
+    rule.structureByLine,
+  );
+  const applicableLines =
+    BRAND_MENU_LINE_OPTIONS.filter(
+      (line) => rule.structureByLine[line.id].length > 0,
+    )
+      .map((line) => line.label)
+      .join("、") || "未选产线";
+  const names = selectedBrandMenuDishNamesByLine(rule.structureByLine);
+  const summary = names.slice(0, 3).join("、") + (names.length > 3 ? "等" : "");
   const productHint =
     selectedCount === 0
       ? `<span class="text-muted-foreground">未选商品（规则暂不生效）</span>`
@@ -142,7 +179,7 @@ function renderRuleRow(rule: MenuOrderIntervalRule): string {
           type="button"
           class="${BTN_LINK} tabular-nums"
           data-menu-order-interval-products-view
-        >${selectedCount} 个</button>`;
+        >查看商品（${selectedCount} 个）</button>`;
   return `
     <div
       class="space-y-2 rounded-md border border-border/60 bg-muted/20 p-3"
@@ -151,10 +188,11 @@ function renderRuleRow(rule: MenuOrderIntervalRule): string {
     >
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div class="min-w-0 space-y-1.5">
-          <p class="m-0 text-sm font-medium text-foreground">指定商品下单间隔 ${rule.intervalMinutes} 分钟</p>
+          <p class="m-0 text-sm font-medium text-foreground">指定商品下单间隔 ${formatIntervalDuration(ruleSeconds(rule))}</p>
           <p class="m-0 text-sm leading-relaxed">
             <span class="text-muted-foreground">适用产线：</span>${escapeHtml(applicableLines)}<span class="text-muted-foreground"> · 适用商品：</span>${productHint}
           </p>
+          ${summary ? `<p class="m-0 text-xs text-muted-foreground">${escapeHtml(summary)}</p>` : ""}
         </div>
         <div class="flex shrink-0 flex-wrap items-center gap-3">
           <button type="button" class="${BTN_LINK}" data-menu-order-interval-edit>编辑</button>
@@ -171,24 +209,20 @@ function renderEmptyHint(): string {
 function renderSettingsDialog(): string {
   return `
     <div
-      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      class="product-picker-dialog fixed inset-0 z-[110] hidden items-center justify-center p-4"
       data-menu-order-interval-dialog
       role="dialog"
       aria-modal="true"
       aria-labelledby="menu-order-interval-dialog-title"
       data-editing-id=""
     >
-      <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
-          <h3 id="menu-order-interval-dialog-title" class="text-base font-semibold text-card-foreground">间隔设置</h3>
-          <button type="button" class="text-muted-foreground hover:text-foreground" data-menu-order-interval-dialog-close aria-label="关闭">×</button>
-        </div>
-        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-menu-order-interval-dialog-body></div>
-        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
-          <button type="button" class="${BTN_GHOST}" data-menu-order-interval-dialog-cancel>取消</button>
-          <button type="button" class="${BTN_PRIMARY}" data-menu-order-interval-dialog-save>确定</button>
-        </div>
+      <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-dialog-backdrop tabindex="-1" aria-label="关闭"></button>
+      <div class="product-picker-surface relative z-10 flex flex-col overflow-hidden">
+        <header class="product-picker-header">
+          <div class="product-picker-title"><button type="button" class="product-picker-close" data-menu-order-interval-dialog-close aria-label="关闭">×</button><h3 id="menu-order-interval-dialog-title">选择商品</h3></div>
+          <button type="button" class="product-picker-confirm" data-menu-order-interval-dialog-save>确认</button>
+        </header>
+        <div class="product-picker-body min-h-0 overflow-y-auto" data-menu-order-interval-dialog-body></div>
       </div>
     </div>`;
 }
@@ -202,7 +236,7 @@ function renderProductsViewDialog(): string {
       aria-modal="true"
       aria-labelledby="menu-order-interval-products-dialog-title"
     >
-      <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-products-backdrop aria-label="关闭"></button>
+      <button type="button" class="absolute inset-0 bg-black/40" data-menu-order-interval-products-backdrop tabindex="-1" aria-label="关闭"></button>
       <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="menu-order-interval-products-dialog-title" class="text-base font-semibold text-card-foreground">适用商品</h3>
@@ -225,7 +259,7 @@ function renderDeleteConfirmDialog(): string {
       aria-modal="true"
       aria-labelledby="menu-order-interval-delete-dialog-title"
     >
-      <button type="button" class="absolute inset-0 bg-black/45 backdrop-blur-[1px]" data-menu-order-interval-delete-backdrop aria-label="关闭"></button>
+      <button type="button" class="absolute inset-0 bg-black/45 backdrop-blur-[1px]" data-menu-order-interval-delete-backdrop tabindex="-1" aria-label="关闭"></button>
       <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         <div class="border-b border-border px-5 py-4">
           <h3 id="menu-order-interval-delete-dialog-title" class="text-base font-semibold text-card-foreground">确认删除</h3>
@@ -243,42 +277,17 @@ function renderDeleteConfirmDialog(): string {
 }
 
 function renderDialogBody(rule: MenuOrderIntervalRule | null): string {
-  const intervalMinutes = rule?.intervalMinutes ?? INTERVAL_DEFAULT;
+  const seconds = ruleSeconds(rule);
   const byLine = rule?.structureByLine ?? emptyBrandMenuStructureByLine();
-  return `
-    <div class="space-y-1.5">
-      <label class="block text-sm font-medium text-foreground" for="menu-order-interval-dialog-minutes">下单时间间隔</label>
-      <div class="flex flex-wrap items-center gap-2 text-sm text-foreground">
-        <span>指定商品下单间隔</span>
-        <input
-          id="menu-order-interval-dialog-minutes"
-          type="number"
-          inputmode="numeric"
-          min="${INTERVAL_MIN}"
-          max="${INTERVAL_MAX}"
-          step="1"
-          class="${NUMBER_INPUT_CLASS}"
-          value="${intervalMinutes}"
-          data-menu-order-interval-dialog-minutes
-          aria-label="下单时间间隔分钟数"
-        />
-        <span>分钟</span>
-      </div>
-      <p class="m-0 text-xs text-muted-foreground">小于间隔再次下单时需服务员授权（${INTERVAL_MIN}–${INTERVAL_MAX}）</p>
-    </div>
-    <div class="space-y-2">
-      <p class="text-sm font-medium text-foreground">适用商品</p>
-      ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
-        enableLines: true,
-        selectionByLine: byLine,
-      })}
-    </div>`;
+  return `<section class="product-picker-section"><h4>下单时间间隔</h4><div class="product-picker-interval-row"><span>指定商品下单间隔</span><div class="order-duration-parts"><label><input id="menu-order-interval-dialog-minutes" type="number" min="0" max="${INTERVAL_MAX}" step="1" value="${Math.floor(seconds/60)}" data-menu-order-interval-dialog-minutes aria-label="商品下单间隔 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${seconds%60}" data-menu-order-interval-dialog-seconds aria-label="商品下单间隔 秒"><span>秒</span></label></div><span>小于间隔再次下单时需服务员授权</span></div></section><section class="product-picker-section"><h4>适用商品</h4>${renderBrandMenuStructurePickerHtml([], undefined, undefined, { enableLines: true, selectionByLine: byLine, searchable: true })}</section>`;
 }
 
 function renderRulesEditorHtml(): string {
   const rules = readGuestMenuOrderIntervalRules();
   const rows =
-    rules.length > 0 ? rules.map((rule) => renderRuleRow(rule)).join("") : renderEmptyHint();
+    rules.length > 0
+      ? rules.map((rule) => renderRuleRow(rule)).join("")
+      : renderEmptyHint();
   return `
     <div
       class="space-y-3"
@@ -308,54 +317,94 @@ export function renderGuestMenuOrderIntervalPanelHtml(on: boolean): string {
     </div>`;
 }
 
+const dialogReturnFocus = new WeakMap<HTMLElement, HTMLElement>();
 function showDialog(dialog: HTMLElement): void {
-  dialog.classList.remove("hidden");
-  dialog.classList.add("flex");
+  if (document.activeElement instanceof HTMLElement) dialogReturnFocus.set(dialog, document.activeElement);
+  dialog.classList.remove("hidden"); dialog.classList.add("flex");
+  const controls = () => [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1']):not(:disabled), input:not([type='hidden']):not(:disabled), select:not(:disabled), a[href]")].filter(el => el.getClientRects().length > 0);
+  if (dialog.dataset.keyboardBound !== "1") {
+    dialog.dataset.keyboardBound = "1";
+    dialog.addEventListener("keydown", event => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); hideDialog(dialog); }
+      if (event.key === "Tab") {
+        const items = controls(), first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    });
+  }
+  controls()[0]?.focus();
 }
-
 function hideDialog(dialog: HTMLElement): void {
-  dialog.classList.add("hidden");
-  dialog.classList.remove("flex");
-  dialog.setAttribute("data-editing-id", "");
+  dialog.classList.add("hidden"); dialog.classList.remove("flex"); dialog.setAttribute("data-editing-id", "");
+  const trigger = dialogReturnFocus.get(dialog); if (trigger?.isConnected) trigger.focus();
 }
 
 function rerenderRuleList(editor: HTMLElement): void {
-  const list = editor.querySelector<HTMLElement>("[data-menu-order-interval-rule-list]");
+  const list = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-rule-list]",
+  );
   if (!list) return;
   const rules = readGuestMenuOrderIntervalRules();
   list.innerHTML =
-    rules.length > 0 ? rules.map((rule) => renderRuleRow(rule)).join("") : renderEmptyHint();
+    rules.length > 0
+      ? rules.map((rule) => renderRuleRow(rule)).join("")
+      : renderEmptyHint();
 }
 
-function openSettingsDialog(editor: HTMLElement, editingId: string | null): void {
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-dialog]");
-  const body = dialog?.querySelector<HTMLElement>("[data-menu-order-interval-dialog-body]");
+function openSettingsDialog(
+  editor: HTMLElement,
+  editingId: string | null,
+): void {
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-dialog]",
+  );
+  const body = dialog?.querySelector<HTMLElement>(
+    "[data-menu-order-interval-dialog-body]",
+  );
   if (!dialog || !body) return;
 
   const rules = readGuestMenuOrderIntervalRules();
-  const editing = editingId ? (rules.find((r) => r.id === editingId) ?? null) : null;
+  const editing = editingId
+    ? (rules.find((r) => r.id === editingId) ?? null)
+    : null;
   dialog.setAttribute("data-editing-id", editing?.id ?? "");
   body.innerHTML = renderDialogBody(editing);
-  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
-    bindBrandMenuStructurePicker(picker);
-  });
+  body
+    .querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]")
+    .forEach((picker) => {
+      bindBrandMenuStructurePicker(picker);
+    });
   showDialog(dialog);
-  body.querySelector<HTMLInputElement>("[data-menu-order-interval-dialog-minutes]")?.focus();
+  body
+    .querySelector<HTMLInputElement>(
+      "[data-menu-order-interval-dialog-minutes]",
+    )
+    ?.focus();
 }
 
 function closeSettingsDialog(editor: HTMLElement): void {
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-dialog]");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-dialog]",
+  );
   if (dialog) hideDialog(dialog);
 }
 
 function openProductsViewDialog(editor: HTMLElement, ruleId: string): void {
   const rule = readGuestMenuOrderIntervalRules().find((r) => r.id === ruleId);
   if (!rule) return;
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-products-dialog]");
-  const body = dialog?.querySelector<HTMLElement>("[data-menu-order-interval-products-body]");
-  const titleEl = dialog?.querySelector<HTMLElement>("#menu-order-interval-products-dialog-title");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-products-dialog]",
+  );
+  const body = dialog?.querySelector<HTMLElement>(
+    "[data-menu-order-interval-products-body]",
+  );
+  const titleEl = dialog?.querySelector<HTMLElement>(
+    "#menu-order-interval-products-dialog-title",
+  );
   if (!dialog || !body) return;
-  if (titleEl) titleEl.textContent = `适用商品 · 间隔 ${rule.intervalMinutes} 分钟`;
+  if (titleEl)
+    titleEl.textContent = `适用商品 · 间隔 ${formatIntervalDuration(ruleSeconds(rule))}`;
   body.innerHTML = `
     <p class="m-0 text-xs text-muted-foreground">按产线查看已配置的组 / 类 / 菜（只读）</p>
     ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
@@ -363,33 +412,43 @@ function openProductsViewDialog(editor: HTMLElement, ruleId: string): void {
       selectionByLine: rule.structureByLine,
       readOnly: true,
     })}`;
-  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
-    bindBrandMenuStructurePicker(picker);
-  });
+  body
+    .querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]")
+    .forEach((picker) => {
+      bindBrandMenuStructurePicker(picker);
+    });
   showDialog(dialog);
 }
 
 function closeProductsViewDialog(editor: HTMLElement): void {
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-products-dialog]");
-  const body = dialog?.querySelector<HTMLElement>("[data-menu-order-interval-products-body]");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-products-dialog]",
+  );
+  const body = dialog?.querySelector<HTMLElement>(
+    "[data-menu-order-interval-products-body]",
+  );
   if (body) body.innerHTML = "";
   if (dialog) {
-    dialog.classList.add("hidden");
-    dialog.classList.remove("flex");
+    hideDialog(dialog);
   }
 }
 
 function saveSettingsDialog(editor: HTMLElement): void {
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-dialog]");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-dialog]",
+  );
   if (!dialog) return;
   const minutesInput = dialog.querySelector<HTMLInputElement>(
     "[data-menu-order-interval-dialog-minutes]",
   );
-  const picker = dialog.querySelector<HTMLElement>("[data-brand-menu-structure-picker]");
+  const picker = dialog.querySelector<HTMLElement>(
+    "[data-brand-menu-structure-picker]",
+  );
   const editingId = dialog.getAttribute("data-editing-id") || "";
   const nextRule: MenuOrderIntervalRule = {
     id: editingId || newRuleId(),
-    intervalMinutes: normalizeMinutes(minutesInput?.value),
+    intervalSeconds: combineIntervalParts(minutesInput?.value, dialog.querySelector<HTMLInputElement>("[data-menu-order-interval-dialog-seconds]")?.value, 1, INTERVAL_MAX * 60, INTERVAL_DEFAULT * 60),
+    intervalMinutes: combineIntervalParts(minutesInput?.value, dialog.querySelector<HTMLInputElement>("[data-menu-order-interval-dialog-seconds]")?.value, 1, INTERVAL_MAX * 60, INTERVAL_DEFAULT * 60) / 60,
     structureByLine: picker
       ? readBrandMenuStructureByLineFromPicker(picker)
       : emptyBrandMenuStructureByLine(),
@@ -404,26 +463,34 @@ function saveSettingsDialog(editor: HTMLElement): void {
 }
 
 function removeRule(editor: HTMLElement, ruleId: string): void {
-  writeGuestMenuOrderIntervalRules(readGuestMenuOrderIntervalRules().filter((r) => r.id !== ruleId));
+  writeGuestMenuOrderIntervalRules(
+    readGuestMenuOrderIntervalRules().filter((r) => r.id !== ruleId),
+  );
   rerenderRuleList(editor);
 }
 
 function openDeleteConfirmDialog(editor: HTMLElement, ruleId: string): void {
   const rule = readGuestMenuOrderIntervalRules().find((r) => r.id === ruleId);
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-delete-dialog]");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-delete-dialog]",
+  );
   const idInput = editor.querySelector<HTMLInputElement>(
     "[data-menu-order-interval-delete-target-id]",
   );
-  const messageEl = editor.querySelector<HTMLElement>("[data-menu-order-interval-delete-message]");
+  const messageEl = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-delete-message]",
+  );
   if (!dialog || !idInput || !messageEl) return;
   idInput.value = ruleId;
-  const minutes = rule?.intervalMinutes ?? INTERVAL_DEFAULT;
-  messageEl.textContent = `确定删除「指定商品下单间隔 ${minutes} 分钟」这条规则？删除后无法恢复。`;
+  const duration = formatIntervalDuration(ruleSeconds(rule));
+  messageEl.textContent = `确定删除「指定商品下单间隔 ${duration}」这条规则？删除后无法恢复。`;
   showDialog(dialog);
 }
 
 function closeDeleteConfirmDialog(editor: HTMLElement): void {
-  const dialog = editor.querySelector<HTMLElement>("[data-menu-order-interval-delete-dialog]");
+  const dialog = editor.querySelector<HTMLElement>(
+    "[data-menu-order-interval-delete-dialog]",
+  );
   const idInput = editor.querySelector<HTMLInputElement>(
     "[data-menu-order-interval-delete-target-id]",
   );
@@ -436,7 +503,9 @@ function closeDeleteConfirmDialog(editor: HTMLElement): void {
 
 function confirmDeleteRule(editor: HTMLElement): void {
   const ruleId = editor
-    .querySelector<HTMLInputElement>("[data-menu-order-interval-delete-target-id]")
+    .querySelector<HTMLInputElement>(
+      "[data-menu-order-interval-delete-target-id]",
+    )
     ?.value.trim();
   if (!ruleId) return;
   removeRule(editor, ruleId);
@@ -447,6 +516,14 @@ function bindMenuOrderIntervalEditor(editor: HTMLElement): void {
   if (editor.dataset.menuOrderIntervalBound === "1") return;
   editor.dataset.menuOrderIntervalBound = "1";
 
+  editor.addEventListener("change", event => {
+    const target = event.target as HTMLInputElement;
+    if (!target.matches("[data-menu-order-interval-dialog-minutes], [data-menu-order-interval-dialog-seconds]")) return;
+    const minutes = editor.querySelector<HTMLInputElement>("[data-menu-order-interval-dialog-minutes]")!;
+    const seconds = editor.querySelector<HTMLInputElement>("[data-menu-order-interval-dialog-seconds]")!;
+    const total = combineIntervalParts(minutes.value, seconds.value, 1, INTERVAL_MAX * 60, INTERVAL_DEFAULT * 60);
+    minutes.value = String(Math.floor(total/60)); seconds.value = String(total%60);
+  });
   editor.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
     if (
@@ -483,7 +560,9 @@ function bindMenuOrderIntervalEditor(editor: HTMLElement): void {
       openSettingsDialog(editor, null);
       return;
     }
-    const productsView = target.closest("[data-menu-order-interval-products-view]");
+    const productsView = target.closest(
+      "[data-menu-order-interval-products-view]",
+    );
     if (productsView) {
       const row = productsView.closest("[data-menu-order-interval-rule-row]");
       const ruleId = row?.getAttribute("data-rule-id");
@@ -508,20 +587,28 @@ function bindMenuOrderIntervalEditor(editor: HTMLElement): void {
 
 export function setGuestMenuOrderIntervalPanelVisible(visible: boolean): void {
   document
-    .querySelectorAll<HTMLElement>(`[data-menu-order-interval-panel="${GUEST_MENU_ORDER_INTERVAL_SEQ}"]`)
+    .querySelectorAll<HTMLElement>(
+      `[data-menu-order-interval-panel="${GUEST_MENU_ORDER_INTERVAL_SEQ}"]`,
+    )
     .forEach((panel) => {
       panel.classList.toggle("hidden", !visible);
       if (visible) panel.removeAttribute("aria-hidden");
       else panel.setAttribute("aria-hidden", "true");
 
-      const addBtn = panel.querySelector<HTMLButtonElement>("[data-menu-order-interval-add]");
+      const addBtn = panel.querySelector<HTMLButtonElement>(
+        "[data-menu-order-interval-add]",
+      );
       if (addBtn) addBtn.disabled = !visible;
     });
 }
 
-export function bindGuestMenuOrderIntervalUi(root: ParentNode = document): void {
+export function bindGuestMenuOrderIntervalUi(
+  root: ParentNode = document,
+): void {
   ensureGuestMenuOrderIntervalToggleMigrated();
-  root.querySelectorAll<HTMLElement>("[data-menu-order-interval-editor]").forEach((editor) => {
-    bindMenuOrderIntervalEditor(editor);
-  });
+  root
+    .querySelectorAll<HTMLElement>("[data-menu-order-interval-editor]")
+    .forEach((editor) => {
+      bindMenuOrderIntervalEditor(editor);
+    });
 }

@@ -1,3 +1,4 @@
+import { combineIntervalParts } from "./interval-display";
 import { renderPageStorePickerBar } from "../shell/page-store-picker";
 import { renderPageSaveBar } from "./page-save-bar-ui";
 import {
@@ -80,15 +81,8 @@ function toggle(
 ): string {
   return `<input type="checkbox" role="switch" class="order-setting-switch ${rule === "expand" ? "order-line-switch" : ""}" data-order-card-toggle="${rule}" data-line="${line}" aria-label="${esc(label)}" ${on ? "checked" : ""}>`;
 }
-function number(
-  line: Line,
-  rule: number,
-  value: number,
-  max: number,
-  label: string,
-  unit = "",
-): string {
-  return `<label class="order-card-number"><input type="number" min="${rule === 0 ? 0 : 1}" max="${max}" step="1" value="${value}" data-order-card-number="${rule}" data-line="${line}" aria-label="${esc(label)}">${unit ? `<span>${unit}</span>` : ""}</label>`;
+function number(line: Line, _rule: number, value: number, max: number, label: string, _unit = ""): string {
+  return `<div class="order-duration-parts"><label><input type="number" min="0" max="${max/60}" step="1" value="${Math.floor(value/60)}" data-order-duration-part="minutes" data-line="${line}" aria-label="${esc(label)} 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${value%60}" data-order-duration-part="seconds" data-line="${line}" aria-label="${esc(label)} 秒"><span>秒</span></label></div>`;
 }
 function choices(
   line: Line,
@@ -112,7 +106,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
     readPoints(),
     readOnly(527),
   ];
-  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${lines
+  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品间隔规则</h3><p>为指定商品设置两次下单的最小间隔分钟数</p></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section><header class="order-settings-heading order-product-policy-heading"><h3>间隔内加购设置</h3></header>` : ""}${lines
     .map((line) => {
       const id = line.id,
         states = [
@@ -136,7 +130,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
           if (!indices.includes(i)) return "";
           let body = "";
           if (i === 0)
-            body = `<div class="order-card-field"><div>最小间隔<small>0–3600 秒，小于间隔时需服务员授权</small></div>${number(id, i, interval[id].seconds, 3600, `${line.label} 最小间隔`, "秒")}</div>`;
+            body = `<div class="order-card-field"><div>最小间隔<small>最长60分钟（3600秒），小于间隔时需服务员授权</small></div>${number(id, i, interval[id].seconds, 3600, `${line.label} 最小间隔`, "秒")}</div>`;
           if (i === 1 || i === 2) {
             const item = i === 1 ? order[id] : menu[id];
             body = `<div class="order-card-field"><span>加购策略</span>${choices(
@@ -159,13 +153,11 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
                 ["auth-once", "授权一次后本单放行"],
               ],
             )}</div>`;
-          return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}"><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
+          return `<article class="order-rule-card" data-order-rule="${i}" data-module-setting-row-seq="${seqs[i]}"><header><div class="order-rule-title">${title}<button type="button" class="order-rule-help" title="${help[i]}" aria-label="${esc(title)}说明">?</button></div>${i === 1 || i === 2 ? "" : toggle(id, i, states[i], `${line.label} ${title}`)}</header>${body ? `<div class="order-rule-body" ${i === 1 || i === 2 || states[i] ? "" : "hidden"}>${body}</div>` : ""}</article>`;
         })
         .join("")}</div></section>`;
     })
-    .join(
-      "",
-    )} ${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品规则</h3><p>为指定商品设置两次下单的最小间隔分钟数</p></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section>` : ""}</section>`;
+    .join("")}</section>`;
 }
 function renderIntervalScenes(): string {
   return `<section id="menu-order-other-interval" data-menu-order-other-category="interval"><div class="order-interval-tabs" role="tablist" aria-label="下单间隔场景">${(["order", "product"] as const).map((scene) => `<button type="button" id="order-interval-tab-${scene}" role="tab" aria-selected="${activeIntervalScene === scene}" aria-controls="order-interval-scene-${scene}" tabindex="${activeIntervalScene === scene ? 0 : -1}" data-order-interval-scene="${scene}">${scene === "order" ? "订单间隔" : "商品间隔"}</button>`).join("")}</div>${(["order", "product"] as const).map((scene) => `<div role="tabpanel" id="order-interval-scene-${scene}" aria-labelledby="order-interval-tab-${scene}" ${activeIntervalScene === scene ? "" : "hidden"}>${renderCategoryCards("interval", scene)}</div>`).join("")}</section>`;
@@ -179,7 +171,7 @@ export function renderOrderSettingsCards(): string {
     ...s,
     targetId: `menu-order-other-${s.key}`,
   }));
-  return `<div class="order-settings-scroll order-settings-with-nav" data-order-settings-cards><header class="order-settings-page-heading"><div><h2>下单设置</h2><p>按点餐端统一管理订单间隔、商品间隔、命中授权与积分商品行为</p></div><div class="order-settings-header-actions">${renderPageStorePickerBar(true)}${renderPageSaveBar(MENU_ORDER_OTHER_SETTINGS_PATH, "header")}</div></header>${renderSettingsCategoryLayout(MENU_ORDER_OTHER_SETTINGS_PATH, categories, body, { mode: "panels" })}</div>`;
+  return `<div class="order-settings-scroll order-settings-with-nav" data-order-settings-cards><header class="order-settings-page-heading"><div><h2>下单设置</h2></div><div class="order-settings-header-actions">${renderPageStorePickerBar(true)}${renderPageSaveBar(MENU_ORDER_OTHER_SETTINGS_PATH, "header")}</div></header>${renderSettingsCategoryLayout(MENU_ORDER_OTHER_SETTINGS_PATH, categories, body, { mode: "panels" })}</div>`;
 }
 /** Update one line only; sibling line settings are preserved by the existing normalizers. */
 export function bindOrderSettingsCards(root: ParentNode): void {
@@ -232,6 +224,16 @@ export function bindOrderSettingsCards(root: ParentNode): void {
   });
   host.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
+    if (input.matches("[data-order-duration-part]")) {
+      const line = input.dataset.line as Line;
+      if (!lines.some(l => l.id === line)) return;
+      const minutes = host.querySelector<HTMLInputElement>(`[data-order-duration-part="minutes"][data-line="${line}"]`)!;
+      const seconds = host.querySelector<HTMLInputElement>(`[data-order-duration-part="seconds"][data-line="${line}"]`)!;
+      const config = readInterval();
+      config[line].seconds = combineIntervalParts(minutes.value, seconds.value, 0, 3600, 60);
+      minutes.value = String(Math.floor(config[line].seconds/60)); seconds.value = String(config[line].seconds%60);
+      writeInterval(config); return;
+    }
     if (
       !input.matches(
         "[data-order-card-toggle],[data-order-card-number],[data-order-card-mode]",
@@ -257,11 +259,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       const config = readInterval();
       if (isToggle) config[line].enabled = input.checked;
       else {
-        const v = Number(input.value);
-        config[line].seconds = Number.isFinite(v)
-          ? Math.max(0, Math.min(3600, Math.round(v)))
-          : 60;
-        input.value = String(config[line].seconds);
+        // Duration fields are handled by the combined minute/second inputs above.
       }
       writeInterval(config);
     }

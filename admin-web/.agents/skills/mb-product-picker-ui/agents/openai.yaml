@@ -1,0 +1,6 @@
+interface:
+  display_name: "后台商品选择规范"
+  short_description: "统一后台产线、组、类、商品四列选择界面的视觉与交互规范"
+  default_prompt: "使用 $mb-product-picker-ui 规范实现当前后台商品选择界面。"
+policy:
+  allow_implicit_invocation: true

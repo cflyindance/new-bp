@@ -1,3 +1,4 @@
+import "./brand-menu-structure-picker.css";
 /**
  * 店中店 · 品牌菜单 · 组 / 类 / 菜三级选择（对齐平台预设一/二/三级列式交互）
  * 品牌编辑可启用左侧产线列（Kiosk / eMenu / SDI），各产线独立商品树与勾选。
@@ -169,7 +170,10 @@ export const BRAND_MENU_STRUCTURE_TREE: BrandMenuGroupNode[] = [
 ];
 
 /** 各产线各自商品树（原型：范围与命名略有差异） */
-export const BRAND_MENU_STRUCTURE_BY_LINE: Record<BrandMenuLineId, BrandMenuGroupNode[]> = {
+export const BRAND_MENU_STRUCTURE_BY_LINE: Record<
+  BrandMenuLineId,
+  BrandMenuGroupNode[]
+> = {
   kiosk: (() => {
     const tree = cloneTree(BRAND_MENU_STRUCTURE_TREE).filter((g) =>
       ["g-hotpot", "g-drink"].includes(g.id),
@@ -227,7 +231,11 @@ export function mergeBrandMenuStructureByLine(
   const out = emptyBrandMenuStructureByLine();
   for (const line of BRAND_MENU_LINE_OPTIONS) {
     out[line.id] = [
-      ...new Set([...(target[line.id] ?? []), ...(source[line.id] ?? [])].filter((k) => k.length > 0)),
+      ...new Set(
+        [...(target[line.id] ?? []), ...(source[line.id] ?? [])].filter(
+          (k) => k.length > 0,
+        ),
+      ),
     ];
   }
   return out;
@@ -237,7 +245,9 @@ export function isBrandMenuLineId(value: string): value is BrandMenuLineId {
   return BRAND_MENU_LINE_OPTIONS.some((l) => l.id === value);
 }
 
-export function normalizeBrandMenuStructureByLine(raw: unknown): BrandMenuStructureByLine {
+export function normalizeBrandMenuStructureByLine(
+  raw: unknown,
+): BrandMenuStructureByLine {
   const empty = emptyBrandMenuStructureByLine();
   if (!raw || typeof raw !== "object") return empty;
   const obj = raw as Record<string, unknown>;
@@ -245,7 +255,9 @@ export function normalizeBrandMenuStructureByLine(raw: unknown): BrandMenuStruct
     const keys = obj[line.id];
     if (!Array.isArray(keys)) continue;
     empty[line.id] = [
-      ...new Set(keys.filter((k): k is string => typeof k === "string" && k.length > 0)),
+      ...new Set(
+        keys.filter((k): k is string => typeof k === "string" && k.length > 0),
+      ),
     ];
   }
   return empty;
@@ -260,13 +272,19 @@ export function coerceBrandMenuStructureByLine(
   if (Object.values(byLine).some((keys) => keys.length > 0)) return byLine;
   if (!Array.isArray(legacyKeysRaw)) return emptyBrandMenuStructureByLine();
   const legacy = [
-    ...new Set(legacyKeysRaw.filter((k): k is string => typeof k === "string" && k.length > 0)),
+    ...new Set(
+      legacyKeysRaw.filter(
+        (k): k is string => typeof k === "string" && k.length > 0,
+      ),
+    ),
   ];
   if (legacy.length === 0) return emptyBrandMenuStructureByLine();
   return { kiosk: [...legacy], emenu: [...legacy], sdi: [...legacy] };
 }
 
-export function flattenBrandMenuStructureByLine(byLine: BrandMenuStructureByLine): string[] {
+export function flattenBrandMenuStructureByLine(
+  byLine: BrandMenuStructureByLine,
+): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const line of BRAND_MENU_LINE_OPTIONS) {
@@ -287,7 +305,11 @@ export function categoryKey(groupId: string, categoryId: string): string {
   return `c:${groupId}:${categoryId}`;
 }
 
-export function dishKey(groupId: string, categoryId: string, dishId: string): string {
+export function dishKey(
+  groupId: string,
+  categoryId: string,
+  dishId: string,
+): string {
   return `d:${groupId}:${categoryId}:${dishId}`;
 }
 
@@ -406,7 +428,9 @@ export function brandMenuCheckboxState(
   return { checked: false, indeterminate: true };
 }
 
-export function selectionToKeys(selection: BrandMenuStructureSelection): string[] {
+export function selectionToKeys(
+  selection: BrandMenuStructureSelection,
+): string[] {
   return Object.keys(selection).filter((k) => selection[k]);
 }
 
@@ -423,6 +447,28 @@ export function keysToSelection(
     syncParentGroup(selection, group.id, tree);
   }
   return selection;
+}
+
+export function selectedBrandMenuDishNamesByLine(
+  byLine: BrandMenuStructureByLine,
+): string[] {
+  return [
+    ...new Set(
+      BRAND_MENU_LINE_OPTIONS.flatMap((line) => {
+        const tree = resolveTree(line.id),
+          selection = keysToSelection(byLine[line.id] ?? [], tree);
+        return tree.flatMap((group) =>
+          group.categories.flatMap((category) =>
+            category.dishes
+              .filter(
+                (dish) => selection[dishKey(group.id, category.id, dish.id)],
+              )
+              .map((dish) => dish.name),
+          ),
+        );
+      }),
+    ),
+  ];
 }
 
 export function formatBrandMenuStructureSummary(
@@ -458,7 +504,9 @@ export function formatBrandMenuStructureSummary(
   return `${unique.slice(0, 3).join("、")} 等 ${unique.length} 项`;
 }
 
-export function formatBrandMenuStructureByLineSummary(byLine: BrandMenuStructureByLine): string {
+export function formatBrandMenuStructureByLineSummary(
+  byLine: BrandMenuStructureByLine,
+): string {
   const parts = BRAND_MENU_LINE_OPTIONS.map((line) => {
     const keys = byLine[line.id] ?? [];
     if (keys.length === 0) return null;
@@ -470,7 +518,9 @@ export function formatBrandMenuStructureByLineSummary(byLine: BrandMenuStructure
 }
 
 /** 统计各产线下已勾选的菜品数量（同菜跨产线分别计数） */
-export function countBrandMenuStructureDishesByLine(byLine: BrandMenuStructureByLine): number {
+export function countBrandMenuStructureDishesByLine(
+  byLine: BrandMenuStructureByLine,
+): number {
   return BRAND_MENU_LINE_OPTIONS.reduce((sum, line) => {
     const tree = resolveTree(line.id);
     const selection = keysToSelection(byLine[line.id] ?? [], tree);
@@ -494,7 +544,11 @@ function renderStructureItem(
   tree: BrandMenuGroupNode[],
   opts?: { childCount?: number; readOnly?: boolean },
 ): string {
-  const { checked, indeterminate } = brandMenuCheckboxState(key, selection, tree);
+  const { checked, indeterminate } = brandMenuCheckboxState(
+    key,
+    selection,
+    tree,
+  );
   const countBadge =
     opts?.childCount != null
       ? `<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">${opts.childCount}</span>`
@@ -504,6 +558,7 @@ function renderStructureItem(
     <button
       type="button"
       data-brand-menu-col-select="${escapeHtml(key)}"
+      data-brand-menu-active="${selected}"
       class="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
         selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"
       }"
@@ -522,11 +577,17 @@ function renderStructureItem(
     </button>`;
 }
 
-function renderLineItem(lineId: BrandMenuLineId, label: string, selected: boolean, selectedCount: number): string {
+function renderLineItem(
+  lineId: BrandMenuLineId,
+  label: string,
+  selected: boolean,
+  selectedCount: number,
+): string {
   return `
     <button
       type="button"
       data-brand-menu-line-select="${escapeHtml(lineId)}"
+      data-brand-menu-active="${selected}"
       class="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
         selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"
       }"
@@ -538,6 +599,8 @@ function renderLineItem(lineId: BrandMenuLineId, label: string, selected: boolea
 
 export type RenderBrandMenuStructurePickerOptions = {
   enableLines?: boolean;
+  searchable?: boolean;
+  query?: string;
   selectionByLine?: BrandMenuStructureByLine;
   activeLineId?: BrandMenuLineId;
   /** 只读：可切换产线/组/类浏览，不可勾选 */
@@ -553,14 +616,21 @@ export function renderBrandMenuStructurePickerHtml(
   options?: RenderBrandMenuStructurePickerOptions,
 ): string {
   const enableLines = !!options?.enableLines;
+  const searchable = !!options?.searchable;
+  const query = options?.query ?? "";
   const readOnly = !!options?.readOnly;
   const treeLineId =
-    options?.treeLineId && isBrandMenuLineId(options.treeLineId) ? options.treeLineId : null;
+    options?.treeLineId && isBrandMenuLineId(options.treeLineId)
+      ? options.treeLineId
+      : null;
   const byLine = normalizeBrandMenuStructureByLine(
-    options?.selectionByLine ?? (enableLines ? emptyBrandMenuStructureByLine() : undefined),
+    options?.selectionByLine ??
+      (enableLines ? emptyBrandMenuStructureByLine() : undefined),
   );
   const activeLine: BrandMenuLineId =
-    enableLines && options?.activeLineId && isBrandMenuLineId(options.activeLineId)
+    enableLines &&
+    options?.activeLineId &&
+    isBrandMenuLineId(options.activeLineId)
       ? options.activeLineId
       : DEFAULT_BRAND_MENU_LINE_ID;
 
@@ -572,47 +642,104 @@ export function renderBrandMenuStructurePickerHtml(
   const lineKeys = enableLines ? (byLine[activeLine] ?? []) : selectedKeys;
   const selection = keysToSelection(lineKeys, tree);
   const groups = tree;
-  const activeG = activeGroupId && findGroup(activeGroupId, tree) ? activeGroupId : groups[0]?.id ?? "";
+  const activeG =
+    activeGroupId && findGroup(activeGroupId, tree)
+      ? activeGroupId
+      : (groups[0]?.id ?? "");
   const group = findGroup(activeG, tree);
   const activeC =
     activeCategoryId && group?.categories.some((c) => c.id === activeCategoryId)
       ? activeCategoryId
-      : group?.categories[0]?.id ?? "";
+      : (group?.categories[0]?.id ?? "");
 
   const colLine = enableLines
     ? BRAND_MENU_LINE_OPTIONS.map((line) =>
-        renderLineItem(line.id, line.label, line.id === activeLine, byLine[line.id]?.length ?? 0),
+        renderLineItem(
+          line.id,
+          line.label,
+          line.id === activeLine,
+          searchable
+            ? countBrandMenuStructureDishesByLine({
+                ...emptyBrandMenuStructureByLine(),
+                [line.id]: byLine[line.id],
+              })
+            : (byLine[line.id]?.length ?? 0),
+        ),
       ).join("")
     : "";
 
   const col1 = groups
     .map((g) =>
-      renderStructureItem(groupKey(g.id), g.name, g.id === activeG, selection, tree, {
-        childCount: g.categories.length,
-        readOnly,
-      }),
+      renderStructureItem(
+        groupKey(g.id),
+        g.name,
+        g.id === activeG,
+        selection,
+        tree,
+        {
+          childCount: g.categories.length,
+          readOnly,
+        },
+      ),
     )
     .join("");
 
   const col2 = (group?.categories ?? [])
     .map((c) =>
-      renderStructureItem(categoryKey(activeG, c.id), c.name, c.id === activeC, selection, tree, {
-        childCount: c.dishes.length,
-        readOnly,
-      }),
+      renderStructureItem(
+        categoryKey(activeG, c.id),
+        c.name,
+        c.id === activeC,
+        selection,
+        tree,
+        {
+          childCount: c.dishes.length,
+          readOnly,
+        },
+      ),
     )
     .join("");
 
   const category = findCategory(activeG, activeC, tree);
   const col3 = (category?.dishes ?? [])
     .map((d) =>
-      renderStructureItem(dishKey(activeG, activeC, d.id), d.name, false, selection, tree, {
-        readOnly,
-      }),
+      renderStructureItem(
+        dishKey(activeG, activeC, d.id),
+        d.name,
+        false,
+        selection,
+        tree,
+        {
+          readOnly,
+        },
+      ),
     )
     .join("");
 
-  const empty = (text: string) => `<p class="p-3 text-sm text-muted-foreground">${text}</p>`;
+  const searchResults = tree
+    .flatMap((g) =>
+      g.categories.flatMap((c) =>
+        c.dishes
+          .filter((d) =>
+            `${d.name} ${g.name} ${c.name}`
+              .toLowerCase()
+              .includes(query.trim().toLowerCase()),
+          )
+          .map((d) =>
+            renderStructureItem(
+              dishKey(g.id, c.id, d.id),
+              `${d.name} · ${g.name}/${c.name}`,
+              false,
+              selection,
+              tree,
+              { readOnly },
+            ),
+          ),
+      ),
+    )
+    .join("");
+  const empty = (text: string) =>
+    `<p class="p-3 text-sm text-muted-foreground">${text}</p>`;
   const gridClass = enableLines
     ? "grid min-h-[14rem] grid-cols-1 divide-y divide-border sm:grid-cols-4 sm:divide-x sm:divide-y-0"
     : "grid min-h-[14rem] grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0";
@@ -626,8 +753,9 @@ export function renderBrandMenuStructurePickerHtml(
 
   return `
     <div
-      class="overflow-hidden rounded-md border border-border"
+      class="product-scope-picker overflow-hidden rounded-md border border-border"
       data-brand-menu-structure-picker
+      ${searchable ? `data-searchable="1" data-query="${escapeHtml(query)}"` : ""}
       ${enableLines ? 'data-enable-lines="1"' : ""}
       ${readOnly ? 'data-read-only="1"' : ""}
       ${treeLineId ? `data-tree-line="${escapeHtml(treeLineId)}"` : ""}
@@ -636,6 +764,7 @@ export function renderBrandMenuStructurePickerHtml(
       data-active-category="${escapeHtml(activeC)}"
     >
       <input type="hidden" ${hiddenAttr} value="${hiddenValue}" />
+      ${searchable ? `<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3"><label class="min-w-0 flex-1"><span class="sr-only">搜索当前产线商品</span><input type="search" class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm" placeholder="搜索商品" aria-label="搜索当前产线商品" data-brand-menu-search value="${escapeHtml(query)}"></label><span class="text-xs text-muted-foreground" aria-live="polite">已选 ${countBrandMenuStructureDishesByLine(byLine)} 个商品（跨产线分别计数）</span></div>` : ""}
       <div class="${gridClass}">
         ${
           enableLines
@@ -645,7 +774,10 @@ export function renderBrandMenuStructurePickerHtml(
         </div>`
             : ""
         }
-        <div class="flex min-h-0 flex-col">
+        ${
+          searchable && query.trim()
+            ? `<div class="sm:col-span-3 p-2" data-brand-menu-search-results>${searchResults || empty("没有匹配的商品")}</div>`
+            : `        <div class="flex min-h-0 flex-col">
           <p class="shrink-0 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">组</p>
           <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1" data-brand-menu-col="group">${col1 || empty("暂无分组")}</div>
         </div>
@@ -654,21 +786,31 @@ export function renderBrandMenuStructurePickerHtml(
           <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1" data-brand-menu-col="category">${col2 || empty("请选择组")}</div>
         </div>
         <div class="flex min-h-0 flex-col">
-          <p class="shrink-0 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">菜</p>
+          <p class="shrink-0 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">商品</p>
           <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1" data-brand-menu-col="dish">${col3 || empty("请选择分类")}</div>
-        </div>
+        </div>`
+        }
+
       </div>
     </div>`;
 }
 
 export function syncBrandMenuStructureIndeterminate(root: ParentNode): void {
-  root.querySelectorAll<HTMLInputElement>(".brand-menu-enable-cb[data-indeterminate]").forEach((cb) => {
-    cb.indeterminate = true;
-  });
+  root
+    .querySelectorAll<HTMLInputElement>(
+      ".brand-menu-enable-cb[data-indeterminate]",
+    )
+    .forEach((cb) => {
+      cb.indeterminate = true;
+    });
 }
 
-export function readBrandMenuStructureKeysFromPicker(picker: HTMLElement): string[] {
-  const raw = picker.querySelector<HTMLInputElement>("[data-brand-menu-structure-keys]")?.value ?? "[]";
+export function readBrandMenuStructureKeysFromPicker(
+  picker: HTMLElement,
+): string[] {
+  const raw =
+    picker.querySelector<HTMLInputElement>("[data-brand-menu-structure-keys]")
+      ?.value ?? "[]";
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -678,9 +820,13 @@ export function readBrandMenuStructureKeysFromPicker(picker: HTMLElement): strin
   }
 }
 
-export function readBrandMenuStructureByLineFromPicker(picker: HTMLElement): BrandMenuStructureByLine {
+export function readBrandMenuStructureByLineFromPicker(
+  picker: HTMLElement,
+): BrandMenuStructureByLine {
   const raw =
-    picker.querySelector<HTMLInputElement>("[data-brand-menu-structure-by-line]")?.value ?? "{}";
+    picker.querySelector<HTMLInputElement>(
+      "[data-brand-menu-structure-by-line]",
+    )?.value ?? "{}";
   try {
     return normalizeBrandMenuStructureByLine(JSON.parse(raw) as unknown);
   } catch {
@@ -701,8 +847,11 @@ function resolvePickerTree(picker: HTMLElement): BrandMenuGroupNode[] {
   const treeLine = pickerTreeLineId(picker);
   if (treeLine) return resolveTree(treeLine);
   if (pickerUsesLines(picker)) {
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLineRaw =
+      picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLine = isBrandMenuLineId(activeLineRaw)
+      ? activeLineRaw
+      : DEFAULT_BRAND_MENU_LINE_ID;
     return resolveTree(activeLine);
   }
   return BRAND_MENU_STRUCTURE_TREE;
@@ -725,41 +874,83 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     const html = enableLines
       ? renderBrandMenuStructurePickerHtml([], activeGroup, activeCategory, {
           enableLines: true,
+          searchable: picker.dataset.searchable === "1",
+          query: picker.dataset.query ?? "",
           selectionByLine: keysOrByLine as BrandMenuStructureByLine,
           activeLineId: activeLine ?? DEFAULT_BRAND_MENU_LINE_ID,
           readOnly,
         })
-      : renderBrandMenuStructurePickerHtml(keysOrByLine as string[], activeGroup, activeCategory, {
-          readOnly,
-          treeLineId: treeLineId ?? undefined,
-        });
+      : renderBrandMenuStructurePickerHtml(
+          keysOrByLine as string[],
+          activeGroup,
+          activeCategory,
+          {
+            readOnly,
+            treeLineId: treeLineId ?? undefined,
+          },
+        );
     const wrap = document.createElement("div");
     wrap.innerHTML = html.trim();
     const next = wrap.firstElementChild as HTMLElement | null;
     if (!next) return;
+    const focusedKey = picker.dataset.searchable === "1" && document.activeElement instanceof HTMLInputElement
+      ? document.activeElement.getAttribute("data-brand-menu-enable") : null;
     picker.replaceWith(next);
     syncBrandMenuStructureIndeterminate(next);
     bindBrandMenuStructurePicker(next);
+    if (focusedKey) next.querySelector<HTMLInputElement>(`[data-brand-menu-enable="${CSS.escape(focusedKey)}"]`)?.focus();
   };
+
+  picker.addEventListener("input", (event) => {
+    const input = event.target as HTMLInputElement;
+    if (!input.matches("[data-brand-menu-search]")) return;
+    const parent = picker.parentElement,
+      caret = input.selectionStart;
+    picker.dataset.query = input.value;
+    const line = picker.dataset.activeLine as BrandMenuLineId;
+    rerender(
+      readBrandMenuStructureByLineFromPicker(picker),
+      picker.dataset.activeGroup ?? "",
+      picker.dataset.activeCategory ?? "",
+      line,
+    );
+    const next = parent?.querySelector<HTMLInputElement>(
+      "[data-brand-menu-search]",
+    );
+    next?.focus();
+    if (next && caret != null) next.setSelectionRange(caret, caret);
+  });
 
   picker.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const lineBtn = target.closest<HTMLElement>("[data-brand-menu-line-select]");
+    const lineBtn = target.closest<HTMLElement>(
+      "[data-brand-menu-line-select]",
+    );
     if (lineBtn && pickerUsesLines(picker)) {
       const lineId = lineBtn.getAttribute("data-brand-menu-line-select") ?? "";
       if (!isBrandMenuLineId(lineId)) return;
       const byLine = readBrandMenuStructureByLineFromPicker(picker);
       const tree = resolveTree(lineId);
-      rerender(byLine, tree[0]?.id ?? "", tree[0]?.categories[0]?.id ?? "", lineId);
+      rerender(
+        byLine,
+        tree[0]?.id ?? "",
+        tree[0]?.categories[0]?.id ?? "",
+        lineId,
+      );
       return;
     }
 
-    const selectBtn = target.closest<HTMLElement>("[data-brand-menu-col-select]");
+    const selectBtn = target.closest<HTMLElement>(
+      "[data-brand-menu-col-select]",
+    );
     if (!selectBtn || target.closest("[data-brand-menu-enable]")) return;
     const key = selectBtn.getAttribute("data-brand-menu-col-select") ?? "";
     const enableLines = pickerUsesLines(picker);
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLineRaw =
+      picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLine = isBrandMenuLineId(activeLineRaw)
+      ? activeLineRaw
+      : DEFAULT_BRAND_MENU_LINE_ID;
     const tree = resolvePickerTree(picker);
     const keys = enableLines
       ? readBrandMenuStructureByLineFromPicker(picker)
@@ -769,7 +960,12 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
       const groupId = key.slice(2);
       const group = findGroup(groupId, tree);
       if (enableLines) {
-        rerender(keys as BrandMenuStructureByLine, groupId, group?.categories[0]?.id ?? "", activeLine);
+        rerender(
+          keys as BrandMenuStructureByLine,
+          groupId,
+          group?.categories[0]?.id ?? "",
+          activeLine,
+        );
       } else {
         rerender(keys as string[], groupId, group?.categories[0]?.id ?? "");
       }
@@ -780,7 +976,12 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
       const groupId = parts[1] ?? "";
       const categoryId = parts[2] ?? "";
       if (enableLines) {
-        rerender(keys as BrandMenuStructureByLine, groupId, categoryId, activeLine);
+        rerender(
+          keys as BrandMenuStructureByLine,
+          groupId,
+          categoryId,
+          activeLine,
+        );
       } else {
         rerender(keys as string[], groupId, categoryId);
       }
@@ -794,8 +995,11 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     const key = input.getAttribute("data-brand-menu-enable");
     if (!key) return;
     const enableLines = pickerUsesLines(picker);
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLineRaw =
+      picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLine = isBrandMenuLineId(activeLineRaw)
+      ? activeLineRaw
+      : DEFAULT_BRAND_MENU_LINE_ID;
     const tree = resolvePickerTree(picker);
     const activeGroup = picker.dataset.activeGroup ?? "";
     const activeCategory = picker.dataset.activeCategory ?? "";
@@ -810,7 +1014,12 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
         tree,
       );
       const nextKeys = selectionToKeys(nextSelection);
-      rerender({ ...byLine, [activeLine]: nextKeys }, activeGroup, activeCategory, activeLine);
+      rerender(
+        { ...byLine, [activeLine]: nextKeys },
+        activeGroup,
+        activeCategory,
+        activeLine,
+      );
       return;
     }
 

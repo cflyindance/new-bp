@@ -60,7 +60,7 @@ const MODE_OPTIONS: ReadonlyArray<{
 const QTY_MIN = 1;
 const QTY_MAX = 99;
 const QTY_DEFAULT = 1;
-const MODE_DEFAULT: GuestOrderIntervalAllowCartMode = "allowed";
+const MODE_DEFAULT: GuestOrderIntervalAllowCartMode = "blocked";
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
@@ -80,6 +80,10 @@ function escapeHtml(s: string): string {
 
 function isValidMode(value: string): value is GuestOrderIntervalAllowCartMode {
   return MODE_OPTIONS.some((o) => o.value === value);
+}
+
+function normalizePolicyMode(value: unknown): GuestOrderIntervalAllowCartMode {
+  return value === "allowed" || value === "auth-every" || value === "auth-qty" ? "allowed" : "blocked";
 }
 
 function clampQty(raw: unknown): number {
@@ -108,17 +112,14 @@ function defaultByLineConfig(
 function normalizeByLineConfig(
   raw: Partial<Record<string, Partial<GuestOrderIntervalAllowCartLineConfig>>>,
 ): GuestOrderIntervalAllowCartByLine {
-  const base = defaultByLineConfig(false);
+  const base = defaultByLineConfig(true);
   // Retired auth-every/auth-qty values resolve to allowed; threshold data stays inert.
   for (const line of GUEST_ORDER_INTERVAL_ALLOW_CART_PRODUCT_LINES) {
     const item = raw[line.id];
     if (!item || typeof item !== "object") continue;
-    const mode =
-      typeof item.mode === "string" && isValidMode(item.mode)
-        ? item.mode
-        : MODE_DEFAULT;
+    const mode = item.enabled === false ? "blocked" : normalizePolicyMode(item.mode);
     base[line.id] = {
-      enabled: item.enabled === true,
+      enabled: true,
       mode,
       qtyThreshold: clampQty(item.qtyThreshold ?? QTY_DEFAULT),
     };
@@ -165,10 +166,7 @@ export function ensureGuestOrderIntervalAllowCartByLineMigrated(): void {
   }
 
   const modeRaw = readModuleSettingJson<unknown>(MODE_STORAGE_ID, null);
-  const mode =
-    typeof modeRaw === "string" && isValidMode(modeRaw)
-      ? modeRaw
-      : MODE_DEFAULT;
+  const mode = normalizePolicyMode(modeRaw);
   const qty = clampQty(readModuleSettingNumber(QTY_STORAGE_ID, QTY_DEFAULT));
 
   const config = defaultByLineConfig(true);
@@ -258,28 +256,7 @@ export function isGuestOrderIntervalAllowCartSeq(seq: number): boolean {
 }
 
 function syncRowControls(editor: HTMLElement, panelEnabled: boolean): void {
-  editor
-    .querySelectorAll<HTMLInputElement>(
-      "[data-guest-order-interval-allow-cart-line-enabled]",
-    )
-    .forEach((cb) => {
-      const lineId = cb.getAttribute(
-        "data-guest-order-interval-allow-cart-line-enabled",
-      );
-      if (!lineId) return;
-      const lineEnabled = panelEnabled && cb.checked;
-      const modeRadios = editor.querySelectorAll<HTMLInputElement>(
-        `[data-guest-order-interval-allow-cart-line-mode="${CSS.escape(lineId)}"]`,
-      );
-      modeRadios.forEach((radio) => {
-        radio.disabled = !lineEnabled;
-        const label = radio.closest("label");
-        if (!label) return;
-        label.classList.toggle("cursor-not-allowed", !lineEnabled);
-        label.classList.toggle("opacity-50", !lineEnabled);
-        label.classList.toggle("cursor-pointer", lineEnabled);
-      });
-    });
+  editor.querySelectorAll<HTMLInputElement>("[data-guest-order-interval-allow-cart-line-mode]").forEach(radio => { radio.disabled = !panelEnabled; });
 }
 
 function collectByLineFromEditor(
@@ -315,12 +292,7 @@ function collectByLineFromEditor(
 
 function renderByLineEditorHtml(enabled: boolean): string {
   const config = readGuestOrderIntervalAllowCartByLine();
-  return `<div data-guest-order-interval-allow-cart-by-line-editor="${GUEST_ORDER_INTERVAL_ALLOW_CART_SEQ}" class="space-y-2"><div class="overflow-x-auto rounded-md border border-border"><table class="w-full border-collapse text-left text-sm"><thead><tr><th class="px-3 py-2">产线</th><th class="px-3 py-2">启用</th><th class="px-3 py-2">加购策略</th></tr></thead><tbody>${GUEST_ORDER_INTERVAL_ALLOW_CART_PRODUCT_LINES.map(
-    (line) => {
-      const item = config[line.id];
-      return `<tr ${FOH_LINE_CONFIG_ROW_ATTR}="${line.id}"><td class="px-3 py-2">${line.label}</td><td class="px-3 py-2"><input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS}" data-guest-order-interval-allow-cart-line-enabled="${line.id}" aria-label="${line.label} 启用间隔内加购策略" ${item.enabled ? "checked" : ""} ${enabled ? "" : "disabled"}></td><td class="px-3 py-2"><div class="flex flex-wrap gap-4" role="radiogroup" aria-label="${line.label} 加购策略">${MODE_OPTIONS.map((opt) => `<label class="inline-flex items-center gap-2"><input type="radio" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" name="guest-order-interval-allow-cart-mode-${line.id}" data-guest-order-interval-allow-cart-line-mode="${line.id}" value="${opt.value}" ${item.mode === opt.value ? "checked" : ""} ${enabled && item.enabled ? "" : "disabled"}><span>${opt.label}</span></label>`).join("")}</div></td></tr>`;
-    },
-  ).join("")}</tbody></table></div></div>`;
+  return `<div data-guest-order-interval-allow-cart-by-line-editor="${GUEST_ORDER_INTERVAL_ALLOW_CART_SEQ}" class="space-y-2"><div class="overflow-x-auto rounded-md border border-border"><table class="w-full border-collapse text-left text-sm"><thead><tr><th class="px-3 py-2">产线</th><th class="px-3 py-2">加购策略</th></tr></thead><tbody>${GUEST_ORDER_INTERVAL_ALLOW_CART_PRODUCT_LINES.map(line => `<tr ${FOH_LINE_CONFIG_ROW_ATTR}="${line.id}"><td class="px-3 py-2">${line.label}</td><td class="px-3 py-2"><div class="flex gap-4" role="radiogroup" aria-label="${line.label} 加购策略">${MODE_OPTIONS.map(opt => `<label class="inline-flex items-center gap-2"><input type="radio" name="guest-order-interval-allow-cart-mode-${line.id}" data-guest-order-interval-allow-cart-line-mode="${line.id}" value="${opt.value}" ${config[line.id].mode === opt.value ? "checked" : ""} ${enabled ? "" : "disabled"}><span>${opt.label}</span></label>`).join("")}</div></td></tr>`).join("")}</tbody></table></div></div>`;
 }
 
 export function renderGuestOrderIntervalAllowCartPanelHtml(

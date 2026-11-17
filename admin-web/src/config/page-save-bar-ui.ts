@@ -64,7 +64,7 @@ export function renderPageSaveBar(
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
   if (placement === "header")
-    return `<div class="order-settings-save" data-page-save-bar data-page-save-key="${escapeHtml(pageKey)}"><button type="button" data-page-save-preview ${dirty ? "" : "disabled hidden"}><span data-page-save-count-num>${count}</span> 项待保存</button><button type="button" data-page-save-commit ${dirty ? "" : "disabled"}>保存设置</button></div>`;
+    return `<div class="order-settings-save" data-page-save-bar data-page-save-key="${escapeHtml(pageKey)}"><button type="button" data-page-save-commit ${dirty ? "" : "disabled"}>保存设置</button></div>`;
   const deployedHint = formatDeployedHint(pageKey);
   const classification =
     pageKey === "/operations/queue-call/classification-settings";
