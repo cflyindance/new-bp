@@ -1,4 +1,5 @@
-import { combineIntervalParts } from "./interval-display";
+import { readScopeFilters } from "../auth/session-scope";
+import { combineIntervalParts, formatIntervalDuration } from "./interval-display";
 import { renderPageStorePickerBar } from "../shell/page-store-picker";
 import { renderPageSaveBar } from "./page-save-bar-ui";
 import {
@@ -75,11 +76,11 @@ const esc = (v: string) =>
   );
 function toggle(
   line: Line,
-  rule: number | "expand",
+  rule: number,
   on: boolean,
   label: string,
 ): string {
-  return `<input type="checkbox" role="switch" class="order-setting-switch ${rule === "expand" ? "order-line-switch" : ""}" data-order-card-toggle="${rule}" data-line="${line}" aria-label="${esc(label)}" ${on ? "checked" : ""}>`;
+  return `<input type="checkbox" role="switch" class="order-setting-switch " data-order-card-toggle="${rule}" data-line="${line}" aria-label="${esc(label)}" ${on ? "checked" : ""}>`;
 }
 function number(line: Line, _rule: number, value: number, max: number, label: string, _unit = ""): string {
   return `<div class="order-duration-parts"><label><input type="number" min="0" max="${max/60}" step="1" value="${Math.floor(value/60)}" data-order-duration-part="minutes" data-line="${line}" aria-label="${esc(label)} 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${value%60}" data-order-duration-part="seconds" data-line="${line}" aria-label="${esc(label)} 秒"><span>秒</span></label></div>`;
@@ -95,7 +96,27 @@ function choices(
 type IntervalScene = "order" | "product";
 let activeIntervalScene: IntervalScene = "order";
 
+// Presentation state only: never write expansion into a business setting.
+const expandedLines = new Map<string, Set<Line>>();
+function expansionKey(category: string, scene?: IntervalScene): string {
+  return `${readScopeFilters().store ?? "default"}:${category}:${scene ?? ""}`;
+}
+function lineSummaries(id: Line): string[] {
+  const interval = readInterval()[id], auth = readAuth()[id];
+  return [
+    interval.enabled ? `订单间隔 ${formatIntervalDuration(interval.seconds)}` : "订单间隔未启用",
+    readOrder()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
+    readMenu()[id].mode === "allowed" ? "间隔内允许加购" : "间隔内不允许加购",
+    auth.enabled ? (auth.mode === "auth-once" ? "授权一次后本单放行" : "每次命中均需授权") : "命中授权未启用",
+    readView(595).includes(id) ? "可看不可点菜可直接加购" : "可看不可点菜加购需授权",
+    readView(596).includes(id) ? "可看不可点菜需服务员授权" : "未启用服务员授权要求",
+    readPoints().includes(id) ? "积分菜兑换需授权" : "积分菜兑换无需授权",
+    readOnly(527).includes(id) ? "允许纯积分订单兑换" : "不允许纯积分订单兑换",
+  ];
+}
 function renderCategoryCards(category: string, scene?: IntervalScene): string {
+  const stateKey = expansionKey(category, scene);
+  if (!expandedLines.has(stateKey)) expandedLines.set(stateKey, new Set([lines[0].id]));
   const interval = readInterval(),
     order = readOrder(),
     menu = readMenu(),
@@ -106,7 +127,7 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
     readPoints(),
     readOnly(527),
   ];
-  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品间隔规则</h3><p>为指定商品设置两次下单的最小间隔分钟数</p></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section><header class="order-settings-heading order-product-policy-heading"><h3>间隔内加购设置</h3></header>` : ""}${lines
+  return `<section id="menu-order-other-${category}${scene ? `-${scene}` : ""}" class="order-settings-cards" ${scene ? "" : `data-menu-order-other-category="${category}"`}>${scene ? "" : `<header class="order-settings-heading"><h3>${MENU_ORDER_OTHER_SETTINGS_SECTIONS.find((s) => s.key === category)!.title}</h3></header>`}${scene === "product" ? `<section class="order-product-rules" data-module-setting-row-seq="590"><header class="order-settings-heading"><h3>商品间隔规则</h3><p>为指定商品设置两次下单的最小间隔</p></header>${renderGuestMenuOrderIntervalPanelHtml(true)}</section><header class="order-settings-heading order-product-policy-heading"><h3>间隔内加购设置</h3></header>` : ""}${lines
     .map((line) => {
       const id = line.id,
         states = [
@@ -124,8 +145,10 @@ function renderCategoryCards(category: string, scene?: IntervalScene): string {
           : category === "auth"
             ? [3, 4, 5]
             : [6, 7];
-      const expanded = indices.some((i) => states[i]);
-      return `<section class="order-line-card" data-order-line="${id}"><header><span class="order-line-badge">${line.label}</span>${toggle(id, "expand", expanded, `${line.label} 展开规则设置`)}</header><div class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
+      const expanded = expandedLines.get(stateKey)!.has(id);
+      const summary = lineSummaries(id);
+      const detailsId = `order-line-${category}-${scene ?? "rules"}-${id}`;
+      return `<section class="order-line-card" data-order-line="${id}" data-order-expansion-key="${esc(stateKey)}"><header><button type="button" class="order-line-disclosure" data-order-line-disclosure aria-expanded="${expanded}" aria-controls="${detailsId}" aria-label="${line.label} 规则设置"><span class="order-line-badge">${line.label}</span><span class="order-line-summary">${indices.map(i => `<span data-order-summary-rule="${i}" data-module-setting-row-seq="${seqs[i]}">${esc(summary[i])}</span>`).join("")}</span><svg class="order-line-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></header><div id="${detailsId}" class="order-line-rules" ${expanded ? "" : "hidden"}>${titles
         .map((title, i) => {
           if (!indices.includes(i)) return "";
           let body = "";
@@ -200,7 +223,26 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       if (panel) panel.hidden = id !== scene;
     }
   };
+  const refreshSummaries = () => {
+    host.querySelectorAll<HTMLElement>("[data-order-line]").forEach(card => {
+      const values = lineSummaries(card.dataset.orderLine as Line);
+      card.querySelectorAll<HTMLElement>("[data-order-summary-rule]").forEach(node => {
+        node.textContent = values[Number(node.dataset.orderSummaryRule)];
+      });
+    });
+  };
   host.addEventListener("click", (event) => {
+    const disclosure = (event.target as Element).closest<HTMLButtonElement>("[data-order-line-disclosure]");
+    if (disclosure) {
+      const card = disclosure.closest<HTMLElement>("[data-order-line]")!;
+      const expanded = disclosure.getAttribute("aria-expanded") !== "true";
+      disclosure.setAttribute("aria-expanded", String(expanded));
+      card.querySelector<HTMLElement>(".order-line-rules")!.hidden = !expanded;
+      const selection = expandedLines.get(card.dataset.orderExpansionKey!)!;
+      if (expanded) selection.add(card.dataset.orderLine as Line);
+      else selection.delete(card.dataset.orderLine as Line);
+      return;
+    }
     const button = (event.target as Element).closest<HTMLElement>(
       "[data-order-interval-scene]",
     );
@@ -232,7 +274,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       const config = readInterval();
       config[line].seconds = combineIntervalParts(minutes.value, seconds.value, 0, 3600, 60);
       minutes.value = String(Math.floor(config[line].seconds/60)); seconds.value = String(config[line].seconds%60);
-      writeInterval(config); return;
+      writeInterval(config); refreshSummaries(); return;
     }
     if (
       !input.matches(
@@ -242,13 +284,6 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       return;
     const line = input.dataset.line as Line;
     if (!lines.some((l) => l.id === line)) return;
-    if (input.dataset.orderCardToggle === "expand") {
-      const rules = input
-        .closest("section")
-        ?.querySelector<HTMLElement>(".order-line-rules");
-      if (rules) rules.hidden = !input.checked;
-      return;
-    }
     const rule = Number(
       input.dataset.orderCardToggle ??
         input.dataset.orderCardNumber ??
@@ -294,6 +329,7 @@ export function bindOrderSettingsCards(root: ParentNode): void {
       else if (rule === 6) writePoints(next);
       else writeOnly(527, next);
     }
+    refreshSummaries();
     if (isToggle) {
       const body = input
         .closest("article")

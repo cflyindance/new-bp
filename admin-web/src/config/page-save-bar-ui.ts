@@ -24,6 +24,14 @@ import { readFohByLineToggleState } from "./foh-settings-by-line-toggle";
 import type { FohLineNavId } from "./foh-settings-line-scope";
 import { readModuleSettingToggleOn } from "./module-settings-toggle-ui";
 
+const savedHeaderPages = new Set<string>();
+function headerStateKey(pageKey: string): string {
+  return `${resolveAutoDeploymentScope()?.storeIds[0] ?? "default"}:${pageKey}`;
+}
+function headerSaveState(pageKey: string, dirty: boolean): string {
+  return dirty ? "有未保存修改" : savedHeaderPages.has(headerStateKey(pageKey)) ? "已保存" : "暂无待保存修改";
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -64,7 +72,7 @@ export function renderPageSaveBar(
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
   if (placement === "header")
-    return `<div class="order-settings-save" data-page-save-bar data-page-save-key="${escapeHtml(pageKey)}"><button type="button" data-page-save-commit ${dirty ? "" : "disabled"}>保存设置</button></div>`;
+    return `<div class="order-settings-save" data-page-save-bar data-page-save-key="${escapeHtml(pageKey)}"><span role="status" aria-live="polite" data-order-save-state>${headerSaveState(pageKey, dirty)}</span><button type="button" data-page-save-commit ${dirty ? "" : "disabled"}>保存设置</button></div>`;
   const deployedHint = formatDeployedHint(pageKey);
   const classification =
     pageKey === "/operations/queue-call/classification-settings";
@@ -145,6 +153,10 @@ function syncPageSaveBarDom(pageKey: string): void {
   const commitBtn = bar.querySelector<HTMLButtonElement>(
     "[data-page-save-commit]",
   );
+
+  const headerState = bar.querySelector("[data-order-save-state]");
+  if (headerState) headerState.textContent = headerSaveState(pageKey, dirty);
+  if (dirty) savedHeaderPages.delete(headerStateKey(pageKey));
 
   if (countNum) countNum.textContent = String(count);
   if (countWrap) {
@@ -236,6 +248,7 @@ export function bindPageSaveBar(remount: () => void): void {
         if (!pageKey || !isPageSavePending(pageKey)) return;
         void confirmAndTriggerPageSaveAndDeploy(pageKey).then((batch) => {
           if (batch) {
+            savedHeaderPages.add(headerStateKey(pageKey));
             refreshPageSaveBar(pageKey);
             remount();
           }
