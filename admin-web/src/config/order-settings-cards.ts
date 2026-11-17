@@ -180,7 +180,7 @@ export function renderOrderSettingsCards(): string {
     ...s,
     targetId: `menu-order-other-${s.key}`,
   }));
-  return `<div class="order-settings-scroll order-settings-with-nav" data-order-settings-cards><header class="order-settings-page-heading"><div><h2>下单设置</h2><p>按点餐端统一管理订单间隔、商品间隔、命中授权与积分商品行为</p></div><div class="order-settings-header-actions">${renderPageStorePickerBar(true)}${renderPageSaveBar(MENU_ORDER_OTHER_SETTINGS_PATH, "header")}</div></header>${renderSettingsCategoryLayout(MENU_ORDER_OTHER_SETTINGS_PATH, categories, body)}</div>`;
+  return `<div class="order-settings-scroll order-settings-with-nav" data-order-settings-cards><header class="order-settings-page-heading"><div><h2>下单设置</h2><p>按点餐端统一管理订单间隔、商品间隔、命中授权与积分商品行为</p></div><div class="order-settings-header-actions">${renderPageStorePickerBar(true)}${renderPageSaveBar(MENU_ORDER_OTHER_SETTINGS_PATH, "header")}</div></header>${renderSettingsCategoryLayout(MENU_ORDER_OTHER_SETTINGS_PATH, categories, body, { mode: "panels" })}</div>`;
 }
 /** Update one line only; sibling line settings are preserved by the existing normalizers. */
 export function bindOrderSettingsCards(root: ParentNode): void {
