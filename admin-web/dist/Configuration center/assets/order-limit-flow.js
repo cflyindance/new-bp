@@ -5038,9 +5038,7 @@
     var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
     if (!editorState || !editorState.quantitySceneDialog) workbenchState.storeId = draft.activeStoreId;
     var config = storeConfigFor(draft, draft.activeStoreId, true);
-    var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
-    var rangeSummary = config.productLines.length + " 条产线 · " + (draft.targetType === "dish_set" ? config.dishSetMembers.length : config.targetIds.length) + " 个" + (draft.targetType === "category" ? "分类" : "商品");
-    return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><div class="olf-v4-store-summary"><strong>' + esc(store ? store.name : '') + ' · 商品范围</strong><span>' + esc(rangeSummary) + '</span></div></div>' +
+    return '<section class="olf-section olf-v4-quantity-editor">' +
       draft.enabledPeriods.slice().sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); }).map(function (period) {
         return renderV4PeriodSection(draft, config, period) + renderV4PendingTargetNotice(config, period);
       }).join("") + '</section>' + renderQuantitySceneDialog(draft, config);
