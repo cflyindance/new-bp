@@ -14,15 +14,26 @@ export function bindFlatBusinessPresets(host:HTMLElement,choices:MenuChoice[],re
  let selected:string=saved.selected??'',baseline:string[]=saved.baseline??[],source:string=saved.source??'',pending:HTMLDialogElement|undefined;
  const rows=()=>readBusinessMenuTemplates(choices).filter(t=>t.enabled&&t.releases.at(-1)?.org===scene.read().org);
  const changed=()=>read().length!==baseline.length||read().some(k=>!baseline.includes(k));
- const provenance=()=>{host.dataset.flatPresetState=JSON.stringify({selected,baseline,source});if(source)bar.dataset.templateSource=source+` · 额外选择 ${read().filter(k=>!baseline.includes(k)).length} 项／取消 ${baseline.filter(k=>!read().includes(k)).length} 项`;};
+ const updateAppliedCard=()=>{
+  bar.querySelectorAll<HTMLButtonElement>('[data-business-preset]').forEach(card=>{
+   const applied=card.dataset.businessPreset===selected;
+   card.toggleAttribute('data-applied',applied);
+   card.querySelector<HTMLElement>('[data-applied-label]')!.hidden=!applied;
+  });
+ };
+ const provenance=()=>{updateAppliedCard();host.dataset.flatPresetState=JSON.stringify({selected,baseline,source});if(source)bar.dataset.templateSource=source+` · 额外选择 ${read().filter(k=>!baseline.includes(k)).length} 项／取消 ${baseline.filter(k=>!read().includes(k)).length} 项`;};
  const render=()=>{
   const cards=rows().map(template=>{
    const release=template.releases.at(-1)!;
    const plan=planTemplateSelection([],release.keys,choices,allowed,'replace');
    const pages=choices.filter(choice=>choice.isPage&&plan.next.includes(choice.key)).length;
-   return `<button type="button" class="ba-template-card" data-business-preset="${templateEsc(template.id)}"><span><strong>${templateEsc(release.name)}</strong><small>${pages} 个页面</small></span><span aria-hidden="true">→</span></button>`;
+   return `<button type="button" class="ba-template-card" data-business-preset="${templateEsc(template.id)}" aria-haspopup="dialog">
+    <span class="ba-template-card-content"><strong>${templateEsc(release.name)}</strong><small>${pages} 个页面</small><small class="ba-template-applied" data-applied-label hidden>已应用</small></span>
+    <span class="ba-template-arrow" aria-hidden="true">→</span>
+   </button>`;
   }).join('');
-  bar.innerHTML=`<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6zM14 3v5h5"/></svg>使用菜单模板</h3><p class="ba-muted">预览后可补充或替换</p><div class="ba-flat-preset-options">${cards||'<p class="ba-muted">暂无已发布模板</p>'}</div><span role="alert" data-preset-error></span>`;
+  bar.innerHTML=`<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6zM14 3v5h5"/></svg>使用菜单模板</h3><p class="ba-muted">预览后可补充或替换</p><div class="ba-flat-preset-options">${cards||'<p class="ba-template-empty ba-muted">暂无已发布模板</p>'}</div><span role="alert" data-preset-error></span>`;
+  updateAppliedCard();
  };
  const choose=(id:string,automatic=false)=>{
   if(automatic&&(id===selected||changed()))return;
