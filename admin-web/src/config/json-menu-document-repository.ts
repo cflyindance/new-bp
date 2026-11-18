@@ -1,5 +1,6 @@
 import { serializeMenuDocument } from "./json-menu-document-serializer";
-import type { MenuDocument } from "./json-menu-document-domain";
+import { PAID_MENU_DEMO_CASES } from "./paid-menu-demo";
+import { walkMenuNodes, type MenuDocument } from "./json-menu-document-domain";
 import { resolveMenuDocumentRepositoryMode } from "./json-menu-document-repository-mode";
 import { buildCurrentMerchantMenuDemoNodes, isLegacyMerchantMenuSeed } from "./json-menu-demo-data";
 
@@ -64,11 +65,20 @@ export class HttpMenuDocumentRepository implements MenuDocumentRepository {
 export const DEMO_PUBLISHED_KEY = "menusifu:json-menu-editor:published-v4";
 export const DEMO_DRAFT_KEY = "menusifu:json-menu-editor:draft-v4";
 
+function buildPublishedDemoMenu() {
+  const menu = buildCurrentMerchantMenuDemoNodes();
+  const paidPaths = new Set<string>(PAID_MENU_DEMO_CASES.map(item => item.path));
+  for (const { node } of walkMenuNodes(menu)) {
+    if (node.path && paidPaths.has(node.path)) node.paidMenu = true;
+  }
+  return menu;
+}
+
 function defaultDemoDocument(): MenuDocument {
   return {
     _id: "67d2d3412011b635378d3efc",
     name: "B Platform Menu",
-    menu: buildCurrentMerchantMenuDemoNodes(),
+    menu: buildPublishedDemoMenu(),
     updatedBy: { userId: "demo", timestamp: new Date().toISOString(), firstname: "Demo", lastname: null },
     createdDate: Date.now(),
   };
@@ -87,7 +97,7 @@ function writeStored(key: string, document: MenuDocument): MenuDocument {
 export class DemoMenuDocumentRepository implements MenuDocumentRepository {
   async readPublished(): Promise<MenuDocument> {
     const stored=readStored(DEMO_PUBLISHED_KEY);
-    return structuredClone(stored&&isLegacyMerchantMenuSeed(stored.menu)?{...stored,menu:buildCurrentMerchantMenuDemoNodes()}:stored??defaultDemoDocument());
+    return structuredClone(stored&&isLegacyMerchantMenuSeed(stored.menu)?{...stored,menu:buildPublishedDemoMenu()}:stored??defaultDemoDocument());
   }
   async readDraft(): Promise<MenuDocument | null> {
     const draft=readStored(DEMO_DRAFT_KEY);
