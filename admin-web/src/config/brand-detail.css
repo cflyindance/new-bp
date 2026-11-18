@@ -89,14 +89,11 @@
 .brand-detail-body [data-tab=org] .ba-stats { gap: 16px; margin-bottom: 24px; }
 .brand-detail-body .ba-store-toolbar input { max-width: 360px; min-height: 48px; border-radius: 999px; }
 .brand-detail-body .ba-store-toolbar .ba-actions { margin-inline-start: auto; }
-.brand-detail-body .ba-store-toolbar button, .brand-store-more summary { border: 0; border-radius: 12px; background: var(--brand-detail-tint); color: var(--brand-detail-blue); min-height: 44px; }
+.brand-detail-body .ba-store-toolbar button { border: 0; border-radius: 12px; background: var(--brand-detail-tint); color: var(--brand-detail-blue); min-height: 44px; }
 .brand-detail-body [data-tab=org] table { min-width: 700px; }
 .brand-detail-body [data-tab=org] td:first-child, .brand-detail-body [data-tab=org] th:first-child { width: 52px; }
 .brand-detail-body [data-tab=org] .ba-tag { background: var(--brand-detail-tint); }
 .brand-detail-body [data-tab=org] .ba-create-store-status { background: transparent; padding-inline: 0; }
-.brand-store-more summary { display: inline-grid; min-width: 40px; place-items: center; cursor: pointer; list-style: none; background: transparent; }
-.brand-store-more summary::-webkit-details-marker { display: none; }
-.brand-store-more .ba-actions { flex-direction: column; align-items: stretch; margin-bottom: 8px; }
 .brand-detail-body [data-menu-read] .ba-opened-menu { grid-template-columns: minmax(190px,28%) minmax(0,1fr); border-radius: 16px; }
 .brand-detail-body [data-menu-read] nav { padding: 16px; border: 0; background: var(--brand-detail-tint); }
 .brand-detail-body [data-menu-read] nav button { min-height: 48px; margin: 0 0 2px; font-size: 14px; border-radius: 12px; }

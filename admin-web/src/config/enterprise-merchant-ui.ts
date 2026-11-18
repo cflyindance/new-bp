@@ -392,7 +392,6 @@ function renderListPage(): string {
         ${renderMerchantTable(filteredManagementBrands(readBrandListFilter()))}
       </div>
       <p class="sr-only" role="status" data-brand-list-result></p>
-      <div id="brand-row-menu" class="brand-row-menu" data-brand-row-menu role="menu" aria-label="品牌操作" hidden></div>
     </div>`;
 }
 
