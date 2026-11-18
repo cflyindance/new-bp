@@ -78,7 +78,7 @@ function escapeHtml(s: string): string {
 }
 
 export function renderMPlatformSidebar(path: string): string {
-  return `<aside data-mb-navigation="m" class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="mb-nav-identity border-b"><span class="mb-nav-logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span><div class="min-w-0"><h1>M 平台</h1><p>服务商管理后台</p></div></header>${renderMNavigation(path)}</aside>`;
+  return `<aside data-mb-navigation="m" class="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background"><header class="mb-nav-identity border-b"><span class="mb-nav-logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span><div class="min-w-0"><h1>M 平台</h1><p>服务商管理后台</p></div></header>${renderMNavigation(path)}${path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX?'<footer class="brand-sidebar-footer"><button type="button" id="theme-toggle" aria-label="切换深色模式" title="切换深色模式"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 15a8 8 0 0 1-11-11 8 8 0 1 0 11 11Z"/></svg></button><span>MenuSifu</span></footer>':''}</aside>`;
 }
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
@@ -139,6 +139,7 @@ function renderMPlatformContent(path: string): string {
 }
 
 function renderMPlatformMain(path: string): string {
+  if(path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX)return `<main class="brand-list-main"><div data-m-platform-content class="flex min-h-0 flex-1 flex-col">${renderMPlatformContent(path)}</div></main>`;
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       ${renderMPlatformHeader(path)}
@@ -187,7 +188,7 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
 }
 
 export function mountMPlatformShell(onMount: () => void, path: string): string {
-  return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell>
+  return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell ${path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX?'data-brand-management-layout':''}>
     ${sessionStorage.getItem('menusifu:provider-access-notice')?'<div role="alert" class="mp-readonly-note" data-provider-session-notice>商户访问授权已失效，请联系管理员。<button type="button" data-provider-notice-close style="margin-left:20px">关闭</button></div>':''}
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">${renderMPlatformShell(onMount, path)}</div>
   </div>`;

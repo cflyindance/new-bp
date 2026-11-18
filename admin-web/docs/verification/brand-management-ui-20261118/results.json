@@ -1,0 +1,18 @@
+{
+  "base": "http://127.0.0.1:5336",
+  "total": 17,
+  "checks": [
+    "legacy hidden filters ignored",
+    "default data and desktop layout",
+    "debounced search, Enter and empty/reset",
+    "status filter persists and resets",
+    "progress matches actual stage",
+    "date validation, draft cancel, apply, clear",
+    "menu position, Escape focus, outside and scroll close",
+    "details, menu and stores preserve target context",
+    "theme and narrow contained table scrolling",
+    "delegated login uses existing loading/session",
+    "read-only can search/details, cannot create or delegate"
+  ],
+  "errors": []
+}

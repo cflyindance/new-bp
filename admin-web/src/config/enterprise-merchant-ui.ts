@@ -1,3 +1,4 @@
+import {renderBrandListFilters,renderBrandManagementTable,bindBrandManagementList,readBrandListFilter} from './brand-management-list';
 import {getStoreOperatingStatus} from './enterprise-merchant-store';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mActionKey} from '../permissions/m-platform-catalog';
@@ -343,14 +344,7 @@ function bindMerchantBrandStoresDialog(): void {
   });
 }
 
-function renderMerchantTable(merchants: ReturnType<typeof getMerchants>): string {
-  if(!merchants.length)return '<p class="ba ba-empty">暂无匹配品牌</p>';
-  const choices=brandMenuChoices(['pos','kiosk','emenu','sdi']);
-  return `<div class="ba ba-table-wrap" data-enterprise-merchant-chain-list><table style="min-width:960px"><thead><tr><th>品牌名称 / BID</th><th>服务状态</th><th>开通进度</th><th>品牌菜单</th><th>品牌门店</th><th>主管理员</th><th>开通时间</th><th>操作</th></tr></thead><tbody>${merchants.map(m=>{
-    const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.isPage&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId);
-    return `<tr data-enterprise-merchant-row="${escapeHtml(m.merchantId)}"><td><a href="${merchantDetailHref(m.merchantId)}"><strong>${escapeHtml(m.name)}</strong></a><br><small>${escapeHtml(m.bid??'—')}</small></td><td><span class="ba-tag ${m.status==='active'?'active':''}">${escapeHtml(getMerchantStatusLabel(m.status))}</span></td><td><small>${escapeHtml(brandOnboardingProgress(m.merchantId))}</small></td><td><a href="${merchantDetailHref(m.merchantId,'capabilities')}"><span class="ba-tag ${pages?'active':''}">${pages?`${pages} 个页面`:'未配置'}</span></a></td><td><a class="ba-btn" href="${merchantDetailHref(m.merchantId,'org')}">管理门店 · ${stores}</a></td><td><small>${escapeHtml(brandPrimaryAdminEmail(m.merchantId)||'待开通')}</small></td><td><small>${escapeHtml(formatDate(m.activatedAt??m.createdAt))}</small></td><td><div class="ba-actions"><a href="${merchantDetailHref(m.merchantId)}">详情</a>${canImpersonateMerchant(m)?`<button type="button" class="ba-btn" data-merchant-impersonate="${escapeHtml(m.merchantId)}">代登录</button>`:''}</div></td></tr>`;
-  }).join('')}</tbody></table></div>`;
-}
+function renderMerchantTable(merchants:ReturnType<typeof getMerchants>):string {return renderBrandManagementTable(merchants);}
 
 function storeStatusBadgeClass(status: MerchantOrgStoreStatus): string {
   if (status === "open") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
@@ -390,12 +384,14 @@ function renderStoreListPage(): string {
 
 function renderListPage(): string {
   return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="list">
+    <div class="brand-list-card" data-enterprise-merchant-page="list">
 
-      ${renderManagementFilters("brand")}
-      <div class="min-h-0 flex-1 overflow-y-auto" data-enterprise-merchant-table>
-        ${renderMerchantTable(filteredManagementBrands(savedManagementFilter("brand")))}
+      ${renderBrandListFilters()}
+      <div class="brand-list-table-scroll" data-enterprise-merchant-table>
+        ${renderMerchantTable(filteredManagementBrands(readBrandListFilter()))}
       </div>
+      <p class="sr-only" role="status" data-brand-list-result></p>
+      <div id="brand-row-menu" class="brand-row-menu" data-brand-row-menu role="menu" aria-label="品牌操作" hidden></div>
     </div>`;
 }
 
@@ -1177,9 +1173,10 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
 
   const filterForm = document.querySelector<HTMLFormElement>("[data-enterprise-merchant-filter-form]");
   const tableHost = document.querySelector<HTMLElement>("[data-enterprise-merchant-table]");
-  if (tableHost && !tableHost.dataset.merchantImpersonateBound) {
-    tableHost.dataset.merchantImpersonateBound = "1";
-    tableHost.addEventListener("click", (e) => {
+  const tableEvents=tableHost?.closest<HTMLElement>('[data-enterprise-merchant-page="list"]')??tableHost;
+  if (tableEvents && !tableEvents.dataset.merchantImpersonateBound) {
+    tableEvents.dataset.merchantImpersonateBound = "1";
+    tableEvents.addEventListener("click", (e) => {
       const storeBtn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-merchant-view-stores]");
       if (storeBtn) {
         const merchantId = storeBtn.dataset.merchantViewStores;
@@ -1193,7 +1190,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       void runImpersonationWithLoading(btn, () => enterMerchantBackendAsImpersonator(merchantId, merchantHref("")), "当前品牌状态不支持代登录。");
     });
   }
-  bindManagementFilters('brand', filter => {if(tableHost)tableHost.innerHTML=renderMerchantTable(filteredManagementBrands(filter));});
+  bindBrandManagementList(filter => {if(tableHost){const brands=filteredManagementBrands(filter);tableHost.innerHTML=renderMerchantTable(brands);const count=document.querySelector('[data-brand-list-result]');if(count)count.textContent=brands.length+' 个品牌';}});
   const storeTableHost=document.querySelector<HTMLElement>('[data-enterprise-store-table]');
   bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
   if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;void runImpersonationWithLoading(button,()=>enterStoreBackendAsImpersonator(button.dataset.storeImpersonate!,merchantHref('/stores')),'当前门店暂不支持代登录，请检查品牌服务状态、员工授权及门店已开通菜单。');};
