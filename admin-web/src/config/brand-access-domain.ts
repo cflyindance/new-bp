@@ -17,6 +17,11 @@ export interface BrandAccount {
 }
 export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[]; logs:(CenterState['logs'][number]&{facts?:import('./brand-audit-types').BrandChangeFacts})[] }
 
+export function canCorrectBrandAdminInvitation(account: BrandAccount | undefined): boolean {
+  const invitation=account?.invitation;
+  return !!account?.admin && !!invitation && (invitation.revoked === true || Date.parse(invitation.expiresAt) <= Date.now());
+}
+
 export function brandAdminOpeningMethod(state: BrandAccessState, account: BrandAccount): NonNullable<BrandAccount['openedVia']> {
   if (account.openedVia) return account.openedVia;
   if (account.invitation) return 'email';

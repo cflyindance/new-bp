@@ -1,4 +1,4 @@
-import { wasOpenedByEmail } from './brand-access-domain';
+import { canCorrectBrandAdminInvitation, wasOpenedByEmail } from './brand-access-domain';
 import { storeBusinessStatusFilter } from './store-business-status-filter';
 import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
@@ -425,11 +425,10 @@ function changeBrandAdminInvitation(id:string,accountId:string,operation:'resend
   },{action:title,compact:true,topActions:true});
 }
 
-function openAdminInviteCorrection(id:string,accountId:string,onSaved:()=>void):void {
-  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),account=state.accounts.find(item=>item.id===accountId);
-  if(!account?.admin||!account.invitation||getMerchantById(id)?.status==='closed')throw Error('当前状态不支持此操作。');
+function openAdminInviteCorrection(state:BrandAccessState,account:BrandAccount,actor:string,onSaved:()=>void):void {
+  const accountId=account.id;
   const title='更正并重发邀请';
-  dialog(title,'',`
+  dialog('管理品牌 Admin','',`
     <label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}"></label>
     <label class="ba-field">邀请邮箱 *<input required type="email" name="email" value="${esc(account.email)}"></label>
   `,form=>{
@@ -481,7 +480,11 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
   if(mode==='password'&&existing&&wasOpenedByEmail(state,existing)){openBrandAdminEmailReset(id,existing.id,onSaved);return;}
   const initialAccount:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
   const accepting=mode==='accept', creating=!existing;
-  if(existing?.invitation&&!accepting)throw Error('请先接受邮箱邀请。');
+  if(existing&&mode==='profile'){
+    if(getMerchantById(id)?.status==='closed')throw Error('品牌已关闭，无法修改管理员资料。');
+    if(canCorrectBrandAdminInvitation(existing)){openAdminInviteCorrection(state,existing,actor,onSaved);return;}
+  }
+  if(existing?.invitation&&!accepting&&mode!=='profile')throw Error('请先接受邮箱邀请。');
   if(accepting&&(!initialAccount.invitation||initialAccount.invitation.revoked||Date.parse(initialAccount.invitation.expiresAt)<=Date.now()))throw Error('邀请已失效，请重新邀请。');
   const nextEnabled=!initialAccount.enabled;
   const title=accepting?'演示接受邀请':mode==='password'?'重设管理员密码':mode==='status'?(initialAccount.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
@@ -531,13 +534,13 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     account.admin=true;
     if(mode==='status'&&!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
     if(!account.name||!account.email.includes('@'))throw Error('请填写姓名与有效登录邮箱。');
-    if(!inviting&&account.password.length<6)throw Error('账号密码至少 6 位。');
+    if(!account.invitation&&account.password.length<6)throw Error('账号密码至少 6 位。');
     const index=draft.accounts.findIndex(a=>a.id===account.id);
     if(index<0)draft.accounts.push(account);else draft.accounts[index]=account;
     if(!inviting){
       const employee=draft.employees.find(e=>e.id===account.id);
       if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
-      else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
+      else if(!account.invitation)draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
     }
     saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:inviting?'invite':accepting?'accept':!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(inviting?'已创建演示邀请':`${title}成功`,{variant:'success'});onSaved();return true;
   },{action,destructive:mode==='status'&&initialAccount.enabled,blocked,compact:true,topActions:creating||accepting});
@@ -572,7 +575,7 @@ function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:
   const form=d.querySelector('form')!;
   const storeProfiles=new Map(getMerchantStores(id).map(store=>[store.storeId,store]));
   const renderBindings=()=>{
-    d.querySelector('[data-bindings]')!.innerHTML=bindings.map((b,i)=>`<div class="ba-binding"><div class="ba-actions"><label class="ba-field" style="flex:1">角色<select data-role="${i}"><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}" ${b.roleId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-remove="${i}">移除</button></div><p class="ba-muted" style="margin-top:10px">该角色仅在以下门店生效</p><div class="ba-checks">${stores.map(s=>`<label><input type="checkbox" data-binding="${i}" value="${esc(s.id)}" ${b.scope.ids.includes(s.id)?'checked':''}><span>${esc(s.title)}<br>${brandStoreLocation(storeProfiles.get(s.id))}</span></label>`).join('')||'<p class="ba-muted">请先关联门店</p>'}</div></div>`).join('')||'<div class="ba-empty">尚未分配角色；请先创建角色，再添加分配</div>';
+    d.querySelector('[data-bindings]')!.innerHTML=bindings.map((b,i)=>`<div class="ba-binding"><div class="ba-actions"><label class="ba-field" style="flex:1">角色<select data-role="${i}"><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}" ${b.roleId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-remove="${i}">移除</button></div><p class="ba-muted" style="margin-top:10px">该角色仅在以下门店生效</p><div class="ba-checks">${stores.map(s=>`<label><input type="checkbox" data-binding="${i}" value="${esc(s.id)}" ${b.scope.ids.includes(s.id)?'checked':''}><span>${esc(s.title)}<br>${brandStoreLocation(storeProfiles.get(s.id))}</span></label>`).join('')||'<p class="ba-muted">请先添加新门店</p>'}</div></div>`).join('')||'<div class="ba-empty">尚未分配角色；请先创建角色，再添加分配</div>';
     d.querySelectorAll<HTMLSelectElement>('[data-role]').forEach(el=>el.onchange=()=>bindings[Number(el.dataset.role)]!.roleId=el.value);
     d.querySelectorAll<HTMLInputElement>('[data-binding]').forEach(el=>el.onchange=()=>{const b=bindings[Number(el.dataset.binding)]!;b.scope.ids=el.checked?[...b.scope.ids,el.value]:b.scope.ids.filter(x=>x!==el.value);});
     d.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(el=>el.onclick=()=>{bindings.splice(Number(el.dataset.remove),1);renderBindings();form.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -625,7 +628,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             const expired=!!invite&&Date.parse(invite.expiresAt)<=Date.now();
             const label=invite?invite.revoked?'邀请已撤销':expired?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
             const actions=invite
-              ? button('重发演示邀请',`invite-resend:${account.id}`)+(merchant.status!=='closed'?button('更正并重发邀请',`invite-correct:${account.id}`):'')
+              ? button('重发演示邀请',`invite-resend:${account.id}`)+(merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`):'')
                 +(invite.revoked?'':button('撤销邀请',`invite-revoke:${account.id}`))
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
               : (merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`):'')+button(openedByEmail?'邮箱重置密码':'重设密码',`admin-password:${account.id}`)+(account.passwordReset&&Date.parse(account.passwordReset.expiresAt)>Date.now()?button('演示完成密码重置',`admin-email-reset:${account.id}`):'')+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
@@ -680,7 +683,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         }).join('');
         const search=`<input type="search" data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店">`;
         root.innerHTML=`${detail?'':`<header class="ba-head"><h2>品牌门店</h2><div class="ba-actions">${storeActions}</div></header>`}
-          ${stats}<div class="ba-toolbar ba-store-toolbar">${detail?`<div class="brand-store-search">${storeSearchIcon}${search}</div>${storeBusinessStatusFilter('',true)}<div class="ba-actions">${storeActions}</div>`:`${search}${storeBusinessStatusFilter()}<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div>
+          ${stats}<div class="ba-toolbar ba-store-toolbar">${detail?`<div class="brand-store-search">${storeSearchIcon}${search}</div>${storeBusinessStatusFilter('',true)}<div class="ba-actions">${storeActions}</div>`:`${search}${storeBusinessStatusFilter()}<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新添加的门店默认继承品牌菜单，可切换独立配置'}</span>`}</div>
           <div class="ba-table-wrap ${detail?'brand-store-table':''}"><table><thead><tr>
             <th scope="col"><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th scope="col">门店名称 / MID</th>
             <th scope="col">${detail?'营业状态':'经营状态（近30天）'}</th><th scope="col">菜单配置</th><th scope="col">最近配置</th><th scope="col">地址</th><th scope="col">邮编</th><th scope="col" class="brand-store-action-cell">操作</th>
@@ -718,7 +721,6 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         const action=b.dataset.ba!;
         if(source==='m-platform'&&(action==='new-role'||action==='new-account'||action.startsWith('role:')||action.startsWith('account:')))throw Error('员工账号与角色请在商家后台管理。');
         if(source==='m-platform'&&action.startsWith('invite-accept:'))openBrandAdmin(id,action.slice(14),render,'accept');
-        if(source==='m-platform'&&action.startsWith('invite-correct:'))openAdminInviteCorrection(id,action.slice('invite-correct:'.length),render);
         if(source==='m-platform'&&action.startsWith('invite-resend:'))changeBrandAdminInvitation(id,action.slice(14),'resend',render);
         if(source==='m-platform'&&action.startsWith('invite-revoke:'))changeBrandAdminInvitation(id,action.slice(14),'revoke',render);
         if(source==='m-platform'&&action==='new-admin')openBrandAdmin(id,undefined,render);

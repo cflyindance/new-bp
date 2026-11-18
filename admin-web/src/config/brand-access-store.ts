@@ -1,4 +1,4 @@
-import { wasOpenedByEmail } from './brand-access-domain';
+import { canCorrectBrandAdminInvitation, wasOpenedByEmail } from './brand-access-domain';
 import {currentProviderCanTarget as requireProviderBrandTarget} from '../permissions/provider-access-store';
 import {currentMAccount} from '../permissions/m-platform-store';
 import {readProviderState,canProviderEnter,currentProviderAccess} from '../permissions/provider-access-store';
@@ -132,7 +132,7 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
     const before=current.accounts.find(item=>item.id===account.id);
     if(before?.admin&&before.email!==account.email&&
       !(context?.accountId===account.id&&context.operation==='invite-correct')) {
-      throw Error('仅可在接受邀请前更正邀请邮箱。');
+      throw Error('仅可更正已撤销或已过期的邀请邮箱。');
     }
     if (!account.name.trim() || account.name.length>30 || !/^[^\s@]+@menusifu\.(cn|com)$/i.test(account.email)) throw Error('请填写姓名及有效的 Menusifu 邮箱。');
     if (emails.has(account.email.toLowerCase())) throw Error('品牌账号邮箱重复。');
@@ -155,13 +155,13 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
     const before=current.accounts.find(a=>a.id===context.accountId),after=next.accounts.find(a=>a.id===context.accountId);
     if(!after)throw Error('管理员不存在。');
     if(['profile','invite-correct'].includes(context.operation)&&merchant?.status==='closed')throw Error('品牌已关闭，无法修改管理员资料。');
-    if(context.operation==='profile'&&before&&(before.invitation||before.email!==after.email))throw Error('已有账号的登录邮箱为只读。');
-    if(context.operation==='invite-correct'&&(!before?.invitation||!after.invitation||after.invitation.revoked))throw Error('无法更正此邀请。');
+    if(context.operation==='profile'&&before&&before.email!==after.email)throw Error('已有账号的登录邮箱为只读。');
+    if(context.operation==='invite-correct'&&(!canCorrectBrandAdminInvitation(before)||!after.invitation||after.invitation.revoked||Date.parse(after.invitation.expiresAt)<=Date.now()))throw Error('仅可更正已撤销或已过期的邀请。');
 
     const fields:BrandChangeFacts['fields']=[];
     if(!before||before.name!==after.name)fields.push({name:'姓名',before:before?.name??'未开通',after:after.name});
     if(!before||before.email!==after.email)fields.push({name:'登录账号',before:before?.email??'未开通',after:after.email});
-    const label=(account?:BrandAccount)=>!account?'未开通':account.invitation?account.invitation.revoked?'邀请已撤销':'待接受邀请':account.enabled?'已启用':'已停用';
+    const label=(account?:BrandAccount)=>!account?'未开通':account.invitation?account.invitation.revoked?'邀请已撤销':Date.parse(account.invitation.expiresAt)<=Date.now()?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
     if(label(before)!==label(after))fields.push({name:'账号状态',before:label(before),after:label(after)});
     if(context.operation==='resend'||context.operation==='invite'||context.operation==='invite-correct')fields.push({name:'邀请有效期',before:before?.invitation?.expiresAt?new Date(before.invitation.expiresAt).toLocaleString('zh-CN'):'—',after:new Date(after.invitation!.expiresAt).toLocaleString('zh-CN')});
     if(context.operation==='password'&&before&&wasOpenedByEmail(current,before))throw Error('此账号须通过邮箱重设密码。');
