@@ -424,7 +424,7 @@
 .brand-associate-modal .brand-store-table th:nth-child(5) { width: 12%; }
 .brand-store-address { overflow-wrap: anywhere; }
 
-.ba select.brand-store-status-filter {
+.ba select:is(.brand-store-status-filter, .brand-admin-status-filter) {
   min-height: 44px;
   padding-inline: 14px;
   border: 0;
