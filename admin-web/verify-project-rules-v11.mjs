@@ -1,0 +1,35 @@
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const {chromium}=createRequire(import.meta.url)('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+try{
+ const p=await browser.newPage();
+ const base='http://127.0.0.1:65290';
+ await p.goto(base);
+ await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('demo.menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('demo.menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+ await p.goto(base+'/#/m-platform/nav-blueprint/page-registry/projects');
+ await p.locator('[data-project-create]').click();
+ const form=p.locator('[data-project-save]'),save=p.locator('button[form=project-config-form]');
+ for(const [key,value] of Object.entries({name:'核验项目',microName:'product-center-demo',microUrl:'https://example.com/test',microRoute:'/__registry-test/product-center'}))await form.locator('[name='+key+']').fill(value);
+ await save.click();assert.match(await form.innerText(),/微应用标识已被/);
+ await form.locator('[name=microName]').fill('check-project');
+ await save.click();assert.match(await form.innerText(),/微应用路由已被/);
+ await p.keyboard.press('Escape');await p.getByRole('button',{name:'继续编辑'}).click();
+ assert.equal(await form.locator('[name=name]').inputValue(),'核验项目');
+ await p.keyboard.press('Escape');await p.getByRole('button',{name:'放弃修改'}).click();
+ const row=p.locator('tr').filter({hasText:'商品中心'});
+ await row.locator('[data-project-action=edit]').click();
+ await form.locator('[name=microUrl]').fill('https://example.com/updated-product');
+ await save.click();await p.getByText(/该项目下已有.*个页面/).waitFor();
+ await row.locator('[data-project-action=toggle]').click();await p.getByRole('button',{name:'确认停用'}).click();
+ await row.getByRole('link',{name:'管理页面'}).click();
+ assert.ok(await p.locator('[data-pt-new]').isDisabled());
+ const existing=p.locator('[data-pt-row]').filter({hasText:'商品'}).filter({hasText:'微应用'}).first();
+ await existing.locator('[data-pt-action=edit]').click();
+ const pageForm=p.locator('[data-pt-form]');
+ assert.ok(await pageForm.locator('[name=parent]').isDisabled());
+ await pageForm.locator('[name=name]').fill('商品验证');
+ await pageForm.getByRole('button',{name:'保存',exact:true}).click();
+ await p.getByText('商品验证',{exact:true}).waitFor();
+ console.log('PASS: duplicate identifier/route, discard protection, impact notice, disabled-project page editing');
+}finally{await browser.close();}
