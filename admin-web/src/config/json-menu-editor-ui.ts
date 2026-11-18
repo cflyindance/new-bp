@@ -532,6 +532,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
     } catch { dialogState.error = "extraInfo 必须是合法的 JSON 对象或数组。"; return null; }
   } else delete normalized.node.extraInfo;
   Object.keys(node).forEach((key) => delete (node as unknown as Record<string, unknown>)[key]);
+  if(dialogState.pageMode!=='micro-app'){delete normalized.node.registeredPageId;delete node.registeredPageId;}
   Object.assign(node, normalized.node);
   if (node.i18nInfo && !Object.values(node.i18nInfo).some(Boolean)) delete node.i18nInfo;
   dialogState.error = undefined;
@@ -631,6 +632,20 @@ export function bindJsonMenuEditor(mount: () => void): void {
       const rows = document.querySelector<HTMLElement>("[data-page-picker-rows]"); if (rows) rows.innerHTML = pickerRows();
       document.querySelector<HTMLButtonElement>("[data-page-confirm]")?.removeAttribute("disabled");
       document.querySelector<HTMLElement>(`[data-page-pick="${CSS.escape(pagePick)}"]`)?.focus(); return;
+    }
+    if(target.closest('[data-page-refresh-binding]')&&dialogState){
+      if(currentMAccess(mPageKey('routing'))!=='edit'||dialogState.mode!=='edit'||dialogState.pageMode!=='micro-app')return;
+      const node=dialogState.draft;
+      const published=walkMenuNodes(jsonMenuEditorStore.state.published?.menu??[]).find(v=>v.node.id===node.id)?.node;
+      const page=getPageRegistrations().find(p=>p.id===node.registeredPageId);
+      if(!page||!published||published.type!=='micro-app'||published.registeredPageId!==page.id)return;
+      try{
+        dialogState.draft=bindRegisteredPage(node,page,published);
+        dialogState.pageModeTouched=true;dialogState.dirty=true;dialogState.error=undefined;
+        rerenderPreservingMenuFormScroll(onMount);
+        showAppToast('页面配置已刷新到草稿，保存并发布后生效');
+      }catch(error){showAppToast(error instanceof Error?error.message:'无法刷新已有绑定',{variant:'error'});}
+      return;
     }
     if (target.closest("[data-page-confirm]") && dialogState) {
       const page = getPageRegistrations().find(p => p.id === registrationUi.pending); if (!page) return;

@@ -44,16 +44,18 @@ export function searchPageRegistrations(pages: readonly PageRegistration[], quer
 /** 只识别技术快照精确匹配的节点，不重写历史配置，不按路径强行认领。 */
 export function matchRegisteredPage(node: MenuNode, pages: readonly PageRegistration[]): PageRegistration | undefined {
   if (node.children?.length || node.targetKey) return undefined;
+  if(node.registeredPageId) return pages.find(page=>page.id===node.registeredPageId);
   return pages.find(page => routingKeys.every(key => canonical(node[key]) === canonical(page.routing[key])));
 }
-export function bindRegisteredPage(node: MenuNode, page: PageRegistration): MenuNode {
-  if (page.status !== "active") throw new Error("该页面已停用，不能新增关联。");
+export function bindRegisteredPage(node: MenuNode, page: PageRegistration, published?: MenuNode): MenuNode {
+  if (page.status !== "active" && (!node.id || published?.id!==node.id || published.registeredPageId!==page.id || published.type!=="micro-app" || node.registeredPageId!==page.id)) throw new Error("该页面已停用，不能新增关联。");
   const errors = validatePageRegistrations([page]);
   if (errors.length) throw new Error(errors[0]);
   if (node.children?.length) throw new Error("有子导航的菜单不需要关联页面。");
   const next = structuredClone(node);
   for (const key of routingKeys) delete next[key];
   delete next.targetKey;
+  next.registeredPageId=page.id;
   Object.assign(next, structuredClone(page.routing));
   // 空目录转换为页面；不触及菜单身份、名称、权限、多语言和 extraInfo。
   if (next.children?.length === 0) delete next.children;

@@ -38,6 +38,7 @@ export interface MenuNode {
   parentKey?: string;
   externalConfig?: MenuExternalConfig;
   microAppConfig?: MenuMicroAppConfig;
+  registeredPageId?: string;
   accessControl?: MenuAccessControl;
   display?: boolean;
   disabled?: boolean;
@@ -54,7 +55,7 @@ export type MenuValidationSeverity = "error" | "warning";
 export interface MenuValidationIssue { code: string; severity: MenuValidationSeverity; message: string; path?: MenuNodePath; field?: string; }
 
 export const MENU_ROOT_FIELDS = ["_id", "name", "menu", "updatedBy", "createdDate"] as const;
-export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "accessControl", "display", "disabled", "extraInfo", "children"] as const;
+export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "registeredPageId", "accessControl", "display", "disabled", "extraInfo", "children"] as const;
 export const MENU_I18N_FIELDS = ["zh-CN", "zh-HK", "en-US"] as const;
 export const MENU_MICRO_APP_FIELDS = ["name", "url", "iframe", "keepAlive", "path", "defaultPage", "routeType"] as const;
 export const MENU_EXTERNAL_CONFIG_FIELDS = ["target", "features"] as const;
