@@ -592,8 +592,22 @@ function renderLineItem(
     </button>`;
 }
 
+function filterPickerTree(tree: BrandMenuGroupNode[], excluded: readonly string[] = [], selectedKeys: readonly string[] = []): BrandMenuGroupNode[] {
+  if (!excluded.length) return tree;
+  const blocked = new Set(excluded), selected = new Set(selectedKeys);
+  return tree.map(group => ({ ...group, categories: group.categories.map(category => ({ ...category,
+    dishes: category.dishes.filter(dish => !blocked.has(dish.id) || selected.has(dishKey(group.id, category.id, dish.id))),
+  })).filter(category => category.dishes.length > 0) })).filter(group => group.categories.length > 0);
+}
+
+function readPickerExclusions(picker: HTMLElement): Partial<Record<BrandMenuLineId, string[]>> {
+  try { return JSON.parse(picker.dataset.excludedDishIdsByLine ?? "{}"); } catch { return {}; }
+}
+
 export type RenderBrandMenuStructurePickerOptions = {
   enableLines?: boolean;
+  /** Optional business-scope exclusions; selected legacy conflicts remain visible until resolved. */
+  excludedDishIdsByLine?: Partial<Record<BrandMenuLineId, string[]>>;
   searchable?: boolean;
   query?: string;
   selectionByLine?: BrandMenuStructureByLine;
@@ -629,12 +643,13 @@ export function renderBrandMenuStructurePickerHtml(
       ? options.activeLineId
       : DEFAULT_BRAND_MENU_LINE_ID;
 
-  const tree = treeLineId
+  const fullTree = treeLineId
     ? resolveTree(treeLineId)
     : enableLines
       ? resolveTree(activeLine)
       : BRAND_MENU_STRUCTURE_TREE;
   const lineKeys = enableLines ? (byLine[activeLine] ?? []) : selectedKeys;
+  const tree = filterPickerTree(fullTree, options?.excludedDishIdsByLine?.[treeLineId ?? activeLine], lineKeys);
   const selection = keysToSelection(lineKeys, tree);
   const groups = tree;
   const activeG =
@@ -750,6 +765,7 @@ export function renderBrandMenuStructurePickerHtml(
     <div
       class="product-scope-picker overflow-hidden rounded-md border border-border"
       data-brand-menu-structure-picker
+      ${options?.excludedDishIdsByLine ? `data-excluded-dish-ids-by-line="${escapeHtml(JSON.stringify(options.excludedDishIdsByLine))}"` : ""}
       ${searchable ? `data-searchable="1" data-query="${escapeHtml(query)}"` : ""}
       ${enableLines ? 'data-enable-lines="1"' : ""}
       ${readOnly ? 'data-read-only="1"' : ""}
@@ -774,7 +790,7 @@ export function renderBrandMenuStructurePickerHtml(
             ? `<div class="sm:col-span-3 p-2" data-brand-menu-search-results>${searchResults || empty("没有匹配的商品")}</div>`
             : `        <div class="flex min-h-0 flex-col">
           <p class="shrink-0 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">组</p>
-          <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1" data-brand-menu-col="group">${col1 || empty("暂无分组")}</div>
+          <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1" data-brand-menu-col="group">${col1 || empty(options?.excludedDishIdsByLine?.[activeLine]?.length ? "当前产线商品均已被其他规则使用" : "暂无分组")}</div>
         </div>
         <div class="flex min-h-0 flex-col">
           <p class="shrink-0 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">类</p>
@@ -840,14 +856,14 @@ function pickerTreeLineId(picker: HTMLElement): BrandMenuLineId | null {
 
 function resolvePickerTree(picker: HTMLElement): BrandMenuGroupNode[] {
   const treeLine = pickerTreeLineId(picker);
-  if (treeLine) return resolveTree(treeLine);
+  if (treeLine) return filterPickerTree(resolveTree(treeLine), readPickerExclusions(picker)[treeLine], readBrandMenuStructureKeysFromPicker(picker));
   if (pickerUsesLines(picker)) {
     const activeLineRaw =
       picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
     const activeLine = isBrandMenuLineId(activeLineRaw)
       ? activeLineRaw
       : DEFAULT_BRAND_MENU_LINE_ID;
-    return resolveTree(activeLine);
+    return filterPickerTree(resolveTree(activeLine), readPickerExclusions(picker)[activeLine], readBrandMenuStructureByLineFromPicker(picker)[activeLine]);
   }
   return BRAND_MENU_STRUCTURE_TREE;
 }
@@ -872,6 +888,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
           searchable: picker.dataset.searchable === "1",
           query: picker.dataset.query ?? "",
           selectionByLine: keysOrByLine as BrandMenuStructureByLine,
+          excludedDishIdsByLine: readPickerExclusions(picker),
           activeLineId: activeLine ?? DEFAULT_BRAND_MENU_LINE_ID,
           readOnly,
         })
@@ -882,6 +899,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
           {
             readOnly,
             treeLineId: treeLineId ?? undefined,
+            excludedDishIdsByLine: readPickerExclusions(picker),
           },
         );
     const wrap = document.createElement("div");

@@ -265,10 +265,22 @@ function renderDeleteConfirmDialog(): string {
     </div>`;
 }
 
+/** Occupancy is scoped to the current store's rule set and line + leaf product identity. */
+export function intervalOccupiedDishIds(rules: readonly MenuOrderIntervalRule[], editingId = ""): BrandMenuStructureByLine {
+  const occupied = emptyBrandMenuStructureByLine();
+  for (const rule of rules) {
+    if (rule.id === editingId) continue;
+    for (const dish of selectedBrandMenuDishesByLine(rule.structureByLine)) {
+      if (!occupied[dish.lineId].includes(dish.dishId)) occupied[dish.lineId].push(dish.dishId);
+    }
+  }
+  return occupied;
+}
+
 function renderDialogBody(rule: MenuOrderIntervalRule | null): string {
   const seconds = ruleSeconds(rule);
   const byLine = rule?.structureByLine ?? emptyBrandMenuStructureByLine();
-  return `<section class="product-picker-section"><h4>下单时间间隔</h4><div class="product-picker-interval-row"><span>指定商品下单间隔</span><div class="order-duration-parts"><label><input id="menu-order-interval-dialog-minutes" type="number" min="0" max="${INTERVAL_MAX}" step="1" value="${Math.floor(seconds/60)}" data-menu-order-interval-dialog-minutes aria-label="商品下单间隔 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${seconds%60}" data-menu-order-interval-dialog-seconds aria-label="商品下单间隔 秒"><span>秒</span></label></div></div></section><section class="product-picker-section"><h4>适用商品</h4>${renderBrandMenuStructurePickerHtml([], undefined, undefined, { enableLines: true, selectionByLine: byLine, searchable: true })}</section>`;
+  return `<section class="product-picker-section"><h4>下单时间间隔</h4><div class="product-picker-interval-row"><span>指定商品下单间隔</span><div class="order-duration-parts"><label><input id="menu-order-interval-dialog-minutes" type="number" min="0" max="${INTERVAL_MAX}" step="1" value="${Math.floor(seconds/60)}" data-menu-order-interval-dialog-minutes aria-label="商品下单间隔 分钟"><span>分</span></label><label><input type="number" min="0" max="59" step="1" value="${seconds%60}" data-menu-order-interval-dialog-seconds aria-label="商品下单间隔 秒"><span>秒</span></label></div></div></section><section class="product-picker-section"><h4>适用商品</h4><p class="mb-3 text-sm text-destructive" role="alert" tabindex="-1" data-menu-order-interval-conflict hidden></p>${renderBrandMenuStructurePickerHtml([], undefined, undefined, { enableLines: true, selectionByLine: byLine, searchable: true, excludedDishIdsByLine: intervalOccupiedDishIds(readGuestMenuOrderIntervalRules(), rule?.id) })}</section>`;
 }
 
 function renderRulesEditorHtml(): string {
@@ -434,6 +446,19 @@ function saveSettingsDialog(editor: HTMLElement): void {
       : emptyBrandMenuStructureByLine(),
   };
   const rules = readGuestMenuOrderIntervalRules();
+  const error = dialog.querySelector<HTMLElement>("[data-menu-order-interval-conflict]")!;
+  const occupied = intervalOccupiedDishIds(rules, editingId);
+  const conflicts = selectedBrandMenuDishesByLine(nextRule.structureByLine).filter(dish => occupied[dish.lineId].includes(dish.dishId));
+  if (conflicts.length || (editingId && !rules.some(rule => rule.id === editingId))) {
+    error.textContent = conflicts.length
+      ? `以下商品已被其他间隔规则使用，请重新选择：${conflicts.map(dish => dish.dishName.endsWith(`（${dish.lineName}）`) ? dish.dishName : `${dish.dishName}（${dish.lineName}）`).join("、")}`
+      : "该规则已被移除，请关闭后重新配置。";
+    error.hidden = false;
+    error.focus({ preventScroll: true });
+    error.scrollIntoView({ block: "nearest" });
+    return;
+  }
+  error.hidden = true;
   const idx = editingId ? rules.findIndex((r) => r.id === editingId) : -1;
   if (idx >= 0) rules[idx] = nextRule;
   else rules.push(nextRule);
