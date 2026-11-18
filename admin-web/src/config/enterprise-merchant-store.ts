@@ -1824,7 +1824,7 @@ export function getMerchantChangelog(merchantId?: string): MerchantChangeLogEntr
   const snap = readSnapshot();
   const eid = activeEnterpriseId();
   const ids = merchantIdsForEnterprise(snap, eid);
-  let logs = snap.changelog.filter((l) => (l.enterpriseId === eid || ids.has(l.merchantId) || l.merchantId === "enterprise")&&(!providerScopeActive()||(l.storeId?providerTargetAllowed(l.merchantId,l.storeId):providerTargetAllowed(l.merchantId))));
+  let logs = snap.changelog.filter((l) => (l.enterpriseId === eid || ids.has(l.merchantId) || l.merchantId === "enterprise")&&(!providerScopeActive()||(l.storeId&&l.action!=='org.store.remove'?providerTargetAllowed(l.merchantId,l.storeId):providerTargetAllowed(l.merchantId))));
   if (!merchantId) return logs;
   return logs.filter((l) => l.merchantId === merchantId);
 }
@@ -2269,6 +2269,50 @@ export function associateBrandStores(id:string,storeIds:string[],expected:string
     appendChangelog(snap,{merchantId:id,storeId:sid,action:'org.store.associate',operatorEmail:actor,facts:{category:'品牌门店',title:'关联门店',target:s.name+' · '+sid,source:'M 平台运营',operationId:associationId,fields:[{name:'所属品牌',before:previousBrand,after:merchant.name},{name:'菜单配置方式',before:'原门店配置',after:'继承品牌菜单'}]},detail:`关联已有门店「${s.name}」；保留 MID，新归属下默认继承品牌门店视角菜单`});
   }
   persistBrandConfiguration(snap);notifyChainBrandOrgSyncForMerchant(id);
+}
+
+function independentStoreOwner(snap:EnterpriseMerchantSnapshot, store:MerchantOrgStore, merchant:EnterpriseMerchant):EnterpriseMerchant|undefined {
+  if(store.merchantId!==merchant.merchantId||store.linkedMerchantId===merchant.merchantId)return undefined;
+  return snap.merchants.find(owner=>owner.merchantId===store.linkedMerchantId&&owner.enterpriseId===merchant.enterpriseId&&owner.orgType==='single-store');
+}
+
+export function canRemoveBrandStore(merchant:EnterpriseMerchant,store:MerchantOrgStore):boolean {
+  return !!independentStoreOwner(readSnapshot(),store,merchant);
+}
+
+export function removeBrandStore(merchantId:string,storeId:string,expected:string,actor:string):void {
+  assertProviderTarget(merchantId,storeId);
+  if(brandConfigurationVersion(merchantId)!==expected)throw Error('门店归属已更新，请刷新后重新操作。');
+  const snap=structuredClone(readSnapshot());
+  const merchant=snap.merchants.find(item=>item.merchantId===merchantId);
+  const store=snap.stores.find(item=>item.storeId===storeId&&item.merchantId===merchantId);
+  const owner=merchant&&store&&independentStoreOwner(snap,store,merchant);
+  if(!merchant||!store||!owner)throw Error('该门店无法恢复为独立门店。');
+
+  let brand=snap.brands.find(item=>item.merchantId===owner.merchantId);
+  if(!brand){
+    brand={brandId:genId('brand'),merchantId:owner.merchantId,name:owner.name,code:`${owner.code}-brand`,status:'active'};
+    snap.brands.push(brand);
+  }
+  let region=snap.regions.find(item=>item.merchantId===owner.merchantId&&item.brandId===brand.brandId);
+  if(!region){
+    region={regionId:genId('region'),merchantId:owner.merchantId,brandId:brand.brandId,name:'默认区域',code:'default'};
+    snap.regions.push(region);
+  }
+  const previousMode=snap.storeCapabilities?.find(item=>item.storeId===storeId)?.menuMode;
+  store.merchantId=owner.merchantId;
+  store.brandId=brand.brandId;
+  store.regionId=region.regionId;
+  store.mountedAt=undefined;
+  snap.storeCapabilities=(snap.storeCapabilities??[]).filter(item=>item.storeId!==storeId);
+  snap.storeCapabilities.push({storeId,merchantId:owner.merchantId,menuMode:'inherit',enabledKeys:[],updatedAt:nowIso(),updatedBy:actor});
+  appendChangelog(snap,{merchantId,storeId,action:'org.store.remove',operatorEmail:actor,detail:`移除门店「${store.name}」，保留 MID 并恢复独立门店归属。`,facts:{
+    category:'品牌门店',title:'移除门店',target:`${store.name} · ${storeId}`,source:'M 平台运营',
+    fields:[{name:'所属品牌',before:merchant.name,after:`${owner.name}（独立门店）`},{name:'菜单配置方式',before:previousMode==='inherit'?'继承品牌菜单':previousMode==='independent'?'独立配置':'未配置',after:'按独立门店原归属生效'}],
+  }});
+  persistBrandConfiguration(snap);
+  notifyChainBrandOrgSyncForMerchant(merchantId);
+  notifyChainBrandOrgSyncForMerchant(owner.merchantId);
 }
 
 export function getMerchantStoreIdSet(merchantId: string): Set<string> {

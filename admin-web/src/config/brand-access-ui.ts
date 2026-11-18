@@ -19,7 +19,7 @@ import { buildCenterCatalog, type Catalog } from '../permissions/center-catalog'
 import { roleAccess, type Role, type Binding, type Access } from '../permissions/center-domain';
 import { type BrandAccessState, type BrandAccount, updateMenuKeys, brandAccountStores } from './brand-access-domain';
 import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuKeys, brandStores, currentBrandPrincipal, readBrandAccess, saveBrandAccess, type MenuChoice } from './brand-access-store';
-import { ensureBrandCreationDemoStores, associateBrandStores, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
+import { ensureBrandCreationDemoStores, associateBrandStores, canRemoveBrandStore, removeBrandStore, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
 import { matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
@@ -376,6 +376,22 @@ function openAssociation(id:string,onSaved:()=>void):void {
   updateSelectAll();
 }
 
+function openStoreRemoval(merchantId:string,storeId:string,onSaved:()=>void):void {
+  const merchant=getMerchantById(merchantId);
+  const store=getMerchantStores(merchantId).find(item=>item.storeId===storeId);
+  if(!merchant||!store||!canRemoveBrandStore(merchant,store))throw Error('该门店无法恢复为独立门店。');
+  const version=brandConfigurationVersion(merchantId);
+  dialog('移除门店？','',`
+    <div class="brand-modal-warning">门店将恢复为独立门店，保留原 MID，并按独立门店原归属生效菜单。</div>
+    <div class="brand-store-identity">${storeListIcon}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small>${brandStoreLocation(store)}</div></div>
+  `,()=>{
+    removeBrandStore(merchantId,storeId,version,authorizeBrandManagement(merchantId,'m-platform'));
+    onSaved();
+    showAppToast('门店已移除',{variant:'success'});
+    return true;
+  },{action:'确认移除',destructive:true,topActions:true});
+}
+
 function resourceChoices(catalog:Catalog,ceiling:Set<string>):MenuChoice[]{
   return [...catalog.resources.values()].filter(r=>ceiling.has(r.key)&&!r.compatibilityOnly&&r.type!=='action').map(r=>({key:r.key,title:r.title,parent:r.parent,level:r.type==='module'?1:r.type==='page'||r.type==='navigation'?2:r.type==='setting'?4:3,path:r.path,kind:r.type==='setting'?'setting':'menu'}));
 }
@@ -591,7 +607,8 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         const rows = stores.map(store=>{
           const canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,store.storeId);
           const actions=(canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(store.storeId)}">门店详情</button>`:'')
-            +(admin?button('查看生效菜单',`effective:${store.storeId}`)+button('配置菜单',`store:${store.storeId}`):'');
+            +(admin?button('查看生效菜单',`effective:${store.storeId}`)+button('配置菜单',`store:${store.storeId}`):'')
+            +(source==='m-platform'&&canRemoveBrandStore(merchant,store)?`<button type="button" class="ba-btn" data-ba="remove-store:${esc(store.storeId)}">移除门店</button>`:'');
           return `<tr data-store-row="${esc(store.name+' '+store.storeId)}">
             <td><input type="checkbox" data-store-id="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
             ${renderStoreFields(store,choices,detail)}
@@ -647,6 +664,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         if(source==='m-platform'&&action.startsWith('admin-status:'))openBrandAdmin(id,action.slice(13),render,'status');
         if(action==='edit-menu')openBrandMenus(id,render);
         if(action==='associate')openAssociation(id,render);
+        if(source==='m-platform'&&action.startsWith('remove-store:'))openStoreRemoval(id,action.slice('remove-store:'.length),render);
         if(action==='new-account')openAccount(id,undefined,source,render);
         if(action==='new-role')openRole(id,undefined,source,render);
         if(action.startsWith('account:'))openAccount(id,action.slice(8),source,render);
