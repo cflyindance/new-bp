@@ -1,3 +1,4 @@
+import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
 import {getStoreOperatingStatus} from './enterprise-merchant-store';
 import {validateBrandCreationFields} from './brand-create-validation';
@@ -385,7 +386,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         root.innerHTML=`<header class="ba-head"><div><h2>账号与角色</h2></div>${admin?`<div class="ba-actions">${button('新建角色','new-role')}${button('开通账号','new-account',true)}</div>`:''}</header><section class="ba-card"><h3 style="margin-bottom:16px">登录账号 <span class="ba-tag">${state.accounts.length}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>账号</th><th>身份</th><th>角色与生效门店</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.accounts.map(a=>{const e=state.employees.find(e=>e.id===a.id);return `<tr><td>${esc(a.name)}<br><small>${esc(a.email)}</small></td><td><span class="ba-tag ${a.admin?'active':''}">${a.admin?'品牌 Admin':'普通账号'}</span></td><td>${a.admin?'全部品牌门店（含新增门店）':e?.bindings.map(b=>`${esc(state.roles.find(r=>r.id===b.roleId)?.name??'角色缺失')} · ${b.scope.ids.length} 家门店`).join('<br>')||'未分配'}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${admin?button('管理账号',`account:${a.id}`):'—'}</td></tr>`;}).join('')||`<tr><td colspan="5" class="ba-empty">尚未单独开通账号${merchant.accountProvisioningRequired?'，请先开通品牌 Admin':'；已有品牌管理员继续使用原登录方式'}</td></tr>`}</tbody></table></div></section><section class="ba-card"><h3>品牌角色 <span class="ba-tag">${state.roles.length}</span></h3>${state.roles.map(r=>`<div class="ba-role-line"><div><strong>${esc(r.name)}</strong><p class="ba-muted">${esc(r.description)||'未填写描述'} · ${state.employees.filter(e=>e.bindings.some(b=>b.roleId===r.id)).length} 个账号使用</p></div>${admin?button('编辑权限',`role:${r.id}`):''}</div>`).join('')||'<p class="ba-empty">尚未创建角色。建议按店长、财务等岗位建立，再分配给账号。</p>'}</section>`;
         }
       }else if(tab==='changelog'){
-        bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action,facts:l.facts??historicalAdminFacts(l)})),...getMerchantChangelog(id)],choices,stores);
+        bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action,facts:l.facts??historicalAdminFacts(l)})),...getMerchantChangelog(id),...(source==='m-platform'?brandChangeDemo(id,merchant.name,stores):[])],choices,stores);
       }else{
         const detail = !!root.closest('[data-brand-detail-tab]');
         const storeActions = `${admin?button('批量配置菜单','batch',true):''}${source==='m-platform'?button('关联已有门店','associate'):''}`;
