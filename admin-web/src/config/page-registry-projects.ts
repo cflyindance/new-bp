@@ -63,6 +63,15 @@ export function updateRegistryWorkspace(builtIn: readonly PageRegistration[], mu
   const next = structuredClone(state.workspace);
   try {
     mutate(next); validateWorkspace(next, builtIn);
+    for(const p of next.projects){
+      const old=state.workspace.projects.find(o=>o.id===p.id);
+      if(old&&JSON.stringify(old)===JSON.stringify(p))continue;
+      for(const [key,label] of [['microName','微应用标识'],['microRoute','微应用路由']] as const){
+        const value=p[key]?.trim();if(!value)continue;
+        const conflict=next.projects.find(other=>other.id!==p.id&&other[key]?.trim()===value);
+        if(conflict)throw new Error(`${label}已被项目“${conflict.name}”使用，请更换。`);
+      }
+    }
     try {target.setItem(REGISTRY_PROJECTS_KEY, JSON.stringify(next));} catch {throw new Error('本地保存失败，输入内容已保留，请检查存储空间或权限。');}
   } catch(error) {
     appendOperation({scope:'registry',action:'提交配置',stage:'本地保存',before:state.workspace,after:next,result:'failure',reason:error instanceof Error?error.message:'本地保存失败'});
@@ -82,7 +91,7 @@ export function registerProjectPage(input: LocalPageRegistrationInput, projectId
   updateRegistryWorkspace(builtIn, w => {
     const project = w.projects.find(p => p.id === projectId);
     if (!project) throw new Error('项目不存在');
-    if (project.status === 'disabled') throw new Error('项目已停用，不能保存注册页面');
+    if (project.status === 'disabled' && (!replaceId || replaceId!==input.id || !w.assignments.some(a=>a.pageId===replaceId&&a.projectId===projectId&&a.directoryId===directoryId))) throw new Error('项目已停用，不能保存注册页面');
     const configured = Boolean(project.microName || project.microUrl || project.microRoute);
     if (configured) validateProjectMicroApp(project);
     const page = buildLocalPageRegistration(configured ? { ...input, type: 'micro-app', microName: project.microName, microUrl: project.microUrl } : input);
