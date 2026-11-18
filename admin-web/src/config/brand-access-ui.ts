@@ -331,20 +331,16 @@ function openAssociation(id:string,onSaved:()=>void):void {
       <th scope="col"><input type="checkbox" data-select-candidates aria-label="选择全部可见门店"></th>
       <th scope="col">门店名称 / MID</th><th scope="col">营业状态</th><th scope="col">地址</th><th scope="col">邮编</th>
     </tr></thead><tbody>${rows}<tr data-candidate-empty ${rows?'hidden':''}><td colspan="5" class="ba-empty">${rows?'没有符合条件的门店':'暂无可添加的门店'}</td></tr></tbody></table></div>
-  `,(form,review)=>{
+  `,form=>{
     const ids=new FormData(form).getAll('storeIds').map(String);
     if(!ids.length)throw Error('请至少选择一家门店。');
-    if(review.hidden){
-      review.textContent=`将添加 ${ids.length} 家门店。保留原 MID，门店默认继承品牌的门店视角菜单，保存后可切换独立配置。`;
-      review.hidden=false;
-      return;
-    }
     associateBrandStores(id,ids,version,authorizeBrandManagement(id,'m-platform'));
     onSaved();
     return true;
-  },{topActions:true});
+  }, {action:'确认保存',topActions:true});
   d.classList.add('brand-associate-modal');
   const search=d.querySelector<HTMLInputElement>('[data-store-search]')!;
+  const submit=d.querySelector<HTMLButtonElement>('button[type=submit]')!;
   const selectAll=d.querySelector<HTMLInputElement>('[data-select-candidates]')!;
   const empty=d.querySelector<HTMLTableRowElement>('[data-candidate-empty]')!;
   const checks=Array.from(d.querySelectorAll<HTMLInputElement>('[name=storeIds]'));
@@ -352,6 +348,7 @@ function openAssociation(id:string,onSaved:()=>void):void {
   const updateSelectAll=()=>{
     const shown=visible();
     const count=shown.filter(input=>input.checked).length;
+    submit.disabled=!checks.some(input=>input.checked);
     selectAll.disabled=shown.length===0;
     selectAll.checked=count>0&&count===shown.length;
     selectAll.indeterminate=count>0&&count<shown.length;
@@ -577,7 +574,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
               : button('编辑品牌 Admin',`admin:${account.id}`)+button('重设密码',`admin-password:${account.id}`)+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
             return `<tr data-brand-admin="${esc(account.id)}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
-              <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span></td>
+              <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span>${account.id.startsWith('demo-admin-scenario:')?' <span class="ba-tag">演示</span>':''}</td>
               <td>${esc(account.email)}</td>
               <td><span class="ba-create-store-status" data-status="${invite?'preparing':account.enabled?'open':'terminated'}">${label}</span>${invite?`<br><small>有效至 ${esc(date(invite.expiresAt))}</small>`:''}</td>
               <td>${invite?`邀请于 ${esc(date(invite.sentAt))}`:account.createdAt?esc(date(account.createdAt)):'—'}</td>

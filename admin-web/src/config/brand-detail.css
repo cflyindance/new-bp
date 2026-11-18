@@ -515,3 +515,17 @@
   border-radius: 12px;
   background: var(--brand-detail-tint);
 }
+
+.brand-hardware-device-dialog .ba-dialog-header > div { min-width: 0; overflow-wrap: anywhere; }
+.brand-hardware-detail-content, .brand-hardware-detail-grid {
+  display: grid;
+  gap: 16px;
+}
+.brand-hardware-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.brand-hardware-detail-grid .brand-modal-card { margin: 0; }
+.brand-hardware-detail-content .brand-modal-card h2 { font-size: 15px; }
+.brand-hardware-detail-content dt { font-size: 12px; }
+.brand-hardware-detail-content dd { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .brand-hardware-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
