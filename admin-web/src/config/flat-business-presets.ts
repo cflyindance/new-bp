@@ -1,5 +1,6 @@
+import {bindOpenedBrandMenuTree} from './brand-menu-read-tree';
 import {readBusinessMenuTemplates,planTemplateSelection} from './business-menu-template-store';
-import {templateDialog,templateEsc} from './business-menu-template-ui';
+import {templateEsc} from './business-menu-template-ui';
 import {matchesBrandMenuScene,type BrandMenuSceneOptions} from './brand-menu-scene';
 import type {MenuChoice} from './brand-menu-choices';
 
@@ -14,23 +15,53 @@ export function bindFlatBusinessPresets(host:HTMLElement,choices:MenuChoice[],re
  const rows=()=>readBusinessMenuTemplates(choices).filter(t=>t.enabled&&t.releases.at(-1)?.org===scene.read().org);
  const changed=()=>read().length!==baseline.length||read().some(k=>!baseline.includes(k));
  const provenance=()=>{host.dataset.flatPresetState=JSON.stringify({selected,baseline,source});if(source)bar.dataset.templateSource=source+` · 额外选择 ${read().filter(k=>!baseline.includes(k)).length} 项／取消 ${baseline.filter(k=>!read().includes(k)).length} 项`;};
- const render=()=>{bar.innerHTML='<span>业态</span><div class="ba-flat-preset-options" role="group" aria-label="业态">'+rows().map(t=>`<button type="button" class="ba-btn ${t.id===selected?'ba-primary':''}" aria-pressed="${t.id===selected}" data-business-preset="${templateEsc(t.id)}">${templateEsc(t.releases.at(-1)!.name.replace(/\s*·\s*(连锁|单店)\s*$/,''))}</button>`).join('')+'</div><span role="alert" data-preset-error></span>';};
+ const render=()=>{
+  const cards=rows().map(template=>{
+   const release=template.releases.at(-1)!;
+   const plan=planTemplateSelection([],release.keys,choices,allowed,'replace');
+   const pages=choices.filter(choice=>choice.isPage&&plan.next.includes(choice.key)).length;
+   return `<button type="button" class="ba-template-card" data-business-preset="${templateEsc(template.id)}"><span><strong>${templateEsc(release.name)}</strong><small>${pages} 个页面</small></span><span aria-hidden="true">→</span></button>`;
+  }).join('');
+  bar.innerHTML=`<h3>使用菜单模板</h3><p class="ba-muted">预览后可补充或替换</p><div class="ba-flat-preset-options">${cards||'<p class="ba-muted">暂无已发布模板</p>'}</div><span role="alert" data-preset-error></span>`;
+ };
  const choose=(id:string,automatic=false)=>{
-  if(id===selected)return;
-  const t=rows().find(t=>t.id===id),release=t?.releases.at(-1);if(!t||!release)return;
-  const revision=t.revision;
-  const commit=()=>{const current=rows().find(t=>t.id===id);if(!current||current.revision!==revision){bar.querySelector('[data-preset-error]')!.textContent='业态预设已更新，请重新选择。';return;}
-   const plan=planTemplateSelection(read(),release.keys,choices,allowed,'replace');
-   if(!plan.next.some(k=>choices.some(c=>c.key===k&&c.isPage))){bar.querySelector('[data-preset-error]')!.textContent='该业态暂无当前可用菜单，已保留现有选择。';return;}
-   apply(plan.next);baseline=[...plan.next];selected=id;source=`模板「${release.name}」v${release.version} [${id}]`;render();provenance();host.dispatchEvent(new Event('change',{bubbles:true}));
+  if(automatic&&(id===selected||changed()))return;
+  const template=rows().find(t=>t.id===id),release=template?.releases.at(-1);
+  if(!template||!release)return;
+  const preview=planTemplateSelection([],release.keys,choices,allowed,'replace');
+  const pages=choices.filter(choice=>choice.isPage&&preview.next.includes(choice.key)).length;
+  const commit=(mode:'replace'|'add',error:Element)=>{
+   if(rows().find(t=>t.id===id)?.revision!==template.revision){error.textContent='菜单模板已更新，请关闭后重新选择。';return false;}
+   if(!pages){error.textContent='该模板暂无当前可用菜单。';return false;}
+   const plan=planTemplateSelection(read(),release.keys,choices,allowed,mode);
+   apply(plan.next);baseline=[...plan.next];selected=id;source=`模板「${release.name}」v${release.version} [${id}]`;
+   provenance();host.dispatchEvent(new Event('change',{bubbles:true}));
+   return true;
   };
-  if(changed()){
-   if(automatic||pending?.open)return;
-   pending=templateDialog('切换业态','<p>切换业态将替换已调整的菜单，是否继续？</p>');
-   const footer=pending.querySelector('footer')!;footer.innerHTML='<button type="button" class="ba-btn" data-keep>继续编辑</button><button type="button" class="ba-btn ba-primary" data-switch>切换业态</button>';
-   pending.querySelector('[data-keep]')!.addEventListener('click',()=>pending!.close());
-   pending.querySelector('[data-switch]')!.addEventListener('click',()=>{commit();pending!.close();});
-  }else commit();
+  if(automatic){commit('replace',bar.querySelector('[data-preset-error]')!);return;}
+  if(pending?.open)return;
+  const dialog=document.createElement('dialog');
+  pending=dialog;
+  dialog.className='ba ba-modal ba-create-template-preview';
+  dialog.setAttribute('aria-labelledby','brand-create-template-title');
+  dialog.innerHTML=`<div class="ba-dialog-inner">
+   <header class="ba-dialog-header">
+    <div class="ba-create-section-head"><button type="button" class="ba-btn" data-close aria-label="关闭模板预览">×</button>
+     <div><h2 id="brand-create-template-title">预览菜单模板</h2><p class="ba-muted">${templateEsc(release.name)} · ${pages} 个页面</p></div>
+    </div>
+    <div class="ba-actions"><button type="button" class="ba-btn" data-apply="add">补充到已选菜单</button><button type="button" class="ba-btn ba-primary" data-apply="replace">替换已选菜单</button></div>
+   </header>
+   <div class="ba-dialog-body"><p role="alert" data-preview-error></p><div data-template-tree></div></div>
+  </div>`;
+  dialog.querySelector('[data-close]')!.addEventListener('click',()=>dialog.close());
+  dialog.querySelectorAll<HTMLButtonElement>('[data-apply]').forEach(button=>{
+   button.disabled=!pages;
+   button.onclick=()=>{if(commit(button.dataset.apply as 'replace'|'add',dialog.querySelector('[data-preview-error]')!))dialog.close();};
+  });
+  bindOpenedBrandMenuTree(dialog.querySelector('[data-template-tree]')!,choices,new Set(preview.next),{emptyText:'该模板暂无当前可用菜单。'});
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  document.body.append(dialog);
+  dialog.showModal();
  };
  bar.addEventListener('click',e=>{const button=(e.target as Element).closest<HTMLElement>('[data-business-preset]');if(button)choose(button.dataset.businessPreset!);});
  host.addEventListener('change',provenance,{signal:controller.signal});

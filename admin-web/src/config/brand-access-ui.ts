@@ -114,7 +114,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       else{let p=byKey.get(key)?.parent;while(p){if(!descendants(p).some(c=>selected.has(c.key))){selected.delete(p);if(grants)grants[p]='hidden';}p=byKey.get(p)?.parent;}}
     };
     const all=host.querySelector<HTMLInputElement>('[data-menu-select-all]')!;all.checked=available.length>0&&available.every(c=>selected.has(c.key));all.indeterminate=available.some(c=>selected.has(c.key))&&!all.checked;all.disabled=!available.length;all.onchange=()=>{roots.forEach(root=>toggle(root.key,all.checked));render();host.dispatchEvent(new Event('change',{bubbles:true}));};
-    host.querySelectorAll<HTMLInputElement>('[data-key]').forEach(c=>{c.onchange=()=>{toggle(c.dataset.key!,c.checked);render();};const children=descendants(c.dataset.key!);c.indeterminate=children.some(x=>selected.has(x.key))&&!children.every(x=>selected.has(x.key));});
+    host.querySelectorAll<HTMLInputElement>('[data-key]').forEach(c=>{c.onchange=()=>{toggle(c.dataset.key!,c.checked);render();host.dispatchEvent(new Event('change',{bubbles:true}));};const children=descendants(c.dataset.key!);c.indeterminate=children.some(x=>selected.has(x.key))&&!children.every(x=>selected.has(x.key));});
     host.querySelectorAll<HTMLSelectElement>('[data-edit]').forEach(el=>el.onchange=()=>{if(grants)grants[el.dataset.edit!]=el.value as Access;});
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -351,36 +351,106 @@ export function renderBrandCreateWizard():string {return '<section class="ba ba-
 export function bindBrandCreateWizard():void {
   const root=document.querySelector<HTMLElement>('[data-brand-create]');if(!root||root.dataset.bound)return;root.dataset.bound='true';
   const business=getBusinessTypeOptions(),lines=getProductLineOptions();
-  root.innerHTML=`${renderStandalonePageHeader({className:'ba-head',level:2,titleHtml:'创建品牌',backHtml:'<a href="#/m-platform/merchants">← 返回品牌管理</a>',subtitleHtml:'<span class="ba-tag">新门店默认继承品牌菜单</span>',actionsHtml:'<button type="submit" form="standalone-brand-create-form" class="ba-btn ba-primary" data-create-submit hidden>核对创建信息</button>'})}<form id="standalone-brand-create-form"><nav class="ba-stepper" aria-label="品牌创建步骤">${['品牌信息','选择品牌门店','开通品牌菜单'].map((t,i)=>`<button type="button" data-step="${i}" class="${i===0?'active':''}"><small>0${i+1}</small>　${t}</button>`).join('')}</nav><div class="ba-create-body"><section data-panel="0" class="ba-card"><h3 style="margin-bottom:18px">品牌基本信息</h3><div class="ba-grid"><label class="ba-field" style="grid-column:1/-1">品牌名称 *<input name="name" maxlength="60" required></label><label class="ba-field">联系人<input name="contactName" maxlength="30"></label><label class="ba-field">联系电话<input name="contactPhone"></label></div><fieldset style="margin-top:20px"><legend>经营业态 *</legend><div class="ba-checks">${business.map(b=>`<label><input type="checkbox" name="businessTypeIds" value="${esc(b.id)}">${esc(b.label)}</label>`).join('')}</div></fieldset><fieldset><legend>产线 *</legend><div class="ba-checks">${lines.map(l=>`<label><input type="checkbox" name="productLineIds" value="${esc(l.id)}" ${l.id==='pos'?'checked':''}>${esc(l.label)}</label>`).join('')}</div></fieldset></section><section data-panel="1" class="ba-card" hidden><h3>选择品牌门店</h3><div class="ba-toolbar" style="margin-top:16px"><input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称 / MID / 地址 / 邮编"></div><div data-create-stores></div></section><section data-panel="2" class="ba-card" hidden><h3>品牌菜单开通</h3><div data-create-picker></div></section><p class="ba-error" data-create-error hidden role="alert"></p></div><footer class="ba-footer"><span class="ba-muted" data-step-hint>第 1 / 3 步</span><div class="ba-actions">${button('上一步','prev')}<button type="submit" class="ba-btn ba-primary" data-next>下一步</button></div></footer></form>`;
+  root.innerHTML=`${renderStandalonePageHeader({
+    className:'ba-head',level:2,titleHtml:'新增品牌',
+    backHtml:'<a href="#/m-platform/merchants">返回品牌管理</a>',
+    subtitleHtml:'完成品牌资料、门店和菜单配置后，可继续开通品牌 Admin',
+    actionsHtml:`<div class="ba-actions">${button('上一步','prev')}<button type="submit" form="standalone-brand-create-form" class="ba-btn ba-primary" data-next>下一步</button></div>`
+  })}
+  <progress class="ba-create-progress" max="3" value="1" aria-label="品牌创建进度"></progress>
+  <form id="standalone-brand-create-form">
+    <div class="ba-create-body">
+      <p class="ba-error" data-create-error hidden role="alert"></p>
+      <div data-panel="0">
+        <section class="ba-card">
+          <h3>基本信息</h3>
+          <div class="ba-grid">
+            <label class="ba-field ba-create-name"><span>品牌名称 <b aria-hidden="true">*</b></span><input name="name" maxlength="60" required></label>
+            <label class="ba-field">联系人<input name="contactName" maxlength="30"></label>
+            <label class="ba-field">联系电话<input name="contactPhone" type="tel"></label>
+          </div>
+        </section>
+        <section class="ba-card">
+          <h3>经营范围</h3>
+          <fieldset><legend>经营业态 <b aria-hidden="true">*</b></legend><div class="ba-checks">${business.map(b=>`<label><input type="checkbox" name="businessTypeIds" value="${esc(b.id)}">${esc(b.label)}</label>`).join('')}</div></fieldset>
+          <fieldset><legend>产线 <b aria-hidden="true">*</b></legend><div class="ba-checks">${lines.map(l=>`<label><input type="checkbox" name="productLineIds" value="${esc(l.id)}" ${l.id==='pos'?'checked':''}>${esc(l.label)}</label>`).join('')}</div></fieldset>
+        </section>
+      </div>
+      <section data-panel="1" class="ba-card" hidden>
+        <div class="ba-create-section-head"><div><h3 tabindex="-1">选择门店</h3><p class="ba-muted">可暂不选择，已选 <output data-store-count aria-live="polite">0</output> 家门店</p></div>
+        <input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称、MID、地址或邮编"></div>
+        <div data-create-stores></div>
+      </section>
+      <section data-panel="2" hidden>
+        <div class="ba-create-menu-card ba-card"><h3 tabindex="-1">品牌菜单开通</h3><p class="ba-muted">可暂不选择</p><div data-create-picker></div></div>
+      </section>
+    </div>
+  </form>`;
   const routeVersion=brandMenuRouteVersion();
   const form=root.querySelector('form')!;let step=0,read=()=>[] as string[],menuKeys:string[]=[],dirty=false,reviewDialog:HTMLDialogElement|null=null;
-  const setStep=(next:number)=>{step=next;root.querySelectorAll<HTMLElement>('[data-panel]').forEach(el=>el.hidden=Number(el.dataset.panel)!==step);root.querySelectorAll<HTMLElement>('[data-step]').forEach(el=>el.classList.toggle('active',Number(el.dataset.step)===step));root.querySelector('[data-step-hint]')!.textContent=`第 ${step+1} / 3 步`;root.querySelector<HTMLButtonElement>('[data-ba=prev]')!.disabled=step===0;root.querySelector('[data-next]')!.textContent=step===2?'核对创建信息':'下一步';root.querySelector<HTMLElement>('[data-next]')!.hidden=step===2;root.querySelector<HTMLElement>('[data-create-submit]')!.hidden=step!==2;};
+  const error=root.querySelector<HTMLElement>('[data-create-error]')!;
+  const scrollBody=root.querySelector<HTMLElement>('.ba-create-body')!;
+  const setStep=(next:number)=>{
+    step=next;
+    root.querySelectorAll<HTMLElement>('[data-panel]').forEach(panel=>panel.hidden=Number(panel.dataset.panel)!==step);
+    root.querySelector<HTMLProgressElement>('progress')!.value=step+1;
+    root.querySelector<HTMLButtonElement>('[data-ba=prev]')!.hidden=step===0;
+    root.querySelector('[data-next]')!.textContent=step===2?'保存':'下一步';
+    error.hidden=true;
+    scrollBody.scrollTop=0;
+    root.querySelector<HTMLElement>(`[data-panel="${step}"] ${step===0?'[name=name]':'h3'}`)?.focus({preventScroll:true});
+  };
   const selections=()=>new FormData(form);
   const validate=()=>{if(brandMenuRouteVersion()!==routeVersion)throw Error('菜单路由已更新，请刷新后重新选择。');const fd=selections();validateBrandCreationFields({name:String(fd.get('name')??''),contactName:String(fd.get('contactName')??''),businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String)});};
+  const storeBoxes=()=>Array.from(form.querySelectorAll<HTMLInputElement>('[name=storeIds]'));
+  const visibleStoreBoxes=()=>storeBoxes().filter(box=>!box.closest('tr')!.hidden);
+  const updateStoreCount=()=>{
+    const visible=visibleStoreBoxes(),checked=visible.filter(box=>box.checked).length;
+    const all=form.querySelector<HTMLInputElement>('[data-create-store-all]')!;
+    all.disabled=!visible.length;
+    all.checked=checked>0&&checked===visible.length;
+    all.indeterminate=checked>0&&!all.checked;
+    form.querySelector<HTMLOutputElement>('[data-store-count]')!.value=String(storeBoxes().filter(box=>box.checked).length);
+  };
   const filterStores=()=>{
-    const query=root.querySelector<HTMLInputElement>('[data-create-store-search]')!.value.trim().toLocaleLowerCase();
-    let visible=0;
-    root.querySelectorAll<HTMLElement>('[data-candidate-search]').forEach(row=>{row.hidden=!row.dataset.candidateSearch!.includes(query);if(!row.hidden)visible++;});
-    const empty=root.querySelector<HTMLElement>('[data-candidate-empty]');if(empty)empty.hidden=visible>0;
+    const query=form.querySelector<HTMLInputElement>('[data-create-store-search]')!.value.trim().toLocaleLowerCase();
+    form.querySelectorAll<HTMLElement>('[data-candidate-search]').forEach(row=>row.hidden=!row.dataset.candidateSearch!.includes(query));
+    form.querySelector<HTMLElement>('[data-candidate-empty]')!.hidden=visibleStoreBoxes().length>0;
+    updateStoreCount();
   };
   const refreshStores=()=>{
     ensureBrandCreationDemoStores();
     const candidates=listBrandAssociationCandidates();
-    root.querySelector<HTMLInputElement>('[data-create-store-search]')!.value='';
-    root.querySelector('[data-create-stores]')!.innerHTML=`<div class="ba-table-wrap"><table style="min-width:680px"><thead><tr><th>选择</th><th>门店名称</th><th>门店 MID</th><th>地址</th><th>邮编</th><th>经营状态（近30天）</th></tr></thead><tbody>${candidates.map(store=>`<tr data-candidate-search="${esc([store.name,store.storeId,store.address??'',store.postalCode??''].join(' ').toLocaleLowerCase())}"><td><input type="checkbox" name="storeIds" value="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td><td>${esc(store.name)}</td><td>${esc(store.storeId)}</td><td style="white-space:normal;overflow-wrap:anywhere;max-width:360px">${esc(store.address?.trim()||'—')}</td><td>${esc(store.postalCode?.trim()||'—')}</td><td>${esc(getStoreOperatingStatus(store).label)}</td></tr>`).join('')}<tr data-candidate-empty ${candidates.length?'hidden':''}><td colspan="6" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可关联门店。'}</td></tr></tbody></table></div>`;
+    const rows=candidates.map(store=>{
+      const status=getStoreOperatingStatus(store);
+      const searchable=[store.name,store.storeId,store.address??'',store.postalCode??''].join(' ').toLocaleLowerCase();
+      return `<tr data-candidate-search="${esc(searchable)}">
+        <td><input type="checkbox" name="storeIds" value="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
+        <td><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small></td>
+        <td>${esc(store.address?.trim()||'—')}${store.postalCode?.trim()?`<small>${esc(store.postalCode)}</small>`:''}</td>
+        <td><span class="ba-create-store-status" data-status="${esc(status.status)}">${esc(status.label)}</span></td>
+      </tr>`;
+    }).join('');
+    form.querySelector('[data-create-stores]')!.innerHTML=`<div class="ba-table-wrap"><table><thead><tr>
+      <th scope="col"><input type="checkbox" data-create-store-all aria-label="全选当前搜索结果"></th>
+      <th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">经营状态（近30天）</th>
+      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="4" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可关联门店。'}</td></tr></tbody></table></div>`;
+    const all=form.querySelector<HTMLInputElement>('[data-create-store-all]')!;
+    all.onchange=()=>{visibleStoreBoxes().forEach(box=>box.checked=all.checked);updateStoreCount();};
+    updateStoreCount();
   };
-  root.querySelector<HTMLInputElement>('[data-create-store-search]')!.addEventListener('input',filterStores);
+  form.querySelector('[data-create-store-search]')!.addEventListener('input',filterStores);
 
   const refreshPicker=()=>{menuKeys=read();read=bindMenuPicker(root.querySelector('[data-create-picker]')!,brandMenuChoices(selections().getAll('productLineIds').map(String)),menuKeys,{scene:{read:()=>resolveBrandMenuScene(selections().getAll('businessTypeIds').map(String),business),edit:()=>setStep(0)}});};
   root.querySelectorAll('[name=businessTypeIds]').forEach(el=>el.addEventListener('change',()=>root.querySelector('[data-create-picker]')!.dispatchEvent(new Event('business-template-context-change'))));
-  root.querySelectorAll('[name=productLineIds]').forEach(el=>el.addEventListener('change',refreshPicker));refreshPicker();refreshStores();setStep(0);
-  form.addEventListener('change',e=>{if((e.target as HTMLElement).matches('[data-create-store-search]'))return;dirty=true;setStep(step);});
+  root.querySelectorAll('[name=productLineIds]').forEach(el=>el.addEventListener('change',refreshPicker));refreshPicker();refreshStores();
+  form.addEventListener('change',e=>{const target=e.target as HTMLElement;if(target.matches('[data-create-store-search]'))return;if(target.matches('[name=storeIds]'))updateStoreCount();dirty=true;});
   form.addEventListener('input',e=>{if(!(e.target as HTMLElement).matches('[data-menu-search],[data-create-store-search]'))dirty=true;});
   const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',unload);
   const original=location.hash;
   const guard=(e:HashChangeEvent)=>{if(!root.isConnected){window.removeEventListener('hashchange',guard,true);window.removeEventListener('beforeunload',unload);return;}if(dirty&&location.hash!==original&&!confirm('有未保存的品牌配置，是否放弃并离开？')){e.stopImmediatePropagation();history.replaceState(null,'',original);}else if(location.hash!==original){dirty=false;reviewDialog?.close();window.removeEventListener('beforeunload',unload);window.removeEventListener('hashchange',guard,true);}};window.addEventListener('hashchange',guard,true);
+  root.querySelector<HTMLElement>('[data-ba=prev]')!.hidden=true;
   root.querySelector('[data-ba=prev]')!.addEventListener('click',()=>setStep(Math.max(0,step-1)));
-  root.querySelectorAll<HTMLButtonElement>('[data-step]').forEach(b=>b.onclick=()=>{try{if(Number(b.dataset.step)>0)validate();setStep(Number(b.dataset.step));}catch(e){const error=root.querySelector<HTMLElement>('[data-create-error]')!;error.hidden=false;error.textContent=(e as Error).message;}});
   const openReview=()=>{
     if(reviewDialog?.open)return;
     const fd=selections(),selectedKeys=read(),choices=brandMenuChoices(fd.getAll('productLineIds').map(String));
@@ -390,7 +460,7 @@ export function bindBrandCreateWizard():void {
     const d=document.createElement('dialog');reviewDialog=d;d.className='ba ba-modal ba-create-confirm';d.setAttribute('aria-labelledby','brand-create-review-title');
     d.innerHTML=`<form><header class="ba-dialog-header"><h2 id="brand-create-review-title">核对创建信息</h2><button type="button" class="ba-btn" data-review-close aria-label="关闭核对创建信息">×</button></header><section class="ba-dialog-body"><h3>品牌信息</h3><dl class="ba-create-summary">${field('品牌名称',value('name'))}${field('联系人',value('contactName'))}${field('联系电话',value('contactPhone'))}${field('经营业态',esc(business.filter(item=>fd.getAll('businessTypeIds').includes(item.id)).map(item=>item.label).join('、')))}${field('产线',esc(lines.filter(item=>fd.getAll('productLineIds').includes(item.id)).map(item=>item.label).join('、')))}</dl><h3>品牌门店（${stores.length} 家）</h3>${stores.length?`<div class="ba-table-wrap"><table><thead><tr><th>门店名称</th><th>门店 MID</th><th>地址</th><th>邮编</th></tr></thead><tbody>${stores.map(store=>`<tr><td>${esc(store.name)}</td><td>${esc(store.storeId)}</td><td>${esc(store.address??'—')}</td><td>${esc(store.postalCode??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="ba-muted">未选择门店</p>'}<p class="ba-muted">${esc(templateSourceFor(root.querySelector('[data-create-picker]')))}</p>${brandMenuSelectionSummary(selectedKeys,choices)}<p class="ba-error" data-confirm-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">确认后创建品牌</span><div class="ba-actions"><button type="button" class="ba-btn" data-review-close>返回修改</button><button type="submit" class="ba-btn ba-primary" data-confirm-create>确认创建品牌</button></div></footer></form>`;
     const close=()=>d.close();d.querySelectorAll('[data-review-close]').forEach(button=>button.addEventListener('click',close));
-    d.addEventListener('close',()=>{d.remove();if(reviewDialog===d)reviewDialog=null;if(root.isConnected)root.querySelector<HTMLButtonElement>(step===2?'[data-create-submit]':'[data-next]')?.focus();},{once:true});
+    d.addEventListener('close',()=>{d.remove();if(reviewDialog===d)reviewDialog=null;if(root.isConnected)root.querySelector<HTMLButtonElement>('[data-next]')?.focus();},{once:true});
     let saving=false;
     d.querySelector('form')!.addEventListener('submit',event=>{event.preventDefault();if(saving)return;const error=d.querySelector<HTMLElement>('[data-confirm-error]')!,confirmButton=d.querySelector<HTMLButtonElement>('[data-confirm-create]')!;error.hidden=true;
       try{saving=true;confirmButton.disabled=true;validate();
@@ -400,5 +470,5 @@ export function bindBrandCreateWizard():void {
     });
     document.body.append(d);d.showModal();
   };
-  form.addEventListener('submit',e=>{e.preventDefault();const error=root.querySelector<HTMLElement>('[data-create-error]')!;error.hidden=true;try{validate();if(step<2){setStep(step+1);return;}openReview();}catch(err){error.hidden=false;error.textContent=(err as Error).message;}});
+  form.addEventListener('submit',e=>{e.preventDefault();error.hidden=true;try{validate();if(step<2){setStep(step+1);return;}openReview();}catch(err){error.hidden=false;error.textContent=(err as Error).message;}});
 }
