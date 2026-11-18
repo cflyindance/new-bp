@@ -6,7 +6,7 @@ import { getMerchantById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "
 export const ENTERPRISE_MERCHANT_ROUTE_PREFIX = "/m-platform/merchants";
 export const ENTERPRISE_MERCHANT_MODULE_LABEL = "商户管理中心";
 
-export type MerchantDetailTab = "overview" | "org" | "capabilities" | "accounts" | "changelog" | "usage" | "services";
+export type MerchantDetailTab = "overview" | "org" | "capabilities" | "accounts" | "changelog" | "usage" | "services" | "hardware";
 export type StoreDetailTab = "overview" | "capabilities" | "changelog" | "usage";
 
 export function isMPlatformMerchantPath(path: string): boolean {
@@ -61,7 +61,7 @@ export function parseMerchantDetailPath(path: string): { merchantId: string; tab
   const head = decodeURIComponent(parts[0]!);
   if (MERCHANT_RESERVED_PATH_SEGMENTS.has(head)) return null;
   const tab = (parts[1] as MerchantDetailTab | undefined) ?? "overview";
-  if (tab !== "overview" && tab !== "org" && tab !== "capabilities" && tab !== "accounts" && tab !== "changelog" && tab !== "usage" && tab !== "services") {
+  if (tab !== "overview" && tab !== "org" && tab !== "capabilities" && tab !== "accounts" && tab !== "changelog" && tab !== "usage" && tab !== "services" && tab !== "hardware") {
     return { merchantId: head, tab: "overview" };
   }
   return { merchantId: head, tab };

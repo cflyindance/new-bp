@@ -114,7 +114,8 @@ import type {
   MerchantOrgStoreStatus,
   MerchantStatus,
 } from "./enterprise-merchant-types";
-import { hardwareHref } from "./enterprise-hardware-scope";
+import { ENTERPRISE_HARDWARE_DEVICES_PATH } from "./enterprise-hardware-scope";
+import { bindEnterpriseHardware, renderBrandHardwareAssets } from "./enterprise-hardware-ui";
 
 /** 品牌列表展示全部 Enterprise 下的品牌（不含连锁挂载的门店租户） */
 function listMerchantsFilter(extra: MerchantFilter = {}): MerchantFilter {
@@ -620,11 +621,12 @@ function renderChangeLogPage(): string {
 function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string {
   const tabs: readonly (readonly [MerchantDetailTab, string])[] = [
     ["overview", "概览"],
-    ...(mCanVisit(MERCHANT_SUBSCRIPTIONS_PATH) ? [["services", "服务权益"] as const] : []),
     ["org", "品牌门店"],
+    ...(mCanVisit(MERCHANT_SUBSCRIPTIONS_PATH) ? [["services", "服务权益"] as const] : []),
     ["capabilities", "品牌菜单"],
     ["accounts", "品牌管理员"],
     ...(mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? [["usage", "使用情况"] as const] : []),
+    ...(mCanVisit(ENTERPRISE_HARDWARE_DEVICES_PATH) ? [["hardware", "硬件资产"] as const] : []),
     ["changelog", "变更记录"],
   ];
   return `<nav class="brand-detail-tabs" aria-label="品牌详情">${tabs.map(([tab, label]) =>
@@ -701,13 +703,6 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
           ${row("预设同步", formatDate(cap?.syncedPresetAt))}
         </dl>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <a
-            href="${hardwareHref("/devices")}"
-            data-enterprise-hw-link-merchant="${escapeHtml(merchant.merchantId)}"
-            class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted"
-          >查看硬件资产</a>
-        </div>
         <div class="mt-4">${renderLifecycleActions(merchant)}</div>
       </section>
       <section class="brand-detail-card brand-detail-full">
@@ -992,6 +987,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   if (tab === "org" || tab === "capabilities" || tab === "accounts" || tab === "changelog") body = renderBrandWorkspace(merchantId, tab);
   else if (tab === "services") body = renderBrandServiceEntitlements(merchantId,{cards:true});
   else if (tab === "usage") body = `<section data-merchant-usage>${mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? renderActivityPage(activityContextPath({kind: "brand", id: merchantId}), true) : "<p>暂无系统使用分析权限，请联系服务商管理员。</p>"}</section>`;
+  else if (tab === "hardware") body = mCanVisit(ENTERPRISE_HARDWARE_DEVICES_PATH) ? renderBrandHardwareAssets(merchantId) : "<p>暂无硬件资产查看权限。</p>";
   else body = renderMerchantDetailOverview(merchant);
 
   const status = serviceStatus(merchant.status);
@@ -1240,6 +1236,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   bindBrandWorkspaces({canView: canViewBrandStoreDetails, open: openBrandStoreDetails});
   const usagePath = location.hash.slice(1), brandUsage = parseMerchantDetailPath(usagePath), storeUsage = parseStoreDetailPath(usagePath);
   const usageContext = storeUsage?.tab === 'usage' ? {kind: 'store' as const, id: storeUsage.storeId} : brandUsage?.tab === 'usage' ? {kind: 'brand' as const, id: brandUsage.merchantId} : null;
+  if (brandUsage?.tab === 'hardware' && mCanVisit(usagePath) && mCanVisit(ENTERPRISE_HARDWARE_DEVICES_PATH)) bindEnterpriseHardware(onMount);
   if (usageContext && mCanVisit(usagePath) && mCanVisit(activityContextPath(usageContext))) bindActivityPage(onMount, activityContextPath(usageContext));
   bindBrandCreateWizard();
   document.querySelectorAll<HTMLButtonElement>("[data-brand-single-store]").forEach(button => button.onclick = () => { const store=getStoreById(button.dataset.brandSingleStore!); if(store)openBrandStoreMenuEditor(store.merchantId,[store.storeId],"m-platform",onMount); });
@@ -1310,19 +1307,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         window.alert("API 调用失败");
       }
       onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLAnchorElement>("[data-enterprise-hw-link-merchant]").forEach((link) => {
-    link.addEventListener("click", () => {
-      const merchantId = link.dataset.enterpriseHwLinkMerchant;
-      if (merchantId) {
-        try {
-          sessionStorage.setItem("menusifu:enterprise-hardware-merchant-filter", merchantId);
-        } catch {
-          /* ignore */
-        }
-      }
     });
   });
 

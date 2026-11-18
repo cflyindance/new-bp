@@ -3,7 +3,7 @@
  */
 import { getDemoScopeStores } from "../auth/session-scope";
 import { listMPlatformStoreScopeEntries } from "../permissions/m-platform-store-scope";
-import { getMerchantsForSelect } from "./enterprise-merchant-store";
+import { getMerchantsForSelect, getMerchantStoreIdSet } from "./enterprise-merchant-store";
 import {
   ENTERPRISE_HARDWARE_DEVICES_PATH,
   ENTERPRISE_HARDWARE_ROUTE_PREFIX,
@@ -74,10 +74,12 @@ function cardShell(content: string): string {
 function renderFilterBar(
   filter: EnterpriseDeviceFilter,
   idPrefix: string,
-  options: { includeDeviceType?: boolean; fixedDeviceType?: EnterpriseDeviceType } = {},
+  options: { includeDeviceType?: boolean; fixedDeviceType?: EnterpriseDeviceType; fixedMerchantId?: string } = {},
 ): string {
   const statuses = ["", "online", "offline", "unknown"] as const;
-  const { includeDeviceType = false, fixedDeviceType } = options;
+  const { includeDeviceType = false, fixedDeviceType, fixedMerchantId } = options;
+  const merchantStores = fixedMerchantId ? getMerchantStoreIdSet(fixedMerchantId) : null;
+  const storeOptions = getDemoScopeStores().filter(store => !merchantStores || merchantStores.has(store.value));
 
   const select = (name: string, label: string, optionsList: { value: string; label: string }[]) => `
     <label class="flex min-w-[8rem] flex-col gap-1">
@@ -110,15 +112,21 @@ function renderFilterBar(
       )
     : "";
 
+  const brandSearch = `<label class="brand-hardware-search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
+    <input type="search" name="query" data-enterprise-hw-filter="query" value="${escapeHtml(filter.query ?? "")}" aria-label="搜索设备" placeholder="搜索名称 / SN / 设备 ID">
+  </label>`;
   return `
     <form
       id="${idPrefix}-filter-form"
       class="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
       data-enterprise-hw-filter-form
+      ${fixedMerchantId ? `data-enterprise-hw-fixed-merchant="${escapeHtml(fixedMerchantId)}"` : ""}
       ${fixedDeviceType ? `data-enterprise-hw-fixed-type="${escapeHtml(fixedDeviceType)}"` : ""}
     >
+      ${fixedMerchantId ? brandSearch : ""}
       ${deviceTypeField}
-      ${select(
+      ${fixedMerchantId ? "" : `${select(
         "merchantId",
         "入驻品牌",
         [{ value: "", label: "全部品牌" }, ...getMerchantsForSelect().map((m) => ({ value: m.merchantId, label: m.name }))],
@@ -140,11 +148,11 @@ function renderFilterBar(
             new Set(listMPlatformStoreScopeEntries().map((e) => e.regionName).filter(Boolean)),
           ).map((name) => ({ value: name, label: name })),
         ],
-      )}
+      )}`}
       ${select(
         "storeId",
         "门店",
-        [{ value: "", label: "全部门店" }, ...getDemoScopeStores().map((s) => ({ value: s.value, label: s.labelZh }))],
+        [{ value: "", label: "全部门店" }, ...storeOptions.map((s) => ({ value: s.value, label: s.labelZh }))],
       )}
       ${select(
         "status",
@@ -154,7 +162,7 @@ function renderFilterBar(
           label: s ? getStatusLabel(s) : "全部状态",
         })),
       )}
-      <label class="flex min-w-[10rem] flex-1 flex-col gap-1">
+      ${fixedMerchantId ? `<button type="button" class="ba-btn brand-hardware-reset" data-brand-hardware-reset><span aria-hidden="true">⟳</span> 重置</button>` : `<label class="flex min-w-[10rem] flex-1 flex-col gap-1">
         <span class="text-xs text-muted-foreground">搜索</span>
         <input
           type="search"
@@ -164,12 +172,12 @@ function renderFilterBar(
           placeholder="名称 / SN / 设备 ID"
           class="h-9 rounded-md border border-input bg-background px-3 text-sm"
         />
-      </label>
-      <button
+      </label>`}
+      ${fixedMerchantId ? "" : `<button
         type="button"
         data-enterprise-hw-export
         class="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
-      >导出 CSV</button>
+      >导出 CSV</button>`}
     </form>`;
 }
 
@@ -245,9 +253,9 @@ function renderVersionOrTerminalCell(device: EnterpriseDevice): string {
 
 function renderDeviceTable(
   devices: EnterpriseDevice[],
-  options: { showStore?: boolean; showType?: boolean; mobileTerminalLayout?: boolean } = {},
+  options: { showStore?: boolean; showType?: boolean; mobileTerminalLayout?: boolean; inlineDetail?: boolean } = {},
 ): string {
-  const { showStore = true, showType = true, mobileTerminalLayout = false } = options;
+  const { showStore = true, showType = true, mobileTerminalLayout = false, inlineDetail = false } = options;
   const stores = getEnterpriseStores();
   if (devices.length === 0) {
     return `<p class="py-8 text-center text-sm text-muted-foreground">暂无匹配设备</p>`;
@@ -322,7 +330,7 @@ function renderDeviceTable(
             <th class="px-3 py-2.5 font-medium">健康度</th>
             <th class="px-3 py-2.5 font-medium">最后活跃</th>
             <th class="px-3 py-2.5 font-medium">${escapeHtml(versionHeader)}</th>
-            <th class="px-3 py-2.5 font-medium w-24"></th>
+            <th class="px-3 py-2.5 font-medium w-24" scope="col"><span class="sr-only">操作</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
@@ -338,12 +346,12 @@ function renderDeviceTable(
                 ${escapeHtml(d.name)}
               </td>
               <td class="px-3 py-2.5 font-mono text-xs text-muted-foreground">${escapeHtml(d.sn)}<br/>${escapeHtml(d.deviceId)}</td>
-              <td class="px-3 py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(d.status)}">${escapeHtml(getStatusLabel(d.status))}</span></td>
-              <td class="px-3 py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${healthBadgeClass(d.health)}">${escapeHtml(getHealthLabel(d.health))}</span></td>
+              <td class="px-3 py-2.5"><span data-hardware-status="${d.status}" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(d.status)}">${escapeHtml(getStatusLabel(d.status))}</span></td>
+              <td class="px-3 py-2.5"><span data-hardware-health="${d.health}" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${healthBadgeClass(d.health)}">${escapeHtml(getHealthLabel(d.health))}</span></td>
               <td class="px-3 py-2.5 text-muted-foreground">${escapeHtml(formatRelativeLastSeen(d.lastSeenAt))}</td>
               ${renderVersionOrTerminalCell(d)}
               <td class="px-3 py-2.5">
-                <a href="${hardwareHref(`/devices/${encodeURIComponent(d.uid)}`)}" class="text-primary text-xs hover:underline">详情</a>
+                ${inlineDetail?`<button type="button" class="brand-hardware-detail-link" data-brand-hardware-device="${escapeHtml(d.uid)}" aria-label="查看 ${escapeHtml(d.name)} 详情">详情</button>`:`<a href="${hardwareHref(`/devices/${encodeURIComponent(d.uid)}`)}" class="text-primary text-xs hover:underline">详情</a>`}
               </td>
             </tr>`;
             })
@@ -422,6 +430,13 @@ function renderOverviewPage(): string {
         </div>
       `)}
     </div>`;
+}
+
+export function renderBrandHardwareAssets(merchantId: string): string {
+  return `<section class="brand-hardware-assets" aria-label="品牌硬件资产">
+    ${renderFilterBar({ merchantId }, "brand-hardware", { fixedMerchantId: merchantId, includeDeviceType: true })}
+    <div data-enterprise-hw-device-table>${renderDeviceTable(filterEnterpriseDevices({ merchantId }), { inlineDetail: true })}</div>
+  </section>`;
 }
 
 function renderDevicesAllPage(): string {
@@ -516,8 +531,8 @@ function renderAlertsPage(): string {
     </div>`;
 }
 
-function renderDeviceDetailPage(uid: string): string {
-  const device = getEnterpriseDeviceByUid(uid);
+function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): string {
+  const device = inlineDevice ?? getEnterpriseDeviceByUid(uid);
   if (!device) {
     return cardShell(`<p class="text-sm text-muted-foreground">未找到设备 <code>${escapeHtml(uid)}</code></p>`);
   }
@@ -547,9 +562,9 @@ function renderDeviceDetailPage(uid: string): string {
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-      <div class="flex flex-wrap items-center gap-2">
+      ${inlineDevice?"":`<div class="flex flex-wrap items-center gap-2">
         <a href="${hardwareHref("/devices")}" class="text-sm text-primary hover:underline">← 返回全量设备</a>
-      </div>
+      </div>`}
       <div class="grid gap-4 lg:grid-cols-2">
         ${cardShell(`
           <h2 class="text-sm font-semibold text-card-foreground">基本信息</h2>
@@ -567,7 +582,7 @@ function renderDeviceDetailPage(uid: string): string {
         ${cardShell(`
           <h2 class="text-sm font-semibold text-card-foreground">归属与状态</h2>
           <dl class="mt-2">
-            ${row("门店", `<a href="${hardwareHref(`/stores/${encodeURIComponent(device.storeId)}`)}" class="text-primary hover:underline">${escapeHtml(store?.storeName ?? device.storeId)}</a>`)}
+            ${row("门店", inlineDevice?escapeHtml(store?.storeName ?? device.storeId):`<a href="${hardwareHref(`/stores/${encodeURIComponent(device.storeId)}`)}" class="text-primary hover:underline">${escapeHtml(store?.storeName ?? device.storeId)}</a>`)}
             ${store ? row("品牌 / 区域", escapeHtml(`${store.brandName} · ${store.regionName}`)) : ""}
             ${store ? row("门店状态", escapeHtml(getStoreStatusLabel(store.storeStatus))) : ""}
             ${row("连接状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(device.status)}">${escapeHtml(getStatusLabel(device.status))}</span>`)}
@@ -661,7 +676,7 @@ function readFilterFromForm(form: HTMLFormElement): EnterpriseDeviceFilter {
   };
   const fixedType = form.dataset.enterpriseHwFixedType as EnterpriseDeviceType | undefined;
   return {
-    merchantId: get("merchantId") || undefined,
+    merchantId: form.dataset.enterpriseHwFixedMerchant || get("merchantId") || undefined,
     brandId: get("brandId") || undefined,
     regionId: get("regionId") || undefined,
     storeId: get("storeId") || undefined,
@@ -692,21 +707,45 @@ export function bindEnterpriseHardware(onMount: () => void): void {
     const fixedType = filterForm.dataset.enterpriseHwFixedType as EnterpriseDeviceType | undefined;
     const showType = !fixedType;
     const mobileTerminalLayout = fixedType === "kiosk" || fixedType === "emenu";
-    tableHost.innerHTML = renderDeviceTable(devices, { showType, mobileTerminalLayout });
+    tableHost.innerHTML = renderDeviceTable(devices, { showType, mobileTerminalLayout, inlineDetail: !!filterForm.dataset.enterpriseHwFixedMerchant });
   };
 
-  if (filterForm) {
-    try {
-      const presetMerchantId = sessionStorage.getItem("menusifu:enterprise-hardware-merchant-filter");
-      if (presetMerchantId) {
-        sessionStorage.removeItem("menusifu:enterprise-hardware-merchant-filter");
-        const merchantSelect = filterForm.querySelector<HTMLSelectElement>('[data-enterprise-hw-filter="merchantId"]');
-        if (merchantSelect) merchantSelect.value = presetMerchantId;
+  const brandId = filterForm?.dataset.enterpriseHwFixedMerchant;
+  if (brandId && tableHost) {
+    tableHost.addEventListener("click", event => {
+      const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-brand-hardware-device]");
+      if (!trigger) return;
+      const device = filterEnterpriseDevices({ merchantId: brandId }).find(item => item.uid === trigger.dataset.brandHardwareDevice);
+      if (!device) {
+        applyFilter();
+        return;
       }
-    } catch {
-      /* ignore */
-    }
-    applyFilter();
+      const dialog = document.createElement("dialog");
+      dialog.className = "ba ba-modal brand-design-modal brand-hardware-device-dialog";
+      dialog.setAttribute("aria-labelledby", "brand-hardware-device-title");
+      dialog.innerHTML = `<div class="ba-dialog-inner"><header class="ba-dialog-header">
+        <button type="button" class="ba-btn" data-close aria-label="关闭" autofocus>×</button>
+        <div><h2 id="brand-hardware-device-title">设备详情</h2><p class="ba-muted">${escapeHtml(device.name)}</p></div>
+      </header><div class="ba-dialog-body">${renderDeviceDetailPage(device.uid, device)}</div></div>`;
+      dialog.querySelector("[data-close]")?.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+        if (trigger.isConnected) trigger.focus({ preventScroll: true });
+      }, { once: true });
+      tableHost.closest(".brand-hardware-assets")!.append(dialog);
+      dialog.showModal();
+    });
+  }
+  if (filterForm) applyFilter();
+  if (filterForm?.dataset.enterpriseHwFixedMerchant) {
+    filterForm.querySelector("[data-brand-hardware-reset]")?.addEventListener("click", () => {
+      filterForm.reset();
+      applyFilter();
+    });
+    filterForm.addEventListener("submit", event => {
+      event.preventDefault();
+      applyFilter();
+    });
   }
 
   filterForm?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-enterprise-hw-filter]").forEach((el) => {

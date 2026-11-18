@@ -418,3 +418,77 @@
 .brand-associate-modal .ba-toolbar .brand-store-search { margin-bottom: 0; }
 .brand-associate-modal .ba-toolbar .brand-store-search input { min-width: 0; }
 .brand-usage-filters #brand-usage-filter-form { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.brand-hardware-assets > [data-enterprise-hw-filter-form] {
+  align-items: flex-end;
+  padding: 0;
+  margin-bottom: 16px;
+  border: 0;
+  background: transparent;
+}
+.brand-hardware-assets select[data-enterprise-hw-filter] {
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-muted);
+}
+.brand-hardware-search {
+  display: flex;
+  flex: 0 1 320px;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-muted-foreground);
+}
+.brand-hardware-search svg { flex: none; }
+.brand-hardware-search input[data-enterprise-hw-filter] {
+  width: 100%;
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+.brand-hardware-search:focus-within {
+  outline: 2px solid var(--brand-detail-blue);
+  outline-offset: 2px;
+}
+.brand-hardware-assets .brand-hardware-reset {
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+.brand-hardware-assets .brand-hardware-reset:hover { background: var(--color-muted); }
+.brand-hardware-assets [data-enterprise-hw-device-table] > div {
+  border: 0;
+  border-radius: 0;
+}
+.brand-hardware-assets table { min-width: 900px; }
+.brand-hardware-assets td :is(a, .brand-hardware-detail-link) { color: var(--brand-detail-blue); }
+.brand-hardware-detail-link { background: transparent; border: 0; padding: 0; }
+.brand-hardware-assets td :is(a, .brand-hardware-detail-link):hover { text-decoration: underline; }
+.brand-hardware-assets :is([data-hardware-status], [data-hardware-health]) {
+  gap: 5px;
+  white-space: nowrap;
+  padding: 0;
+  background: transparent;
+  font-weight: 500;
+}
+.brand-hardware-assets :is([data-hardware-status], [data-hardware-health])::before {
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+.brand-hardware-assets [data-enterprise-hw-device-table] > p {
+  padding: 32px 16px;
+  border-radius: 12px;
+  background: var(--brand-detail-tint);
+}
