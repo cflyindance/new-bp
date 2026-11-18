@@ -26,6 +26,9 @@ import { serviceAccess } from './service-entitlement-domain';
 
 type Source='m-platform'|'merchant';
 const button=(text:string,action:string,primary=false)=>`<button type="button" class="ba-btn ${primary?'ba-primary':''}" data-ba="${action}">${text}</button>`;
+const storeListIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l2-6h12l2 6v2a2.5 2.5 0 0 1-5 0 3 3 0 0 1-6 0 2.5 2.5 0 0 1-5 0zm2 4v6h12v-6m-8 6v-5h4v5"/></svg>';
+const storeSearchIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>';
+const storeConfigDate=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 const date=(value:string)=>new Date(value).toLocaleString('zh-CN');
 
 /** A native dialog supplies focus containment, Escape handling and focus restoration. */
@@ -386,7 +389,38 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
       }else{
         const detail = !!root.closest('[data-brand-detail-tab]');
         const storeActions = `${admin?button('批量配置菜单','batch',true):''}${source==='m-platform'?button('关联已有门店','associate'):''}`;
-        root.innerHTML=` ${detail?'':`<header class="ba-head"><h2>品牌门店</h2><div class="ba-actions">${storeActions}</div></header>`}${stats}<div class="ba-toolbar ba-store-toolbar"><input data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店">${detail?`<div class="ba-actions">${storeActions}</div>`:`<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div><div class="ba-table-wrap"><table><thead><tr><th><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th>门店名称 / MID</th><th>经营状态（近30天）</th><th>菜单配置</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${stores.map(s=>{const sc=getStoreCapability(s.storeId),operating=getStoreOperatingStatus(s),canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,s.storeId);const actions=`${canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(s.storeId)}">门店详情</button>`:''}${admin?button('查看生效菜单',`effective:${s.storeId}`)+button('配置菜单',`store:${s.storeId}`):''}`;return `<tr data-store-row="${esc(s.name+' '+s.storeId)}"><td><input type="checkbox" data-store-id="${esc(s.storeId)}" aria-label="选择${esc(s.name)}"></td><td><strong>${esc(s.name)}</strong><br><small>${esc(s.storeId)}${detail?'':` · ${esc(s.address??'暂无地址')}`}</small></td><td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}">${esc(operating.label)}</span></td><td><span class="ba-tag ${sc?.enabledKeys.length?'active':''}">${sc?.menuMode==='inherit'?'继承品牌 · ':sc?.menuMode==='independent'?'独立配置 · ':''}${sc?.menuMode==='inherit'||sc?.menuMode==='independent'||sc?.enabledKeys.length?`${choices.filter(c=>c.isPage===true&&sc?.enabledKeys.includes(c.key)).length} 个页面`:'未开通'}</span></td><td><small>${sc?.updatedAt?esc(date(sc.updatedAt)):'—'}${!detail&&sc?.updatedBy?`<br>${esc(sc.updatedBy)}`:''}</small></td><td>${!actions?'—':detail?renderBrandMoreActions(esc(s.name)+'的更多操作',actions):`<div class="ba-actions">${actions}</div>`}</td></tr>`;}).join('')||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}<tr data-store-empty hidden><td colspan="6" class="ba-empty">没有符合条件的门店</td></tr></tbody></table></div>`;
+        const rows = stores.map(store=>{
+          const capability=getStoreCapability(store.storeId), operating=getStoreOperatingStatus(store);
+          const canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,store.storeId);
+          const actions=(canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(store.storeId)}">门店详情</button>`:'')
+            +(admin?button('查看生效菜单',`effective:${store.storeId}`)+button('配置菜单',`store:${store.storeId}`):'');
+          const mode=capability?.menuMode;
+          const menuKeys=new Set(capability?.enabledKeys);
+          const configured=!!mode||menuKeys.size>0;
+          const configuredCount=choices.filter(choice=>choice.isPage===true&&menuKeys.has(choice.key)).length;
+          const menuLabel=configured?`${mode==='inherit'?'继承品牌 · ':mode==='independent'?'独立配置 · ':''}${configuredCount} 个页面`:'未开通';
+          const statusLabel=detail&&operating.status==='open'?'营业中':detail&&operating.status==='terminated'?'关店':operating.label;
+          const updatedAt=capability?.updatedAt;
+          const timestamp=updatedAt&&Number.isFinite(Date.parse(updatedAt))?(detail?storeConfigDate.format(new Date(updatedAt)):date(updatedAt)):'—';
+          return `<tr data-store-row="${esc(store.name+' '+store.storeId)}">
+            <td><input type="checkbox" data-store-id="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
+            <td><div class="brand-store-identity">${detail?storeListIcon:''}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}${detail?'':` · ${esc(store.address??'暂无地址')}`}</small></div></div></td>
+            <td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}" title="${esc(operating.label)}">${esc(statusLabel)}</span></td>
+            <td><span class="ba-tag ${detail?'brand-store-menu-label':menuKeys.size?'active':''}">${menuLabel}</span></td>
+            <td class="brand-store-date">${esc(timestamp)}${!detail&&capability?.updatedBy?`<br><small>${esc(capability.updatedBy)}</small>`:''}</td>
+            <td class="brand-store-action-cell">${!actions?'—':detail?renderBrandMoreActions(esc(store.name)+'的更多操作',actions):`<div class="ba-actions">${actions}</div>`}</td>
+          </tr>`;
+        }).join('');
+        const search=`<input type="search" data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店">`;
+        root.innerHTML=`${detail?'':`<header class="ba-head"><h2>品牌门店</h2><div class="ba-actions">${storeActions}</div></header>`}
+          ${stats}<div class="ba-toolbar ba-store-toolbar">${detail?`<div class="brand-store-search">${storeSearchIcon}${search}</div><div class="ba-actions">${storeActions}</div>`:`${search}<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div>
+          <div class="ba-table-wrap"><table><thead><tr>
+            <th scope="col"><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th scope="col">门店名称 / MID</th>
+            <th scope="col">${detail?'营业状态':'经营状态（近30天）'}</th><th scope="col">菜单配置</th><th scope="col">最近配置</th><th scope="col" class="brand-store-action-cell">操作</th>
+          </tr></thead><tbody>
+            ${rows||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}
+            <tr data-store-empty hidden><td colspan="6" class="ba-empty">没有符合条件的门店</td></tr>
+          </tbody></table></div>`;
         const query=root.querySelector<HTMLInputElement>('[data-store-query]')!;
         const all=root.querySelector<HTMLInputElement>('[data-select-all]')!;
         const boxes=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]')];
