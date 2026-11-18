@@ -8,12 +8,21 @@ export interface BrandAccount {
   admin: boolean;
   createdAt?: string;
   lastLoginAt?: string;
+  openedVia?: 'email' | 'password';
+  passwordReset?: { requestedAt: string; expiresAt: string };
   invitation?: { sentAt:string; expiresAt:string; revoked?:boolean };
 
   /** Local prototype credentials; use the existing authentication service in production. */
   password: string;
 }
 export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[]; logs:(CenterState['logs'][number]&{facts?:import('./brand-audit-types').BrandChangeFacts})[] }
+
+export function wasOpenedByEmail(state: BrandAccessState, account: BrandAccount): boolean {
+  if (account.openedVia) return account.openedVia === 'email';
+  return !!account.invitation || state.logs.some(log =>
+    log.facts?.title === '接受邮箱邀请' && log.facts.target.endsWith(` · ${account.email}`)
+  );
+}
 
 /** Never combine one binding's role with another binding's store range. */
 export function brandAccountStores(state: BrandAccessState, account: BrandAccount, stores: Store[]): string[] {

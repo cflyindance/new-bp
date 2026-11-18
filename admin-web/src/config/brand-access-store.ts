@@ -1,3 +1,4 @@
+import { wasOpenedByEmail } from './brand-access-domain';
 import {currentProviderCanTarget as requireProviderBrandTarget} from '../permissions/provider-access-store';
 import {currentMAccount} from '../permissions/m-platform-store';
 import {readProviderState,canProviderEnter,currentProviderAccess} from '../permissions/provider-access-store';
@@ -26,8 +27,12 @@ import { getModuleSettingsBasePath } from './module-settings-catalog';
 export const BRAND_ACCESS_KEY = 'menusifu:brand-access:v1:';
 export const brandAccessKey = (id: string) => BRAND_ACCESS_KEY + id;
 export const brandIdentity=(id:string)=>{const merchant=getMerchantById(id);return merchant?{name:merchant.name,groupId:merchant.groupId,regions:getMerchantRegions(id)}:null;};
+export function wasReplacedAdminEmail(state:BrandAccessState,email:string):boolean {
+  return state.logs.some(log=>log.facts?.title==='换绑管理员邮箱'&&
+    log.facts.fields.some(field=>field.name==='登录账号'&&field.before.toLowerCase()===email.toLowerCase()));
+}
 export function brandPrimaryAdminEmail(id:string):string {
-  const state=readBrandAccess(id),m=getMerchantById(id),explicit=state.accounts.find(a=>a.admin&&a.enabled);if(explicit)return explicit.email;return !m?.accountProvisioningRequired&&m?.primaryAdminEmail&&!state.accounts.some(a=>a.email.toLowerCase()===m.primaryAdminEmail!.toLowerCase())?m.primaryAdminEmail:'';
+  const state=readBrandAccess(id),m=getMerchantById(id),explicit=state.accounts.find(a=>a.admin&&a.enabled);if(explicit)return explicit.email;return !m?.accountProvisioningRequired&&m?.primaryAdminEmail&&!wasReplacedAdminEmail(state,m.primaryAdminEmail)&&!state.accounts.some(a=>a.email.toLowerCase()===m.primaryAdminEmail!.toLowerCase())?m.primaryAdminEmail:'';
 }
 export const brandStores = (id: string): Store[] => getMerchantStores(id).map(s => ({id:s.storeId,title:s.name,brand:id,region:s.regionId}));
 
@@ -93,7 +98,7 @@ function resolveBrandPrincipal(): Principal | null {
     const active=merchant.status==='active';
     if (explicit) return {merchantId:merchant.merchantId,account:active?explicit:{...explicit,enabled:false},state};
     // Preserve existing primary Admins. New brands require explicit account provisioning.
-    if (!merchant.accountProvisioningRequired && merchant.primaryAdminEmail?.toLowerCase()===email) return {merchantId:merchant.merchantId,state,account:{id:`admin:${merchant.merchantId}`,name:'品牌 Admin',email,enabled:active,admin:true,password:''}};
+    if (!merchant.accountProvisioningRequired && merchant.primaryAdminEmail?.toLowerCase()===email && !wasReplacedAdminEmail(state,email)) return {merchantId:merchant.merchantId,state,account:{id:`admin:${merchant.merchantId}`,name:'品牌 Admin',email,enabled:active,admin:true,password:''}};
   }
   return null;
 }
@@ -114,7 +119,7 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
   const stores=new Set(brandStores(next.merchantId).map(s=>s.id));
   const emails=new Set<string>();
   const merchant=getMerchantById(next.merchantId);
-  const legacyAdmin=!merchant?.accountProvisioningRequired && !!merchant?.primaryAdminEmail && !next.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail!.toLowerCase());
+  const legacyAdmin=!merchant?.accountProvisioningRequired && !!merchant?.primaryAdminEmail && !wasReplacedAdminEmail(current,merchant.primaryAdminEmail) && !next.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail!.toLowerCase());
   if(next.accounts.some(a=>!a.invitation) && !next.accounts.some(a=>a.admin&&a.enabled) && !legacyAdmin)throw Error('必须保留至少一名已启用的品牌 Admin。');
   for (const account of next.accounts) {
     if (!account.name.trim() || account.name.length>30 || !/^[^\s@]+@menusifu\.(cn|com)$/i.test(account.email)) throw Error('请填写姓名及有效的 Menusifu 邮箱。');
@@ -137,15 +142,30 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
   if(context){
     const before=current.accounts.find(a=>a.id===context.accountId),after=next.accounts.find(a=>a.id===context.accountId);
     if(!after)throw Error('管理员不存在。');
+    if(['profile','email-change','invite-correct'].includes(context.operation)&&merchant?.status==='closed')throw Error('品牌已关闭，无法修改管理员资料。');
+    if(context.operation==='profile'&&before&&(before.invitation||before.email!==after.email))throw Error('请使用独立的邮箱换绑或更正邀请操作。');
+    if(context.operation==='email-change'&&(!before?.admin||before.invitation||after.email===before.email||after.passwordReset))throw Error('邮箱换绑信息无效。');
+    if(context.operation==='invite-correct'&&(!before?.invitation||!after.invitation||after.invitation.revoked))throw Error('无法更正此邀请。');
+
     const fields:BrandChangeFacts['fields']=[];
     if(!before||before.name!==after.name)fields.push({name:'姓名',before:before?.name??'未开通',after:after.name});
     if(!before||before.email!==after.email)fields.push({name:'登录账号',before:before?.email??'未开通',after:after.email});
     const label=(account?:BrandAccount)=>!account?'未开通':account.invitation?account.invitation.revoked?'邀请已撤销':'待接受邀请':account.enabled?'已启用':'已停用';
     if(label(before)!==label(after))fields.push({name:'账号状态',before:label(before),after:label(after)});
-    if(context.operation==='resend'||context.operation==='invite')fields.push({name:'邀请有效期',before:before?.invitation?.expiresAt?new Date(before.invitation.expiresAt).toLocaleString('zh-CN'):'—',after:new Date(after.invitation!.expiresAt).toLocaleString('zh-CN')});
-    if(context.operation==='password')fields.push({name:'登录密码',before:'不展示密码',after:'已重设（旧密码失效，不记录密码内容）'});
+    if(context.operation==='resend'||context.operation==='invite'||context.operation==='invite-correct')fields.push({name:'邀请有效期',before:before?.invitation?.expiresAt?new Date(before.invitation.expiresAt).toLocaleString('zh-CN'):'—',after:new Date(after.invitation!.expiresAt).toLocaleString('zh-CN')});
+    if(context.operation==='password'&&before&&wasOpenedByEmail(current,before))throw Error('此账号须通过邮箱重设密码。');
+    if(context.operation==='email-reset-request'||context.operation==='email-reset-complete'){
+      if(!before||before.invitation||!wasOpenedByEmail(current,before))throw Error('此账号不支持邮箱重置。');
+      if(context.operation==='email-reset-request'){
+        if(!after.passwordReset||after.password!==before.password)throw Error('重置请求无效。');
+        fields.push({name:'邮箱重置请求',before:'—',after:'已创建演示重置请求'});
+      }else{
+        if(!before.passwordReset||Date.parse(before.passwordReset.expiresAt)<=Date.now()||after.passwordReset)throw Error('重置请求已失效，请重新发送。');
+      }
+    }
+    if(context.operation==='password'||context.operation==='email-reset-complete')fields.push({name:'登录密码',before:'不展示密码',after:'已重设（旧密码失效，不记录密码内容）'});
     if(!fields.length)return current;
-    facts={category:'品牌管理员',title:({invite:'创建邮箱邀请',resend:'重发邮箱邀请',revoke:'撤销邮箱邀请',accept:'接受邮箱邀请'} as Partial<Record<AdminAuditContext['operation'],string>>)[context.operation]??(context.operation==='create'?'开通管理员':context.operation==='password'?'重设管理员密码':context.operation==='enable'?'启用管理员':context.operation==='disable'?'停用管理员':'修改管理员资料'),source:context.source,target:`${after.name} · ${after.email}`,fields};
+    facts={category:'品牌管理员',title:({invite:'创建邮箱邀请',resend:'重发邮箱邀请',revoke:'撤销邮箱邀请',accept:'接受邮箱邀请','email-reset-request':'创建邮箱重置请求','email-reset-complete':'完成邮箱密码重置','email-change':'换绑管理员邮箱','invite-correct':'更正并重发邮箱邀请'} as Partial<Record<AdminAuditContext['operation'],string>>)[context.operation]??(context.operation==='create'?'开通管理员':context.operation==='password'?'重设管理员密码':context.operation==='enable'?'启用管理员':context.operation==='disable'?'停用管理员':'修改管理员资料'),source:context.source,target:`${after.name} · ${after.email}`,fields};
   }
   const saved=structuredClone(next);
   saved.version=expected+1;
@@ -159,7 +179,7 @@ export function recordBrandSuccessfulLogin(email:string):void {
  for(const m of getEnterpriseMerchantSnapshot().merchants){
   if(m.status!=='active')continue;const state=readBrandAccess(m.merchantId),a=state.accounts.find(a=>a.email.toLowerCase()===email.trim().toLowerCase());
   if(a?.enabled){a.lastLoginAt=new Date().toISOString();localStorage.setItem(brandAccessKey(m.merchantId),JSON.stringify(state));recordMerchantFirstLogin(m.merchantId);break;}
-  if(!a&&!m.accountProvisioningRequired&&m.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase()){recordMerchantFirstLogin(m.merchantId);break;}
+  if(!a&&!m.accountProvisioningRequired&&m.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase()&&!wasReplacedAdminEmail(state,email.trim())){recordMerchantFirstLogin(m.merchantId);break;}
  }
 }
 export function validateBrandLogin(email:string,password:string):string|null|undefined {
@@ -175,7 +195,7 @@ export function validateBrandLogin(email:string,password:string):string|null|und
     }
     if (merchant.accountProvisioningRequired && merchant.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase()) return '请先在品牌详情开通登录账号。';
   }
-  return undefined;
+  return getEnterpriseMerchantSnapshot().merchants.some(merchant=>wasReplacedAdminEmail(readBrandAccess(merchant.merchantId),email.trim()))?'该邮箱已解除绑定，请使用当前登录邮箱。':undefined;
 }
 
 interface Runtime {p:Principal;catalog:Catalog;ceiling:Set<string>;all:Store[];storeIds:string[];caps:Map<string,Set<string>>;brandPerspective:boolean;values:Map<string,Access>;session?:UserSessionContext;paths:Map<string,boolean>}

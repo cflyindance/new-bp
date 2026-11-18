@@ -1,3 +1,4 @@
+import { wasOpenedByEmail } from './brand-access-domain';
 import { storeBusinessStatusFilter } from './store-business-status-filter';
 import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
@@ -18,7 +19,7 @@ import { esc } from '../permissions/center-editor';
 import { buildCenterCatalog, type Catalog } from '../permissions/center-catalog';
 import { roleAccess, type Role, type Binding, type Access } from '../permissions/center-domain';
 import { type BrandAccessState, type BrandAccount, updateMenuKeys, brandAccountStores } from './brand-access-domain';
-import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuKeys, brandStores, currentBrandPrincipal, readBrandAccess, saveBrandAccess, type MenuChoice } from './brand-access-store';
+import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuKeys, brandStores, currentBrandPrincipal, readBrandAccess, saveBrandAccess, wasReplacedAdminEmail, type MenuChoice } from './brand-access-store';
 import { ensureBrandCreationDemoStores, associateBrandStores, canRemoveBrandStore, removeBrandStore, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
@@ -424,9 +425,74 @@ function changeBrandAdminInvitation(id:string,accountId:string,operation:'resend
   },{action:title,compact:true,topActions:true});
 }
 
+function openAdminContactChange(id:string,accountId:string,onSaved:()=>void,correctInvite=false):void {
+  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id);
+  const account=state.accounts.find(item=>item.id===accountId);
+  if(!account?.admin||!!account.invitation!==correctInvite||getMerchantById(id)?.status==='closed')throw Error('当前状态不支持此操作。');
+  const title=correctInvite?'更正并重发邀请':'换绑登录邮箱';
+  const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
+  const body=correctInvite?`${target}<p class="ba-admin-hint">保存后原邀请失效，并使用更正后的资料发起新邀请。</p>
+    <label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}"></label>`:
+    `${target}<p class="ba-admin-hint">由账号持有人验证当前密码，再模拟确认新邮箱。</p>
+    <label class="ba-field">当前密码 *<input required type="password" name="currentPassword" autocomplete="current-password"></label>
+    <label class="ba-actions"><input type="checkbox" name="verifiedMailbox" required>演示确认已验证新邮箱</label>`;
+  dialog(title,'',`${body}<label class="ba-field">${correctInvite?'邀请邮箱':'新登录邮箱'} *<input required type="email" name="email" value="${correctInvite?esc(account.email):''}"></label>`,form=>{
+    const fields=new FormData(form),email=String(fields.get('email')??'').trim().toLowerCase();
+    if(!correctInvite){
+      if(fields.get('currentPassword')!==account.password)throw Error('当前密码不正确。');
+      if(!fields.has('verifiedMailbox'))throw Error('请先验证新邮箱。');
+      if(email===account.email.toLowerCase())throw Error('新邮箱须与当前邮箱不同。');
+    }
+    const draft=structuredClone(state),next=draft.accounts.find(item=>item.id===accountId)!;
+    if(wasOpenedByEmail(state,account))next.openedVia='email';
+    next.email=email;
+    if(correctInvite){
+      next.name=String(fields.get('name')??'').trim();
+      next.invitation=newBrandAdminInvitation();
+    }
+    delete next.passwordReset;
+    const employee=draft.employees.find(item=>item.id===accountId);
+    if(employee)Object.assign(employee,{email:next.email,name:next.name});
+    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营（演示）',accountId,operation:correctInvite?'invite-correct':'email-change'});
+    showAppToast(correctInvite?'已创建更正后的演示邀请':'登录邮箱已换绑',{variant:'success'});
+    onSaved();
+    return true;
+  },{action:correctInvite?'更正并重发（演示）':'确认换绑（演示）',compact:true,topActions:true});
+}
+
+function openBrandAdminEmailReset(id:string,accountId:string,onSaved:()=>void,complete=false):void {
+  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id);
+  const account=state.accounts.find(item=>item.id===accountId);
+  if(!account?.admin||account.invitation||!wasOpenedByEmail(state,account))throw Error('此账号不支持邮箱重置。');
+  const title=complete?'演示完成密码重置':'邮箱重置密码';
+  const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
+  const body=complete?`${target}<fieldset class="ba-grid">
+    <label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>
+    <label class="ba-field">确认密码 *<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password"></label>
+  </fieldset>`:`${target}<p class="ba-admin-hint">在 Demo 中模拟向登录邮箱发送重置邮件。完成重置前，原密码仍可使用。</p>`;
+  dialog(title,'',body,form=>{
+    const draft=structuredClone(state),next=draft.accounts.find(item=>item.id===accountId)!;
+    next.openedVia='email';
+    if(complete){
+      const fields=new FormData(form),password=String(fields.get('password')??'');
+      if(password!==fields.get('confirmPassword'))throw Error('两次输入的登录密码不一致。');
+      next.password=password;
+      delete next.passwordReset;
+    }else{
+      const now=Date.now();
+      next.passwordReset={requestedAt:new Date(now).toISOString(),expiresAt:new Date(now+60*60*1000).toISOString()};
+    }
+    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营（演示）',accountId,operation:complete?'email-reset-complete':'email-reset-request'});
+    showAppToast(complete?'密码已重置':'已创建演示重置请求',{variant:'success'});
+    onSaved();
+    return true;
+  },{action:complete?'确认重置密码':'发送重置邮件（演示）',compact:true,topActions:true});
+}
+
 function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mode:'profile'|'password'|'status'|'accept'='profile'):void {
   const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),existing=state.accounts.find(a=>a.id===accountId);
   if(accountId&&!existing?.admin)throw Error('只能管理品牌 Admin。');
+  if(mode==='password'&&existing&&wasOpenedByEmail(state,existing)){openBrandAdminEmailReset(id,existing.id,onSaved);return;}
   const initialAccount:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
   const accepting=mode==='accept', creating=!existing;
   if(existing?.invitation&&!accepting)throw Error('请先接受邮箱邀请。');
@@ -457,7 +523,9 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     const account=structuredClone(initialAccount);
     const fd=new FormData(form), inviting=creating&&fd.get('method')==='invite';
     if((creating&&!inviting||accepting)&&fd.get('password')!==fd.get('confirmPassword'))throw Error('两次输入的登录密码不一致。');
+    if(creating)account.openedVia=inviting?'email':'password';
     if(accepting){
+      account.openedVia='email';
       if(Date.parse(account.invitation!.expiresAt)<=Date.now())throw Error('邀请已过期，请重新邀请。');
       delete account.invitation;
       account.enabled=true;
@@ -465,7 +533,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     }
     if(mode==='status')account.enabled=nextEnabled;
     else if(mode==='password')account.password=String(fd.get('password')??'');
-    else if(!accepting){account.name=String(fd.get('name')??'').trim();account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
+    else if(!accepting){account.name=String(fd.get('name')??'').trim();if(!existing)account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
     if(inviting){
       const merchant=getMerchantById(id);
       if(!merchant?.accountProvisioningRequired&&merchant?.primaryAdminEmail?.toLowerCase()===account.email)throw Error('该邮箱已有品牌管理员登录资格。');
@@ -555,7 +623,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         }
       }else if(tab==='accounts'){
         if(source==='m-platform'){
-          const administrators=state.accounts.filter(a=>a.admin),legacy=!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail&&!state.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail?.toLowerCase());
+          const administrators=state.accounts.filter(a=>a.admin),legacy=!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail&&!wasReplacedAdminEmail(state,merchant.primaryAdminEmail)&&!state.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail?.toLowerCase());
           const detail = !!root.closest('[data-brand-detail-tab]');
           const accountStatuses=['已启用','已停用','待接受邀请','邀请已过期','邀请已撤销','品牌服务未启用'];
           const toolbar = `${detail?'':'<header class="ba-head"><h2>品牌管理员</h2></header>'}
@@ -569,10 +637,10 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             const expired=!!invite&&Date.parse(invite.expiresAt)<=Date.now();
             const label=invite?invite.revoked?'邀请已撤销':expired?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
             const actions=invite
-              ? button('重发演示邀请',`invite-resend:${account.id}`)
+              ? button('重发演示邀请',`invite-resend:${account.id}`)+(merchant.status!=='closed'?button('更正并重发邀请',`invite-correct:${account.id}`):'')
                 +(invite.revoked?'':button('撤销邀请',`invite-revoke:${account.id}`))
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
-              : button('编辑品牌 Admin',`admin:${account.id}`)+button('重设密码',`admin-password:${account.id}`)+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
+              : (merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`)+button('换绑登录邮箱',`admin-email-change:${account.id}`):'')+button(wasOpenedByEmail(state,account)?'邮箱重置密码':'重设密码',`admin-password:${account.id}`)+(account.passwordReset&&Date.parse(account.passwordReset.expiresAt)>Date.now()?button('演示完成密码重置',`admin-email-reset:${account.id}`):'')+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
             return `<tr data-brand-admin="${esc(account.id)}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
               <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span>${account.id.startsWith('demo-admin-scenario:')?' <span class="ba-tag">演示</span>':''}</td>
               <td>${esc(account.email)}</td>
@@ -662,10 +730,13 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         const action=b.dataset.ba!;
         if(source==='m-platform'&&(action==='new-role'||action==='new-account'||action.startsWith('role:')||action.startsWith('account:')))throw Error('员工账号与角色请在商家后台管理。');
         if(source==='m-platform'&&action.startsWith('invite-accept:'))openBrandAdmin(id,action.slice(14),render,'accept');
+        if(source==='m-platform'&&action.startsWith('invite-correct:'))openAdminContactChange(id,action.slice('invite-correct:'.length),render,true);
+        if(source==='m-platform'&&action.startsWith('admin-email-change:'))openAdminContactChange(id,action.slice('admin-email-change:'.length),render);
         if(source==='m-platform'&&action.startsWith('invite-resend:'))changeBrandAdminInvitation(id,action.slice(14),'resend',render);
         if(source==='m-platform'&&action.startsWith('invite-revoke:'))changeBrandAdminInvitation(id,action.slice(14),'revoke',render);
         if(source==='m-platform'&&action==='new-admin')openBrandAdmin(id,undefined,render);
         if(source==='m-platform'&&action.startsWith('admin:'))openBrandAdmin(id,action.slice(6),render);
+        if(source==='m-platform'&&action.startsWith('admin-email-reset:'))openBrandAdminEmailReset(id,action.slice('admin-email-reset:'.length),render,true);
         if(source==='m-platform'&&action.startsWith('admin-password:'))openBrandAdmin(id,action.slice(15),render,'password');
         if(source==='m-platform'&&action.startsWith('admin-status:'))openBrandAdmin(id,action.slice(13),render,'status');
         if(action==='edit-menu')openBrandMenus(id,render);

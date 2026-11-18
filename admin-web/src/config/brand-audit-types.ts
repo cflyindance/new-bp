@@ -3,4 +3,4 @@ export interface BrandChangeFacts {
  title:string;target:string;source:string;operationId?:string;
  fields:{name:string;before:string;after:string}[];
 }
-export interface AdminAuditContext {source:string;accountId:string;operation:'create'|'invite'|'resend'|'revoke'|'accept'|'profile'|'password'|'enable'|'disable'}
+export interface AdminAuditContext {source:string;accountId:string;operation:'create'|'invite'|'resend'|'revoke'|'accept'|'profile'|'email-change'|'invite-correct'|'password'|'email-reset-request'|'email-reset-complete'|'enable'|'disable'}
