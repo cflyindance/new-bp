@@ -539,6 +539,10 @@ function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): s
   const store = getEnterpriseStoreById(device.storeId);
   const deviceAlerts = getEnterpriseAlerts().filter((a) => a.deviceUid === uid && !a.resolved);
 
+  const detailCard = inlineDevice
+    ? (content: string) => `<section class="brand-modal-card">${content}</section>`
+    : cardShell;
+
   const row = (label: string, value: string) =>
     `<div class="grid gap-1 sm:grid-cols-[8rem_1fr] sm:gap-4 py-2 border-b border-border last:border-0">
       <dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt>
@@ -546,7 +550,7 @@ function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): s
     </div>`;
 
   const mobileTerminalSection = isMobileTerminalDevice(device)
-    ? cardShell(`
+    ? detailCard(`
           <h2 class="text-sm font-semibold text-card-foreground">移动终端信息</h2>
           <dl class="mt-2">
             ${row("系统平台", escapeHtml(resolveDeviceMobileOs(device)))}
@@ -561,12 +565,12 @@ function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): s
     : "";
 
   return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+    <div class="${inlineDevice?"brand-hardware-detail-content":"flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"}">
       ${inlineDevice?"":`<div class="flex flex-wrap items-center gap-2">
         <a href="${hardwareHref("/devices")}" class="text-sm text-primary hover:underline">← 返回全量设备</a>
       </div>`}
-      <div class="grid gap-4 lg:grid-cols-2">
-        ${cardShell(`
+      <div class="${inlineDevice?"brand-hardware-detail-grid":"grid gap-4 lg:grid-cols-2"}">
+        ${detailCard(`
           <h2 class="text-sm font-semibold text-card-foreground">基本信息</h2>
           <dl class="mt-2">
             ${row("名称", escapeHtml(device.name))}
@@ -579,14 +583,14 @@ function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): s
             ${row("数据来源", device.source === "terminal-report" ? "终端上报" : "门店手工配置")}
           </dl>
         `)}
-        ${cardShell(`
+        ${detailCard(`
           <h2 class="text-sm font-semibold text-card-foreground">归属与状态</h2>
           <dl class="mt-2">
             ${row("门店", inlineDevice?escapeHtml(store?.storeName ?? device.storeId):`<a href="${hardwareHref(`/stores/${encodeURIComponent(device.storeId)}`)}" class="text-primary hover:underline">${escapeHtml(store?.storeName ?? device.storeId)}</a>`)}
             ${store ? row("品牌 / 区域", escapeHtml(`${store.brandName} · ${store.regionName}`)) : ""}
             ${store ? row("门店状态", escapeHtml(getStoreStatusLabel(store.storeStatus))) : ""}
-            ${row("连接状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(device.status)}">${escapeHtml(getStatusLabel(device.status))}</span>`)}
-            ${row("健康度", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${healthBadgeClass(device.health)}">${escapeHtml(getHealthLabel(device.health))}</span>`)}
+            ${row("连接状态", `<span data-hardware-status="${device.status}" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(device.status)}">${escapeHtml(getStatusLabel(device.status))}</span>`)}
+            ${row("健康度", `<span data-hardware-health="${device.health}" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${healthBadgeClass(device.health)}">${escapeHtml(getHealthLabel(device.health))}</span>`)}
             ${row("最后活跃", escapeHtml(formatRelativeLastSeen(device.lastSeenAt)))}
             ${!isMobileTerminalDevice(device) && device.appVersion ? row("App 版本", escapeHtml(device.appVersion)) : ""}
             ${!isMobileTerminalDevice(device) && device.shellVersion ? row("Shell 版本", escapeHtml(device.shellVersion)) : ""}
@@ -598,7 +602,7 @@ function renderDeviceDetailPage(uid: string, inlineDevice?: EnterpriseDevice): s
       ${mobileTerminalSection}
       ${
         deviceAlerts.length > 0
-          ? cardShell(`
+          ? detailCard(`
           <h2 class="text-sm font-semibold text-card-foreground">相关告警</h2>
           <ul class="mt-2 space-y-2">
             ${deviceAlerts
