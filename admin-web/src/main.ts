@@ -354,7 +354,7 @@ import {
   shouldShowRestartOnboardingControl,
   syncProductVersionDocumentAttribute,
 } from "./config/product-version";
-import { bindProviderSessionRevalidation, bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
+import { bindProviderSessionRevalidation, bindImpersonationBanner, consumeDelegatedBackendEntry, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
   bindChainBrandMgmtControls,
@@ -12156,6 +12156,7 @@ function mountInitializedPage(): void {
     mountLoginShell();
     return;
   }
+  if (consumeDelegatedBackendEntry()) return;
   ensureMvpDefaultPlatformPresetOnboardingSkipped();
   ensureMvpBrandPerspectiveRegionScopeCleared();
   if (!shouldShowAiAssistantControl()) {

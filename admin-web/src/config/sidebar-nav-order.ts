@@ -40,8 +40,16 @@ export const CHAIN_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
 /** @deprecated 使用 getSidebarMoreModuleIds()；保留别名指向门店版列表 */
 export const DEFAULT_SIDEBAR_MORE_MODULE_IDS = STORE_SIDEBAR_MORE_MODULE_IDS;
 
+const DELEGATED_LAYOUT_KEY = 'menusifu:delegated-sidebar-layout';
+export function setDelegatedSidebarLayout(preset: SidebarNavLayoutPreset | null): void {
+  if (preset) sessionStorage.setItem(DELEGATED_LAYOUT_KEY,preset);
+  else sessionStorage.removeItem(DELEGATED_LAYOUT_KEY);
+}
+
 export function readSidebarNavLayoutPreset(): SidebarNavLayoutPreset {
   try {
+    const delegated = sessionStorage.getItem(DELEGATED_LAYOUT_KEY);
+    if (delegated === 'chain' || delegated === 'store') return delegated;
     const v = localStorage.getItem(SIDEBAR_NAV_LAYOUT_PRESET_KEY);
     return v === "chain" ? "chain" : "store";
   } catch {

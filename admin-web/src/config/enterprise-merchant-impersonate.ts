@@ -24,10 +24,39 @@ import {
   resetScopeFiltersForPerspectiveChange,
   writeScopeFilters,
 } from "../auth/session-scope";
-import { writeSidebarNavLayoutPreset } from "./sidebar-nav-order";
+import { setDelegatedSidebarLayout } from "./sidebar-nav-order";
 import { clearActiveMerchantGroupOverride } from "./merchant-chain-brand-sync";
 
 const IMPERSONATION_SESSION_KEY = "menusifu:merchant-impersonation-v1";
+const ENTRY_REQUEST_KEY = "menusifu:merchant-impersonation-entry";
+type EntryRequest = {kind: 'brand' | 'store'; id: string; returnPath: string};
+
+export function openDelegatedBackendTab(request:EntryRequest):void {
+  const tab=window.open('about:blank','_blank');
+  if(!tab){window.alert('浏览器阻止了新标签页，请允许弹出窗口后重试。');return;}
+  try {
+    // The same-origin blank tab inherits the operator's tab-scoped login.
+    tab.sessionStorage.setItem(ENTRY_REQUEST_KEY,JSON.stringify(request));
+    tab.opener=null;
+    tab.location.replace(location.href);
+  } catch {
+    tab.close();
+    window.alert('无法打开商家后台，请重试。');
+  }
+}
+
+export function consumeDelegatedBackendEntry():boolean {
+  const raw=sessionStorage.getItem(ENTRY_REQUEST_KEY);
+  if(!raw)return false;
+  sessionStorage.removeItem(ENTRY_REQUEST_KEY);
+  const request=JSON.parse(raw) as EntryRequest;
+  const entered=request.kind==='store'
+    ?enterStoreBackendAsImpersonator(request.id,request.returnPath)
+    :enterMerchantBackendAsImpersonator(request.id,request.returnPath);
+  if(!entered)window.setTimeout(()=>window.alert('无法进入商家后台，请检查品牌服务状态和访问授权。'),0);
+  return entered;
+}
+
 const APP_NAV_HOME_PATH = "/nav-home";
 
 export interface MerchantImpersonationSession {
@@ -92,7 +121,7 @@ function resolveEntryPath(merchant: EnterpriseMerchant): string {
 
 function applyImpersonationScopeLock(merchant: EnterpriseMerchant): void {
   clearActiveMerchantGroupOverride();
-  writeSidebarNavLayoutPreset("chain");
+  setDelegatedSidebarLayout("chain");
   writeChainDataPerspective("brand", { brandId: merchant.merchantId });
   ensureScopeFiltersForLayoutPreset("chain");
   resetScopeFiltersForPerspectiveChange();
@@ -131,7 +160,7 @@ function prepareMerchantImpersonation(
   // Delegated access does not provision or impersonate a brand administrator.
   writeImpersonationSession(session);
   if(store){
-    writeSidebarNavLayoutPreset('store');
+    setDelegatedSidebarLayout('store');
     writeChainDataPerspective('store',{brandId:merchantId,storeId:store.storeId});
     writeScopeFilters({brand:merchantId,region:store.regionId,store:store.storeId});
   }
@@ -168,6 +197,7 @@ export function endMerchantImpersonation(reason: "manual" = "manual"): void {
   const session = readActiveImpersonation();
   if (!session) return;
   writeImpersonationSession(null);
+  setDelegatedSidebarLayout(null);
   appendImpersonationLogEnd(session.sessionId, reason);
   enterMPlatformShell();
   location.hash = session.returnPath.startsWith("#") ? session.returnPath : `#${session.returnPath}`;
