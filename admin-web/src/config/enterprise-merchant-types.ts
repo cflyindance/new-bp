@@ -122,6 +122,7 @@ export interface MerchantServiceSubscription {
 }
 
 export interface MerchantCapabilitySnapshot {
+  excludedInheritedPaidMenuKeys?: string[];
   menuGrantMode?: 'explicit';
   /** Frozen resource identities; newly registered routes require another explicit grant. */
   menuResourceKeys?: string[];

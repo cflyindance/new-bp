@@ -5,6 +5,7 @@ export function validateCommercialPolicy(policy: ServiceCommercialPolicy | undef
   if (!Number.isSafeInteger(price) || price < 0) throw Error('价格须为有效的非负金额，最多两位小数。');
   if (!policy) return;
   if (!['free', 'paid'].includes(policy.chargeType) || !['brand', 'store'].includes(policy.billingUnit)) throw Error('收费类型或计费单位无效。');
+  if (policy.visibilityScope !== undefined && !['parent-brands', 'all-merchants'].includes(policy.visibilityScope)) throw Error('收费服务展示范围无效。');
   if (policy.chargeType === 'free' && price !== 0) throw Error('免费服务价格必须为0。');
   if (policy.chargeType === 'paid' && price <= 0) throw Error('收费服务价格必须大于0。');
   if (policy.trialEnabled && (policy.chargeType !== 'paid' || !Number.isInteger(policy.trialDays) || policy.trialDays < 1 || policy.trialDays > 90)) throw Error('收费服务的试用天数须为1至90的整数。');

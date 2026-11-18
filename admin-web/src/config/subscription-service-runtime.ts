@@ -9,6 +9,7 @@ import {
 } from "../auth/merchant-scope-context";
 import { readActiveImpersonation } from "./enterprise-merchant-impersonate";
 import { getMerchantById, getStoreById } from "./enterprise-merchant-store";
+import { installPublishedPaidMenuPathReader } from "./enterprise-merchant-services";
 import { NAV_MODULES, type NavModule } from "./navigation";
 import { getSubscriptionRouteCatalog } from "./subscription-service-domain";
 import {
@@ -48,14 +49,38 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
   if (!routeIds) return modules;
   return modules
     .map((module) => {
-      const children = module.children.filter((child) => hasCommercialRoute(child.path) || routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id))));
+      const children = module.children.filter((child) => isPaidMenuVisible(child.path) && (hasCommercialRoute(child.path) || routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id)))));
       if (!children.length) return null;
       return { ...module, children };
     })
     .filter((module): module is NavModule => module != null);
 }
 
+export function matchingPaidMenus(rawPath: string) {
+  const path = rawPath.split("?")[0]?.replace(/\/$/, "");
+  const { catalog } = serviceEntitlementData();
+  return catalog.filter(node => {
+    const menuPath = node.path.replace(/\/$/, "");
+    return node.paidMenu && (path === menuPath || path?.startsWith(menuPath + "/"));
+  });
+}
+
+export function publishedPaidServicesForMenu(menuId: string) {
+  const { snapshot } = serviceEntitlementData();
+  return snapshot.packages.filter(pkg => pkg.status === "published" && pkg.commercial?.chargeType === "paid" &&
+    snapshot.releases.some(release => release.id === pkg.activeReleaseId && release.packageId === pkg.id && release.routeNodeIds.includes(menuId)));
+}
+
+installPublishedPaidMenuPathReader(() => new Set(serviceEntitlementData().catalog
+  .filter(node => node.paidMenu && publishedPaidServicesForMenu(node.id).length)
+  .map(node => node.path)));
+
+export function isPaidMenuVisible(path: string): boolean {
+  return matchingPaidMenus(path).every(node => publishedPaidServicesForMenu(node.id).length > 0);
+}
+
 export function isPathAllowedBySubscription(path: string): boolean {
+  if (!isPaidMenuVisible(path)) return false;
   path = path.split("?")[0] ?? path;
   if (isStoreInformationPage(path)) path = "/stores/settings";
   if (path === "/nav-home" || path === "/login" || path.startsWith("/login/") || path === "/onboarding" || path.startsWith("/onboarding/")) return true;

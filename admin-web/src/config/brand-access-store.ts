@@ -13,14 +13,14 @@ import { buildCenterCatalog, actionKey, pageKey, settingKey, type Catalog } from
 import { additionalPageActions } from '../permissions/center-actions';
 import { type Resource, type Access, type Store } from '../permissions/center-domain';
 import { buildPermissionResourceIndex } from './permission-registry';
-import { buildMerchantServiceTreeIndex, brandStoreSelectableCeiling, resolveMerchantServiceProductLine } from './enterprise-merchant-services';
+import { buildMerchantServiceTreeIndex, brandStoreSelectableCeiling, inheritedPaidBrandMenuKeys, resolveMerchantServiceProductLine } from './enterprise-merchant-services';
 import { getEnterpriseMerchantSnapshot, recordMerchantFirstLogin, getMerchantById, getMerchantCapability, getMerchantStores, getMerchantRegions, getStoreCapability } from './enterprise-merchant-store';
 import { getAuthenticatedEmail } from '../auth/login';
 import { readActiveImpersonation } from './enterprise-merchant-impersonate';
 import { assertBrandVersion, brandAccountStores, resolveBrandAccess, type BrandAccessState, type BrandAccount } from './brand-access-domain';
 import { validateCenterState } from '../permissions/center-persistence';
 import type { UserSessionContext } from '../auth/session-permissions';
-import { isNavHomePath } from './app-routes';
+import { isMerchantServiceCenterPath, isNavHomePath } from './app-routes';
 import { getModuleSettingsBasePath } from './module-settings-catalog';
 
 export const BRAND_ACCESS_KEY = 'menusifu:brand-access:v1:';
@@ -42,15 +42,18 @@ export function readBrandAccess(id: string): BrandAccessState {
 export function brandRawMenuKeys(id: string): Set<string> {
   const cap = getMerchantCapability(id);
   if (!cap) return new Set();
-  if(cap.menuGrantMode==='explicit')return new Set(cap.services.filter(s=>s.enabled).map(s=>s.nodeKey??s.serviceId));
   return new Set(cap.productLineIds.flatMap(pl => [...brandStoreSelectableCeiling(cap, resolveMerchantServiceProductLine([pl]))]));
 }
 
 
 export function brandCatalog(id: string,catalog:Catalog=buildCenterCatalog()): {catalog: Catalog; ceiling: Set<string>} {
   const derived=mappedRuntimeKeys(brandRawMenuKeys(id),catalog);
-  const manifest=getMerchantCapability(id)?.menuResourceKeys;
-  return {catalog,ceiling:manifest?new Set([...derived].filter(k=>manifest.includes(k))):derived};
+  const cap = getMerchantCapability(id);
+  const manifest = cap?.menuResourceKeys;
+  if (!cap || !manifest) return { catalog, ceiling: derived };
+  const inherited = new Set(cap.productLineIds.flatMap(line => [...inheritedPaidBrandMenuKeys(cap, resolveMerchantServiceProductLine([line]))]));
+  const inheritedResources = mappedRuntimeKeys(inherited, catalog);
+  return { catalog, ceiling: new Set([...derived].filter(key => manifest.includes(key) || inheritedResources.has(key))) };
 }
 
 export { brandMenuChoices, type MenuChoice } from './brand-menu-choices';
@@ -230,6 +233,7 @@ export function isBrandPathAllowed(path:string):boolean {
   const {p,catalog}=runtime;
   path=path.split('?')[0]!;
   if(!p.account.enabled)return path==='/login';
+  if (isMerchantServiceCenterPath(path)) return p.account.admin;
   if (isNavHomePath(path) || path==='/login' || path==='/onboarding') return true;
   if (path.startsWith('/brand-stores/')&&readActiveImpersonation()&&!p.account.admin)return false;
   if (path.startsWith('/brand-stores/')) return !readActiveImpersonation()?.storeId && p.account.enabled && (p.account.admin || path==='/brand-stores/list' || path==='/brand-stores/overview');

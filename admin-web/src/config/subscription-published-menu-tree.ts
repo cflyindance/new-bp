@@ -15,6 +15,7 @@ export interface SubscriptionMenuTreeNode {
   path?: string;
   level: number;
   selectable: boolean;
+  paidMenu?: boolean;
   children: SubscriptionMenuTreeNode[];
 }
 
@@ -58,6 +59,7 @@ function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeI
     path: routePath,
     level: path.length,
     selectable: !isMenuDirectory(node) && node.disabled !== true,
+    paidMenu: node.paidMenu === true,
     children: (node.children ?? []).map((child, index) => adaptPublishedMenuNode(child, [...path, index], routeNodeId)),
   };
 }
@@ -76,16 +78,16 @@ export function buildSubscriptionMenuTreeFromPublishedMenuDocument(document: Men
   };
 }
 
-export async function ensurePublishedSubscriptionMenuTree(): Promise<boolean> {
+export async function ensurePublishedSubscriptionMenuTree(force = false): Promise<boolean> {
   if (publishedMenuDocumentRequest) return publishedMenuDocumentRequest;
-  if (publishedMenuDocument !== undefined && Date.now() - publishedMenuDocumentReadAt < 500) return false;
+  if (!force && publishedMenuDocument !== undefined && Date.now() - publishedMenuDocumentReadAt < 500) return false;
   publishedMenuDocumentRequest = (async () => {
     const previousTimestamp = publishedMenuDocument?.updatedBy.timestamp ?? "";
     try {
       const { getMenuDocumentRepository } = await import("./json-menu-document-repository");
       publishedMenuDocument = await getMenuDocumentRepository().readPublished();
     } catch {
-      publishedMenuDocument = null;
+      publishedMenuDocument ??= null;
     }
     publishedMenuDocumentReadAt = Date.now();
     return previousTimestamp !== (publishedMenuDocument?.updatedBy.timestamp ?? "");
@@ -151,12 +153,12 @@ export function flattenSubscriptionMenuTree(roots: SubscriptionMenuTreeNode[]): 
   return output;
 }
 
-export function getPublishedSubscriptionRouteCatalog(): Array<{ id: string; title: string; path: string; parentId?: string; level: number }> {
+export function getPublishedSubscriptionRouteCatalog(): Array<{ id: string; title: string; path: string; parentId?: string; level: number; paidMenu?: boolean }> {
   const tree = getPublishedSubscriptionMenuTree();
   if (!tree) return [];
   return flattenSubscriptionMenuTree(tree.roots)
     .filter((node) => node.selectable && node.path)
-    .map((node) => ({ id: node.routeNodeId, title: node.title, path: node.path!, parentId: node.parentRouteNodeId, level: node.level }));
+    .map((node) => ({ id: node.routeNodeId, title: node.title, path: node.path!, parentId: node.parentRouteNodeId, level: node.level, paidMenu: node.paidMenu }));
 }
 
 export function filterSubscriptionMenuTree(roots: SubscriptionMenuTreeNode[], rawQuery: string): SubscriptionMenuTreeNode[] {

@@ -279,7 +279,38 @@ export function brandStoreSelectableCeiling(
   productLineId: ProductLineId,
 ): Set<string> {
   const keys = brandCapabilityCeilingKeys(cap, productLineId);
-  return cap.menuGrantMode === 'explicit' ? keys : expandCeilingWithDescendants(keys, productLineId);
+  if (cap.menuGrantMode !== 'explicit') return expandCeilingWithDescendants(keys, productLineId);
+  return new Set([...keys, ...inheritedPaidBrandMenuKeys(cap, productLineId, keys)]);
+}
+
+let readPublishedPaidMenuPaths: () => ReadonlySet<string> = () => new Set();
+
+export function installPublishedPaidMenuPathReader(reader: () => ReadonlySet<string>): void {
+  readPublishedPaidMenuPaths = reader;
+}
+
+export function inheritedPaidBrandMenuKeys(
+  cap: MerchantCapabilitySnapshot,
+  productLineId: ProductLineId,
+  selected = brandCapabilityCeilingKeys(cap, productLineId),
+): Set<string> {
+  const paidPaths = readPublishedPaidMenuPaths();
+  const inherited = new Set<string>();
+  if (!paidPaths.size || !selected.size) return inherited;
+
+  const excluded = new Set(cap.excludedInheritedPaidMenuKeys);
+  for (const group of buildMerchantServiceTreeIndex(productLineId).groups) {
+    const visit = (node: typeof group.tree, parentSelected: boolean): void => {
+      const resource = node.resource;
+      if (parentSelected && resource.path && !resource.seq && !resource.actionId &&
+          paidPaths.has(resource.path) && !selected.has(resource.key) && !excluded.has(resource.key)) {
+        inherited.add(resource.key);
+      }
+      for (const child of node.children) visit(child, parentSelected || selected.has(resource.key));
+    };
+    visit(group.tree, false);
+  }
+  return inherited;
 }
 
 /** 将已开通键扩展为包含全树子孙，供门店四级勾选 */

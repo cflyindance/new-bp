@@ -9,6 +9,7 @@ export type StoredSubscriptionSubjectType = SubscriptionSubjectType | "group";
 export interface ServiceCommercialPolicy {
   chargeType: 'free' | 'paid';
   billingUnit: 'brand' | 'store';
+  visibilityScope?: 'parent-brands' | 'all-merchants';
   trialEnabled: boolean;
   trialDays: number;
 }

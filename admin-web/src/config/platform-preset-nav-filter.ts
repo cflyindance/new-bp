@@ -1,4 +1,4 @@
-import { isBrandPathAllowed, currentBrandPrincipal } from '../auth/brand-access-runtime';
+import { isBrandPathAllowed } from '../auth/brand-access-runtime';
 import { orderCenterGateId } from "./order-center-navigation";
 /**
  * 平台预设 · 侧栏 L1 / 滑层 L2 运行时过滤
@@ -22,7 +22,7 @@ import { isMvpProductVersion } from "./product-version";
 import { getModuleSettingsCatalog } from "./module-settings-catalog";
 import { isModuleSettingsPathAllowedByPreset } from "./platform-preset-settings-filter";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
-import { filterNavModulesBySubscription, isPathAllowedBySubscription } from "./subscription-service-runtime";
+import { filterNavModulesBySubscription, isPaidMenuVisible, isPathAllowedBySubscription } from "./subscription-service-runtime";
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
   if (moduleId === "store-mgmt") featureId = storeInformationGateId(featureId);
@@ -121,12 +121,12 @@ export function filterSheetSubnavByPlatformPreset(
 ): ProductCenterSidebarSubItem[] {
   const selection = getActiveSelection();
   const visible=selection?items.filter((item) => isPresetL2EnabledInSelection(selection, moduleId, item.id)):items;
-  return currentBrandPrincipal()?filterBrandNodes(visible):visible;
+  return filterBrandNodes(visible);
 }
 
 export function filterNavItemsByPlatformPreset(moduleId: string, items: NavItem[]): NavItem[] {
   const visible=isPlatformPresetNavFilterActive()?items.filter((item) => isPresetL2Enabled(moduleId, item.id)):items;
-  return currentBrandPrincipal()?filterBrandNodes(visible):visible;
+  return filterBrandNodes(visible);
 }
 
 function pathBelongsToModule(path: string, m: NavModule): boolean {
@@ -209,13 +209,13 @@ export function getFilteredNavModuleSheetSubnav(m: NavModule): ProductCenterSide
 }
 
 function filterBrandMenus(modules:NavModule[]):NavModule[] {
-  if(!currentBrandPrincipal())return modules;
-  return modules.flatMap(m=>{const children=filterBrandNodes(m.children);return children.length ? [{...m,children}] : isBrandPathAllowed(m.path)?[{...m,children}]:[];});
+  return modules.flatMap(m=>{if (!isPaidMenuVisible(m.path)) return []; const children=filterBrandNodes(m.children);return children.length ? [{...m,children}] : isBrandPathAllowed(m.path)?[{...m,children}]:[];});
 }
 
 interface BrandNavNode {path:string;children?:BrandNavNode[];sidebarChildren?:BrandNavNode[]}
 function filterBrandNodes<T extends BrandNavNode>(items:T[]):T[] {
   return items.flatMap(item=>{
+    if (!isPaidMenuVisible(item.path)) return [];
     const children=item.children?filterBrandNodes(item.children):undefined;
     const sidebarChildren=item.sidebarChildren?filterBrandNodes(item.sidebarChildren):undefined;
     if(!isBrandPathAllowed(item.path)&&!children?.length&&!sidebarChildren?.length)return [];

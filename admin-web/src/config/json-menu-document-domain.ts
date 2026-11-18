@@ -42,6 +42,7 @@ export interface MenuNode {
   accessControl?: MenuAccessControl;
   display?: boolean;
   disabled?: boolean;
+  paidMenu?: boolean;
   extraInfo?: unknown;
   children?: MenuNode[];
 }
@@ -55,7 +56,7 @@ export type MenuValidationSeverity = "error" | "warning";
 export interface MenuValidationIssue { code: string; severity: MenuValidationSeverity; message: string; path?: MenuNodePath; field?: string; }
 
 export const MENU_ROOT_FIELDS = ["_id", "name", "menu", "updatedBy", "createdDate"] as const;
-export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "registeredPageId", "accessControl", "display", "disabled", "extraInfo", "children"] as const;
+export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "registeredPageId", "accessControl", "display", "disabled", "paidMenu", "extraInfo", "children"] as const;
 export const MENU_I18N_FIELDS = ["zh-CN", "zh-HK", "en-US"] as const;
 export const MENU_MICRO_APP_FIELDS = ["name", "url", "iframe", "keepAlive", "path", "defaultPage", "routeType"] as const;
 export const MENU_EXTERNAL_CONFIG_FIELDS = ["target", "features"] as const;
@@ -261,6 +262,9 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
   for (const visit of walkMenuNodes(Array.isArray(document.menu) ? document.menu : [])) {
     const { node, path, depth, ancestors } = visit;
     const compatibility = isCompatibilityProtected(document.menu, path);
+    if (node.paidMenu !== undefined && typeof node.paidMenu !== 'boolean') {
+      issues.push({ code: 'INVALID_PAID_MENU', severity: 'error', message: '是否收费菜单必须为布尔值。', path, field: 'paidMenu' });
+    }
     unknownFields(node, MENU_NODE_FIELDS).forEach((field) => issues.push({ code: "UNKNOWN_NODE_FIELD", severity: "error", message: `节点字段不在参考结构中：${field}`, path, field }));
     if (compatibility && isExplicitCompatibilityType(node)) issues.push({ code: "LEGACY_TYPE", severity: "warning", message: `${node.type} 节点及其子树按原数据只读保留`, path, field: "type" });
     if (!node.id?.trim()) issues.push({ code: "MISSING_ID", severity: "error", message: "节点 ID 不能为空", path, field: "id" });

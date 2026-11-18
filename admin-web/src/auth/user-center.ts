@@ -12,7 +12,7 @@ function escapeHtml(s: string): string {
 
 const USER_CENTER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 
-export function renderHeaderUserCenter(): string {
+export function renderHeaderUserCenter(serviceCenterHref?: string): string {
   const email = getAuthenticatedEmail();
   const accountLabel = email ?? t("header.userCenterFallbackAccount");
   return `
@@ -39,6 +39,7 @@ export function renderHeaderUserCenter(): string {
           <p class="mt-0.5 truncate text-sm font-medium text-card-foreground" title="${escapeHtml(accountLabel)}">${escapeHtml(accountLabel)}</p>
         </div>
         <div class="px-2 pt-1">
+          ${serviceCenterHref ? `<a role="menuitem" href="${escapeHtml(serviceCenterHref)}" class="flex min-h-9 items-center rounded-md px-3 text-sm hover:bg-accent">服务与订阅</a>` : ""}
           <button
             type="button"
             role="menuitem"

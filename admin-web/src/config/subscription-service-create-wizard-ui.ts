@@ -36,7 +36,7 @@ function esc(value: unknown): string {
 }
 
 function hasChanges(): boolean {
-  return Boolean(draft.name.trim() || draft.code.trim() || draft.description.trim() || draft.price !== "0" || draft.billingInterval !== "month" || draft.commercial?.chargeType === "paid" || draft.commercial?.trialEnabled || draft.commercial?.billingUnit === "store" || draft.routeNodeIds.length);
+  return Boolean(draft.name.trim() || draft.code.trim() || draft.description.trim() || draft.price !== "0" || draft.billingInterval !== "month" || draft.commercial?.chargeType === "paid" || draft.commercial?.visibilityScope === 'all-merchants' || draft.commercial?.trialEnabled || draft.commercial?.billingUnit === "store" || draft.routeNodeIds.length);
 }
 
 function intervalLabel(value: BillingInterval): string {

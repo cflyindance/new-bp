@@ -19,6 +19,9 @@ import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuK
 import { ensureBrandCreationDemoStores, associateBrandStores, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
+import { matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
+import { serviceEntitlementData } from './service-entitlement-data';
+import { serviceAccess } from './service-entitlement-domain';
 
 type Source='m-platform'|'merchant';
 const button=(text:string,action:string,primary=false)=>`<button type="button" class="ba-btn ${primary?'ba-primary':''}" data-ba="${action}">${text}</button>`;
@@ -66,7 +69,7 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   dialog(title,'',`<div class="ba-admin-target"><strong>${esc(merchant.name)}</strong><span>${esc(merchant.bid??id)}</span></div><p class="ba-admin-hint">${hint}</p><p class="ba-muted">影响范围：${esc(brandServiceImpact(id))}</p>${issues.length?`<ul class="ba-admin-warning" role="alert">${issues.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:''}<label class="ba-field">操作原因 *<textarea name="reason" required minlength="2" maxlength="200" rows="3" placeholder="请填写2至200字的原因"></textarea></label>`,form=>{transitionBrandService(id,action,String(new FormData(form).get('reason')??''),expected);showAppToast(title+'成功',{variant:'success'});onSaved();return true;},{compact:true,action:'确认'+title,destructive:action==='suspend'||action==='close',blocked:issues.length>0});
 }
 
-export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;scene?:BrandMenuSceneOptions}={}):()=>string[] {
+export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
   const roots=available.filter(c=>c.level===1),byKey=new Map(available.map(c=>[c.key,c]));
@@ -77,6 +80,15 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
   const descendants=(key:string)=>available.filter(c=>{let parent=c.parent;const seen=new Set<string>();while(parent&&!seen.has(parent)){if(parent===key)return true;seen.add(parent);parent=byKey.get(parent)?.parent;}return false;});
   const stateOf=(c:MenuChoice)=>{const children=descendants(c.key);return selected.has(c.key)&&children.every(x=>selected.has(x.key))?'已开通':selected.has(c.key)||children.some(x=>selected.has(x.key))?'部分开通':'未开通';};
   const pathOf=(c:MenuChoice)=>{const names:string[]=[];let parent=c.parent;const seen=new Set<string>();while(parent&&byKey.has(parent)&&!seen.has(parent)){seen.add(parent);const node=byKey.get(parent)!;names.unshift(node.title);parent=node.parent;}return names.join(' / ');};
+  const paidStatus = (choice: MenuChoice): string => {
+    if (options.roles || !choice.path) return '';
+    const menu = matchingPaidMenus(choice.path).find(node => node.path === choice.path);
+    if (!menu) return '';
+    const services = publishedPaidServicesForMenu(menu.id);
+    if (!services.length) return '待发布收费服务';
+    if (!options.brandId) return '收费服务已发布';
+    return services.some(pkg => serviceAccess(serviceEntitlementData().snapshot, pkg, { brandId: options.brandId }).usable) ? '收费服务已开通' : '收费服务未开通';
+  };
   const render=()=>{
     const pageCount=(key:string)=>{const pages=descendants(key).filter(c=>c.isPage===true);return `${pages.filter(c=>selected.has(c.key)).length}/${pages.length}`;};
     const matches=new Set<string>();
@@ -85,7 +97,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     if(filtered)for(const c of available){if(!reviewAll&&rootOf(c)!==active&&!query)continue;if((selectedOnly||reviewAll)&&!selected.has(c.key))continue;if(query&&!`${c.title} ${c.path??''} ${pathOf(c)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))continue;includeWithParents(c);}
     const displayRows=options.roles?available:compactBrandMenuRows(available),displayKeys=new Set(displayRows.map(c=>c.key));
     const rows=displayRows.filter(c=>((reviewAll||query)||rootOf(c)===active)&&(c.level!==1||reviewAll||query)&&(filtered?matches.has(c.key):!hiddenByParent(c)));
-    const row=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';return `<tr data-menu-row="${esc(c.key)}"><td><div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${selected.has(c.key)?'checked':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div></td><td><div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div></td></tr>`;};
+    const row=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),status=paidStatus(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';return `<tr data-menu-row="${esc(c.key)}"><td><div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${selected.has(c.key)?'checked':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div></td><td><div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${status ? `<span class="ba-tag">${esc(status)}</span>` : ''}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div></td></tr>`;};
     host.innerHTML=`<div class="ba-toolbar"><input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称或路由" value="${esc(query)}"><span class="ba-tag" data-menu-count>已选 ${roots.filter(c=>selected.has(c.key)||descendants(c.key).some(x=>selected.has(x.key))).length} 个分类 · ${available.filter(c=>c.isPage===true&&selected.has(c.key)).length} 个页面</span><label class="ba-tree-select-all"><input type="checkbox" data-menu-select-all aria-label="全选全部菜单">全选全部菜单</label><button type="button" class="ba-btn" data-only-selected aria-pressed="${selectedOnly}">${selectedOnly?'✓ ':''}仅看已选</button><button type="button" class="ba-btn" data-menu-review aria-pressed="${reviewAll}">${reviewAll?'返回配置':'查看已选'}</button></div><div class="ba-menu ba-tree-picker"><nav aria-label="菜单分类">${roots.map(r=>`<div class="ba-tree-class"><input type="checkbox" data-key="${esc(r.key)}" aria-label="开通整个分类${esc(r.title)}" ${selected.has(r.key)?'checked':''}><button type="button" class="${active===r.key&&!reviewAll?'active':''}" data-module="${esc(r.key)}"><span>${esc(r.title)}</span><span class="ba-tree-nav-count">${pageCount(r.key)}</span></button></div>`).join('')}</nav><div class="ba-tree-pane"><header class="ba-tree-heading"><strong>${reviewAll?'已选菜单核对':query?'搜索结果':esc(byKey.get(active)?.title??'菜单选择')}</strong><div class="ba-actions">${button('展开全部','expand-all')}${button('收起全部','collapse-all')}${!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):''}</div></header><div class="ba-menu-list"><table class="ba-tree-table"><thead><tr><th scope="col">菜单名称</th><th scope="col">${options.roles?'权限':'状态'}</th></tr></thead><tbody>${rows.map(row).join('')||`<tr><td colspan="2" class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</td></tr>`}</tbody></table></div></div></div>`;
     host.querySelectorAll<HTMLButtonElement>('[data-ba=expand-all],[data-ba=collapse-all]').forEach(button=>{button.disabled=filtered;button.title=filtered?'筛选结果自动显示完整路径':'';});
     host.querySelector('[data-only-selected]')?.addEventListener('click',()=>{selectedOnly=!selectedOnly;render();});
@@ -199,7 +211,7 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
     };
     document.body.append(current);renderTree();current.showModal();
   },{action:'预览配置'});
-  d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before);
+  d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id});
 }
 
 function openAssociation(id:string,onSaved:()=>void):void {
