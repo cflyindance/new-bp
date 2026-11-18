@@ -179,13 +179,13 @@ function rootPage(): string {
   const follow = rows.filter(row => ["recent", "suspected", "long"].includes(row.m.status)).length;
   const table = rows.map(({ store, m }) => {
     const profile=brandSummary?getStoreById(store.id):undefined;
-    const location=brandSummary?`<small>地址 ${esc(profile?.address?.trim()||'—')}</small><small>邮编 ${esc(profile?.postalCode?.trim()||'—')}</small>`:'';
+    const location=brandSummary?`<td class="brand-usage-location">${esc(profile?.address?.trim()||'—')}<small>${esc(profile?.postalCode?.trim()||'—')}</small></td>`:'';
     return '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
-    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + (brandSummary?'':esc(store.merchantName)+' · ')+esc(store.id) + '</small>' + location + '</td><td>' +
+    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + (brandSummary?'':esc(store.merchantName)+' · ')+esc(store.id) + '</small></td>' + location + '<td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + (brandSummary
     ? `<td class="ma-number">${n(m.count)}</td><td class="ma-number">${n(m.paid)} / ${n(m.cancelled)}</td><td class="ma-number">${n(m.activeDays)}</td><td class="ma-number">${m.dailyAverage===null?'—':m.dailyAverage.toFixed(1)}</td><td>${time(m.latest)}</td>`
     : metricCells(m)) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td></tr>';}).join("");
+    '</td><td class="ma-number">' + n(m.unknown) + '</td>' + (brandSummary ? '' : '<td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td>') + '</tr>';}).join("");
   const brandMetrics = brandSummary ? (() => {
     const ids = new Set(complete.map(item => item.store.id));
     const allIds = new Set(rows.map(item => item.store.id));
@@ -207,7 +207,7 @@ function rootPage(): string {
   const search = `<div class="brand-usage-search"><button type="submit" form="brand-usage-filter-form" aria-label="搜索门店">${usageSearchIcon}</button><input type="search" form="brand-usage-filter-form" name="query" aria-label="搜索门店名称或 MID" placeholder="搜索门店名称或 MID" maxlength="80" value="${esc(state.query)}"></div>`;
   const headers = brandSummary ? '<th>点单数</th><th>支付 / 取消</th><th>有订单天数</th><th>日均点单</th><th>最近点单</th>' : metricHeaders;
   return (brandSummary?'':filterControls())+brandMetrics+`<section class="ma-panel${brandSummary?' brand-usage-table':''}"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div>${brandSummary?search:`<span>${rows.length} 家门店</span>`}</div>
-    <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th><th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead>
+    <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th>${brandSummary?'<th scope="col">地址 / 邮编</th>':''}<th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th>${brandSummary?'':'<th>操作</th>'}</tr></thead>
     <tbody>${table||`<tr><td colspan="${brandSummary?10:12}" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>`}</tbody></table></div></section>`;
 
 }
@@ -250,7 +250,7 @@ function storeDrawer(scope: ActivityScope): string {
     '<header class="ma-drawer-heading"><div><p>门店详情</p><h2 id="ma-drawer-title">' + esc(store.name) + '</h2><div class="ma-drawer-context"><span>' + esc(store.merchantName) + '</span>' + badge(m.status) +
     activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-ma-drawer-close aria-label="关闭门店详情">关闭 ×</button></header>' +
-    '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' + renderActivityDemoNotice() +
+    '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' + (brandUsage()?'':renderActivityDemoNotice()) +
     (store.quality === 'error' ? '<p class="ma-error-note" role="alert">该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : '') + scopeSummary(selected) +
     (!scope.line ? lineOverview(scope) + (m.unknown ? '<p class="ma-inline-note">来源待识别：' + n(m.unknown) + ' 单。未计入任何产线或设备。</p>' : '') : '') + devicesPage(scope) + '</div></section></div>';
 }
@@ -277,7 +277,7 @@ export function renderActivityPage(path: string, embedded = false): string {
     scope = state.inlineScope;
   }
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
-  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + (brandUsage()?'':renderActivityDemoNotice()) + contextHeader(embedded) + dateControls() + rootPage() + (brandUsage()?renderActivityDemoNotice():'') +
+  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + (brandUsage()?'':renderActivityDemoNotice()) + contextHeader(embedded) + dateControls() + rootPage() +
     '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
     '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section></div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }

@@ -278,6 +278,9 @@
 .brand-detail-body [data-merchant-usage] .ma-card { min-height: 112px; padding: 24px; }
 .brand-detail-body [data-merchant-usage] .ma-card strong { margin-top: 12px; }
 .brand-usage-table { padding: 12px; }
+.brand-usage-table .ma-link { color: var(--brand-detail-blue); }
+.brand-usage-table .ma-link:hover { text-decoration: underline; }
+.brand-usage-table .ma-link:focus-visible { outline-color: var(--brand-detail-blue); }
 .brand-usage-table .ma-panel-title { flex-wrap: wrap; padding: 12px 12px 16px; }
 .brand-usage-search {
   display: flex; align-items: center; width: min(320px,100%); min-height: 48px;
@@ -293,8 +296,8 @@
 .brand-usage-table th { background: transparent; color: var(--color-foreground); }
 .brand-usage-table td, .brand-usage-table th { height: 64px; font-size: 14px; }
 .brand-usage-table th { height: 48px; }
+.brand-usage-table .brand-usage-location { min-width: 150px; overflow-wrap: anywhere; }
 .brand-usage-table .ma-number { text-align: start; }
-.brand-usage-table [data-ma-entry=name] { color: var(--color-foreground); font-weight: 500; }
 .brand-usage-table .ma-badge { padding: 0; background: transparent; border: 0; font-size: 12px; }
 .brand-usage-table .ma-active { color: #267b12; }
 .brand-usage-table .ma-recent { color: #946513; }
