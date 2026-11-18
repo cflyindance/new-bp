@@ -7,7 +7,7 @@ let cached: {snapshot:ReturnType<typeof readSubscriptionServiceSnapshot>;catalog
 export function serviceEntitlementData():NonNullable<typeof cached> {
   if(cached)return cached;
   const snapshot=readSubscriptionServiceSnapshot();
-  cached={snapshot,catalog:snapshot.packages.some(p=>p.commercial)?getPublishedSubscriptionRouteCatalog():[]};
+  cached={snapshot,catalog:getPublishedSubscriptionRouteCatalog()};
   queueMicrotask(()=>{cached=undefined;});
   return cached;
 }

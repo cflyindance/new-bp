@@ -1,14 +1,20 @@
 import {serviceEntitlementData} from './service-entitlement-data';
-import { resolveCurrentSubscriptionContext } from './subscription-service-runtime';
-import { getPublishedSubscriptionRouteCatalog, ensurePublishedSubscriptionMenuTree } from './subscription-published-menu-tree';
+import { matchingPaidMenus, publishedPaidServicesForMenu, resolveCurrentSubscriptionContext } from './subscription-service-runtime';
+import { ensurePublishedSubscriptionMenuTree } from './subscription-published-menu-tree';
 import { readSubscriptionServiceSnapshot, SUBSCRIPTION_SERVICE_CHANGE_EVENT } from './subscription-service-store';
-import { resolveServicePathAccess, entitlementApplies, type ServiceAccess } from './service-entitlement-domain';
+import { resolveServicePathAccess, entitlementApplies, serviceAccess, type ServiceAccess } from './service-entitlement-domain';
 
 export function currentServiceAccess(path=location.hash.slice(1)): ServiceAccess[] {
   if (path.startsWith('/m-platform/')) return [];
   const {snapshot,catalog}=serviceEntitlementData();
+  const context = resolveCurrentSubscriptionContext() ?? {};
+  const paidMenus = matchingPaidMenus(path);
+  if (paidMenus.length) {
+    const deepest = [...paidMenus].sort((a, b) => b.path.length - a.path.length)[0]!;
+    return publishedPaidServicesForMenu(deepest.id).map(pkg => serviceAccess(snapshot, pkg, context));
+  }
   if(!snapshot.packages.some(p=>p.commercial))return [];
-  return resolveServicePathAccess(snapshot,catalog,path,resolveCurrentSubscriptionContext()??{});
+  return resolveServicePathAccess(snapshot,catalog,path,context);
 }
 export function servicePathBlocked(path=location.hash.slice(1)): boolean {
   const rights=currentServiceAccess(path);
@@ -37,7 +43,7 @@ export function installServiceEntitlementRuntime(onMount:()=>void): void {
   schedule();
   if(installed)return;
   installed=true;
-  const changed=()=>{if(location.hash.startsWith('#/m-platform/'))return;checkForChange();schedule();};
+  const changed=()=>{if(location.hash.startsWith('#/m-platform/'))return;signature=currentSignature();refresh();schedule();};
   window.addEventListener(SUBSCRIPTION_SERVICE_CHANGE_EVENT,changed);
   window.addEventListener('storage',event=>{if(event.key==='menusifu:subscription-service-packages-v1'||event.key===null)changed();});
   window.addEventListener('focus',()=>{if(currentServiceAccess().length)changed();});

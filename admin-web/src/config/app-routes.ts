@@ -4,6 +4,12 @@
 
 /** 登录/引导完成后默认落地：仅展示侧栏主导航，不进入模块子页或滑层 */
 export const APP_NAV_HOME_PATH = "/home";
+export const MERCHANT_SERVICE_CENTER_PATH = "/service-subscriptions";
+
+export function isMerchantServiceCenterPath(path: string): boolean {
+  const route = path.split('?')[0];
+  return route === MERCHANT_SERVICE_CENTER_PATH || route === `${MERCHANT_SERVICE_CENTER_PATH}/opened`;
+}
 
 export function isNavHomePath(path: string): boolean {
   return path === APP_NAV_HOME_PATH || path === `${APP_NAV_HOME_PATH}/`;

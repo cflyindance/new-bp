@@ -8,6 +8,7 @@ export function renderCommercialFields(policy?: ServiceCommercialPolicy, newServ
     <label class="text-xs font-semibold">收费类型<select name="chargeType" class="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"><option value="free" ${p.chargeType==='free'?'selected':''}>免费服务</option><option value="paid" ${p.chargeType==='paid'?'selected':''}>收费服务</option></select></label>
     <label class="text-xs font-semibold">计费单位<select name="billingUnit" class="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"><option value="brand" ${p.billingUnit==='brand'?'selected':''}>按品牌</option><option value="store" ${p.billingUnit==='store'?'selected':''}>按门店</option></select></label>
     </div>
+    <label class="block text-xs font-semibold">收费服务展示范围<select name="visibilityScope" class="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"><option value="parent-brands">已开通父级的品牌</option><option value="all-merchants" ${p.visibilityScope === 'all-merchants' ? 'selected' : ''}>全体商户</option></select></label>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="trialEnabled" ${p.trialEnabled?'checked':''}>允许免费试用</label>
     <label class="block text-xs font-semibold">默认试用天数<input name="trialDays" type="number" min="1" max="90" step="1" value="${p.trialDays||14}" class="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"></label>
     <p class="text-xs leading-5 text-muted-foreground">同一品牌同一服务限试用一次，明确确认后开始计时。到期不自动扣款；修改价格和试用时长不影响已记录的成交价与试用结束时间。</p>
@@ -19,5 +20,5 @@ export function readCommercialFields(form: HTMLFormElement, existing?:ServiceCom
     if(existing)throw Error('已启用的服务权益控制不能直接取消。');
     return undefined;
   }
-  return {chargeType:String(data.get('chargeType')) as 'free'|'paid',billingUnit:String(data.get('billingUnit')) as 'brand'|'store',trialEnabled:data.has('trialEnabled'),trialDays:Number(data.get('trialDays')??0)};
+  return {chargeType:String(data.get('chargeType')) as 'free'|'paid',billingUnit:String(data.get('billingUnit')) as 'brand'|'store',visibilityScope:data.get('visibilityScope') === 'all-merchants' ? 'all-merchants' : undefined,trialEnabled:data.has('trialEnabled'),trialDays:Number(data.get('trialDays')??0)};
 }

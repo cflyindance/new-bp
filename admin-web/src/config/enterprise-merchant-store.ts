@@ -25,6 +25,7 @@ import {
 import { markPlatformPresetOnboardingComplete } from "./platform-preset-onboarding";
 import {
   brandCapabilityCeilingKeys,
+  inheritedPaidBrandMenuKeys,
   buildMerchantServiceTreeIndex,
   isPaidServiceModuleId,
   brandStoreSelectableCeiling,
@@ -2204,10 +2205,21 @@ export function saveExplicitBrandMenus(id:string,keys:string[],expected:string,a
   if(!cap)throw Error('品牌菜单配置不存在。');
   const validated=validateExplicitMenuKeys(keys,cap.productLineIds);
   const before=[...cap.services.filter(s=>s.enabled).map(s=>s.nodeKey??s.serviceId)];
-  if(cap.menuGrantMode==='explicit'&&before.length===validated.length&&validated.every(k=>before.includes(k)))return;
+  const inherited = new Set(cap.productLineIds.flatMap(line => [...inheritedPaidBrandMenuKeys(cap, resolveMerchantServiceProductLine([line]))]));
+  const prospective = { ...cap, excludedInheritedPaidMenuKeys: [] };
+  const selected = new Set(validated);
+  const inheritedAfter = new Set(cap.productLineIds.flatMap(line => [...inheritedPaidBrandMenuKeys(prospective, resolveMerchantServiceProductLine([line]), selected)]));
+  const excluded = new Set((cap.excludedInheritedPaidMenuKeys ?? []).filter(key => !selected.has(key)));
+  for (const key of inheritedAfter) {
+    if (before.includes(key) || inherited.has(key)) excluded.add(key);
+  }
+  const nextExclusions = [...excluded].sort();
+  if (cap.menuGrantMode === 'explicit' && before.length === validated.length && validated.every(k => before.includes(k)) &&
+      JSON.stringify(nextExclusions) === JSON.stringify(cap.excludedInheritedPaidMenuKeys ?? [])) return;
   const storeBefore=(snap.storeCapabilities??[]).filter(c=>c.merchantId===id).map(c=>({storeId:c.storeId,keys:effectiveStoreCapability(snap,c).enabledKeys}));
+  cap.excludedInheritedPaidMenuKeys = nextExclusions;
   cap.menuGrantMode='explicit';cap.services=explicitServices(validated);cap.menuResourceKeys=[...centerKeysForRaw(new Set(validated))];
-  const removedStores=pruneStoreCapabilitiesForMerchant(snap,id,new Set(validated));
+  const removedStores = pruneStoreCapabilitiesForMerchant(snap, id, new Set([...validated, ...[...inheritedAfter].filter(key => !excluded.has(key))]));
   appendChangelog(snap,{merchantId:id,action:'brand.menu.update',operatorEmail:actor,facts:{category:'品牌菜单',title:'修改品牌菜单',target:snap.merchants.find(m=>m.merchantId===id)?.name??id,source,fields:storeBefore.flatMap(old=>{const next=snap.storeCapabilities?.find(c=>c.storeId===old.storeId);if(!next)return [];const keys=effectiveStoreCapability(snap,next).enabledKeys,added=keys.filter(k=>!old.keys.includes(k)).length,removed=old.keys.filter(k=>!keys.includes(k)).length;return added||removed?[{name:'门店影响 · '+(snap.stores.find(s=>s.storeId===old.storeId)?.name??old.storeId),before:old.keys.length+' 项菜单节点',after:keys.length+' 项菜单节点（新增 '+added+' 项，关闭 '+removed+' 项）'}]:[];})},menuChange:{operationId:genId('menu-operation'),source,mode:'brand',beforeMode:'brand',added:validated.filter(k=>!before.includes(k)),removed:before.filter(k=>!validated.includes(k)),choices:brandMenuChoices(cap.productLineIds)},detail:`品牌菜单 ${before.length} → ${validated.length} 项；裁剪 ${removedStores} 家门店；继承模式自动同步品牌开通范围，独立配置不自动新增`});
   persistBrandConfiguration(snap);
 }

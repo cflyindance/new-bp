@@ -1,5 +1,8 @@
-import {renderServiceGate,renderServiceTrialNotice,bindServiceGate} from './config/service-entitlement-ui';
+import {renderServiceGate,renderServiceTrialNotice,bindServiceGate,canViewMerchantServiceCenter,renderMerchantServiceCenter} from './config/service-entitlement-ui';
 import {installServiceEntitlementRuntime} from './config/service-entitlement-runtime';
+import {isPaidMenuVisible} from './config/subscription-service-runtime';
+import {isMerchantServiceCenterPath, MERCHANT_SERVICE_CENTER_PATH} from './config/app-routes';
+import {ensurePublishedSubscriptionMenuTree} from './config/subscription-published-menu-tree';
 import { bindNavigationSubmenuActions } from './shell/navigation-submenu-actions';
 import { currentMAccount } from './permissions/m-platform-store';
 import { mCanVisit } from './permissions/m-platform-runtime';
@@ -427,6 +430,7 @@ import {
 } from "./config/platform-preset-nav-filter";
 import {
   buildHubSearchIndex,
+  installMenuSearchPathVisibility,
   clearAllHubSheetSearch,
   clearHubSheetSearch,
   consumeHubSearchFocusTarget,
@@ -3560,6 +3564,7 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
 }
 
 function findTitle(path: string): { title: string; module?: string } {
+  if (isMerchantServiceCenterPath(path)) return { title: '服务与订阅' };
   if (isTeamPayrollReportPath(path)) {
     const payroll = NAV_MODULES.find(m => m.id === 'team')?.children.find(c => c.id === 'team-tax-payroll');
     const leaf = payroll?.children && [...payroll.children].sort((a,b) => b.path.length-a.path.length).find(c => path === c.path || path.startsWith(`${c.path}/`));
@@ -11676,7 +11681,7 @@ function renderMain(): string {
           ${aiAssistantBtn}
           ${renderHeaderScopeFilters()}
           ${renderUiLocaleControl()}
-          ${renderHeaderUserCenter()}
+          ${renderHeaderUserCenter(canViewMerchantServiceCenter() ? `#${MERCHANT_SERVICE_CENTER_PATH}` : undefined)}
           <button type="button" id="theme-toggle" class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:size-11" aria-label="${escapeHtml(t("header.themeToggle"))}">
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -11685,7 +11690,7 @@ function renderMain(): string {
       </header>`;
 
   const commercialGate=renderServiceGate(path);
-  const merchantTabPanelBody = commercialGate ?? (() => {
+  const merchantTabPanelBody = commercialGate ?? (isMerchantServiceCenterPath(path) ? renderMerchantServiceCenter(path) : null) ?? (() => {
     if (hubSearchCtx) {
       const index = buildHubSearchIndex(hubSearchCtx.hubId);
       const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
@@ -11909,6 +11914,10 @@ function renderDashboardPanel(path: string, title: string): string {
 }
 
 function guardNavModuleAccess(path: string): void {
+  if (isMerchantServiceCenterPath(path)) {
+    if (!canViewMerchantServiceCenter()) replaceHashPath(getFirstAllowedNavPath());
+    return;
+  }
   const mod = getTabModule(path);
   if (mod && !isNavModuleVisible(mod.id)) {
     replaceHashPath(getFirstAllowedNavPath());
@@ -13348,6 +13357,7 @@ if (["", "#", "#/", "#/home", "#/home/"].includes(location.hash) && applyDefault
   replaceHashPath(APP_NAV_HOME_PATH);
 }
 
+installMenuSearchPathVisibility(isPaidMenuVisible);
 bindPageSaveGuard();
 bindProviderSessionRevalidation(mount);
 bindBrandRuntimeGuards();
@@ -13360,4 +13370,4 @@ if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: d
   document.documentElement.classList.add("dark");
 }
 
-mount();
+void ensurePublishedSubscriptionMenuTree().finally(mount);

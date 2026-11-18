@@ -17,6 +17,7 @@ import {
   type MenuValidationIssue,
 } from "./json-menu-document-domain";
 import { jsonMenuEditorStore } from "./json-menu-editor-store";
+import { ensurePublishedSubscriptionMenuTree } from "./subscription-published-menu-tree";
 import { renderJsonMenuNodeFormPanel, type MenuNodeDialogState, type MenuPageMode } from "./json-menu-node-form-ui";
 import { normalizeMenuNodeForPageMode } from "./json-menu-page-mode";
 import { renderJsonMenuFullscreenPreview } from "./json-menu-preview-ui";
@@ -366,6 +367,7 @@ function assignDialogField(field: string, raw: string): void {
   const parts = field.split(".");
   if (parts[0] === "i18nInfo") { node.i18nInfo ??= {}; if (remove) delete node.i18nInfo[parts[1] as keyof typeof node.i18nInfo]; else node.i18nInfo[parts[1] as keyof typeof node.i18nInfo] = raw; }
   if (field === "display") { if (remove) delete node.display; else node.display = boolValue; }
+  if (field === "paidMenu") node.paidMenu = boolValue === true ? true : undefined;
   if (field === "disabled") { if (remove) delete node.disabled; else node.disabled = boolValue; }
   if (parts[0] === "microAppConfig") {
     node.microAppConfig ??= {};
@@ -523,6 +525,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
     pageModeTouched: dialogState.pageModeTouched,
   });
   if (!normalized.ok) { dialogState.error = normalized.error; return null; }
+  if (dialogState.pageMode === 'directory') delete normalized.node.paidMenu;
   const extraInfoText = dialogState.extraInfoText?.trim();
   if (extraInfoText) {
     try {
@@ -558,6 +561,7 @@ async function publishCurrentMenu(onMount: () => void): Promise<boolean> {
     const ok = await openConfirmDialog({ title: "确认发布", message: `当前有 ${jsonMenuEditorStore.state.issues.filter((issue) => issue.severity === "warning").length} 个兼容警告，确认仍要发布？`, confirmLabel: "确认发布" });
     if (ok) result = await jsonMenuEditorStore.publish(currentUser(), true);
   }
+  if (result.ok) await ensurePublishedSubscriptionMenuTree(true);
   if (!result.ok && !result.needsWarningConfirmation) {
     const first = jsonMenuEditorStore.state.issues.find((issue) => issue.severity === "error");
     if (first?.path) jsonMenuEditorStore.select(first.path);

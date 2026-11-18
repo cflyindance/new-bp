@@ -8,7 +8,10 @@ import { MERCHANT_SUBSCRIPTIONS_PATH, SUBSCRIPTION_SERVICE_ROUTE_PREFIX } from '
 import { readSubscriptionServiceSnapshot } from './subscription-service-store';
 import { ensurePublishedSubscriptionMenuTree } from './subscription-published-menu-tree';
 import type { MerchantSubscription, ServiceEntitlementKind, ServicePackage } from './subscription-service-domain';
-import { serviceAccess } from './service-entitlement-domain';
+import { MERCHANT_SERVICE_CENTER_PATH } from './app-routes';
+import { packageOnSale } from './service-package-availability';
+import { serviceEntitlementData } from './service-entitlement-data';
+import { entitlementApplies, serviceAccess, type ServiceAccess } from './service-entitlement-domain';
 import { currentServiceAccess } from './service-entitlement-runtime';
 import { resolveCurrentSubscriptionContext } from './subscription-service-runtime';
 import { canManageServiceEntitlements, changeServiceEntitlement, recordServiceEntitlement } from './service-entitlement-store';
@@ -94,10 +97,51 @@ export function bindBrandServiceEntitlements(onMount:()=>void):void {
   });
 }
 
+export function canViewMerchantServiceCenter(): boolean {
+  const principal = currentBrandPrincipal();
+  return !!principal?.account.enabled && principal.account.admin && resolveCurrentSubscriptionContext()?.brandId === principal.merchantId;
+}
+
+function renderMerchantServiceCard(access: ServiceAccess, canTrial: boolean, period = access.grant): string {
+  const pkg = access.package;
+  return `<section class="ba-card"><div class="ba-section-title"><h3>${esc(pkg.name)}</h3><span class="ba-tag">${esc(access.label)}</span></div>
+    <p class="text-xl font-semibold">${esc(price(pkg))}</p><p class="ba-muted mt-2">${esc(pkg.description ?? '')}</p>
+    ${period ? `<p class="ba-muted mt-2">有效期 ${esc(date(period.startAt))} 至 ${esc(date(period.endAt))}</p>` : ''}
+    <div class="ba-actions mt-4">${access.canTrial && canTrial ? btn(`免费试用${pkg.commercial!.trialDays}天`, `data-service-trial="${esc(pkg.id)}"`, true) : ''}${btn('联系服务商开通 / 续期', 'data-service-contact')}</div>
+  </section>`;
+}
+
+export function renderMerchantServiceCenter(path: string): string {
+  if (!canViewMerchantServiceCenter()) return '';
+  const context = resolveCurrentSubscriptionContext()!;
+  const { snapshot, catalog } = serviceEntitlementData();
+  const opened = path.split('?')[0] === `${MERCHANT_SERVICE_CENTER_PATH}/opened`;
+  const knownGrants = snapshot.subscriptions
+    .filter(grant => !grant.id.startsWith('sub-demo-') && grant.entitlementKind && entitlementApplies(grant, context))
+    .sort((a, b) => Date.parse(b.startAt) - Date.parse(a.startAt));
+  const rows = snapshot.packages.filter(pkg => {
+    if (opened) return knownGrants.some(grant => grant.packageId === pkg.id);
+    if (!packageOnSale(pkg) || pkg.commercial?.chargeType !== 'paid' || pkg.commercial.visibilityScope !== 'all-merchants') return false;
+    const release = snapshot.releases.find(item => item.id === pkg.activeReleaseId && item.packageId === pkg.id);
+    return release?.routeNodeIds.some(id => catalog.some(node => node.id === id && node.paidMenu));
+  });
+  return `<section class="ba rounded-xl border border-border bg-card p-6" data-service-gate>
+    <h2 class="text-xl font-semibold">服务与订阅</h2>
+    <nav aria-label="服务与订阅" class="my-5 flex gap-4 border-b border-border pb-3">
+      <button type="button" data-merchant-service-tab="available" class="${opened ? '' : 'font-semibold text-primary'}" aria-pressed="${!opened}">可开通服务</button>
+      <button type="button" data-merchant-service-tab="opened" class="${opened ? 'font-semibold text-primary' : ''}" aria-pressed="${opened}">已开通服务</button>
+    </nav>
+    <div class="space-y-4">${rows.length ? rows.map(pkg => {
+      const access = serviceAccess(snapshot, pkg, context);
+      return renderMerchantServiceCard(access, !opened, access.grant ?? (opened ? knownGrants.find(grant => grant.packageId === pkg.id) : undefined));
+    }).join('') : `<p class="ba-muted py-8 text-center">${opened ? '当前品牌暂无开通记录' : '暂无可开通服务'}</p>`}</div>
+  </section>`;
+}
+
 export function renderServiceGate(path:string):string|null {
   const rights=currentServiceAccess(path);if(!rights.length||rights.some(r=>r.usable))return null;
   const context=resolveCurrentSubscriptionContext(),principal=currentBrandPrincipal();
-  return `<section class="ba rounded-xl border border-border bg-card p-6 md:p-10" data-service-gate><div class="mb-6"><span class="ba-tag">服务未获得有效使用权益</span><h2 class="mt-4 text-xl font-semibold">开通服务后使用当前功能</h2><p class="ba-muted mt-3">菜单已展示，业务数据与操作尚未开放。${context?.brandId?'到期不删除原数据，免费服务继续按原授权使用。':'请先选择具体品牌或门店，不能跨品牌推断服务权益。'}</p></div>${rights.map(r=>`<section class="ba-card"><div class="ba-section-title"><h3>${esc(r.package.name)}</h3><span class="ba-tag">${r.label}</span></div><p class="text-xl font-semibold">${esc(price(r.package))}</p><p class="ba-muted mt-2">${esc(r.package.description??'')}</p><div class="ba-actions mt-4">${r.canTrial&&principal?.account.admin&&context?.brandId===principal.merchantId?btn(`免费试用${r.package.commercial!.trialDays}天`,`data-service-trial="${esc(r.package.id)}"`,true):''}${btn('联系服务商开通 / 续期','data-service-contact')}</div></section>`).join('')}<p class="ba-muted mt-5">${principal?.account.admin?'服务有效后，员工仍需相应角色权限。':'请联系品牌管理员处理服务开通与试用。'}</p></section>`;
+  return `<section class="ba rounded-xl border border-border bg-card p-6 md:p-10" data-service-gate><div class="mb-6"><span class="ba-tag">服务未获得有效使用权益</span><h2 class="mt-4 text-xl font-semibold">开通服务后使用当前功能</h2><p class="ba-muted mt-3">菜单已展示，业务数据与操作尚未开放。${context?.brandId?'到期不删除原数据，免费服务继续按原授权使用。':'请先选择具体品牌或门店，不能跨品牌推断服务权益。'}</p></div>${rights.map(r => renderMerchantServiceCard(r, !!principal?.account.admin && context?.brandId === principal.merchantId)).join('')}<p class="ba-muted mt-5">${principal?.account.admin?'服务有效后，员工仍需相应角色权限。':'请联系品牌管理员处理服务开通与试用。'}</p></section>`;
 }
 export function renderServiceTrialNotice(path:string):string {
   const r=currentServiceAccess(path).find(r=>r.usable);
@@ -106,6 +150,12 @@ export function renderServiceTrialNotice(path:string):string {
   return `<div class="ba-note text-sm" data-service-notice>${esc(r.package.name)} · 试用剩余${remaining}天 · ${date(r.grant.endAt)}结束${btn('联系服务商开通','data-service-contact')}</div>`;
 }
 export function bindServiceGate(onMount:()=>void):void {
+  document.querySelectorAll<HTMLButtonElement>('[data-merchant-service-tab]').forEach(button => {
+    button.onclick = () => {
+      const suffix = button.dataset.merchantServiceTab === 'opened' ? '/opened' : '';
+      location.hash = `#${MERCHANT_SERVICE_CENTER_PATH}${suffix}`;
+    };
+  });
   // Labels only: visibility and role gates were already applied by the navigation.
   document.querySelectorAll<HTMLAnchorElement>('#app a[href^="#/"]').forEach(anchor=>{
     if(anchor.closest('[data-service-gate]')||anchor.querySelector('[data-service-menu-state]'))return;

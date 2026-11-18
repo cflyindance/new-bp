@@ -333,6 +333,12 @@ function resolveSettingsNavPathForCatalog(
   return settingsItem?.path ?? settingsPath;
 }
 
+let menuSearchPathVisible: (path: string) => boolean = () => true;
+
+export function installMenuSearchPathVisibility(visible: (path: string) => boolean): void {
+  menuSearchPathVisible = visible;
+}
+
 export function buildHubSearchIndex(hubId: string): HubSearchIndex | null {
   const m = NAV_MODULES.find((x) => x.id === hubId);
   if (!m || !isHubSheetSearchEnabled(hubId)) return null;
@@ -342,7 +348,7 @@ export function buildHubSearchIndex(hubId: string): HubSearchIndex | null {
   const settingEntries = catalogPaths.flatMap((settingsPath) =>
     buildSettingEntries(settingsPath, resolveSettingsNavPathForCatalog(subnav, settingsPath), hubTitle),
   );
-  const entries = [...buildNavEntries(hubId, subnav), ...settingEntries];
+  const entries = [...buildNavEntries(hubId, subnav), ...settingEntries].filter(entry => menuSearchPathVisible(entry.navPath));
   return {
     hubId,
     hubTitle,
