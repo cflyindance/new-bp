@@ -588,7 +588,12 @@ let operationWarningBound = false;
 export function bindJsonMenuEditor(mount: () => void): void {
   bindProjectPageTable(mount);
   if(!operationWarningBound){operationWarningBound=true;window.addEventListener('menusifu:operation-log-warning',event=>showAppToast((event as CustomEvent<string>).detail,{variant:'error'}));}
-  setOperationActor(()=>{const account=currentMAccount();return account ? `${account.employeeId}（本地账号）`:'未知本地账号';});
+  setOperationActor(()=>{
+    const account=currentMAccount();
+    return account
+      ? {name:`${account.employeeId}（本地账号）`,email:account.loginEmail}
+      : '未知本地账号';
+  });
   bindOperationLog(mount);
   // Right-panel edits, picker close/confirm and other direct refresh paths all
   // replace the tree DOM. Preserve its viewport independently of detail scroll.

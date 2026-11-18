@@ -14,8 +14,8 @@ try {
  });
  await page.goto(base+'/#/m-platform/nav-blueprint/page-registry/logs');
  await page.locator('[data-operation-log]').waitFor();
- assert.deepEqual(await page.locator('[data-operation-log] thead th').allTextContents(),['操作时间','操作人','所属项目','操作对象','对象名称','操作类型','操作结果']);
- assert.equal(await page.locator('[data-operation-log] tbody tr').first().locator('td').count(),7);
+ assert.deepEqual(await page.locator('[data-operation-log] thead th').allTextContents(),['操作时间','操作人','邮箱','所属项目','操作对象','对象名称','操作类型','操作结果']);
+ assert.equal(await page.locator('[data-operation-log] tbody tr').first().locator('td').count(),8);
  assert.equal(await page.locator('[data-log-date-range] input[type=date]').count(),2);
  assert.match(await page.locator('[data-log-project]').first().innerText(),/订单中心/);
  assert.equal(await page.locator('[data-log-object-kind]').first().innerText(),'页面');
