@@ -8,6 +8,8 @@ export interface BrandAccount {
   admin: boolean;
   createdAt?: string;
   lastLoginAt?: string;
+  invitation?: { sentAt:string; expiresAt:string; revoked?:boolean };
+
   /** Local prototype credentials; use the existing authentication service in production. */
   password: string;
 }

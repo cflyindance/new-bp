@@ -387,3 +387,8 @@
   .ba-brand-edit-picker .ba-menu-list { padding-inline: 8px; }
   .ba-edit-tree li > ul { margin-inline-start: 6px; padding-inline-start: 8px; }
 }
+.brand-admin-method { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.brand-admin-method legend { margin-bottom: 8px; font-weight: 600; }
+.brand-admin-method label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+.brand-admin-method label:has(:checked) { border-color: #1677ff; background: #1677ff14; }
+.brand-admin-method input { accent-color: #1677ff; }

@@ -289,33 +289,100 @@ function openRole(id:string,roleId:string|undefined,source:Source,onSaved:()=>vo
   });read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,resourceChoices(catalog,ceiling),Object.keys(role.grants).filter(k=>role.grants[k]!=='hidden'),{roles:true,grants:role.grants});
 }
 
-function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mode:'profile'|'password'|'status'='profile'):void {
-  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),draft=structuredClone(state),existing=draft.accounts.find(a=>a.id===accountId);
+function newBrandAdminInvitation():NonNullable<BrandAccount['invitation']> {
+  const now=Date.now();
+  return {sentAt:new Date(now).toISOString(),expiresAt:new Date(now+72*60*60*1000).toISOString()};
+}
+
+function changeBrandAdminInvitation(id:string,accountId:string,operation:'resend'|'revoke',onSaved:()=>void):void {
+  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),draft=structuredClone(state);
+  const account=draft.accounts.find(entry=>entry.id===accountId);
+  if(!account?.invitation)throw Error('邀请不存在或已接受。');
+  const title=operation==='resend'?'重发演示邀请':'撤销邀请';
+  dialog(title,'',`<p>${esc(account.name)} · ${esc(account.email)}</p>`,()=>{
+    account.invitation=operation==='resend'?newBrandAdminInvitation():{...account.invitation!,revoked:true};
+    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营（演示）',accountId,operation});
+    onSaved();return true;
+  },{action:title,compact:true,topActions:true});
+}
+
+function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mode:'profile'|'password'|'status'|'accept'='profile'):void {
+  const actor=authorizeBrandManagement(id,'m-platform'),state=readBrandAccess(id),existing=state.accounts.find(a=>a.id===accountId);
   if(accountId&&!existing?.admin)throw Error('只能管理品牌 Admin。');
-  const account:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
-  const nextEnabled=!account.enabled;
-  const title=mode==='password'?'重设管理员密码':mode==='status'?(account.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
-  const blocked=mode==='status'&&account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled);
-  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':existing?'保存修改':'确定';
-  const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
-  const hint=mode==='status'?(account.enabled?'停用后，该账号将无法登录商家后台，已有会话将不再获得品牌权限。账号资料保留，可重新启用。':'启用后，该账号可使用原登录账号和密码登录，恢复品牌 Admin 管理范围。'):mode==='password'?'重设后旧密码立即失效，请使用新密码登录。':'可修改管理员姓名，登录账号与管理员身份保持不变。';
-  const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">这是当前最后一名已启用的品牌 Admin，请先开通另一名管理员后再停用。</p>':''}`:mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password" placeholder="请输入至少 6 位的新密码"></label>`:`${existing?`<p class="ba-admin-hint">${hint}</p>`:''}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}" placeholder="请输入管理员姓名"></label><label class="ba-field">登录账号 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label><label class="ba-field">二次输入登录密码 *<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password"></label>':''}</div>`;
-  dialog(title,'',body,(form,review)=>{
-    const fd=new FormData(form);
-    if(!existing&&fd.get('password')!==fd.get('confirmPassword'))throw Error('两次输入的登录密码不一致。');
+  const initialAccount:BrandAccount=existing??{id:crypto.randomUUID(),name:'',email:getMerchantById(id)?.primaryAdminEmail??'',password:'',enabled:true,admin:true,createdAt:new Date().toISOString()};
+  const accepting=mode==='accept', creating=!existing;
+  if(existing?.invitation&&!accepting)throw Error('请先接受邮箱邀请。');
+  if(accepting&&(!initialAccount.invitation||initialAccount.invitation.revoked||Date.parse(initialAccount.invitation.expiresAt)<=Date.now()))throw Error('邀请已失效，请重新邀请。');
+  const nextEnabled=!initialAccount.enabled;
+  const title=accepting?'演示接受邀请':mode==='password'?'重设管理员密码':mode==='status'?(initialAccount.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
+  const blocked=mode==='status'&&initialAccount.enabled&&!state.accounts.some(a=>a.id!==initialAccount.id&&a.admin&&a.enabled);
+  const action=mode==='status'?(initialAccount.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':accepting?'设置密码并启用':existing?'保存修改':'创建邀请';
+  const target=`<div class="ba-admin-target"><strong>${esc(initialAccount.name)}</strong><span>${esc(initialAccount.email)}</span></div>`;
+  const hint=mode==='status'?(initialAccount.enabled?'停用后，该账号将无法登录商家后台，已有会话将不再获得品牌权限。账号资料保留，可重新启用。':'启用后，该账号可使用原登录账号和密码登录，恢复品牌 Admin 管理范围。'):mode==='password'?'重设后旧密码立即失效，请使用新密码登录。':'可修改管理员姓名，登录账号与管理员身份保持不变。';
+  const passwordFields=`<fieldset class="ba-grid" data-brand-admin-passwords>
+    <label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>
+    <label class="ba-field">确认密码 *<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password"></label>
+  </fieldset>`;
+  const methods=creating?`<fieldset class="brand-admin-method"><legend>开通方式</legend>
+    <label><input type="radio" name="method" value="invite" checked>邮箱邀请</label>
+    <label><input type="radio" name="method" value="password">设置密码</label>
+  </fieldset>`:'';
+  const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">请先开通另一名管理员后再停用。</p>':''}`
+    :mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>`
+    :accepting?`${target}${passwordFields}`
+    :`${methods}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(initialAccount.name)}" placeholder="请输入管理员姓名"></label>
+      <label class="ba-field">登录邮箱 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(initialAccount.email)}" ${existing?'readonly':''}></label>
+      ${creating?`<p class="ba-muted" data-brand-admin-invite-hint>邀请有效期 72 小时。此处演示邀请流程，邮件不会发送。</p>${passwordFields}`:''}
+    </div>`;
+  const modal=dialog(title,'',body,form=>{
+    const draft=structuredClone(state);
+    const account=structuredClone(initialAccount);
+    const fd=new FormData(form), inviting=creating&&fd.get('method')==='invite';
+    if((creating&&!inviting||accepting)&&fd.get('password')!==fd.get('confirmPassword'))throw Error('两次输入的登录密码不一致。');
+    if(accepting){
+      if(Date.parse(account.invitation!.expiresAt)<=Date.now())throw Error('邀请已过期，请重新邀请。');
+      delete account.invitation;
+      account.enabled=true;
+      account.password=String(fd.get('password')??'');
+    }
     if(mode==='status')account.enabled=nextEnabled;
     else if(mode==='password')account.password=String(fd.get('password')??'');
-    else{account.name=String(fd.get('name')??'').trim();account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
+    else if(!accepting){account.name=String(fd.get('name')??'').trim();account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
+    if(inviting){
+      const merchant=getMerchantById(id);
+      if(!merchant?.accountProvisioningRequired&&merchant?.primaryAdminEmail?.toLowerCase()===account.email)throw Error('该邮箱已有品牌管理员登录资格。');
+      const pending=draft.accounts.find(entry=>entry.email.toLowerCase()===account.email&&entry.invitation);
+      if(pending)throw Error('该邮箱已有邀请，请在管理员列表使用「重发演示邀请」。');
+      account.enabled=false;
+      account.invitation=newBrandAdminInvitation();
+    }
     account.admin=true;
-    if(!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
+    if(mode==='status'&&!account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled))throw Error('请先开通另一名品牌 Admin，再停用最后一名管理员。');
     if(!account.name||!account.email.includes('@'))throw Error('请填写姓名与有效登录邮箱。');
-    if(account.password.length<6)throw Error('账号密码至少 6 位。');
-    if(!draft.accounts.some(a=>a.id===account.id))draft.accounts.push(account);
-    const employee=draft.employees.find(e=>e.id===account.id);
-    if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
-    else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
-    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
-  },{action,destructive:mode==='status'&&account.enabled,blocked,compact:true,topActions:!existing});
+    if(!inviting&&account.password.length<6)throw Error('账号密码至少 6 位。');
+    const index=draft.accounts.findIndex(a=>a.id===account.id);
+    if(index<0)draft.accounts.push(account);else draft.accounts[index]=account;
+    if(!inviting){
+      const employee=draft.employees.find(e=>e.id===account.id);
+      if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
+      else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
+    }
+    saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:inviting?'invite':accepting?'accept':!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(inviting?'已创建演示邀请':`${title}成功`,{variant:'success'});onSaved();return true;
+  },{action,destructive:mode==='status'&&initialAccount.enabled,blocked,compact:true,topActions:creating||accepting});
+  if(creating){
+    const passwordPanel=modal.querySelector<HTMLFieldSetElement>('[data-brand-admin-passwords]')!;
+    const hint=modal.querySelector<HTMLElement>('[data-brand-admin-invite-hint]')!;
+    const sync=()=>{
+      const invite=modal.querySelector<HTMLInputElement>('[name=method]:checked')!.value==='invite';
+      passwordPanel.disabled=invite;
+      passwordPanel.hidden=invite;
+      hint.hidden=!invite;
+      modal.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=invite?'创建邀请':'开通账号';
+    };
+    modal.querySelector('form')!.addEventListener('change',sync);
+    modal.querySelector('form')!.addEventListener('input',sync);
+    sync();
+  }
 }
 
 function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:()=>void):void {
@@ -377,14 +444,19 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             ? `<div class="ba-toolbar ba-store-toolbar"><input type="search" data-admin-query aria-label="搜索管理员姓名或账号" placeholder="搜索管理员姓名或账号"><div class="ba-actions">${button('开通品牌 Admin','new-admin',true)}</div></div>`
             : `<header class="ba-head"><h2>品牌管理员</h2>${button('开通品牌 Admin','new-admin',true)}</header>`;
           const adminRows = administrators.map(account => {
-            const actions = button('编辑品牌 Admin',`admin:${account.id}`)
-              + button('重设密码',`admin-password:${account.id}`)
-              + button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
+            const invite=account.invitation;
+            const expired=!!invite&&Date.parse(invite.expiresAt)<=Date.now();
+            const label=invite?invite.revoked?'邀请已撤销':expired?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
+            const actions=invite
+              ? button('重发演示邀请',`invite-resend:${account.id}`)
+                +(invite.revoked?'':button('撤销邀请',`invite-revoke:${account.id}`))
+                +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
+              : button('编辑品牌 Admin',`admin:${account.id}`)+button('重设密码',`admin-password:${account.id}`)+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
             return `<tr data-brand-admin="${esc(account.id)}" data-admin-search="${esc(account.name+' '+account.email)}">
               <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span></td>
               <td>${esc(account.email)}</td>
-              <td><span class="ba-create-store-status" data-status="${account.enabled?'open':'terminated'}">${account.enabled?'已启用':'已停用'}</span></td>
-              <td>${account.createdAt?esc(date(account.createdAt)):'—'}</td>
+              <td><span class="ba-create-store-status" data-status="${invite?'preparing':account.enabled?'open':'terminated'}">${label}</span>${invite?`<br><small>有效至 ${esc(date(invite.expiresAt))}</small>`:''}</td>
+              <td>${invite?`邀请于 ${esc(date(invite.sentAt))}`:account.createdAt?esc(date(account.createdAt)):'—'}</td>
               <td>${account.lastLoginAt?esc(date(account.lastLoginAt)):'—'}</td>
               <td>${detail?renderBrandMoreActions(esc(account.name)+'的更多操作',actions):`<div class="ba-actions">${actions}</div>`}</td>
             </tr>`;
@@ -468,6 +540,9 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
       root.querySelectorAll<HTMLButtonElement>('[data-ba]').forEach(b=>b.onclick=()=>{try{
         const action=b.dataset.ba!;
         if(source==='m-platform'&&(action==='new-role'||action==='new-account'||action.startsWith('role:')||action.startsWith('account:')))throw Error('员工账号与角色请在商家后台管理。');
+        if(source==='m-platform'&&action.startsWith('invite-accept:'))openBrandAdmin(id,action.slice(14),render,'accept');
+        if(source==='m-platform'&&action.startsWith('invite-resend:'))changeBrandAdminInvitation(id,action.slice(14),'resend',render);
+        if(source==='m-platform'&&action.startsWith('invite-revoke:'))changeBrandAdminInvitation(id,action.slice(14),'revoke',render);
         if(source==='m-platform'&&action==='new-admin')openBrandAdmin(id,undefined,render);
         if(source==='m-platform'&&action.startsWith('admin:'))openBrandAdmin(id,action.slice(6),render);
         if(source==='m-platform'&&action.startsWith('admin-password:'))openBrandAdmin(id,action.slice(15),render,'password');

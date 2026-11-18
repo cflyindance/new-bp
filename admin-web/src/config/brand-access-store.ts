@@ -115,12 +115,13 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
   const emails=new Set<string>();
   const merchant=getMerchantById(next.merchantId);
   const legacyAdmin=!merchant?.accountProvisioningRequired && !!merchant?.primaryAdminEmail && !next.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail!.toLowerCase());
-  if(next.accounts.length && !next.accounts.some(a=>a.admin&&a.enabled) && !legacyAdmin)throw Error('必须保留至少一名已启用的品牌 Admin。');
+  if(next.accounts.some(a=>!a.invitation) && !next.accounts.some(a=>a.admin&&a.enabled) && !legacyAdmin)throw Error('必须保留至少一名已启用的品牌 Admin。');
   for (const account of next.accounts) {
     if (!account.name.trim() || account.name.length>30 || !/^[^\s@]+@menusifu\.(cn|com)$/i.test(account.email)) throw Error('请填写姓名及有效的 Menusifu 邮箱。');
     if (emails.has(account.email.toLowerCase())) throw Error('品牌账号邮箱重复。');
     emails.add(account.email.toLowerCase());
-    if (account.password.length<6) throw Error('账号密码至少 6 位。');
+    if(account.invitation&&(account.enabled||!account.admin||account.password))throw Error('邀请账号须在接受邀请后启用。');
+    if (!account.invitation&&account.password.length<6) throw Error('账号密码至少 6 位。');
     for (const m of getEnterpriseMerchantSnapshot().merchants) {
       if (m.merchantId===next.merchantId) continue;
       if (m.primaryAdminEmail?.toLowerCase()===account.email.toLowerCase() || readBrandAccess(m.merchantId).accounts.some(a=>a.email.toLowerCase()===account.email.toLowerCase())) throw Error('该邮箱已属于其他品牌，请使用独立账号。');
@@ -139,10 +140,12 @@ export function saveBrandAccess(next:BrandAccessState,expected:number,actor:stri
     const fields:BrandChangeFacts['fields']=[];
     if(!before||before.name!==after.name)fields.push({name:'姓名',before:before?.name??'未开通',after:after.name});
     if(!before||before.email!==after.email)fields.push({name:'登录账号',before:before?.email??'未开通',after:after.email});
-    if(!before||before.enabled!==after.enabled)fields.push({name:'账号状态',before:before?(before.enabled?'已启用':'已停用'):'未开通',after:after.enabled?'已启用':'已停用'});
+    const label=(account?:BrandAccount)=>!account?'未开通':account.invitation?account.invitation.revoked?'邀请已撤销':'待接受邀请':account.enabled?'已启用':'已停用';
+    if(label(before)!==label(after))fields.push({name:'账号状态',before:label(before),after:label(after)});
+    if(context.operation==='resend'||context.operation==='invite')fields.push({name:'邀请有效期',before:before?.invitation?.expiresAt?new Date(before.invitation.expiresAt).toLocaleString('zh-CN'):'—',after:new Date(after.invitation!.expiresAt).toLocaleString('zh-CN')});
     if(context.operation==='password')fields.push({name:'登录密码',before:'不展示密码',after:'已重设（旧密码失效，不记录密码内容）'});
     if(!fields.length)return current;
-    facts={category:'品牌管理员',title:context.operation==='create'?'开通管理员':context.operation==='password'?'重设管理员密码':context.operation==='enable'?'启用管理员':context.operation==='disable'?'停用管理员':'修改管理员资料',source:context.source,target:`${after.name} · ${after.email}`,fields};
+    facts={category:'品牌管理员',title:({invite:'创建邮箱邀请',resend:'重发邮箱邀请',revoke:'撤销邮箱邀请',accept:'接受邮箱邀请'} as Partial<Record<AdminAuditContext['operation'],string>>)[context.operation]??(context.operation==='create'?'开通管理员':context.operation==='password'?'重设管理员密码':context.operation==='enable'?'启用管理员':context.operation==='disable'?'停用管理员':'修改管理员资料'),source:context.source,target:`${after.name} · ${after.email}`,fields};
   }
   const saved=structuredClone(next);
   saved.version=expected+1;
@@ -165,6 +168,7 @@ export function validateBrandLogin(email:string,password:string):string|null|und
     const account=state.accounts.find(a=>a.email.toLowerCase()===email.trim().toLowerCase());
     if ((account||merchant.primaryAdminEmail?.toLowerCase()===email.trim().toLowerCase())&&merchant.status!=='active')return merchant.status==='onboarding'||merchant.status==='draft'?'该品牌待启用，请联系平台运营。':merchant.status==='closed'?'该品牌已关闭，无法登录。':'该品牌服务已暂停，请联系平台运营。';
     if (account) {
+      if(account.invitation)return '该账号尚未接受邮箱邀请。';
       if (!account.enabled) return '该账号已停用，请联系品牌 Admin。';
       if (merchant.status!=='active') return '该品牌当前状态不允许登录。';
       return account.password===password ? null : '密码不正确';
