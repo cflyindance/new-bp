@@ -990,7 +990,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   else body = renderMerchantDetailOverview(merchant);
 
   const status = serviceStatus(merchant.status);
-  const actions = (tab === "overview" ? renderLifecycleActions(merchant) : "") + renderBrandServiceActions(merchant);
+  const actions = renderLifecycleActions(merchant) + renderBrandServiceActions(merchant);
   return `
     <div class="brand-detail ba" data-enterprise-merchant-page="detail" data-brand-detail-tab="${tab}">
       <div class="brand-detail-banner">
