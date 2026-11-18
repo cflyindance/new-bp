@@ -635,7 +635,7 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
 }
 
 function renderLifecycleActions(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
- return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn ba-primary">进入商家后台</button>`:'';
+ return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn ba-primary brand-detail-action">进入商家后台</button>`:'';
 }
 function renderBrandServiceActions(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
   const status = serviceStatus(merchant.status);
@@ -703,7 +703,6 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
           ${row("预设同步", formatDate(cap?.syncedPresetAt))}
         </dl>
-        <div class="mt-4">${renderLifecycleActions(merchant)}</div>
       </section>
       <section class="brand-detail-card brand-detail-full">
         <h2 class="text-sm font-semibold">基本信息</h2>
@@ -991,7 +990,7 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   else body = renderMerchantDetailOverview(merchant);
 
   const status = serviceStatus(merchant.status);
-  const actions = renderBrandServiceActions(merchant);
+  const actions = (tab === "overview" ? renderLifecycleActions(merchant) : "") + renderBrandServiceActions(merchant);
   return `
     <div class="brand-detail ba" data-enterprise-merchant-page="detail" data-brand-detail-tab="${tab}">
       <div class="brand-detail-banner">
