@@ -428,10 +428,11 @@ function changeBrandAdminInvitation(id:string,accountId:string,operation:'resend
 function openAdminInviteCorrection(state:BrandAccessState,account:BrandAccount,actor:string,onSaved:()=>void):void {
   const accountId=account.id;
   const title='更正并重发邀请';
-  dialog('管理品牌 Admin','',`
+  dialog('管理品牌 Admin','',`<div class="ba-grid">
     <label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}"></label>
     <label class="ba-field">邀请邮箱 *<input required type="email" name="email" value="${esc(account.email)}"></label>
-  `,form=>{
+    <p class="ba-muted">保存后将向填写的邮箱重新发起演示邀请。</p>
+  </div>`,form=>{
     const fields=new FormData(form),draft=structuredClone(state),next=draft.accounts.find(item=>item.id===accountId)!;
     next.name=String(fields.get('name')??'').trim();
     next.email=String(fields.get('email')??'').trim().toLowerCase();
@@ -543,7 +544,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
       else if(!account.invitation)draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
     }
     saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:inviting?'invite':accepting?'accept':!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(inviting?'已创建演示邀请':`${title}成功`,{variant:'success'});onSaved();return true;
-  },{action,destructive:mode==='status'&&initialAccount.enabled,blocked,compact:true,topActions:creating||accepting});
+  },{action,destructive:mode==='status'&&initialAccount.enabled,blocked,compact:true,topActions:mode==='profile'||accepting});
   if(creating){
     const passwordPanel=modal.querySelector<HTMLFieldSetElement>('[data-brand-admin-passwords]')!;
     const sync=()=>{

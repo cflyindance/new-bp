@@ -635,7 +635,9 @@ function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string
 }
 
 function renderLifecycleActions(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
- return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn ba-primary brand-detail-action">进入商家后台</button>`:'';
+ return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn brand-detail-action brand-detail-merchant-entry">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-8h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7"/></svg>
+    <span>进入商家后台</span></button>`:'';
 }
 function renderBrandServiceActions(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
   const status = serviceStatus(merchant.status);

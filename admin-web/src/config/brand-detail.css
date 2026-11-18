@@ -27,6 +27,24 @@
 .brand-detail-status[data-status=suspended] { color: #a65b00; }
 .brand-detail-status[data-status=closed] { color: var(--color-destructive); }
 .brand-detail-action { min-height: 44px; border-radius: 12px; }
+.brand-detail-merchant-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 16px;
+  color: var(--color-primary);
+  background: var(--color-card);
+  font-weight: 600;
+}
+.brand-detail-merchant-entry svg { flex: none; }
+.brand-detail-merchant-entry:hover {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-card));
+}
+.brand-detail-merchant-entry:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 .brand-detail-action[data-brand-service=suspend] { color: var(--color-destructive); }
 .brand-detail-action[data-brand-service=close] { background: #d92d33; color: white; border-color: transparent; }
 .brand-detail-action[data-brand-service=close]:hover { background: #bb2228; }
