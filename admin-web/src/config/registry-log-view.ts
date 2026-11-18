@@ -40,6 +40,14 @@ export function belongsToProject(entry:OperationEntry,projectId:string):boolean 
  });
 }
 
+const demoActors=[
+ {name:'张明',email:'zhang.ming@example.com'},
+ {name:'李娜',email:'li.na@example.com'},
+ {name:'王磊',email:'wang.lei@example.com'},
+ {name:'陈晨',email:'chen.chen@example.com'},
+ {name:'刘洋',email:'liu.yang@example.com'},
+];
+
 /** View-only fixtures: stable IDs, no writes to the real audit store or business data. */
 export function registryLogFixtures(w:RegistryWorkspace):OperationEntry[] {
  const allowed=new Set(['registry-test-product-center','registry-test-promotions','registry-test-members','registry-test-transactions','registry-test-orders']);
@@ -72,7 +80,8 @@ export function registryLogFixtures(w:RegistryWorkspace):OperationEntry[] {
    const projectAction=i<4;
    const name=projectAction?(i===0?created.name:p.name):i===4?pageName:edited.title;
    const object={id:projectAction?p.id:`${p.id}:demo-page`,name,kind:projectAction?'项目':'页面',path:projectAction?name:[p.name,i>=6?destination:undefined,name].filter(Boolean).join(' / ')};
-   return {id,batchId:id,time:new Date(Date.UTC(2026,10,16,1,index*9+i)).toISOString(),scope:'registry',action,actor:['张明','李娜','王磊','陈晨','刘洋'][(index+i)%5],stage:'测试数据',result:'success',reason:'',...transitions[i],objects:[object,...(projectAction?[]:[{id:p.id,name:p.name,path:p.name,kind:'项目'}])],persistent:true} satisfies OperationEntry;
+   const actor=demoActors[(index+i)%demoActors.length];
+   return {id,batchId:id,time:new Date(Date.UTC(2026,10,16,1,index*9+i)).toISOString(),scope:'registry',action,actor:actor.name,actorEmail:actor.email,stage:'测试数据',result:'success',reason:'',...transitions[i],objects:[object,...(projectAction?[]:[{id:p.id,name:p.name,path:p.name,kind:'项目'}])],persistent:true} satisfies OperationEntry;
   });
  });
 }

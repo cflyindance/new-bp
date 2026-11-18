@@ -1,6 +1,6 @@
 export type OperationScope = 'menu' | 'registry';
 export interface OperationEntry {
- id:string; batchId:string; time:string; scope:OperationScope; action:string; actor:string;
+ id:string; batchId:string; time:string; scope:OperationScope; action:string; actor:string; actorEmail?:string;
  stage:string; result:'success'|'failure'; reason:string; before:unknown; after:unknown;
  objects:Array<{id:string;name:string;path:string;kind:string}>;
  changes:Array<{field:string;before:unknown;after:unknown}>;
@@ -9,8 +9,9 @@ export interface OperationEntry {
 export interface LogStorage {getItem(key:string):string|null;setItem(key:string,value:string):void}
 export const OPERATION_LOG_KEY='menusifu:menu-registry-operation-log:v1';
 let session:OperationEntry[]=[];
-let actorProvider=()=> '未知本地账号';
-export function setOperationActor(provider:()=>string):void {actorProvider=provider;}
+type OperationActor = {name:string; email?:string};
+let actorProvider:()=>string|OperationActor=()=> '未知本地账号';
+export function setOperationActor(provider:()=>string|OperationActor):void {actorProvider=provider;}
 export function redactOperationValue(value:unknown,key=''):unknown {
  if(/password|passwd|secret|token|authorization|cookie|credential/i.test(key))return '[已隐藏]';
  if(typeof value==='string') {
@@ -58,13 +59,19 @@ export function appendOperation(input:{scope:OperationScope;action:string;stage:
  const before=redactOperationValue(input.before),after=redactOperationValue(input.after),changes=operationChanges(before,after);
  if(!changes.length&&!input.force&&input.result!=='failure')return null;
  const id=globalThis.crypto?.randomUUID?.()??`${Date.now()}-${Math.random()}`;
- let actor='未知本地账号';try{actor=actorProvider()||actor;}catch{}
+ let actor='未知本地账号';
+ let actorEmail:string|undefined;
+ try{
+  const identity=actorProvider();
+  actor=(typeof identity==='string'?identity:identity.name)||actor;
+  if(input.scope==='registry'&&typeof identity!=='string')actorEmail=identity.email?.trim()||undefined;
+ }catch{/* Leave the default identity if the account is unavailable. */}
  const oldObjects=operationObjects(before),newObjects=operationObjects(after);
  const lookup=(snapshot:unknown,id:string):unknown=>{if(!snapshot||typeof snapshot!=='object')return undefined;if(Array.isArray(snapshot)){for(const item of snapshot){const found=lookup(item,id);if(found!==undefined)return found;}return undefined;}const record=snapshot as Record<string,unknown>;if(record.id===id)return record;for(const value of Object.values(record)){const found=lookup(value,id);if(found!==undefined)return found;}return undefined;};
  const candidates=[...new Map([...oldObjects,...newObjects].map(o=>[o.id,o])).values()];
  const touched=candidates.filter(o=>JSON.stringify(lookup(before,o.id))!==JSON.stringify(lookup(after,o.id))||oldObjects.find(p=>p.id===o.id)?.path!==newObjects.find(p=>p.id===o.id)?.path);
  const objects=touched.length?touched:candidates;
- const entry:OperationEntry={id,batchId:id,time:new Date().toISOString(),scope:input.scope,action:input.action,stage:input.stage,actor,result:input.result??'success',reason:String(redactOperationValue(input.reason??'','reason')),before,after,objects,changes,persistent:false};
+ const entry:OperationEntry={id,batchId:id,time:new Date().toISOString(),scope:input.scope,action:input.action,stage:input.stage,actor,...(actorEmail?{actorEmail}:{}),result:input.result??'success',reason:String(redactOperationValue(input.reason??'','reason')),before,after,objects,changes,persistent:false};
  const state=readOperationLog(target);try{if(state.error)throw Error(state.error);const entries=[...state.entries.filter(e=>e.id!==id),{...entry,persistent:true}];(target??getStorage()).setItem(OPERATION_LOG_KEY,JSON.stringify({version:1,entries}));entry.persistent=true;session=session.filter(e=>!entries.some(p=>p.id===e.id));}catch{session.push(entry);if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('menusifu:operation-log-warning',{detail:'业务结果不变，但操作记录保存失败；本次记录仅在当前会话可见，刷新会丢失。'}));}
  return entry;
 }

@@ -1,8 +1,41 @@
 # M 平台菜单路由需求文档（个人规范版）
 
-> V1.5 · 2026-11-16；OPLOG-20261116-01；功能基线 main@4deac132。
-> 产品：[v1.6](./M平台-菜单路由可视化配置设计方案.md)；研发：[V1.5](./M平台-菜单路由业务规格说明书（研发交付版）.md)。变更、截图操作清单及边界：[交付记录](assets/local-page-registration/README.md)。
+> V1.6 · 2026-11-18，OPLOG-20261118-EMAIL-01，起始 main@0c594657。
+> 产品：[v1.7](./M平台-菜单路由可视化配置设计方案.md)；研发：[V1.6](./M平台-菜单路由业务规格说明书（研发交付版）.md)。变更、截图操作清单及边界：[交付记录](assets/local-page-registration/README.md)。
 
+
+## 版本记录
+
+| 版本 | 日期 | 变更 |
+| --- | --- | --- |
+| V1.6 | 2026-11-18 | OPLOG-20261118-EMAIL-01，注册中心操作记录展示操作人邮箱。 |
+| V1.5 | 2026-11-16 | OPLOG-20261116-01，菜单与注册中心操作记录。 |
+
+## 页面注册中心操作人邮箱
+
+![全局操作记录的邮箱列](assets/registry-operation-email/registry-current.png)
+
+图：页面注册中心「操作记录」。功能检出基于 main@0c594657，图中为内置 Demo 数据。
+
+![项目管理的查看记录入口](assets/registry-operation-email/project-entry.png)
+
+图：项目管理行内「查看记录」。
+
+![项目全屏操作记录的邮箱列](assets/registry-operation-email/project-log.png)
+
+图：点击商品中心「查看记录」后的全屏列表。
+
+![操作记录详情的邮箱](assets/registry-operation-email/detail-current.png)
+
+图：点击「查看详情」后，操作人旁显示同一 Demo 邮箱。
+
+| 字段／操作 | 逻辑说明 |
+| --- | --- |
+| 邮箱 | 全局列表与项目级列表均位于「操作人」右侧。详情在操作人旁显示「邮箱」。取操作时的账号邮箱，历史缺失显示「—」。两个入口读取同一条记录的值。 |
+| 查看记录 | 从项目管理行内进入该项目全屏操作记录，保留「邮箱」列。 |
+| 查看详情 | 从记录行打开详情，展示该条记录的邮箱快照；关闭后回到原列表。 |
+
+预设 Demo 操作人使用固定示例邮箱：张明 `zhang.ming@example.com`、李娜 `li.na@example.com`、王磊 `wang.lei@example.com`、陈晨 `chen.chen@example.com`、刘洋 `liu.yang@example.com`。
 
 ## 菜单与注册中心操作记录
 
@@ -13,6 +46,8 @@
 入口：菜单与页面管理 → 菜单配置 → 操作记录。菜单配置下默认进入菜单管理，不再直接作为叶子入口。
 
 ### 注册中心操作记录
+
+以下记录本地日志的基础行为。历史截图早于邮箱变更，当前邮箱界面见上节。
 
 ![注册中心操作记录](assets/operation-logs/registry-list.png)
 
