@@ -96,8 +96,30 @@
 .ba-create .ba-checks { display: flex; flex-wrap: wrap; gap: 12px 24px; max-height: none; }
 .ba-create .ba-checks label { font-size: 14px; padding-block: 5px; cursor: pointer; }
 .ba-create-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.ba-create-section-head input[type=search] { width: min(320px, 100%); }
-.ba-create input[data-create-store-search], .ba-create input[data-menu-search] { border-radius: 999px; min-height: 42px; background: var(--color-card); padding-inline: 14px; }
+.ba-create input[data-menu-search] { border-radius: 999px; min-height: 42px; background: var(--color-card); padding-inline: 14px; }
+.ba-create-store-head { flex-wrap: wrap; }
+.ba-create-store-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 500px);
+  min-width: 0;
+  margin-inline-start: auto;
+}
+.ba-create-store-filters .brand-store-search { width: 100%; min-height: 48px; }
+.ba-create .ba-create-store-filters input[data-create-store-search] {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+}
+.ba-create .ba-create-store-filters input[data-create-store-search]:focus-visible { outline: none; }
+.ba-create .ba-create-store-filters select[data-store-status-filter] { min-height: 48px; max-width: 100%; }
+@media (max-width: 520px) {
+  .ba-create-store-filters { grid-template-columns: minmax(0, 1fr); }
+}
 .ba-create [data-store-count] { padding: 2px 6px; border-radius: 8px; background: #1677ff18; color: var(--ba-create-blue); }
 .ba-create [data-create-stores] .ba-table-wrap { border: 0; margin-top: 16px; }
 .ba-create [data-create-stores] table { min-width: 570px; }
@@ -191,4 +213,16 @@
   .ba-create-menu-card .ba-brand-edit-picker { grid-template-columns: minmax(100px, 35%) minmax(0, 1fr); }
   .ba-create-menu-card .ba-brand-edit-picker nav { padding: 8px; }
   .ba-create-section-head { flex-wrap: wrap; }
+}
+
+.ba-create-confirm .ba-create-summary { margin: 0; }
+.ba-create-confirm .ba-create-summary > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.ba-create-confirm .ba-table-wrap { border: 0; border-radius: 0; }
+.ba-create-confirm table { min-width: 480px; }
+.ba-create-confirm th { background: var(--color-card); color: var(--color-foreground); }
+.ba-create-confirm td { height: 60px; overflow-wrap: anywhere; }
+.ba-create-confirm .ba-create-review-template { margin-bottom: 12px; }
+.ba-create-confirm [data-confirm-error] { margin-top: 16px; }
+@media (max-width: 520px) {
+  .ba-create-confirm .ba-dialog-header { flex-wrap: wrap; gap: 12px; }
 }

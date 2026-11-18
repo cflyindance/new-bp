@@ -453,7 +453,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     :accepting?`${target}${passwordFields}`
     :`${methods}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(initialAccount.name)}" placeholder="请输入管理员姓名"></label>
       <label class="ba-field">登录邮箱 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(initialAccount.email)}" ${existing?'readonly':''}></label>
-      ${creating?`<p class="ba-muted" data-brand-admin-invite-hint>邀请有效期 72 小时。此处演示邀请流程，邮件不会发送。</p>${passwordFields}`:''}
+      ${creating?passwordFields:''}
     </div>`;
   const modal=dialog(title,'',body,form=>{
     const draft=structuredClone(state);
@@ -492,12 +492,10 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
   },{action,destructive:mode==='status'&&initialAccount.enabled,blocked,compact:true,topActions:creating||accepting});
   if(creating){
     const passwordPanel=modal.querySelector<HTMLFieldSetElement>('[data-brand-admin-passwords]')!;
-    const hint=modal.querySelector<HTMLElement>('[data-brand-admin-invite-hint]')!;
     const sync=()=>{
       const invite=modal.querySelector<HTMLInputElement>('[name=method]:checked')!.value==='invite';
       passwordPanel.disabled=invite;
       passwordPanel.hidden=invite;
-      hint.hidden=!invite;
       modal.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=invite?'创建邀请':'开通账号';
     };
     modal.querySelector('form')!.addEventListener('change',sync);
@@ -720,8 +718,8 @@ export function bindBrandCreateWizard():void {
         </section>
       </div>
       <section data-panel="1" class="ba-card" hidden>
-        <div class="ba-create-section-head"><div><h3 tabindex="-1">选择门店</h3><p class="ba-muted">可暂不选择，已选 <output data-store-count aria-live="polite">0</output> 家门店</p></div>
-        <input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称、MID、地址或邮编">${storeBusinessStatusFilter()}</div>
+        <div class="ba-create-section-head ba-create-store-head"><div><h3 tabindex="-1">选择门店</h3><p class="ba-muted">可暂不选择，已选 <output data-store-count aria-live="polite">0</output> 家门店</p></div>
+        <div class="ba-create-store-filters"><label class="brand-store-search">${storeSearchIcon}<input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称、MID、地址或邮编"></label>${storeBusinessStatusFilter()}</div></div>
         <div data-create-stores></div>
       </section>
       <section data-panel="2" hidden>
@@ -759,7 +757,6 @@ export function bindBrandCreateWizard():void {
     const query=form.querySelector<HTMLInputElement>('[data-create-store-search]')!.value.trim().toLocaleLowerCase();
     const status=form.querySelector<HTMLSelectElement>('[data-store-status-filter]')!.value;
     form.querySelectorAll<HTMLElement>('[data-candidate-search]').forEach(row=>row.hidden=!row.dataset.candidateSearch!.includes(query)||!!status&&row.querySelector<HTMLElement>('[data-status]')?.dataset.status!==status);
-    form.querySelector<HTMLElement>('[data-candidate-empty]')!.hidden=visibleStoreBoxes().length>0;
     updateStoreCount();
   };
   const refreshStores=()=>{
@@ -778,7 +775,7 @@ export function bindBrandCreateWizard():void {
     form.querySelector('[data-create-stores]')!.innerHTML=`<div class="ba-table-wrap"><table><thead><tr>
       <th scope="col"><input type="checkbox" data-create-store-all aria-label="全选当前搜索结果"></th>
       <th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">邮编</th><th scope="col">经营状态（近30天）</th>
-      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="5" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可添加的门店。'}</td></tr></tbody></table></div>`;
+      </tr></thead><tbody>${rows||'<tr><td colspan="5" class="ba-empty">暂无可添加的门店。</td></tr>'}</tbody></table></div>`;
     const all=form.querySelector<HTMLInputElement>('[data-create-store-all]')!;
     all.onchange=()=>{visibleStoreBoxes().forEach(box=>box.checked=all.checked);updateStoreCount();};
     updateStoreCount();
@@ -802,14 +799,45 @@ export function bindBrandCreateWizard():void {
     const stores=listBrandAssociationCandidates().filter(store=>fd.getAll('storeIds').includes(store.storeId));
     const value=(name:string)=>esc(String(fd.get(name)??'').trim()||'—');
     const field=(title:string,content:string)=>`<div><dt>${title}</dt><dd>${content}</dd></div>`;
-    const d=document.createElement('dialog');reviewDialog=d;d.className='ba ba-modal ba-create-confirm';d.setAttribute('aria-labelledby','brand-create-review-title');
-    d.innerHTML=`<form><header class="ba-dialog-header"><h2 id="brand-create-review-title">核对创建信息</h2><button type="button" class="ba-btn" data-review-close aria-label="关闭核对创建信息">×</button></header><section class="ba-dialog-body"><h3>品牌信息</h3><dl class="ba-create-summary">${field('品牌名称',value('name'))}${field('联系人',value('contactName'))}${field('联系电话',value('contactPhone'))}${field('经营业态',esc(business.filter(item=>fd.getAll('businessTypeIds').includes(item.id)).map(item=>item.label).join('、')))}${field('产线',esc(lines.filter(item=>fd.getAll('productLineIds').includes(item.id)).map(item=>item.label).join('、')))}</dl><h3>品牌门店（${stores.length} 家）</h3>${stores.length?`<div class="ba-table-wrap"><table><thead><tr><th>门店名称</th><th>门店 MID</th><th>地址</th><th>邮编</th></tr></thead><tbody>${stores.map(store=>`<tr><td>${esc(store.name)}</td><td>${esc(store.storeId)}</td><td>${esc(store.address??'—')}</td><td>${esc(store.postalCode??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="ba-muted">未选择门店</p>'}<p class="ba-muted">${esc(templateSourceFor(root.querySelector('[data-create-picker]')))}</p>${brandMenuSelectionSummary(selectedKeys,choices)}<p class="ba-error" data-confirm-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">确认后创建品牌</span><div class="ba-actions"><button type="button" class="ba-btn" data-review-close>返回修改</button><button type="submit" class="ba-btn ba-primary" data-confirm-create>确认创建品牌</button></div></footer></form>`;
-    const close=()=>d.close();d.querySelectorAll('[data-review-close]').forEach(button=>button.addEventListener('click',close));
+    const templateSource=templateSourceFor(root.querySelector('[data-create-picker]'));
+    const selectedPages=choices.filter(choice=>choice.isPage===true&&selectedKeys.includes(choice.key)).length;
+    const d=document.createElement('dialog');reviewDialog=d;d.className='ba ba-modal brand-design-modal ba-create-confirm';d.setAttribute('aria-labelledby','brand-create-review-title');
+    d.innerHTML=`<form>
+      <header class="ba-dialog-header">
+        <button type="button" class="ba-btn" data-close aria-label="关闭核对创建信息">×</button>
+        <h2 id="brand-create-review-title">核对创建信息</h2>
+        <button type="submit" class="ba-btn ba-primary" data-confirm-create>确认创建品牌</button>
+      </header>
+      <div class="ba-dialog-body">
+        <section class="brand-modal-card">
+          <h3>品牌信息</h3>
+          <dl class="ba-create-summary">
+            ${field('品牌名称',value('name'))}${field('联系人',value('contactName'))}
+            ${field('联系电话',value('contactPhone'))}
+            ${field('经营业态',esc(business.filter(item=>fd.getAll('businessTypeIds').includes(item.id)).map(item=>item.label).join('、')||'—'))}
+            ${field('产线',esc(lines.filter(item=>fd.getAll('productLineIds').includes(item.id)).map(item=>item.label).join('、')||'—'))}
+          </dl>
+        </section>
+        <section class="brand-modal-card">
+          <h3>品牌门店（${stores.length} 家）</h3>
+          ${stores.length?`<div class="ba-table-wrap"><table><thead><tr><th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">邮编</th></tr></thead><tbody>
+            ${stores.map(store=>`<tr><td><div class="brand-store-identity">${storeListIcon}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small></div></div></td><td>${esc(store.address?.trim()||'—')}</td><td>${esc(store.postalCode?.trim()||'—')}</td></tr>`).join('')}
+          </tbody></table></div>`:'<p class="ba-muted">未选择门店</p>'}
+        </section>
+        <section class="brand-modal-card">
+          <h3>品牌菜单（${selectedPages} 个页面）</h3>
+          ${templateSource?`<p class="ba-muted ba-create-review-template">${esc(templateSource)}</p>`:''}
+          ${brandMenuSelectionSummary(selectedKeys,choices)}
+        </section>
+        <p class="ba-error" data-confirm-error hidden role="alert"></p>
+      </div>
+    </form>`;
+    d.querySelector('[data-close]')?.addEventListener('click',()=>d.close());
     d.addEventListener('close',()=>{d.remove();if(reviewDialog===d)reviewDialog=null;if(root.isConnected)root.querySelector<HTMLButtonElement>('[data-next]')?.focus();},{once:true});
     let saving=false;
     d.querySelector('form')!.addEventListener('submit',event=>{event.preventDefault();if(saving)return;const error=d.querySelector<HTMLElement>('[data-confirm-error]')!,confirmButton=d.querySelector<HTMLButtonElement>('[data-confirm-create]')!;error.hidden=true;
       try{saving=true;confirmButton.disabled=true;validate();
-        const merchant=createMerchant({name:String(fd.get('name')).trim(),orgType:'chain',contactName:String(fd.get('contactName')??''),contactPhone:String(fd.get('contactPhone')??''),primaryAdminEmail:'',businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String),initialMenuKeys:selectedKeys,initialMenuSource:templateSourceFor(root.querySelector('[data-create-picker]')),initialStoreIds:fd.getAll('storeIds').map(String),accountProvisioningRequired:true,activateImmediately:false});
+        const merchant=createMerchant({name:String(fd.get('name')).trim(),orgType:'chain',contactName:String(fd.get('contactName')??''),contactPhone:String(fd.get('contactPhone')??''),primaryAdminEmail:'',businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String),initialMenuKeys:selectedKeys,initialMenuSource:templateSource,initialStoreIds:fd.getAll('storeIds').map(String),accountProvisioningRequired:true,activateImmediately:false});
         dirty=false;window.removeEventListener('beforeunload',unload);window.removeEventListener('hashchange',guard,true);d.close();location.hash=merchantDetailHref(merchant.merchantId,'accounts');showAppToast('品牌已创建，请继续开通品牌 Admin',{variant:'success'});
       }catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;confirmButton.disabled=false;}
     });
