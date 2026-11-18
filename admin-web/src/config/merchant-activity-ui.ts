@@ -1,7 +1,8 @@
+import { storeBusinessStatusFilter } from './store-business-status-filter';
 import { activityManagementLinks } from './activity-management-links';
 import "./merchant-activity.css";
 import { activityContextPath, splitActivityContext, scopedActivityStores, canonicalActivityContext, type ActivityContext } from './merchant-activity-context';
-import { getMerchantById, getStoreById } from './enterprise-merchant-store';
+import { getMerchantById, getStoreById, getStoreOperatingStatus } from './enterprise-merchant-store';
 import { merchantDetailHref, storeDetailHref } from './enterprise-merchant-scope';
 import { mCanVisit } from '../permissions/m-platform-runtime';
 import {
@@ -16,7 +17,7 @@ export { ACTIVITY_PATH } from './merchant-activity-drilldown';
 export function isActivityPath(path: string): boolean { return path === ACTIVITY_PATH || path.startsWith(ACTIVITY_PATH + "/"); }
 const state = {
   period: { start: shiftDate(data.asOf, -6), end: data.asOf } as ActivityPeriod,
-  quick: "7", merchant: "", query: "", status: "",
+  quick: "7", merchant: "", query: "", status: "", operatingStatus: "",
   rootScroll: 0, drawerScroll: 0, openStoreId: "", returnStoreId: "", returnEntry: "name", focusAfter: "", wasOpen: false,
   inlineScope: null as ActivityScope | null,
   filterDraft: null as Record<string, string> | null, periodDraft: null as Record<string, string> | null,
@@ -115,7 +116,7 @@ function dateControls(): string {
       <form class="ma-period" data-ma-form>${dateFields}</form>
     </details>
     ${quickButtons}
-    <form id="brand-usage-filter-form" data-ma-filter-form><select name="status" aria-label="活跃状态">${usageStatusOptions()}</select></form>
+    <form id="brand-usage-filter-form" data-ma-filter-form><select name="status" aria-label="活跃状态">${usageStatusOptions()}</select>${storeBusinessStatusFilter(state.operatingStatus)}</form>
     <button type="button" class="brand-usage-reset" data-ma-reset><span aria-hidden="true">⟳</span> 重置</button>
   </div>`;
   return `<form class="ma-period" data-ma-form data-activity-browse><span class="ma-field-caption">统计期间</span>${quickButtons}${dateFields}</form>`;
@@ -162,8 +163,13 @@ function rootPage(): string {
   const brandSummary = brandUsage();
   const candidates = scopedActivityStores(data, activeContext);
   if (activeContext && !candidates.length) return '<section class="ma-panel ma-empty" data-usage-empty><h3>暂无使用数据</h3><p>当前品牌或门店暂无使用数据。数据接入后，可在此查看活跃情况。</p></section>';
+  const operatingStatus = (id:string) => {
+    const profile=getStoreById(id);
+    return profile?getStoreOperatingStatus(profile).status:'unknown';
+  };
   const stores = candidates.filter(s => (!state.merchant || s.merchantId === state.merchant) &&
     (!state.query || (brandSummary ? [s.name,s.id] : [s.name+s.id+s.merchantName]).some(value=>value.toLowerCase().includes(state.query.toLowerCase()))) &&
+    (!brandSummary || !state.operatingStatus || operatingStatus(s.id) === state.operatingStatus) &&
     (!state.status || metrics({ storeId: s.id }).status === state.status));
   const rows = stores.map(s => ({ store: s, m: metrics({ storeId: s.id }) }));
   const complete = rows.filter(row => row.m.count !== null);
@@ -171,12 +177,15 @@ function rootPage(): string {
   const errors = rows.length - complete.length;
   const active = rows.filter(row => row.m.status === "active").length;
   const follow = rows.filter(row => ["recent", "suspected", "long"].includes(row.m.status)).length;
-  const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
-    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + (brandSummary?'':esc(store.merchantName)+' · ')+esc(store.id) + '</small></td><td>' +
+  const table = rows.map(({ store, m }) => {
+    const profile=brandSummary?getStoreById(store.id):undefined;
+    const location=brandSummary?`<small>地址 ${esc(profile?.address?.trim()||'—')}</small><small>邮编 ${esc(profile?.postalCode?.trim()||'—')}</small>`:'';
+    return '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
+    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + (brandSummary?'':esc(store.merchantName)+' · ')+esc(store.id) + '</small>' + location + '</td><td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + (brandSummary
     ? `<td class="ma-number">${n(m.count)}</td><td class="ma-number">${n(m.paid)} / ${n(m.cancelled)}</td><td class="ma-number">${n(m.activeDays)}</td><td class="ma-number">${m.dailyAverage===null?'—':m.dailyAverage.toFixed(1)}</td><td>${time(m.latest)}</td>`
     : metricCells(m)) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td></tr>').join("");
+    '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td></tr>';}).join("");
   const brandMetrics = brandSummary ? (() => {
     const ids = new Set(complete.map(item => item.store.id));
     const allIds = new Set(rows.map(item => item.store.id));
@@ -256,7 +265,7 @@ export function renderActivityPage(path: string, embedded = false): string {
   const nextContext = canonicalActivityContext(data, route?.context ?? null);
   const nextKey = nextContext ? `${nextContext.kind}:${nextContext.id}` : '';
   if (nextKey !== contextKey) {
-    state.filterDraft = null; state.periodDraft = null; state.merchant = ''; state.status = ''; state.query = '';
+    state.filterDraft = null; state.periodDraft = null; state.merchant = ''; state.status = ''; state.operatingStatus = ''; state.query = '';
     state.rootScroll = 0; state.drawerScroll = 0; state.wasOpen = false; state.openStoreId = ''; state.inlineScope = null; contextKey = nextKey;
   }
   activeContext = nextContext;
@@ -299,11 +308,12 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
     state.filterDraft = null;
     state.merchant = String(form.get("merchant") ?? "");
     state.status = String(form.get("status") ?? "");
+    state.operatingStatus = String(form.get("operatingStatus") ?? "");
     state.query = String(form.get("query") ?? "").trim();
     onMount();
   });
   const brandFilter = root.querySelector<HTMLFormElement>('#brand-usage-filter-form');
-  brandFilter?.querySelector('select')?.addEventListener('change',()=>brandFilter.requestSubmit());
+  brandFilter?.querySelectorAll('select').forEach(select=>select.addEventListener('change',()=>brandFilter.requestSubmit()));
   root.querySelector<HTMLInputElement>('[form="brand-usage-filter-form"][name=query]')?.addEventListener('search',event=>{
     if (!(event.currentTarget as HTMLInputElement).value && state.query) brandFilter?.requestSubmit();
   });
@@ -313,7 +323,7 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
     event.preventDefault();dates.open=false;dates.querySelector('summary')?.focus();
   });
   root.querySelector("[data-ma-reset]")?.addEventListener("click", () => {
-    state.filterDraft = null; state.merchant = ""; state.status = ""; state.query = "";
+    state.filterDraft = null; state.merchant = ""; state.status = ""; state.operatingStatus = ""; state.query = "";
     if (brandFilter) {
       state.periodDraft = null; state.quick = "7";
       state.period = {start:shiftDate(data.asOf,-6),end:data.asOf};

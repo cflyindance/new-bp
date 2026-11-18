@@ -1,3 +1,4 @@
+import { storeBusinessStatusFilter } from './store-business-status-filter';
 import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
 import {getStoreOperatingStatus} from './enterprise-merchant-store';
@@ -61,8 +62,8 @@ function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormEl
   d.addEventListener('close',()=>discardDialog?.close(),{once:true});
   d.addEventListener('cancel',e=>{e.preventDefault();close();});
   d.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',close));
-  form.addEventListener('change',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search],[data-store-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
-  form.addEventListener('input',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search],[data-store-search]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
+  form.addEventListener('change',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search],[data-store-search],[data-store-status-filter]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
+  form.addEventListener('input',e=>{if((e.target as HTMLElement).matches('[data-menu-search],[data-opened-search],[data-store-search],[data-store-status-filter]'))return;dirty=true;review.hidden=true;form.querySelector<HTMLButtonElement>('[type=submit]')!.textContent=options.action??'预览变更';});
   const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};
   const originalHash=location.hash;
   const hashGuard=(e:HashChangeEvent)=>{if(location.hash===originalHash)return;if(dirty){e.stopImmediatePropagation();history.replaceState(null,'',originalHash);error.hidden=false;error.textContent='请先保存或关闭当前弹框，修改内容已保留。';}else{d.close();d.remove();}};
@@ -101,6 +102,8 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
 export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
+  const createPicker=Boolean(options.scene);
+  const treePicker=Boolean(options.brandId)||createPicker;
   const roots=available.filter(c=>c.level===1),byKey=new Map(available.map(c=>[c.key,c]));
   let active=roots[0]?.key??'',query='',selectedOnly=false,reviewAll=false;
   const collapsed=new Set<string>();
@@ -119,6 +122,8 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     return services.some(pkg => serviceAccess(serviceEntitlementData().snapshot, pkg, { brandId: options.brandId }).usable) ? '收费服务已开通' : '收费服务未开通';
   };
   const render=()=>{
+    const categoryScroll=host.querySelector('nav')?.scrollTop??0;
+    const treeScroll=host.querySelector('.ba-menu-list')?.scrollTop??0;
     const pageCount=(key:string)=>{const pages=descendants(key).filter(c=>c.isPage===true);return `${pages.filter(c=>selected.has(c.key)).length}/${pages.length}`;};
     const matches=new Set<string>();
     const includeWithParents=(c:MenuChoice)=>{matches.add(c.key);let parent=c.parent;const seen=new Set<string>();while(parent&&!seen.has(parent)){seen.add(parent);matches.add(parent);parent=byKey.get(parent)?.parent;}};
@@ -146,8 +151,17 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       return `<div class="ba-edit-tree">${renderBranch()}</div>`;
     };
     const treeActions=button('展开全部','expand-all')+button('收起全部','collapse-all')+(!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):'');
-    host.innerHTML=`<div class="ba-toolbar ba-menu-picker-toolbar"><input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称或路由" value="${esc(query)}"><span class="ba-tag" data-menu-count>已选 ${options.brandId?'':`${roots.filter(c=>selected.has(c.key)||descendants(c.key).some(x=>selected.has(x.key))).length} 个分类 · `}<strong>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</span><label class="ba-tree-select-all"><input type="checkbox" data-menu-select-all aria-label="全选全部菜单">全选全部菜单</label>${options.brandId?`<label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>`:`<button type="button" class="ba-btn" data-only-selected aria-pressed="${selectedOnly}">${selectedOnly?'✓ ':''}仅看已选</button>`}<button type="button" class="ba-btn" data-menu-review aria-pressed="${reviewAll}">${reviewAll?'返回配置':'查看已选'}</button></div><div class="ba-menu ba-tree-picker${options.brandId?' ba-brand-edit-picker':''}"><nav aria-label="菜单分类">${roots.map(r=>`<div class="ba-tree-class"><input type="checkbox" data-key="${esc(r.key)}" aria-label="开通整个分类${esc(r.title)}" ${selected.has(r.key)?'checked':''}><button type="button" class="${active===r.key&&!reviewAll?'active':''}" data-module="${esc(r.key)}"><span>${esc(r.title)}</span><span class="ba-tree-nav-count">${pageCount(r.key)}</span></button></div>`).join('')}</nav><div class="ba-tree-pane"><header class="ba-tree-heading"><strong>${reviewAll?'已选菜单核对':query?'搜索结果':esc(byKey.get(active)?.title??'菜单选择')}</strong> ${options.brandId?renderBrandMoreActions('菜单树操作',treeActions):`<div class="ba-actions">${treeActions}</div>`}</header><div class="ba-menu-list">${options.brandId?editableTree():`<table class="ba-tree-table"><thead><tr><th scope="col">菜单名称</th><th scope="col">${options.roles?'权限':'状态'}</th></tr></thead><tbody>${rows.map(row).join('')||`<tr><td colspan="2" class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</td></tr>`}</tbody></table>`}</div></div></div>`;
-    if(options.brandId)bindBrandMoreActions(host);
+    const createToolbar=`<div class="ba-create-menu-toolbar">
+      <div><h3 tabindex="-1">品牌菜单开通</h3><p class="ba-muted">可暂不选择，已选 <strong data-menu-count>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</p></div>
+      <div class="ba-actions"><label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>
+        <button type="button" class="ba-btn" data-create-select-all ${available.length?'':'disabled'}>${available.length&&available.every(c=>selected.has(c.key))?'取消全选':'全选菜单'}</button></div>
+    </div><div class="ba-create-menu-search">${storeSearchIcon}<input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称" value="${esc(query)}"></div>`;
+    host.innerHTML=`${createPicker?createToolbar:`<div class="ba-toolbar ba-menu-picker-toolbar"><input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称或路由" value="${esc(query)}"><span class="ba-tag" data-menu-count>已选 ${options.brandId?'':`${roots.filter(c=>selected.has(c.key)||descendants(c.key).some(x=>selected.has(x.key))).length} 个分类 · `}<strong>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</span><label class="ba-tree-select-all"><input type="checkbox" data-menu-select-all aria-label="全选全部菜单">全选全部菜单</label>${options.brandId?`<label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>`:`<button type="button" class="ba-btn" data-only-selected aria-pressed="${selectedOnly}">${selectedOnly?'✓ ':''}仅看已选</button>`}<button type="button" class="ba-btn" data-menu-review aria-pressed="${reviewAll}">${reviewAll?'返回配置':'查看已选'}</button></div>`}<div class="ba-menu ba-tree-picker${treePicker?' ba-brand-edit-picker':''}"><nav aria-label="菜单分类">${roots.map(r=>`<div class="ba-tree-class"><input type="checkbox" data-key="${esc(r.key)}" aria-label="开通整个分类${esc(r.title)}" ${selected.has(r.key)?'checked':''}><button type="button" class="${active===r.key&&!reviewAll?'active':''}" data-module="${esc(r.key)}"><span>${esc(r.title)}</span><span class="ba-tree-nav-count">${pageCount(r.key)}</span></button></div>`).join('')}</nav><div class="ba-tree-pane"><header class="ba-tree-heading"><strong>${reviewAll?'已选菜单核对':query?'搜索结果':esc(byKey.get(active)?.title??'菜单选择')}</strong> ${treePicker?renderBrandMoreActions('菜单树操作',treeActions):`<div class="ba-actions">${treeActions}</div>`}</header><div class="ba-menu-list">${treePicker?editableTree():`<table class="ba-tree-table"><thead><tr><th scope="col">菜单名称</th><th scope="col">${options.roles?'权限':'状态'}</th></tr></thead><tbody>${rows.map(row).join('')||`<tr><td colspan="2" class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</td></tr>`}</tbody></table>`}</div></div></div>`;
+    if(treePicker)bindBrandMoreActions(host);
+    if(createPicker){
+      host.querySelector('nav')!.scrollTop=categoryScroll;
+      host.querySelector('.ba-menu-list')!.scrollTop=treeScroll;
+    }
     host.querySelectorAll<HTMLButtonElement>('[data-ba=expand-all],[data-ba=collapse-all]').forEach(button=>{button.disabled=filtered;button.title=filtered?'筛选结果自动显示完整路径':'';});
     host.querySelector('[data-only-selected]')?.addEventListener('click',()=>{selectedOnly=!selectedOnly;render();host.querySelector<HTMLElement>('[data-only-selected]')?.focus({preventScroll:true});});
     host.querySelector('[data-menu-review]')?.addEventListener('click',()=>{reviewAll=!reviewAll;render();});
@@ -162,7 +176,14 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       if(on){let p=byKey.get(key)?.parent;while(p){selected.add(p);if(grants)grants[p]='read';p=byKey.get(p)?.parent;}}
       else{let p=byKey.get(key)?.parent;while(p){if(!descendants(p).some(c=>selected.has(c.key))){selected.delete(p);if(grants)grants[p]='hidden';}p=byKey.get(p)?.parent;}}
     };
-    const all=host.querySelector<HTMLInputElement>('[data-menu-select-all]')!;all.checked=available.length>0&&available.every(c=>selected.has(c.key));all.indeterminate=available.some(c=>selected.has(c.key))&&!all.checked;all.disabled=!available.length;all.onchange=()=>{roots.forEach(root=>toggle(root.key,all.checked));render();host.dispatchEvent(new Event('change',{bubbles:true}));};
+    const all=host.querySelector<HTMLInputElement>('[data-menu-select-all]');if(all){all.checked=available.length>0&&available.every(c=>selected.has(c.key));all.indeterminate=available.some(c=>selected.has(c.key))&&!all.checked;all.disabled=!available.length;all.onchange=()=>{roots.forEach(root=>toggle(root.key,all.checked));render();host.dispatchEvent(new Event('change',{bubbles:true}));};}
+    host.querySelector('[data-create-select-all]')?.addEventListener('click',()=>{
+      const select=!available.every(choice=>selected.has(choice.key));
+      roots.forEach(root=>toggle(root.key,select));
+      render();
+      host.querySelector<HTMLButtonElement>('[data-create-select-all]')?.focus({preventScroll:true});
+      host.dispatchEvent(new Event('change',{bubbles:true}));
+    });
     host.querySelectorAll<HTMLInputElement>('[data-key]').forEach(c=>{c.onchange=()=>{toggle(c.dataset.key!,c.checked);render();host.dispatchEvent(new Event('change',{bubbles:true}));};const children=descendants(c.dataset.key!);c.indeterminate=children.some(x=>selected.has(x.key))&&!children.every(x=>selected.has(x.key));});
     host.querySelectorAll<HTMLSelectElement>('[data-edit]').forEach(el=>el.onchange=()=>{if(grants)grants[el.dataset.edit!]=el.value as Access;});
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -200,13 +221,13 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   const initial=stores.length===1?(getStoreCapability(stores[0].storeId)?.enabledKeys??[]).filter(k=>ceiling.has(k)):[];
   const defaultMode=stores.length===1?(getStoreCapability(stores[0].storeId)?.menuMode==='inherit'?'inherit':'replace'):'add';
   let read=()=>initial,preview:HTMLDialogElement|null=null;
-  const d=dialog(stores.length===1?`配置菜单`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
+  const d=dialog(stores.length===1?`配置菜单`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>`<div>${esc(s.name)} · ${esc(s.storeId)}<br>${brandStoreLocation(s)}</div>`).join('')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
     if(preview?.open)return;
     if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
     const mode=new FormData(form).get('mode') as 'inherit'|'add'|'replace',selected=mode==='inherit'?[]:[...read()];
     const plans=stores.map(store=>{const before=getStoreCapability(store.storeId)?.enabledKeys??[],after=mode==='inherit'?[...inherited]:updateMenuKeys(before,selected,mode,ceiling);return{store,before,after,added:after.filter(k=>!before.includes(k)),removed:before.filter(k=>!after.includes(k))};});
     const current=document.createElement('dialog');preview=current;current.className='ba ba-modal ba-store-menu-preview';current.setAttribute('aria-label','门店菜单配置预览');
-    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>门店菜单配置预览</h2><button type="button" class="ba-btn" data-store-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><div class="ba-section-title"><strong>${mode==='inherit'?'继承品牌菜单':mode==='add'?'独立配置 · 增量开通':'独立配置 · 替换菜单'}</strong><span class="ba-muted">${stores.length} 家门店</span></div>${stores.length>1?`<details data-preview-stores><summary>查看涉及门店（${stores.length} 家）</summary><ul>${stores.map(store=>`<li>${esc(store.name)} · ${esc(store.storeId)}</li>`).join('')}</ul></details><p class="ba-muted" data-preview-common></p><label class="ba-field" data-preview-store-field hidden>预览门店<select data-preview-store>${stores.map(store=>`<option value="${esc(store.storeId)}">${esc(store.name)} · ${esc(store.storeId)}</option>`).join('')}</select></label>`:`<p class="ba-muted">${esc(stores[0].name)} · ${esc(stores[0].storeId)}</p>`}<div class="ba-preview-metrics" data-preview-metrics></div><div class="ba-actions ba-preview-filters" aria-label="预览菜单范围"><button type="button" class="ba-btn" data-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-preview-filter="removed">本次关闭</button></div><div data-store-preview-tree></div><p class="ba-error" data-store-preview-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">${mode==='inherit'?'保存后随品牌菜单自动同步':'保存后按门店独立配置生效'}</span><div class="ba-actions"><button type="button" class="ba-btn" data-store-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-store-preview-save>确认保存</button></div></footer></div>`;
+    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>门店菜单配置预览</h2><button type="button" class="ba-btn" data-store-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><div class="ba-section-title"><strong>${mode==='inherit'?'继承品牌菜单':mode==='add'?'独立配置 · 增量开通':'独立配置 · 替换菜单'}</strong><span class="ba-muted">${stores.length} 家门店</span></div>${stores.length>1?`<details data-preview-stores><summary>查看涉及门店（${stores.length} 家）</summary><ul>${stores.map(store=>`<li>${esc(store.name)} · ${esc(store.storeId)}<br>${brandStoreLocation(store)}</li>`).join('')}</ul></details><p class="ba-muted" data-preview-common></p><label class="ba-field" data-preview-store-field hidden>预览门店<select data-preview-store>${stores.map(store=>`<option value="${esc(store.storeId)}">${esc(store.name)} · ${esc(store.storeId)}</option>`).join('')}</select></label>`:`<p class="ba-muted">${esc(stores[0].name)} · ${esc(stores[0].storeId)}<br>${brandStoreLocation(stores[0])}</p>`}<div class="ba-preview-metrics" data-preview-metrics></div><div class="ba-actions ba-preview-filters" aria-label="预览菜单范围"><button type="button" class="ba-btn" data-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-preview-filter="removed">本次关闭</button></div><div data-store-preview-tree></div><p class="ba-error" data-store-preview-error hidden role="alert"></p></section><footer class="ba-footer"><span class="ba-muted">${mode==='inherit'?'保存后随品牌菜单自动同步':'保存后按门店独立配置生效'}</span><div class="ba-actions"><button type="button" class="ba-btn" data-store-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-store-preview-save>确认保存</button></div></footer></div>`;
     let activeStore=stores[0].storeId,filter:'added'|'removed'='added',saving=false;
     const sameKeys=(field:'added'|'removed')=>{const first=new Set(plans[0][field]);return plans.every(plan=>plan[field].length===first.size&&plan[field].every(key=>first.has(key)));};
     const renderTree=()=>{
@@ -248,7 +269,7 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
     const next=[...read()],added=next.filter(k=>!before.includes(k)),removed=before.filter(k=>!next.includes(k));
     const impacted=getMerchantStores(id).filter(s=>(getStoreCapability(s.storeId)?.enabledKeys??[]).some(k=>removed.includes(k)));
     const current=document.createElement('dialog');preview=current;current.className='ba ba-modal ba-brand-menu-preview';current.setAttribute('aria-label','品牌菜单配置预览');
-    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>品牌菜单配置预览</h2><button type="button" class="ba-btn" data-brand-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><h3>${esc(getMerchantById(id)?.name??'品牌菜单')}</h3><div class="ba-preview-metrics"><span>新增 <strong>${added.length}</strong> 项</span><span>关闭 <strong>${removed.length}</strong> 项</span></div><details><summary>受本次关闭影响的门店（${impacted.length} 家）</summary>${impacted.length?`<ul>${impacted.map(s=>`<li>${esc(s.name)} · ${esc(s.storeId)}</li>`).join('')}</ul>`:'<p class="ba-muted">无</p>'}</details><div class="ba-actions ba-preview-filters"><button type="button" class="ba-btn" data-brand-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-brand-preview-filter="removed">本次关闭</button></div><div data-brand-preview-tree></div><p class="ba-error" role="alert" data-brand-preview-error hidden></p></section><footer class="ba-footer"><span class="ba-muted">保存后更新品牌菜单，继承模式门店自动同步</span><div class="ba-actions"><button type="button" class="ba-btn" data-brand-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-brand-preview-save>确认保存</button></div></footer></div>`;
+    current.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>品牌菜单配置预览</h2><button type="button" class="ba-btn" data-brand-preview-close aria-label="关闭预览">×</button></header><section class="ba-dialog-body"><h3>${esc(getMerchantById(id)?.name??'品牌菜单')}</h3><div class="ba-preview-metrics"><span>新增 <strong>${added.length}</strong> 项</span><span>关闭 <strong>${removed.length}</strong> 项</span></div><details><summary>受本次关闭影响的门店（${impacted.length} 家）</summary>${impacted.length?`<ul>${impacted.map(s=>`<li>${esc(s.name)} · ${esc(s.storeId)}<br>${brandStoreLocation(s)}</li>`).join('')}</ul>`:'<p class="ba-muted">无</p>'}</details><div class="ba-actions ba-preview-filters"><button type="button" class="ba-btn" data-brand-preview-filter="added">本次新增</button><button type="button" class="ba-btn" data-brand-preview-filter="removed">本次关闭</button></div><div data-brand-preview-tree></div><p class="ba-error" role="alert" data-brand-preview-error hidden></p></section><footer class="ba-footer"><span class="ba-muted">保存后更新品牌菜单，继承模式门店自动同步</span><div class="ba-actions"><button type="button" class="ba-btn" data-brand-preview-close>返回修改</button><button type="button" class="ba-btn ba-primary" data-brand-preview-save>确认保存</button></div></footer></div>`;
     let filter:'added'|'removed'='added',saving=false;
     const renderTree=()=>{current.querySelectorAll<HTMLButtonElement>('[data-brand-preview-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.brandPreviewFilter===filter)));bindOpenedBrandMenuTree(current.querySelector<HTMLElement>('[data-brand-preview-tree]')!,choices,new Set(filter==='added'?added:removed),{emptyText:filter==='added'?'本次没有新增菜单。':'本次没有关闭菜单。'});};
     current.querySelectorAll<HTMLButtonElement>('[data-brand-preview-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.brandPreviewFilter as typeof filter;renderTree();});
@@ -265,11 +286,15 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
   d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id});
 }
 
+function brandStoreLocation(store:{address?:string;postalCode?:string}|undefined):string {
+  return `<small>地址 ${esc(store?.address?.trim()||'—')} · 邮编 ${esc(store?.postalCode?.trim()||'—')}</small>`;
+}
+
 function renderStoreIdentityAndStatus(store:Parameters<typeof getStoreOperatingStatus>[0],detail:boolean):string {
   const operating=getStoreOperatingStatus(store);
   const statusLabel=detail&&operating.status==='open'?'营业中':detail&&operating.status==='terminated'?'关店':operating.label;
   return `
-    <td><div class="brand-store-identity">${detail?storeListIcon:''}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}${detail?'':` · ${esc(store.address??'暂无地址')}`}</small></div></div></td>
+    <td><div class="brand-store-identity">${detail?storeListIcon:''}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small></div></div></td>
     <td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}" title="${esc(operating.label)}">${esc(statusLabel)}</span></td>
   `;
 }
@@ -301,7 +326,7 @@ function openAssociation(id:string,onSaved:()=>void):void {
     <td>${esc(store.postalCode?.trim()||'—')}</td>
   </tr>`).join('');
   const d=dialog('添加新门店','',`
-    <div class="brand-store-search">${storeSearchIcon}<input type="search" data-store-search placeholder="搜索门店名称 / MID" aria-label="搜索门店"></div>
+    <div class="ba-toolbar"><div class="brand-store-search">${storeSearchIcon}<input type="search" data-store-search placeholder="搜索门店名称 / MID" aria-label="搜索门店"></div>${storeBusinessStatusFilter('',true)}</div>
     <div class="ba-table-wrap brand-store-table"><table><thead><tr>
       <th scope="col"><input type="checkbox" data-select-candidates aria-label="选择全部可见门店"></th>
       <th scope="col">门店名称 / MID</th><th scope="col">营业状态</th><th scope="col">地址</th><th scope="col">邮编</th>
@@ -331,15 +356,18 @@ function openAssociation(id:string,onSaved:()=>void):void {
     selectAll.checked=count>0&&count===shown.length;
     selectAll.indeterminate=count>0&&count<shown.length;
   };
-  search.oninput=()=>{
+  const status=d.querySelector<HTMLSelectElement>('[data-store-status-filter]')!;
+  const filterStores=()=>{
     const query=search.value.trim().toLowerCase();
     checks.forEach(input=>{
       const row=input.closest('tr')!;
-      row.hidden=!row.dataset.candidate!.toLowerCase().includes(query);
+      row.hidden=!row.dataset.candidate!.toLowerCase().includes(query)||!!status.value&&row.querySelector<HTMLElement>('[data-status]')?.dataset.status!==status.value;
     });
     empty.hidden=visible().length>0;
     updateSelectAll();
   };
+  search.oninput=filterStores;
+  status.onchange=filterStores;
   selectAll.onchange=()=>{
     visible().forEach(input=>{input.checked=selectAll.checked;});
     updateSelectAll();
@@ -477,8 +505,9 @@ function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:
     saveBrandAccess(draft,state.version,authorizeBrandManagement(id,source),'保存账号及角色门店范围');onSaved();return true;
   });
   const form=d.querySelector('form')!;
+  const storeProfiles=new Map(getMerchantStores(id).map(store=>[store.storeId,store]));
   const renderBindings=()=>{
-    d.querySelector('[data-bindings]')!.innerHTML=bindings.map((b,i)=>`<div class="ba-binding"><div class="ba-actions"><label class="ba-field" style="flex:1">角色<select data-role="${i}"><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}" ${b.roleId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-remove="${i}">移除</button></div><p class="ba-muted" style="margin-top:10px">该角色仅在以下门店生效</p><div class="ba-checks">${stores.map(s=>`<label><input type="checkbox" data-binding="${i}" value="${esc(s.id)}" ${b.scope.ids.includes(s.id)?'checked':''}>${esc(s.title)}</label>`).join('')||'<p class="ba-muted">请先关联门店</p>'}</div></div>`).join('')||'<div class="ba-empty">尚未分配角色；请先创建角色，再添加分配</div>';
+    d.querySelector('[data-bindings]')!.innerHTML=bindings.map((b,i)=>`<div class="ba-binding"><div class="ba-actions"><label class="ba-field" style="flex:1">角色<select data-role="${i}"><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}" ${b.roleId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-remove="${i}">移除</button></div><p class="ba-muted" style="margin-top:10px">该角色仅在以下门店生效</p><div class="ba-checks">${stores.map(s=>`<label><input type="checkbox" data-binding="${i}" value="${esc(s.id)}" ${b.scope.ids.includes(s.id)?'checked':''}><span>${esc(s.title)}<br>${brandStoreLocation(storeProfiles.get(s.id))}</span></label>`).join('')||'<p class="ba-muted">请先关联门店</p>'}</div></div>`).join('')||'<div class="ba-empty">尚未分配角色；请先创建角色，再添加分配</div>';
     d.querySelectorAll<HTMLSelectElement>('[data-role]').forEach(el=>el.onchange=()=>bindings[Number(el.dataset.role)]!.roleId=el.value);
     d.querySelectorAll<HTMLInputElement>('[data-binding]').forEach(el=>el.onchange=()=>{const b=bindings[Number(el.dataset.binding)]!;b.scope.ids=el.checked?[...b.scope.ids,el.value]:b.scope.ids.filter(x=>x!==el.value);});
     d.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(el=>el.onclick=()=>{bindings.splice(Number(el.dataset.remove),1);renderBindings();form.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -566,18 +595,19 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
           return `<tr data-store-row="${esc(store.name+' '+store.storeId)}">
             <td><input type="checkbox" data-store-id="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
             ${renderStoreFields(store,choices,detail)}
+            <td class="brand-store-address">${esc(store.address?.trim()||'—')}</td><td>${esc(store.postalCode?.trim()||'—')}</td>
             <td class="brand-store-action-cell">${!actions?'—':detail?renderBrandMoreActions(esc(store.name)+'的更多操作',actions):`<div class="ba-actions">${actions}</div>`}</td>
           </tr>`;
         }).join('');
         const search=`<input type="search" data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店">`;
         root.innerHTML=`${detail?'':`<header class="ba-head"><h2>品牌门店</h2><div class="ba-actions">${storeActions}</div></header>`}
-          ${stats}<div class="ba-toolbar ba-store-toolbar">${detail?`<div class="brand-store-search">${storeSearchIcon}${search}</div><div class="ba-actions">${storeActions}</div>`:`${search}<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div>
+          ${stats}<div class="ba-toolbar ba-store-toolbar">${detail?`<div class="brand-store-search">${storeSearchIcon}${search}</div>${storeBusinessStatusFilter('',true)}<div class="ba-actions">${storeActions}</div>`:`${search}${storeBusinessStatusFilter()}<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div>
           <div class="ba-table-wrap ${detail?'brand-store-table':''}"><table><thead><tr>
             <th scope="col"><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th scope="col">门店名称 / MID</th>
-            <th scope="col">${detail?'营业状态':'经营状态（近30天）'}</th><th scope="col">菜单配置</th><th scope="col">最近配置</th><th scope="col" class="brand-store-action-cell">操作</th>
+            <th scope="col">${detail?'营业状态':'经营状态（近30天）'}</th><th scope="col">菜单配置</th><th scope="col">最近配置</th><th scope="col">地址</th><th scope="col">邮编</th><th scope="col" class="brand-store-action-cell">操作</th>
           </tr></thead><tbody>
-            ${rows||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先添加新门店。</td></tr>'}
-            <tr data-store-empty hidden><td colspan="6" class="ba-empty">没有符合条件的门店</td></tr>
+            ${rows||'<tr><td colspan="8" class="ba-empty">暂无品牌门店，请先添加新门店。</td></tr>'}
+            <tr data-store-empty hidden><td colspan="8" class="ba-empty">没有符合条件的门店</td></tr>
           </tbody></table></div>`;
         const query=root.querySelector<HTMLInputElement>('[data-store-query]')!;
         const all=root.querySelector<HTMLInputElement>('[data-select-all]')!;
@@ -591,12 +621,15 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
           const batch=root.querySelector<HTMLButtonElement>('[data-ba=batch]');
           if(detail&&batch)batch.disabled=!boxes.some(box=>box.checked);
         };
-        query.oninput=()=>{
+        const status=root.querySelector<HTMLSelectElement>('[data-store-status-filter]')!;
+        const filterStores=()=>{
           const search=query.value.trim().toLowerCase();
-          boxes.forEach(box=>{const row=box.closest('tr')!;row.hidden=!row.dataset.storeRow!.toLowerCase().includes(search);});
+          boxes.forEach(box=>{const row=box.closest('tr')!;row.hidden=!row.dataset.storeRow!.toLowerCase().includes(search)||!!status.value&&row.querySelector<HTMLElement>('[data-status]')?.dataset.status!==status.value;});
           root.querySelector<HTMLElement>('[data-store-empty]')!.hidden=!boxes.length||visible().length>0;
           sync();
         };
+        query.oninput=filterStores;
+        status.onchange=filterStores;
         all.onchange=()=>{visible().forEach(box=>box.checked=all.checked);sync();};
         boxes.forEach(box=>box.onchange=sync);
         sync();
@@ -659,11 +692,11 @@ export function bindBrandCreateWizard():void {
       </div>
       <section data-panel="1" class="ba-card" hidden>
         <div class="ba-create-section-head"><div><h3 tabindex="-1">选择门店</h3><p class="ba-muted">可暂不选择，已选 <output data-store-count aria-live="polite">0</output> 家门店</p></div>
-        <input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称、MID、地址或邮编"></div>
+        <input type="search" data-create-store-search aria-label="搜索可选门店" placeholder="搜索门店名称、MID、地址或邮编">${storeBusinessStatusFilter()}</div>
         <div data-create-stores></div>
       </section>
       <section data-panel="2" hidden>
-        <div class="ba-create-menu-card ba-card"><h3 tabindex="-1">品牌菜单开通</h3><p class="ba-muted">可暂不选择</p><div data-create-picker></div></div>
+        <div class="ba-create-menu-layout"><div class="ba-card ba-create-menu-card" data-create-picker></div></div>
       </section>
     </div>
   </form>`;
@@ -679,7 +712,7 @@ export function bindBrandCreateWizard():void {
     root.querySelector('[data-next]')!.textContent=step===2?'保存':'下一步';
     error.hidden=true;
     scrollBody.scrollTop=0;
-    root.querySelector<HTMLElement>(`[data-panel="${step}"] ${step===0?'[name=name]':'h3'}`)?.focus({preventScroll:true});
+    root.querySelector<HTMLElement>(`[data-panel="${step}"] ${step===0?'[name=name]':step===2?'[data-create-picker] h3':'h3'}`)?.focus({preventScroll:true});
   };
   const selections=()=>new FormData(form);
   const validate=()=>{if(brandMenuRouteVersion()!==routeVersion)throw Error('菜单路由已更新，请刷新后重新选择。');const fd=selections();validateBrandCreationFields({name:String(fd.get('name')??''),contactName:String(fd.get('contactName')??''),businessTypeIds:fd.getAll('businessTypeIds').map(String),productLineIds:fd.getAll('productLineIds').map(String)});};
@@ -695,7 +728,8 @@ export function bindBrandCreateWizard():void {
   };
   const filterStores=()=>{
     const query=form.querySelector<HTMLInputElement>('[data-create-store-search]')!.value.trim().toLocaleLowerCase();
-    form.querySelectorAll<HTMLElement>('[data-candidate-search]').forEach(row=>row.hidden=!row.dataset.candidateSearch!.includes(query));
+    const status=form.querySelector<HTMLSelectElement>('[data-store-status-filter]')!.value;
+    form.querySelectorAll<HTMLElement>('[data-candidate-search]').forEach(row=>row.hidden=!row.dataset.candidateSearch!.includes(query)||!!status&&row.querySelector<HTMLElement>('[data-status]')?.dataset.status!==status);
     form.querySelector<HTMLElement>('[data-candidate-empty]')!.hidden=visibleStoreBoxes().length>0;
     updateStoreCount();
   };
@@ -708,24 +742,25 @@ export function bindBrandCreateWizard():void {
       return `<tr data-candidate-search="${esc(searchable)}">
         <td><input type="checkbox" name="storeIds" value="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
         <td><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small></td>
-        <td>${esc(store.address?.trim()||'—')}${store.postalCode?.trim()?`<small>${esc(store.postalCode)}</small>`:''}</td>
+        <td>${esc(store.address?.trim()||'—')}</td><td>${esc(store.postalCode?.trim()||'—')}</td>
         <td><span class="ba-create-store-status" data-status="${esc(status.status)}">${esc(status.label)}</span></td>
       </tr>`;
     }).join('');
     form.querySelector('[data-create-stores]')!.innerHTML=`<div class="ba-table-wrap"><table><thead><tr>
       <th scope="col"><input type="checkbox" data-create-store-all aria-label="全选当前搜索结果"></th>
-      <th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">经营状态（近30天）</th>
-      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="4" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可添加的门店。'}</td></tr></tbody></table></div>`;
+      <th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">邮编</th><th scope="col">经营状态（近30天）</th>
+      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="5" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可添加的门店。'}</td></tr></tbody></table></div>`;
     const all=form.querySelector<HTMLInputElement>('[data-create-store-all]')!;
     all.onchange=()=>{visibleStoreBoxes().forEach(box=>box.checked=all.checked);updateStoreCount();};
     updateStoreCount();
   };
   form.querySelector('[data-create-store-search]')!.addEventListener('input',filterStores);
+  form.querySelector('[data-store-status-filter]')!.addEventListener('change',filterStores);
 
   const refreshPicker=()=>{menuKeys=read();read=bindMenuPicker(root.querySelector('[data-create-picker]')!,brandMenuChoices(selections().getAll('productLineIds').map(String)),menuKeys,{scene:{read:()=>resolveBrandMenuScene(selections().getAll('businessTypeIds').map(String),business),edit:()=>setStep(0)}});};
   root.querySelectorAll('[name=businessTypeIds]').forEach(el=>el.addEventListener('change',()=>root.querySelector('[data-create-picker]')!.dispatchEvent(new Event('business-template-context-change'))));
   root.querySelectorAll('[name=productLineIds]').forEach(el=>el.addEventListener('change',refreshPicker));refreshPicker();refreshStores();
-  form.addEventListener('change',e=>{const target=e.target as HTMLElement;if(target.matches('[data-create-store-search]'))return;if(target.matches('[name=storeIds]'))updateStoreCount();dirty=true;});
+  form.addEventListener('change',e=>{const target=e.target as HTMLElement;if(target.matches('[data-create-store-search],[data-store-status-filter]'))return;if(target.matches('[name=storeIds]'))updateStoreCount();dirty=true;});
   form.addEventListener('input',e=>{if(!(e.target as HTMLElement).matches('[data-menu-search],[data-create-store-search]'))dirty=true;});
   const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',unload);
   const original=location.hash;

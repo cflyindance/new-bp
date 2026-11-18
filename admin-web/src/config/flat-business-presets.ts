@@ -22,7 +22,7 @@ export function bindFlatBusinessPresets(host:HTMLElement,choices:MenuChoice[],re
    const pages=choices.filter(choice=>choice.isPage&&plan.next.includes(choice.key)).length;
    return `<button type="button" class="ba-template-card" data-business-preset="${templateEsc(template.id)}"><span><strong>${templateEsc(release.name)}</strong><small>${pages} 个页面</small></span><span aria-hidden="true">→</span></button>`;
   }).join('');
-  bar.innerHTML=`<h3>使用菜单模板</h3><p class="ba-muted">预览后可补充或替换</p><div class="ba-flat-preset-options">${cards||'<p class="ba-muted">暂无已发布模板</p>'}</div><span role="alert" data-preset-error></span>`;
+  bar.innerHTML=`<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6zM14 3v5h5"/></svg>使用菜单模板</h3><p class="ba-muted">预览后可补充或替换</p><div class="ba-flat-preset-options">${cards||'<p class="ba-muted">暂无已发布模板</p>'}</div><span role="alert" data-preset-error></span>`;
  };
  const choose=(id:string,automatic=false)=>{
   if(automatic&&(id===selected||changed()))return;

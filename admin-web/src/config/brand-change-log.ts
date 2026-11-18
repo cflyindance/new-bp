@@ -14,7 +14,7 @@ export function changeCount(keys:string[],choices:MenuChoice[]):string{
  for(const key of new Set(keys)){const c=map.get(key);if(!c)unknown++;else if(c.isPage)pages++;else if(c.kind==='setting')settings++;else directories++;}
  return [[pages,'个页面'],[directories,'个目录/分组'],[settings,'个设置项'],[unknown,'个历史菜单']].filter(([n])=>n).map(([n,t])=>`${n} ${t}`).join('、')||'无';
 }
-export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEntry[],current:MenuChoice[],stores:{storeId:string;name:string}[],options:{storeView?:boolean}={}):void{
+export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEntry[],current:MenuChoice[],stores:{storeId:string;name:string;address?:string;postalCode?:string}[],options:{storeView?:boolean}={}):void{
  const groups=new Map<string,MerchantChangeLogEntry[]>();
  for(const e of entries){const key=e.facts?.operationId??e.menuChange?.operationId??e.id;groups.set(key,[...(groups.get(key)??[]),e]);}
  const rows=[...groups.values()].map(row=>row.sort((a,b)=>b.at.localeCompare(a.at))).sort((a,b)=>b[0].at.localeCompare(a[0].at));
@@ -57,8 +57,9 @@ export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEnt
   const row=rows[Number(button.dataset.changeDetail)],d=document.createElement('dialog');d.className='ba ba-modal ba-change-detail';d.setAttribute('aria-label','变更详情');let index=0,filter:'added'|'removed'='added';
   if(brandDetail)d.classList.add('brand-design-modal','brand-log-modal');
   const objects=row.map(entry=>{
-   const name=entry.storeId?entry.menuChange?.storeName??stores.find(store=>store.storeId===entry.storeId)?.name:undefined;
-   return `<li><strong>${esc(name??target(entry))}</strong>${name&&entry.storeId?`<small>${esc(entry.storeId)}</small>`:''}</li>`;
+   const store=stores.find(store=>store.storeId===entry.storeId);
+   const name=entry.storeId?entry.menuChange?.storeName??store?.name:undefined;
+   return `<li><strong>${esc(name??target(entry))}</strong>${entry.storeId?`<small>${esc(entry.storeId)}</small><small>地址 ${esc(store?.address?.trim()||'—')}</small><small>邮编 ${esc(store?.postalCode?.trim()||'—')}</small>`:''}</li>`;
   }).join('');
   d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><button type="button" class="ba-btn" data-log-close aria-label="关闭详情">×</button><h2>变更详情</h2></header>
    <section class="ba-dialog-body"><section class="brand-modal-card"><h3>涉及对象</h3><ul class="brand-log-objects">${objects}</ul>
