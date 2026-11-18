@@ -361,3 +361,29 @@
 .dark .brand-detail-body [data-tab=org] [data-status=open] { color: #83d75b; }
 .dark .brand-detail-body [data-tab=org] [data-status=closed] { color: #ffbb67; }
 .dark .brand-detail-body [data-tab=org] [data-status=terminated] { color: #ff9577; }
+
+.brand-menu-edit-modal .ba-menu-picker-toolbar { gap: 12px; }
+.brand-menu-edit-modal .ba-menu-picker-toolbar [data-menu-search] { max-width: 320px; min-height: 48px; margin-inline-end: auto; }
+.brand-menu-edit-modal .ba-menu-picker-toolbar [data-menu-count] { gap: 4px; align-items: center; background: transparent; color: var(--color-muted-foreground); font-size: 13px; }
+.brand-menu-edit-modal .ba-menu-picker-toolbar [data-menu-count] strong { padding: 2px 6px; border-radius: 8px; background: #1677ff18; color: #1677ff; font-weight: 500; }
+.brand-menu-edit-modal .ba-brand-edit-picker { grid-template-columns: minmax(190px,30%) minmax(0,1fr); border-radius: 16px; }
+.ba-brand-edit-picker nav { border: 0; }
+.ba-brand-edit-picker .ba-tree-class { padding-inline: 10px; border-radius: 12px; }
+.ba-brand-edit-picker .ba-tree-class > button { margin: 0; padding-inline: 8px 0; }
+.ba-brand-edit-picker .ba-tree-class:has(button.active) { background: #1677ff18; }
+.ba-brand-edit-picker .ba-tree-class:has(button.active) button { background: transparent; }
+.ba-brand-edit-picker .ba-tree-class:has(button.active) .ba-tree-nav-count { background: #1677ff; color: white; }
+.ba-brand-edit-picker .ba-tree-heading { padding: 12px 16px; }
+.ba-brand-edit-picker .ba-menu-list { padding: 0 16px 8px; }
+.ba-edit-tree ul { margin: 0; padding: 0; list-style: none; }
+.ba-edit-tree li > ul { margin: 0 0 8px 12px; padding-inline-start: 16px; border-inline-start: 1px solid var(--color-border); }
+.ba-edit-tree > ul > li { padding-block: 6px; border-bottom: 1px solid var(--color-border); }
+.ba-edit-tree .ba-edit-tree-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; }
+.ba-edit-tree .ba-tree-name { padding: 0; margin: 0; }
+.ba-edit-tree .ba-tree-partial { display: none; }
+.ba-edit-tree .ba-tree-title { white-space: normal; }
+@media(max-width:650px) {
+  .brand-menu-edit-modal .ba-brand-edit-picker { grid-template-columns: minmax(125px,35%) minmax(0,1fr); }
+  .ba-brand-edit-picker .ba-menu-list { padding-inline: 8px; }
+  .ba-edit-tree li > ul { margin-inline-start: 6px; padding-inline-start: 8px; }
+}
