@@ -579,7 +579,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
               : button('编辑品牌 Admin',`admin:${account.id}`)+button('重设密码',`admin-password:${account.id}`)+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
             return `<tr data-brand-admin="${esc(account.id)}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
-              <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span></td>
+              <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span>${account.id.startsWith('demo-admin-scenario:')?' <span class="ba-tag">演示</span>':''}</td>
               <td>${esc(account.email)}</td>
               <td><span class="ba-create-store-status" data-status="${invite?'preparing':account.enabled?'open':'terminated'}">${label}</span>${invite?`<br><small>有效至 ${esc(date(invite.expiresAt))}</small>`:''}</td>
               <td>${invite?`邀请于 ${esc(date(invite.sentAt))}`:account.createdAt?esc(date(account.createdAt)):'—'}</td>
