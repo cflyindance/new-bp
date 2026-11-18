@@ -119,6 +119,7 @@ export interface SubscriptionAuditEntry {
 
 export interface SubscriptionServiceSnapshot {
   entitlementDemoVersion?: number;
+  paidMenuDemoVersion?: number;
   schemaVersion: 1;
   routeBlueprintVersion: number;
   packages: ServicePackage[];

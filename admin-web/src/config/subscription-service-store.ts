@@ -6,6 +6,8 @@ import {packageOnSale,canDeletePackage,packageChangeToken,validatePackageTerms} 
 import {seedBasicMenuDemo} from './subscription-basic-menu-demo';
 import {seedGrowthMenuDemo} from './subscription-growth-menu-demo';
 import { validateCommercialPolicy } from './service-entitlement-domain';
+import { seedPaidMenuDemo } from './paid-menu-demo';
+import { resolveMenuDocumentRepositoryMode } from './json-menu-document-repository-mode';
 import { seedServiceEntitlementDemo } from './service-entitlement-demo';
 import { getMerchantStores, getMerchants } from "./enterprise-merchant-store";
 import {
@@ -94,6 +96,7 @@ function normalizeSnapshot(value: Partial<SubscriptionServiceSnapshot> | null): 
     audit: Array.isArray(value.audit) ? value.audit : [],
     protectedRoutes: Array.isArray(value.protectedRoutes) ? value.protectedRoutes : [],
     entitlementDemoVersion:value.entitlementDemoVersion,
+    paidMenuDemoVersion:value.paidMenuDemoVersion,
   };
 }
 
@@ -107,13 +110,15 @@ export function readSubscriptionServiceSnapshot(): SubscriptionServiceSnapshot {
     const snapshot = normalizeSnapshot(parsed);
     const migrated = JSON.parse(JSON.stringify(snapshot)) as SubscriptionServiceSnapshot;
     const entChanged=appendEntitlementDemo(migrated),growthChanged=appendGrowthDemo(migrated),basicChanged=appendBasicDemo(migrated);
-    if (!entChanged && !growthChanged && !basicChanged) return snapshot;
+    const paidMenuChanged = appendPaidMenuDemo(migrated);
+    if (!entChanged && !growthChanged && !basicChanged && !paidMenuChanged) return snapshot;
     return persistReadCache(migrated) ? migrated : snapshot;
   }
   const seeded = seedSnapshot();
   appendEntitlementDemo(seeded);
   appendGrowthDemo(seeded);
   appendBasicDemo(seeded);
+  appendPaidMenuDemo(seeded);
   persistReadCache(seeded);
   return seeded;
 }
@@ -140,6 +145,13 @@ function appendBasicDemo(snapshot:SubscriptionServiceSnapshot):boolean {
 
 function appendGrowthDemo(snapshot:SubscriptionServiceSnapshot):boolean {
  const tree=getPublishedSubscriptionMenuTree();return tree?.source==='menu-document'?seedGrowthMenuDemo(snapshot,getPublishedSubscriptionRouteCatalog(),tree.blueprintVersion):false;
+}
+
+function appendPaidMenuDemo(snapshot: SubscriptionServiceSnapshot): boolean {
+  if (snapshot.paidMenuDemoVersion === 1 || typeof window === 'undefined' || getPublishedSubscriptionMenuTree()?.source !== 'menu-document') return false;
+  if (resolveMenuDocumentRepositoryMode(import.meta.env?.DEV === true, window.location.hostname) !== 'demo') return false;
+  const catalog = getPublishedSubscriptionRouteCatalog();
+  return seedPaidMenuDemo(snapshot, catalog, new Set(getMerchants({ allEnterprises: true }).map(brand => brand.merchantId)));
 }
 
 function appendEntitlementDemo(snapshot:SubscriptionServiceSnapshot):boolean {
