@@ -504,7 +504,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     :mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>`
     :accepting?`${target}${passwordFields}`
     :`${methods}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(initialAccount.name)}" placeholder="请输入管理员姓名"></label>
-      <label class="ba-field">登录邮箱 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(initialAccount.email)}" ${existing?'readonly':''}></label>
+      <label class="ba-field">登录邮箱${creating?' *':''}<input type="email" name="email" placeholder="name@menusifu.cn" value="${esc(initialAccount.email)}" ${creating?'required':'disabled'}></label>
       ${creating?passwordFields:''}
     </div>`;
   const modal=dialog(title,'',body,form=>{

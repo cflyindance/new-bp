@@ -226,3 +226,9 @@
 @media (max-width: 520px) {
   .ba-create-confirm .ba-dialog-header { flex-wrap: wrap; gap: 12px; }
 }
+.ba-admin-dialog .ba-field input[type="email"]:disabled {
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  cursor: not-allowed;
+  opacity: 1;
+}
