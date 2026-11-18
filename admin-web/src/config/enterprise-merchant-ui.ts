@@ -1,3 +1,4 @@
+import './brand-detail.css';
 import {renderBrandListFilters,renderBrandManagementTable,bindBrandManagementList,readBrandListFilter} from './brand-management-list';
 import {getStoreOperatingStatus} from './enterprise-merchant-store';
 import {currentMAccess} from '../permissions/m-platform-store';
@@ -18,7 +19,7 @@ import {brandStorePerspectiveCeiling} from './enterprise-merchant-services';
 import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,filteredManagementStores,savedManagementFilter} from './management-list-filters';
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
-import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail } from './brand-access-store';
+import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail, readBrandAccess } from './brand-access-store';
 import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
@@ -618,44 +619,101 @@ function renderChangeLogPage(): string {
 }
 
 function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string {
-  const tabClass = (tab: MerchantDetailTab) =>
-    tab === active
-      ? "inline-flex h-9 items-center border-b-2 border-primary px-3 text-sm font-medium text-primary"
-      : "inline-flex h-9 items-center border-b-2 border-transparent px-3 text-sm text-muted-foreground hover:text-foreground";
-
-  return `
-    <nav class="flex shrink-0 flex-wrap gap-1 border-b border-border" aria-label="品牌详情">
-      <a href="${merchantDetailHref(merchantId, "overview")}" class="${tabClass("overview")}">概览</a>
-      ${mCanVisit(MERCHANT_SUBSCRIPTIONS_PATH)?`<a href="${merchantDetailHref(merchantId,"services")}" class="${tabClass("services")}">服务权益</a>`:""}
-      <a href="${merchantDetailHref(merchantId, "org")}" class="${tabClass("org")}">品牌门店</a>
-      <a href="${merchantDetailHref(merchantId, "capabilities")}" class="${tabClass("capabilities")}">品牌菜单</a>
-      <a href="${merchantDetailHref(merchantId, "accounts")}" class="${tabClass("accounts")}">品牌管理员</a>
-      ${mCanVisit(activityContextPath({kind: 'brand', id: merchantId})) ? `<a href="${merchantDetailHref(merchantId, "usage")}" class="${tabClass("usage")}">使用情况</a>` : ""}
-      <a href="${merchantDetailHref(merchantId, "changelog")}" class="${tabClass("changelog")}">变更记录</a>
-    </nav>`;
+  const tabs: readonly (readonly [MerchantDetailTab, string])[] = [
+    ["overview", "概览"],
+    ...(mCanVisit(MERCHANT_SUBSCRIPTIONS_PATH) ? [["services", "服务权益"] as const] : []),
+    ["org", "品牌门店"],
+    ["capabilities", "品牌菜单"],
+    ["accounts", "品牌管理员"],
+    ...(mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? [["usage", "使用情况"] as const] : []),
+    ["changelog", "变更记录"],
+  ];
+  return `<nav class="brand-detail-tabs" aria-label="品牌详情">${tabs.map(([tab, label]) =>
+    `<a href="${merchantDetailHref(merchantId, tab)}"${tab === active ? ' aria-current="page"' : ''}>${label}</a>`
+  ).join("")}</nav>`;
 }
 
 function renderLifecycleActions(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
  return canImpersonateMerchant(merchant)?`<button type="button" data-merchant-lifecycle="impersonate" data-merchant-id="${escapeHtml(merchant.merchantId)}" class="ba-btn ba-primary">进入商家后台</button>`:'';
 }
-function renderServicePanel(merchant:NonNullable<ReturnType<typeof getMerchantById>>):string {
- const status=serviceStatus(merchant.status),id=merchant.merchantId,issues=brandServiceReadiness(id);
- const action=(key:BrandServiceAction,text:string)=>`<button type="button" class="ba-btn ${key==='close'||key==='suspend'?'ba-danger':'ba-primary'}" data-brand-service="${key}" data-merchant-id="${escapeHtml(id)}">${text}</button>`;
- return `<section class="ba ba-card" style="margin-bottom:16px" data-brand-service-panel><div class="ba-head"><h2>服务状态 · ${escapeHtml(getMerchantStatusLabel(merchant.status))}</h2><div class="ba-actions">${status==='onboarding'?action('activate','启用品牌'):status==='active'?action('suspend','暂停服务')+action('close','关闭品牌'):status==='suspended'?action('resume','恢复服务')+action('close','关闭品牌'):''}</div></div><p>开通进度：${escapeHtml(brandOnboardingProgress(id))}</p><p class="ba-muted" style="margin-top:10px">${status==='active'?'品牌正常使用服务；门店营业状态由各门店单独管理。':status==='closed'?'品牌已关闭，当前不提供恢复入口。数据、账号、门店和菜单配置保留。':status==='suspended'?'当前品牌及全部门店停止商家后台访问；恢复服务后沿用原配置。':'待启用品牌可由M平台配置资料、菜单和管理员，商家账号暂不能登录。门店可在启用后继续关联。'}</p>${merchant.status==='closing'?'<p class="ba-admin-warning">历史关闭申请已停止自动倒计时，当前按暂停服务处理；请明确选择恢复服务或关闭品牌。</p>':''}${merchant.serviceReason||merchant.suspendedReason?`<p class="ba-muted" style="margin-top:10px">最近原因：${escapeHtml(merchant.serviceReason??merchant.suspendedReason??'')}</p>`:''}${status==='onboarding'&&issues.length?`<p class="ba-muted" style="margin-top:10px">启用前待完善：${issues.map(escapeHtml).join('；')}</p>`:''}</section>`;
+function renderBrandServiceActions(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
+  const status = serviceStatus(merchant.status);
+  const action = (key: BrandServiceAction, label: string) =>
+    `<button type="button" class="ba-btn brand-detail-action" data-brand-service="${key}" data-merchant-id="${escapeHtml(merchant.merchantId)}">${label}</button>`;
+  if (status === "onboarding") return action("activate", "启用品牌");
+  if (status === "active") return action("suspend", "暂停服务") + action("close", "关闭品牌");
+  if (status === "suspended") return action("resume", "恢复服务") + action("close", "关闭品牌");
+  return "";
+}
+
+function renderBrandProgress(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
+  const id = merchant.merchantId;
+  const status = serviceStatus(merchant.status);
+  const progress = brandOnboardingProgress(id);
+  const needsAdmin = progress === "待开通管理员";
+  const needsMenu = progress === "待配置品牌菜单";
+  const configured = !needsAdmin && !needsMenu;
+  const enabled = status === "active";
+  const signedIn = configured && ["已首次登录", "初始化已完成"].includes(progress);
+  const complete = Number(configured) + Number(enabled) + Number(signedIn);
+  const issues = status === "onboarding" ? brandServiceReadiness(id) : [];
+  return `<section class="brand-detail-card brand-detail-progress">
+    <h2>开通进度</h2>
+    <div class="brand-detail-ring" style="--completed:${complete}" data-configured="${configured}" data-enabled="${enabled}" data-signed-in="${signedIn}" aria-label="已完成 ${complete} 项，共 3 项"><strong>${complete}</strong><small> / 3</small></div>
+    <ol>
+      <li data-done="${configured}"><span>01</span><div>开通配置
+        ${configured ? "" : `<a href="${merchantDetailHref(id, needsAdmin ? "accounts" : "capabilities")}">${needsAdmin ? "开通品牌 Admin" : "配置品牌菜单"} ↗</a>`}</div></li>
+      <li data-done="${enabled}"><span>02</span>启用服务</li>
+      <li data-done="${signedIn}"><span>03</span>首次登录</li>
+    </ol>
+    ${issues.length ? `<p class="brand-detail-progress-note">${issues.map(escapeHtml).join("、")}</p>` : ""}
+    ${merchant.status === "closing" ? '<p class="brand-detail-progress-note">历史关闭申请已停止自动倒计时，当前按暂停服务处理。</p>' : ""}
+  </section>`;
 }
 
 function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof getMerchantById>>): string {
   const cap = getMerchantCapability(merchant.merchantId);
-  const storeCount = countStoresForMerchant(merchant.merchantId);
+  const id = merchant.merchantId;
+  const storeCount = countStoresForMerchant(id);
+  const keys = brandRawMenuKeys(id);
+  const pageCount = brandMenuChoices(cap?.productLineIds).filter(choice => choice.isPage && keys.has(choice.key)).length;
+  const accounts = readBrandAccess(id).accounts;
+  const legacyEmail = merchant.primaryAdminEmail?.toLowerCase();
+  const hasLegacyAdmin = !merchant.accountProvisioningRequired && !!legacyEmail &&
+    !accounts.some(account => account.email.toLowerCase() === legacyEmail);
+  const availableAdmins = accounts.filter(account => account.admin && account.enabled).length + Number(hasLegacyAdmin);
+  const metric = (label: string, value: string | number, unit: string, tab: MerchantDetailTab) =>
+    `<a href="${merchantDetailHref(id, tab)}"><small>${label} ↗</small><strong>${value}</strong> <span>${unit}</span></a>`;
   const row = (label: string, value: string) =>
-    `<div class="grid gap-1 sm:grid-cols-[7rem_1fr] py-2 border-b border-border last:border-0"><dt class="text-xs text-muted-foreground">${escapeHtml(label)}</dt><dd class="text-sm">${value}</dd></div>`;
+    `<div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`;
 
-  return `
-    ${renderServicePanel(merchant)}
-    <div class="grid gap-4 lg:grid-cols-2">
-      ${card(`
+  return `<div class="brand-detail-overview">
+      ${renderBrandProgress(merchant)}
+      <section class="brand-detail-card">
+        <h2 class="text-sm font-semibold">经营摘要</h2>
+        <div class="brand-detail-metrics">
+          ${metric("门店数", storeCount, "家", "org")}
+          ${metric("品牌开通页面", pageCount, "页", "capabilities")}
+          ${metric("可用管理员", availableAdmins, "人", "accounts")}
+        </div>
+        <dl class="brand-detail-fields brand-detail-fields-two">
+          ${row("业态", escapeHtml(cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—"))}
+          ${row("产线", escapeHtml(cap?.productLineIds.map(productLineLabel).join("、") || "—"))}
+          ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
+          ${row("预设同步", formatDate(cap?.syncedPresetAt))}
+        </dl>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a
+            href="${hardwareHref("/devices")}"
+            data-enterprise-hw-link-merchant="${escapeHtml(merchant.merchantId)}"
+            class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted"
+          >查看硬件资产</a>
+        </div>
+        <div class="mt-4">${renderLifecycleActions(merchant)}</div>
+      </section>
+      <section class="brand-detail-card brand-detail-full">
         <h2 class="text-sm font-semibold">基本信息</h2>
-        <dl class="mt-2">
+        <dl class="brand-detail-fields">
           ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.merchantId)}</span>`)}
           ${row("BID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
 
@@ -679,45 +737,29 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           }
           ${row("时区", escapeHtml(merchant.timezone))}
         </dl>
-      `)}
-      ${card(`
-        <h2 class="text-sm font-semibold">经营摘要</h2>
-        <dl class="mt-2">
-          ${row("门店数", String(storeCount))}
-          ${row("业态", cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—")}
-          ${row("产线", cap?.productLineIds.map(productLineLabel).join("、") || "—")}
-          ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
-          ${row("预设同步", formatDate(cap?.syncedPresetAt))}
-        </dl>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <a
-            href="${hardwareHref("/devices")}"
-            data-enterprise-hw-link-merchant="${escapeHtml(merchant.merchantId)}"
-            class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted"
-          >查看硬件资产</a>
+      </section>
+      <section class="brand-detail-card brand-detail-full">
+        <div class="brand-crm-heading">
+          <h2 class="text-sm font-semibold">CRM / 合同（Salesforce 演示）</h2>
+          <div class="brand-crm-actions">
+            <button type="button" data-merchant-crm-sync="${escapeHtml(id)}">从 CRM 同步</button>
+            <details class="brand-crm-renew">
+              <summary>合同续期</summary>
+              <form data-merchant-contract-renew-form data-merchant-id="${escapeHtml(id)}">
+                <label class="ba-field">续期至<input name="contractExpiresAt" type="date" required></label>
+                <button type="submit" class="ba-btn ba-primary">确认续期</button>
+              </form>
+            </details>
+          </div>
         </div>
-        <div class="mt-4">${renderLifecycleActions(merchant)}</div>
-      `)}
-      ${card(`
-        <h2 class="text-sm font-semibold">CRM / 合同（Salesforce 演示）</h2>
-        <dl class="mt-2">
+        <dl class="brand-detail-fields brand-crm-fields">
           ${row("CRM 合同 ID", escapeHtml(merchant.crmContractId ?? "—"))}
           ${row("CRM 账户 ID", escapeHtml(merchant.crmAccountId ?? "—"))}
           ${row("合同状态", escapeHtml(getContractStatusLabel(merchant.contractStatus)))}
           ${row("上次同步", formatDate(merchant.crmLastSyncedAt))}
           ${row("到期自动暂停", merchant.licenseAutoSuspend === false ? "否" : "是")}
         </dl>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <button type="button" data-merchant-crm-sync="${escapeHtml(merchant.merchantId)}" class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs hover:bg-muted">从 CRM 同步</button>
-        </div>
-        <form class="mt-4 flex flex-wrap items-end gap-2" data-merchant-contract-renew-form data-merchant-id="${escapeHtml(merchant.merchantId)}">
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted-foreground">续期至</span>
-            <input name="contractExpiresAt" type="date" required class="h-8 rounded-md border border-input bg-background px-2 text-xs" />
-          </label>
-          <button type="submit" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">合同续期</button>
-        </form>
-      `)}
+      </section>
     </div>`;
 }
 
@@ -949,15 +991,25 @@ function renderMerchantDetailPage(merchantId: string, tab: MerchantDetailTab): s
   }
   let body = "";
   if (tab === "org" || tab === "capabilities" || tab === "accounts" || tab === "changelog") body = renderBrandWorkspace(merchantId, tab);
-  else if (tab === "services") body = renderBrandServiceEntitlements(merchantId);
+  else if (tab === "services") body = renderBrandServiceEntitlements(merchantId,{cards:true});
   else if (tab === "usage") body = `<section data-merchant-usage>${mCanVisit(activityContextPath({kind: "brand", id: merchantId})) ? renderActivityPage(activityContextPath({kind: "brand", id: merchantId}), true) : "<p>暂无系统使用分析权限，请联系服务商管理员。</p>"}</section>`;
   else body = renderMerchantDetailOverview(merchant);
 
+  const status = serviceStatus(merchant.status);
+  const actions = renderBrandServiceActions(merchant);
   return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" data-enterprise-merchant-page="detail">
-      ${renderStandalonePageHeader({level:2,className:"shrink-0",titleHtml:`${escapeHtml(merchant.name)}`,backHtml:`<a href="${merchantHref("")}" class="shrink-0 text-sm text-primary hover:underline">← 返回品牌管理</a>`,subtitleHtml:`<p class="text-xs text-muted-foreground">${escapeHtml(merchant.code)}${merchant.bid && merchant.bid!==merchant.code ? ` · ${escapeHtml(merchant.bid)}` : ""} · ${escapeHtml(getMerchantOrgTypeLabel(merchant.orgType))}</p>`})}
-      ${renderDetailTabs(merchantId, tab)}
-      <div class="min-h-0 flex-1 overflow-y-auto pt-2">${body}</div>
+    <div class="brand-detail ba" data-enterprise-merchant-page="detail" data-brand-detail-tab="${tab}">
+      <div class="brand-detail-banner">
+        ${renderStandalonePageHeader({
+          level: 2,
+          titleHtml: `${escapeHtml(merchant.name)} <span class="brand-detail-status" data-status="${status}">${escapeHtml(getMerchantStatusLabel(merchant.status))}</span>`,
+          backHtml: `<a href="${merchantHref("")}">返回品牌管理</a>`,
+          subtitleHtml: `<p>${escapeHtml(merchant.bid ?? merchant.code)}</p>`,
+          actionsHtml: actions ? `<div class="ba-actions">${actions}</div>` : "",
+        })}
+        ${renderDetailTabs(merchantId, tab)}
+      </div>
+      <div class="brand-detail-body">${body}</div>
     </div>`;
 }
 
@@ -1049,7 +1101,36 @@ function openBrandStoreDetails(merchantId: string, storeId: string): void {
   d.className = 'ba ba-modal';
   d.dataset.brandStoreDetailDialog = storeId;
   d.setAttribute('aria-labelledby', 'brand-store-detail-title');
-  d.innerHTML = `<div class="ba-dialog-inner"><header class="ba-dialog-header"><div><h2 id="brand-store-detail-title">${escapeHtml(store.name)} · 门店详情</h2><p class="ba-muted">${escapeHtml(store.storeId)} · 只读概览</p></div><button type="button" class="ba-btn" data-store-detail-close aria-label="关闭门店详情">×</button></header><section class="ba-dialog-body">${renderStoreDetailOverview(storeId, true)}</section><footer class="ba-footer"><span class="ba-muted">门店信息与当前已保存菜单摘要</span><button type="button" class="ba-btn" data-store-detail-close>关闭</button></footer></div>`;
+  const brand = getMerchantById(merchantId);
+  const business = getStoreOperatingStatus(store);
+  const field = (label: string, value?: string) =>
+    `<div><dt>${label}</dt><dd>${escapeHtml(value || '—')}</dd></div>`;
+  const source = store.status !== 'open' ? '人工维护（不自动覆盖）' :
+    business.source === 'demo' ? '演示数据' : business.source === 'integrated' ? '营业事实同步' : '尚未接入';
+  d.classList.add('brand-design-modal', 'brand-store-detail-modal');
+  d.innerHTML = `<div class="ba-dialog-inner">
+    <header class="ba-dialog-header"><button type="button" class="ba-btn" data-store-detail-close aria-label="关闭门店详情">×</button><h2 id="brand-store-detail-title">门店详情</h2></header>
+    <div class="ba-dialog-body">
+      <section class="brand-modal-card">
+        <h3>门店信息</h3>
+        <div class="brand-modal-store-identity"><div><strong>${escapeHtml(store.name)}</strong><small>${escapeHtml(store.storeId)}</small></div>${renderOperatingBadge(store)}</div>
+        <dl class="brand-modal-fields">
+          ${field('编码',store.code)}
+          ${field('地址',store.address)}
+          ${field('营业数据',source)}
+          ${field('数据更新',business.updatedAt?formatDate(business.updatedAt):undefined)}
+          ${field('统计周期',business.start&&business.end?`${business.start} 至 ${business.end}`:undefined)}
+          ${field('所属品牌',brand?.name)}
+          ${field('品牌 BID',brand?.bid)}
+        </dl>
+      </section>
+      <section class="brand-modal-card"><h3>门店生效菜单</h3><div data-brand-store-tree></div></section>
+    </div>
+  </div>`;
+  bindOpenedBrandMenuTree(d.querySelector('[data-brand-store-tree]')!,
+    brandMenuChoices(getMerchantCapability(merchantId)?.productLineIds),
+    new Set(getStoreCapability(storeId)?.enabledKeys ?? []),
+    {emptyText:'该门店暂无生效菜单。'});
   let finished = false;
   const close = () => {
     if (finished) return;

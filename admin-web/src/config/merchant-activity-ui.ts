@@ -5,7 +5,7 @@ import { getMerchantById, getStoreById } from './enterprise-merchant-store';
 import { merchantDetailHref, storeDetailHref } from './enterprise-merchant-scope';
 import { mCanVisit } from '../permissions/m-platform-runtime';
 import {
-  PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope,
+  PRODUCT_LINES, STATUS_LABELS, currentBindings, dateNumber, devicesForScope, periodOrders,
   shiftDate, summarizeActivity, validatePeriod,
   type ActivityMetrics, type ActivityPeriod, type ActivityScope, type ActivityStatus,
 } from "./merchant-activity-domain";
@@ -110,6 +110,35 @@ function filterControls(): string {
     '</select></label><label class="ma-search">门店／品牌<input name="query" aria-label="搜索门店或品牌" placeholder="门店名称 / MID / 品牌名称" maxlength="80" value="' + esc(state.query) +
     '"></label><button type="submit">筛选</button><button type="button" data-ma-reset>重置筛选</button></form>';
 }
+function brandUsageCharts(storeIds: Set<string>): string {
+  const orders = periodOrders(resolved, state.period).filter(order => storeIds.has(order.storeId));
+  const days = new Map<string, number>();
+  const channels = new Map<string, number>();
+  for (const order of orders) {
+    const day = order.submittedAt.slice(0, 10);
+    const channel = order.binding?.line ?? "待识别";
+    days.set(day, (days.get(day) ?? 0) + 1);
+    channels.set(channel, (channels.get(channel) ?? 0) + 1);
+  }
+  const range = Array.from({length: dateNumber(state.period.end)-dateNumber(state.period.start)+1}, (_, index) => shiftDate(state.period.start,index));
+  const maxDay = Math.max(1,...days.values());
+  const maxChannel = Math.max(1,...channels.values());
+  const bars = range.map(day => {
+    const count = days.get(day) ?? 0;
+    return `<span title="${day} · ${count} 单" style="--bar:${count/maxDay*100}%"></span>`;
+  }).join("");
+  const lines = [...PRODUCT_LINES,"待识别"].map(line => {
+    const count = channels.get(line) ?? 0;
+    return `<div><span>${line}</span><i aria-hidden="true" style="--bar:${count/maxChannel*100}%"></i><strong>${count}</strong></div>`;
+  }).join("");
+  return `<div class="brand-usage-charts">
+    <section class="ma-panel"><header><h3>点单趋势</h3><small>${state.period.start} 至 ${state.period.end}</small></header>
+      <div class="brand-usage-bars" role="img" aria-label="期间每日点单趋势，共 ${orders.length} 单">${bars}</div>
+      <div class="brand-usage-axis"><span>${state.period.start}</span><span>${state.period.end}</span></div>
+    </section>
+    <section class="ma-panel"><h3>产线点单分布</h3><div class="brand-usage-lines">${lines}</div></section>
+  </div>`;
+}
 function rootPage(): string {
   const candidates = scopedActivityStores(data, activeContext);
   if (activeContext && !candidates.length) return '<section class="ma-panel ma-empty" data-usage-empty><h3>暂无使用数据</h3><p>当前品牌或门店暂无使用数据。数据接入后，可在此查看活跃情况。</p></section>';
@@ -126,12 +155,26 @@ function rootPage(): string {
     href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + esc(store.merchantName) + ' · ' + esc(store.id) + '</small></td><td>' +
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + metricCells(m) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
     '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td></tr>').join("");
-  return filterControls() + summaryCards([
+  const brandSummary = activeEmbedded && activeContext?.kind === "brand";
+  const brandMetrics = brandSummary ? (() => {
+    const ids = new Set(complete.map(item => item.store.id));
+    const allIds = new Set(rows.map(item => item.store.id));
+    const bound = new Set([...allIds].flatMap(storeId=>currentBindings(data,{storeId}).map(binding=>binding.deviceId)));
+    const used = new Set(periodOrders(resolved,state.period).filter(order=>ids.has(order.storeId)&&order.binding).map(order=>order.binding!.deviceId));
+    const unknown = complete.reduce((sum,item)=>sum+(item.m.unknown??0),0);
+    return summaryCards([
+      { label: "当前筛选门店", value: String(rows.length), note: "" },
+      { label: "期间点单数", value: n(count), note: errors ? errors + " 家数据异常未计入" : "" },
+      { label: "绑定 / 有订单设备", value: bound.size + " / " + used.size, note: "" },
+      { label: "来源待识别", value: n(unknown), note: "" },
+    ]) + brandUsageCharts(ids);
+  })() : summaryCards([
     { label: "门店", value: String(rows.length), note: "当前筛选范围" },
     { label: "活跃门店", value: String(active), note: "最近点单距今 0～6 天" },
     { label: "需关注门店", value: String(follow), note: "最近点单距今 ≥7 天" },
     { label: "期间点单数", value: n(count), note: errors ? "已知合计 · " + errors + " 家数据异常未计入" : "按业务订单去重" },
-  ]) + '<section class="ma-panel"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div><span>' + rows.length +
+  ]);
+  return filterControls() + brandMetrics + '<section class="ma-panel"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div><span>' + rows.length +
     ' 家门店</span></div><div class="ma-table-wrap"><table><thead><tr><th>门店／品牌</th><th>当前活跃状态</th>' + metricHeaders +
     '<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead><tbody>' +
     (table || '<tr><td colspan="12" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>') +

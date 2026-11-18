@@ -28,9 +28,15 @@ const button=(text:string,action:string,primary=false)=>`<button type="button" c
 const date=(value:string)=>new Date(value).toLocaleString('zh-CN');
 
 /** A native dialog supplies focus containment, Escape handling and focus restoration. */
-function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormElement,review:HTMLElement)=>boolean|void,options:{action?:string;destructive?:boolean;blocked?:boolean;compact?:boolean}={}):HTMLDialogElement {
+function dialog(title:string,subtitle:string,body:string,onSave:(form:HTMLFormElement,review:HTMLElement)=>boolean|void,options:{action?:string;destructive?:boolean;blocked?:boolean;compact?:boolean;topActions?:boolean}={}):HTMLDialogElement {
   const d=document.createElement('dialog');d.className=`ba ba-modal ${options.compact?'ba-admin-dialog':''}`;d.setAttribute('aria-label',title);
-  d.innerHTML=`<form><header class="ba-dialog-header"><div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p></section><footer class="ba-footer">${options.action?'':'<span class="ba-muted">保存前可核对变更；取消不会写入</span>'}<div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button><button type="submit" class="ba-btn ${options.destructive?'ba-danger':'ba-primary'}" ${options.blocked?'disabled':''}>${esc(options.action??'预览变更')}</button></div></footer></form>`;
+  const closeButton='<button type="button" class="ba-btn" data-close aria-label="关闭">×</button>';
+  const submitButton=`<button type="submit" class="ba-btn ${options.destructive?'ba-danger':'ba-primary'}" ${options.blocked?'disabled':''}>${esc(options.action??'预览变更')}</button>`;
+  const heading=`<div><h2>${esc(title)}</h2>${subtitle?`<p class="ba-muted">${esc(subtitle)}</p>`:''}</div>`;
+  if(options.topActions)d.classList.add('brand-design-modal','brand-form-modal');
+  d.innerHTML=`<form><header class="ba-dialog-header">${options.topActions?closeButton+heading+submitButton:heading+closeButton}</header>
+    <section class="ba-dialog-body">${body}<div class="ba-review" data-review hidden></div><p role="alert" class="ba-error" data-error hidden></p></section>
+    ${options.topActions?'':`<footer class="ba-footer">${options.action?'':'<span class="ba-muted">保存前可核对变更；取消不会写入</span>'}<div class="ba-actions"><button type="button" class="ba-btn" data-close>取消</button>${submitButton}</div></footer>`}</form>`;
   document.body.append(d);d.showModal();
   const form=d.querySelector('form')!,review=d.querySelector<HTMLElement>('[data-review]')!,error=d.querySelector<HTMLElement>('[data-error]')!;
   let dirty=false,busy=false;
@@ -66,7 +72,25 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   const expected=brandServiceVersion(id),issues=action==='activate'||action==='resume'?brandServiceReadiness(id):[];
   const title={activate:'启用品牌',suspend:'暂停服务',resume:'恢复服务',close:'关闭品牌'}[action];
   const hint=action==='close'?'关闭后无法从本页恢复，商家账号与已有会话停止访问。数据和配置保留。':action==='suspend'?'暂停后，品牌及全部门店的商家后台访问将停止；可按原配置恢复。':'启用后按已有菜单与账号权限提供服务，不额外授予权限。';
-  dialog(title,'',`<div class="ba-admin-target"><strong>${esc(merchant.name)}</strong><span>${esc(merchant.bid??id)}</span></div><p class="ba-admin-hint">${hint}</p><p class="ba-muted">影响范围：${esc(brandServiceImpact(id))}</p>${issues.length?`<ul class="ba-admin-warning" role="alert">${issues.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:''}<label class="ba-field">操作原因 *<textarea name="reason" required minlength="2" maxlength="200" rows="3" placeholder="请填写2至200字的原因"></textarea></label>`,form=>{transitionBrandService(id,action,String(new FormData(form).get('reason')??''),expected);showAppToast(title+'成功',{variant:'success'});onSaved();return true;},{compact:true,action:'确认'+title,destructive:action==='suspend'||action==='close',blocked:issues.length>0});
+  const destructive=action==='suspend'||action==='close';
+  const count=getMerchantStores(id).length;
+  const warning=action==='suspend'
+    ? `暂停品牌及其 ${count} 家门店的后台访问。数据与配置保留，可按原配置恢复。`
+    : `关闭品牌及其 ${count} 家门店的后台访问，含现有会话。数据与配置保留，关闭后无法在此恢复。`;
+  const reasonLabel=action==='suspend'?'暂停原因':action==='close'?'关闭原因':'操作原因';
+  const body=`${destructive?`<p class="brand-modal-warning">${warning}</p>`:`<div class="ba-admin-target"><strong>${esc(merchant.name)}</strong><span>${esc(merchant.bid??id)}</span></div><p class="ba-admin-hint">${hint}</p><p class="ba-muted">影响范围：${esc(brandServiceImpact(id))}</p>`}
+    ${issues.length?`<ul class="ba-admin-warning" role="alert">${issues.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:''}
+    <label class="ba-field">${reasonLabel} *<textarea name="reason" required minlength="2" maxlength="200" rows="3" placeholder="填写原因（2–200 字）"></textarea></label>`;
+  const modal=dialog(destructive?title+'？':title,destructive?merchant.name:'',body,form=>{
+    transitionBrandService(id,action,String(new FormData(form).get('reason')??''),expected);
+    showAppToast(title+'成功',{variant:'success'});onSaved();return true;
+  },{compact:true,action:action==='suspend'?'确认暂停':action==='close'?'确认关闭':'确认'+title,destructive,blocked:issues.length>0,topActions:destructive});
+  if(destructive){
+    const reason=modal.querySelector<HTMLTextAreaElement>('textarea')!;
+    const confirm=modal.querySelector<HTMLButtonElement>('[type=submit]')!;
+    const sync=()=>confirm.disabled=reason.value.trim().length<2;
+    reason.addEventListener('input',sync);sync();
+  }
 }
 
 export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
@@ -151,7 +175,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   const initial=stores.length===1?(getStoreCapability(stores[0].storeId)?.enabledKeys??[]).filter(k=>ceiling.has(k)):[];
   const defaultMode=stores.length===1?(getStoreCapability(stores[0].storeId)?.menuMode==='inherit'?'inherit':'replace'):'add';
   let read=()=>initial,preview:HTMLDialogElement|null=null;
-  const d=dialog(stores.length===1?`${stores[0].name} · 菜单配置`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
+  const d=dialog(stores.length===1?`配置菜单`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>esc(s.name)).join('、')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
     if(preview?.open)return;
     if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
     const mode=new FormData(form).get('mode') as 'inherit'|'add'|'replace',selected=mode==='inherit'?[]:[...read()];
@@ -181,7 +205,8 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
       catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
-  },{action:'预览配置'});
+  },{action:'确定',topActions:true});
+  d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>{preview?.close();},{once:true});
   read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
@@ -210,7 +235,8 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
       catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
-  },{action:'预览配置'});
+  },{action:'确定',topActions:true});
+  d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id});
 }
 
@@ -245,12 +271,13 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
   const nextEnabled=!account.enabled;
   const title=mode==='password'?'重设管理员密码':mode==='status'?(account.enabled?'停用品牌 Admin':'启用品牌 Admin'):existing?'管理品牌 Admin':'开通品牌 Admin';
   const blocked=mode==='status'&&account.enabled&&!draft.accounts.some(a=>a.id!==account.id&&a.admin&&a.enabled);
-  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':existing?'保存修改':'开通并启用';
+  const action=mode==='status'?(account.enabled?'确认停用':'确认启用'):mode==='password'?'确认重设密码':existing?'保存修改':'确定';
   const target=`<div class="ba-admin-target"><strong>${esc(account.name)}</strong><span>${esc(account.email)}</span></div>`;
   const hint=mode==='status'?(account.enabled?'停用后，该账号将无法登录商家后台，已有会话将不再获得品牌权限。账号资料保留，可重新启用。':'启用后，该账号可使用原登录账号和密码登录，恢复品牌 Admin 管理范围。'):mode==='password'?'重设后旧密码立即失效，请使用新密码登录。':'可修改管理员姓名，登录账号与管理员身份保持不变。';
-  const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">这是当前最后一名已启用的品牌 Admin，请先开通另一名管理员后再停用。</p>':''}`:mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password" placeholder="请输入至少 6 位的新密码"></label>`:`${existing?`<p class="ba-admin-hint">${hint}</p>`:''}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}" placeholder="请输入管理员姓名"></label><label class="ba-field">登录账号 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label>':''}</div>`;
+  const body=mode==='status'?`${target}<p class="ba-admin-hint">${hint}</p>${blocked?'<p class="ba-admin-warning" role="status">这是当前最后一名已启用的品牌 Admin，请先开通另一名管理员后再停用。</p>':''}`:mode==='password'?`${target}<p class="ba-admin-hint">${hint}</p><label class="ba-field">新密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password" placeholder="请输入至少 6 位的新密码"></label>`:`${existing?`<p class="ba-admin-hint">${hint}</p>`:''}<div class="ba-grid"><label class="ba-field">姓名 *<input required name="name" maxlength="30" value="${esc(account.name)}" placeholder="请输入管理员姓名"></label><label class="ba-field">登录账号 *<input required type="email" name="email" placeholder="name@menusifu.cn" value="${esc(account.email)}" ${existing?'readonly':''}></label>${!existing?'<label class="ba-field">登录密码 *<input required type="password" name="password" minlength="6" autocomplete="new-password"></label><label class="ba-field">二次输入登录密码 *<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password"></label>':''}</div>`;
   dialog(title,'',body,(form,review)=>{
     const fd=new FormData(form);
+    if(!existing&&fd.get('password')!==fd.get('confirmPassword'))throw Error('两次输入的登录密码不一致。');
     if(mode==='status')account.enabled=nextEnabled;
     else if(mode==='password')account.password=String(fd.get('password')??'');
     else{account.name=String(fd.get('name')??'').trim();account.email=String(fd.get('email')??'').trim().toLowerCase();if(!existing)account.password=String(fd.get('password')??'');}
@@ -263,7 +290,7 @@ function openBrandAdmin(id:string,accountId:string|undefined,onSaved:()=>void,mo
     if(employee)Object.assign(employee,{name:account.name,email:account.email,status:account.enabled?'enabled':'disabled'});
     else draft.employees.push({id:account.id,name:account.name,email:account.email,status:account.enabled?'enabled':'disabled',bindings:[],overrides:{}});
     saveBrandAccess(draft,state.version,actor,title,{source:'M 平台运营',accountId:account.id,operation:!existing?'create':mode==='password'?'password':mode==='status'?(nextEnabled?'enable':'disable'):'profile'});showAppToast(`${title}成功`,{variant:'success'});onSaved();return true;
-  },{action,destructive:mode==='status'&&account.enabled,blocked,compact:true});
+  },{action,destructive:mode==='status'&&account.enabled,blocked,compact:true,topActions:!existing});
 }
 
 function openAccount(id:string,accountId:string|undefined,source:Source,onSaved:()=>void):void {
@@ -307,12 +334,48 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
       const pageCount=choices.filter(c=>c.isPage===true&&keys.has(c.key)).length;
       const stats=`<div class="ba-stats"><div class="ba-stat"><span class="ba-muted">品牌开通页面</span><strong>${pageCount}<small> 个</small></strong></div><div class="ba-stat"><span class="ba-muted">品牌门店</span><strong>${stores.length}<small> 家</small></strong></div><div class="ba-stat"><span class="ba-muted">已配置门店菜单</span><strong>${stores.filter(s=>{const c=getStoreCapability(s.storeId);return !!c?.menuMode||!!c?.enabledKeys.length;}).length}<small> 家</small></strong></div></div>`;
       if(tab==='capabilities'){
-        root.innerHTML=`<header class="ba-head"><div><h2>品牌菜单</h2></div>${source==='m-platform'?button('编辑品牌菜单','edit-menu',true):'<span class="ba-tag">品牌菜单由 M 平台开通</span>'}</header>${stats}<div data-menu-read></div>`;
-        bindOpenedBrandMenuTree(root.querySelector<HTMLElement>('[data-menu-read]')!,choices,keys);
+        const detail = !!root.closest('[data-brand-detail-tab]');
+        root.innerHTML=`<header class="ba-head"${detail&&pageCount?' hidden':''}><h2>品牌菜单</h2>${source==='m-platform'?button('编辑品牌菜单','edit-menu',true):'<span class="ba-tag">品牌菜单由 M 平台开通</span>'}</header>${detail?'':stats}<div data-menu-read></div>`;
+        const menu = root.querySelector<HTMLElement>('[data-menu-read]')!;
+        bindOpenedBrandMenuTree(menu, choices, keys);
+        if (detail) {
+          const toolbar = menu.querySelector('.ba-toolbar');
+          const edit = root.querySelector('[data-ba=edit-menu]');
+          if (toolbar && edit) toolbar.append(edit);
+          else root.querySelector<HTMLElement>('.ba-head')!.hidden = false;
+        }
       }else if(tab==='accounts'){
         if(source==='m-platform'){
           const administrators=state.accounts.filter(a=>a.admin),legacy=!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail&&!state.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail?.toLowerCase());
-          root.innerHTML=`<header class="ba-head"><h2>品牌管理员</h2>${button('开通品牌 Admin','new-admin',true)}</header><section class="ba-card"><h3 style="margin-bottom:16px">品牌 Admin <span class="ba-tag">${administrators.length+(legacy?1:0)}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>姓名</th><th>登录账号</th><th>状态</th><th>开通时间</th><th>最近登录时间</th><th>操作</th></tr></thead><tbody>${administrators.map(a=>`<tr data-brand-admin="${esc(a.id)}"><td>${esc(a.name)}</td><td>${esc(a.email)}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${a.createdAt?esc(date(a.createdAt)):'—'}</td><td>${a.lastLoginAt?esc(date(a.lastLoginAt)):'—'}</td><td><div class="ba-actions">${button('管理',`admin:${a.id}`)}${button('重设密码',`admin-password:${a.id}`)}${button(a.enabled?'停用':'启用',`admin-status:${a.id}`)}</div></td></tr>`).join('')}${legacy?`<tr data-legacy-admin><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>${merchant.status==='active'?'已启用':'品牌服务未启用'}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>`:''}${!administrators.length&&!legacy?'<tr><td colspan="6" class="ba-empty">尚未开通品牌 Admin</td></tr>':''}</tbody></table></div></section>`;
+          const detail = !!root.closest('[data-brand-detail-tab]');
+          const toolbar = detail
+            ? `<div class="ba-toolbar ba-store-toolbar"><input type="search" data-admin-query aria-label="搜索管理员姓名或账号" placeholder="搜索管理员姓名或账号"><div class="ba-actions">${button('开通品牌 Admin','new-admin',true)}</div></div>`
+            : `<header class="ba-head"><h2>品牌管理员</h2>${button('开通品牌 Admin','new-admin',true)}</header>`;
+          const adminRows = administrators.map(account => {
+            const actions = button('编辑品牌 Admin',`admin:${account.id}`)
+              + button('重设密码',`admin-password:${account.id}`)
+              + button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
+            return `<tr data-brand-admin="${esc(account.id)}" data-admin-search="${esc(account.name+' '+account.email)}">
+              <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span></td>
+              <td>${esc(account.email)}</td>
+              <td><span class="ba-create-store-status" data-status="${account.enabled?'open':'terminated'}">${account.enabled?'已启用':'已停用'}</span></td>
+              <td>${account.createdAt?esc(date(account.createdAt)):'—'}</td>
+              <td>${account.lastLoginAt?esc(date(account.lastLoginAt)):'—'}</td>
+              <td>${detail?`<details class="brand-store-more"><summary aria-label="更多管理员操作">⋯</summary><div class="ba-actions">${actions}</div></details>`:`<div class="ba-actions">${actions}</div>`}</td>
+            </tr>`;
+          }).join('');
+          const legacyRow = legacy ? `<tr data-legacy-admin data-admin-search="既有品牌管理员 ${esc(merchant.primaryAdminEmail)}"><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>${merchant.status==='active'?'已启用':'品牌服务未启用'}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>` : '';
+          root.innerHTML = `${toolbar}<div class="ba-table-wrap ba-admin-table"><table><thead><tr><th>管理员</th><th>登录账号</th><th>账号状态</th><th>开通时间</th><th>最近真实登录</th><th>操作</th></tr></thead><tbody>
+            ${adminRows}${legacyRow}<tr data-admin-empty${adminRows||legacyRow?' hidden':''}><td colspan="6" class="ba-empty">尚未开通品牌 Admin</td></tr>
+          </tbody></table></div>`;
+          root.querySelector<HTMLInputElement>('[data-admin-query]')?.addEventListener('input',event=>{
+            const query=(event.currentTarget as HTMLInputElement).value.trim().toLowerCase();
+            const rows=[...root.querySelectorAll<HTMLElement>('[data-admin-search]')];
+            rows.forEach(row=>row.hidden=!row.dataset.adminSearch!.toLowerCase().includes(query));
+            const empty=root.querySelector<HTMLElement>('[data-admin-empty]')!;
+            empty.hidden=rows.some(row=>!row.hidden);
+            empty.querySelector('td')!.textContent=query?'没有符合条件的管理员':'尚未开通品牌 Admin';
+          });
         }else{
 
         root.innerHTML=`<header class="ba-head"><div><h2>账号与角色</h2></div>${admin?`<div class="ba-actions">${button('新建角色','new-role')}${button('开通账号','new-account',true)}</div>`:''}</header><section class="ba-card"><h3 style="margin-bottom:16px">登录账号 <span class="ba-tag">${state.accounts.length}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>账号</th><th>身份</th><th>角色与生效门店</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.accounts.map(a=>{const e=state.employees.find(e=>e.id===a.id);return `<tr><td>${esc(a.name)}<br><small>${esc(a.email)}</small></td><td><span class="ba-tag ${a.admin?'active':''}">${a.admin?'品牌 Admin':'普通账号'}</span></td><td>${a.admin?'全部品牌门店（含新增门店）':e?.bindings.map(b=>`${esc(state.roles.find(r=>r.id===b.roleId)?.name??'角色缺失')} · ${b.scope.ids.length} 家门店`).join('<br>')||'未分配'}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${admin?button('管理账号',`account:${a.id}`):'—'}</td></tr>`;}).join('')||`<tr><td colspan="5" class="ba-empty">尚未单独开通账号${merchant.accountProvisioningRequired?'，请先开通品牌 Admin':'；已有品牌管理员继续使用原登录方式'}</td></tr>`}</tbody></table></div></section><section class="ba-card"><h3>品牌角色 <span class="ba-tag">${state.roles.length}</span></h3>${state.roles.map(r=>`<div class="ba-role-line"><div><strong>${esc(r.name)}</strong><p class="ba-muted">${esc(r.description)||'未填写描述'} · ${state.employees.filter(e=>e.bindings.some(b=>b.roleId===r.id)).length} 个账号使用</p></div>${admin?button('编辑权限',`role:${r.id}`):''}</div>`).join('')||'<p class="ba-empty">尚未创建角色。建议按店长、财务等岗位建立，再分配给账号。</p>'}</section>`;
@@ -320,9 +383,30 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
       }else if(tab==='changelog'){
         bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action,facts:l.facts??historicalAdminFacts(l)})),...getMerchantChangelog(id)],choices,stores);
       }else{
-        root.innerHTML=`<header class="ba-head"><div><h2>品牌门店</h2></div><div class="ba-actions">${source==='m-platform'?button('关联已有门店','associate'):''}${admin?button('批量配置菜单','batch',true):''}</div></header>${stats}<div class="ba-toolbar"><input data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店"><span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span></div><div class="ba-table-wrap"><table><thead><tr><th><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th>门店名称 / MID</th><th>经营状态（近30天）</th><th>菜单配置</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${stores.map(s=>{const sc=getStoreCapability(s.storeId),canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,s.storeId);return `<tr data-store-row="${esc(s.name+' '+s.storeId)}"><td><input type="checkbox" data-store-id="${esc(s.storeId)}" aria-label="选择${esc(s.name)}"></td><td><strong>${esc(s.name)}</strong><br><small>${esc(s.storeId)} · ${esc(s.address??'暂无地址')}</small></td><td><span class="ba-tag">${esc(getStoreOperatingStatus(s).label)}</span></td><td><span class="ba-tag ${sc?.enabledKeys.length?'active':''}">${sc?.menuMode==='inherit'?'继承品牌 · ':sc?.menuMode==='independent'?'独立配置 · ':''}${sc?.menuMode==='inherit'||sc?.menuMode==='independent'||sc?.enabledKeys.length?`${choices.filter(c=>c.isPage===true&&sc?.enabledKeys.includes(c.key)).length} 个页面`:'未开通'}</span></td><td><small>${sc?.updatedAt?esc(date(sc.updatedAt)):'—'}${sc?.updatedBy?`<br>${esc(sc.updatedBy)}`:''}</small></td><td>${admin||canViewDetails?`<div class="ba-actions">${canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(s.storeId)}">查看门店详情</button>`:''}${admin?`${button('查看生效菜单',`effective:${s.storeId}`)}${button('配置菜单',`store:${s.storeId}`)}`:''}</div>`:'—'}</td></tr>`;}).join('')||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}</tbody></table></div>`;
-        root.querySelector<HTMLInputElement>('[data-store-query]')!.oninput=e=>{const q=(e.target as HTMLInputElement).value.toLowerCase();root.querySelectorAll<HTMLElement>('[data-store-row]').forEach(row=>row.hidden=!row.dataset.storeRow!.toLowerCase().includes(q));};
-        root.querySelector<HTMLInputElement>('[data-select-all]')!.onchange=e=>root.querySelectorAll<HTMLInputElement>('[data-store-id]').forEach(c=>{if(!c.closest<HTMLElement>('tr')!.hidden)c.checked=(e.target as HTMLInputElement).checked;});
+        const detail = !!root.closest('[data-brand-detail-tab]');
+        const storeActions = `${admin?button('批量配置菜单','batch',true):''}${source==='m-platform'?button('关联已有门店','associate'):''}`;
+        root.innerHTML=` ${detail?'':`<header class="ba-head"><h2>品牌门店</h2><div class="ba-actions">${storeActions}</div></header>`}${stats}<div class="ba-toolbar ba-store-toolbar"><input data-store-query placeholder="搜索门店名称 / MID" aria-label="搜索品牌门店">${detail?`<div class="ba-actions">${storeActions}</div>`:`<span class="ba-muted">${source==='merchant'?'门店归属由 M 平台维护；菜单可由品牌 Admin 配置':'新关联门店默认继承品牌菜单，可切换独立配置'}</span>`}</div><div class="ba-table-wrap"><table><thead><tr><th><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th>门店名称 / MID</th><th>经营状态（近30天）</th><th>菜单配置</th><th>最近配置</th><th>操作</th></tr></thead><tbody>${stores.map(s=>{const sc=getStoreCapability(s.storeId),operating=getStoreOperatingStatus(s),canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,s.storeId);return `<tr data-store-row="${esc(s.name+' '+s.storeId)}"><td><input type="checkbox" data-store-id="${esc(s.storeId)}" aria-label="选择${esc(s.name)}"></td><td><strong>${esc(s.name)}</strong><br><small>${esc(s.storeId)}${detail?'':` · ${esc(s.address??'暂无地址')}`}</small></td><td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}">${esc(operating.label)}</span></td><td><span class="ba-tag ${sc?.enabledKeys.length?'active':''}">${sc?.menuMode==='inherit'?'继承品牌 · ':sc?.menuMode==='independent'?'独立配置 · ':''}${sc?.menuMode==='inherit'||sc?.menuMode==='independent'||sc?.enabledKeys.length?`${choices.filter(c=>c.isPage===true&&sc?.enabledKeys.includes(c.key)).length} 个页面`:'未开通'}</span></td><td><small>${sc?.updatedAt?esc(date(sc.updatedAt)):'—'}${!detail&&sc?.updatedBy?`<br>${esc(sc.updatedBy)}`:''}</small></td><td>${admin||canViewDetails?`${detail?'<details class="brand-store-more"><summary aria-label="更多门店操作">⋯</summary><div class="ba-actions">':'<div class="ba-actions">'}${canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(s.storeId)}">查看门店详情</button>`:''}${admin?`${button('查看生效菜单',`effective:${s.storeId}`)}${button('配置菜单',`store:${s.storeId}`)}`:''}</div>${detail?'</details>':''}`:'—'}</td></tr>`;}).join('')||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}<tr data-store-empty hidden><td colspan="6" class="ba-empty">没有符合条件的门店</td></tr></tbody></table></div>`;
+        const query=root.querySelector<HTMLInputElement>('[data-store-query]')!;
+        const all=root.querySelector<HTMLInputElement>('[data-select-all]')!;
+        const boxes=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]')];
+        const visible=()=>boxes.filter(box=>!box.closest('tr')!.hidden);
+        const sync=()=>{
+          const shown=visible(), checked=shown.filter(box=>box.checked).length;
+          all.disabled=!shown.length;
+          all.checked=shown.length>0&&checked===shown.length;
+          all.indeterminate=checked>0&&!all.checked;
+          const batch=root.querySelector<HTMLButtonElement>('[data-ba=batch]');
+          if(detail&&batch)batch.disabled=!boxes.some(box=>box.checked);
+        };
+        query.oninput=()=>{
+          const search=query.value.trim().toLowerCase();
+          boxes.forEach(box=>{const row=box.closest('tr')!;row.hidden=!row.dataset.storeRow!.toLowerCase().includes(search);});
+          root.querySelector<HTMLElement>('[data-store-empty]')!.hidden=!boxes.length||visible().length>0;
+          sync();
+        };
+        all.onchange=()=>{visible().forEach(box=>box.checked=all.checked);sync();};
+        boxes.forEach(box=>box.onchange=sync);
+        sync();
       }
       root.querySelectorAll<HTMLButtonElement>('[data-ba]').forEach(b=>b.onclick=()=>{try{
         const action=b.dataset.ba!;

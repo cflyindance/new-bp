@@ -170,7 +170,10 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
     return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-create-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
   }
   if (parseMerchantDetailPath(path) && mCanVisit(path)) {
-    return `<main class="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-4 md:p-6" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>`;
+    return `<div class="flex h-full min-h-0 w-full">
+      ${renderMPlatformSidebar(ENTERPRISE_MERCHANT_ROUTE_PREFIX)}
+      <main class="brand-detail-main" data-brand-detail-full-page data-m-platform-content>${renderEnterpriseMerchantPage(path)}</main>
+    </div>`;
   }
   if (/^\/m-platform\/permissions\/(roles\/edit|provider-roles\/edit|staff)\/.+/.test(path) && mCanVisit(path)) {
     return `<div class="relative h-full min-h-0 w-full overflow-hidden">${renderMCenter(path)}</div>`;
@@ -188,7 +191,7 @@ function renderMPlatformShell(_onMount: () => void, path: string): string {
 }
 
 export function mountMPlatformShell(onMount: () => void, path: string): string {
-  return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell ${path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX?'data-brand-management-layout':''}>
+  return `<div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden" data-m-platform-shell ${(path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX||parseMerchantDetailPath(path))?'data-brand-management-layout':''}>
     ${sessionStorage.getItem('menusifu:provider-access-notice')?'<div role="alert" class="mp-readonly-note" data-provider-session-notice>商户访问授权已失效，请联系管理员。<button type="button" data-provider-notice-close style="margin-left:20px">关闭</button></div>':''}
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">${renderMPlatformShell(onMount, path)}</div>
   </div>`;
