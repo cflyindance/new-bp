@@ -265,19 +265,26 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
   d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id});
 }
 
+function renderStoreIdentityAndStatus(store:Parameters<typeof getStoreOperatingStatus>[0],detail:boolean):string {
+  const operating=getStoreOperatingStatus(store);
+  const statusLabel=detail&&operating.status==='open'?'营业中':detail&&operating.status==='terminated'?'关店':operating.label;
+  return `
+    <td><div class="brand-store-identity">${detail?storeListIcon:''}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}${detail?'':` · ${esc(store.address??'暂无地址')}`}</small></div></div></td>
+    <td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}" title="${esc(operating.label)}">${esc(statusLabel)}</span></td>
+  `;
+}
+
 function renderStoreFields(store:Parameters<typeof getStoreOperatingStatus>[0],choices:MenuChoice[],detail:boolean):string {
-  const capability=getStoreCapability(store.storeId), operating=getStoreOperatingStatus(store);
+  const capability=getStoreCapability(store.storeId);
   const mode=capability?.menuMode;
   const menuKeys=new Set(capability?.enabledKeys);
   const configured=!!mode||menuKeys.size>0;
   const configuredCount=choices.filter(choice=>choice.isPage===true&&menuKeys.has(choice.key)).length;
   const menuLabel=configured?`${mode==='inherit'?'继承品牌 · ':mode==='independent'?'独立配置 · ':''}${configuredCount} 个页面`:'未开通';
-  const statusLabel=detail&&operating.status==='open'?'营业中':detail&&operating.status==='terminated'?'关店':operating.label;
   const updatedAt=capability?.updatedAt;
   const timestamp=updatedAt&&Number.isFinite(Date.parse(updatedAt))?(detail?storeConfigDate.format(new Date(updatedAt)):date(updatedAt)):'—';
   return `
-    <td><div class="brand-store-identity">${detail?storeListIcon:''}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}${detail?'':` · ${esc(store.address??'暂无地址')}`}</small></div></div></td>
-    <td><span class="ba-tag ba-create-store-status" data-status="${esc(operating.status)}" title="${esc(operating.label)}">${esc(statusLabel)}</span></td>
+    ${renderStoreIdentityAndStatus(store,detail)}
     <td><span class="ba-tag ${detail?'brand-store-menu-label':menuKeys.size?'active':''}">${menuLabel}</span></td>
     <td class="brand-store-date">${esc(timestamp)}${!detail&&capability?.updatedBy?`<br><small>${esc(capability.updatedBy)}</small>`:''}</td>
   `;
@@ -289,19 +296,21 @@ function openAssociation(id:string,onSaved:()=>void):void {
   const candidates=listBrandAssociationCandidates(undefined,merchant.enterpriseId).filter(store=>store.merchantId!==id);
   const rows=candidates.map(store=>`<tr data-candidate="${esc(store.name+' '+store.storeId)}">
     <td><input type="checkbox" name="storeIds" value="${esc(store.storeId)}" aria-label="选择${esc(store.name)}"></td>
-    ${renderStoreFields(store,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),true)}
+    ${renderStoreIdentityAndStatus(store,true)}
+    <td class="brand-store-address">${esc(store.address?.trim()||'—')}</td>
+    <td>${esc(store.postalCode?.trim()||'—')}</td>
   </tr>`).join('');
-  const d=dialog('关联已有门店','选择当前租户内可关联的独立门店。已有其他品牌归属的门店不能直接转移。',`
+  const d=dialog('添加新门店','',`
     <div class="brand-store-search">${storeSearchIcon}<input type="search" data-store-search placeholder="搜索门店名称 / MID" aria-label="搜索门店"></div>
     <div class="ba-table-wrap brand-store-table"><table><thead><tr>
       <th scope="col"><input type="checkbox" data-select-candidates aria-label="选择全部可见门店"></th>
-      <th scope="col">门店名称 / MID</th><th scope="col">营业状态</th><th scope="col">菜单配置</th><th scope="col">最近配置</th>
-    </tr></thead><tbody>${rows}<tr data-candidate-empty ${rows?'hidden':''}><td colspan="5" class="ba-empty">${rows?'没有符合条件的门店':'暂无可关联门店'}</td></tr></tbody></table></div>
+      <th scope="col">门店名称 / MID</th><th scope="col">营业状态</th><th scope="col">地址</th><th scope="col">邮编</th>
+    </tr></thead><tbody>${rows}<tr data-candidate-empty ${rows?'hidden':''}><td colspan="5" class="ba-empty">${rows?'没有符合条件的门店':'暂无可添加的门店'}</td></tr></tbody></table></div>
   `,(form,review)=>{
     const ids=new FormData(form).getAll('storeIds').map(String);
     if(!ids.length)throw Error('请至少选择一家门店。');
     if(review.hidden){
-      review.textContent=`将关联 ${ids.length} 家门店。保留原 MID，门店默认继承品牌的门店视角菜单，保存后可切换独立配置。`;
+      review.textContent=`将添加 ${ids.length} 家门店。保留原 MID，门店默认继承品牌的门店视角菜单，保存后可切换独立配置。`;
       review.hidden=false;
       return;
     }
@@ -549,7 +558,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         bindBrandChangeLog(root,[...state.logs.map((l,i)=>({id:`access-${i}`,merchantId:id,at:l.at,operatorEmail:l.actor,action:`access:${l.action}`,detail:l.action,facts:l.facts??historicalAdminFacts(l)})),...getMerchantChangelog(id),...(source==='m-platform'?brandChangeDemo(id,merchant.name,stores):[])],choices,stores);
       }else{
         const detail = !!root.closest('[data-brand-detail-tab]');
-        const storeActions = `${admin?button('批量配置菜单','batch',true):''}${source==='m-platform'?button('关联已有门店','associate'):''}`;
+        const storeActions = `${admin?button('批量配置菜单','batch',true):''}${source==='m-platform'?button('添加新门店','associate'):''}`;
         const rows = stores.map(store=>{
           const canViewDetails=source==='m-platform'&&!!storeDetails?.canView(id,store.storeId);
           const actions=(canViewDetails?`<button type="button" class="ba-btn" data-brand-store-details data-ba="details:${esc(store.storeId)}">门店详情</button>`:'')
@@ -567,7 +576,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             <th scope="col"><input type="checkbox" data-select-all aria-label="选择全部可见门店"></th><th scope="col">门店名称 / MID</th>
             <th scope="col">${detail?'营业状态':'经营状态（近30天）'}</th><th scope="col">菜单配置</th><th scope="col">最近配置</th><th scope="col" class="brand-store-action-cell">操作</th>
           </tr></thead><tbody>
-            ${rows||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先关联已有门店。</td></tr>'}
+            ${rows||'<tr><td colspan="6" class="ba-empty">暂无品牌门店，请先添加新门店。</td></tr>'}
             <tr data-store-empty hidden><td colspan="6" class="ba-empty">没有符合条件的门店</td></tr>
           </tbody></table></div>`;
         const query=root.querySelector<HTMLInputElement>('[data-store-query]')!;
@@ -706,7 +715,7 @@ export function bindBrandCreateWizard():void {
     form.querySelector('[data-create-stores]')!.innerHTML=`<div class="ba-table-wrap"><table><thead><tr>
       <th scope="col"><input type="checkbox" data-create-store-all aria-label="全选当前搜索结果"></th>
       <th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">经营状态（近30天）</th>
-      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="4" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可关联门店。'}</td></tr></tbody></table></div>`;
+      </tr></thead><tbody>${rows}<tr data-candidate-empty><td colspan="4" class="ba-empty">${candidates.length?'没有匹配门店，请调整搜索条件。':'暂无可添加的门店。'}</td></tr></tbody></table></div>`;
     const all=form.querySelector<HTMLInputElement>('[data-create-store-all]')!;
     all.onchange=()=>{visibleStoreBoxes().forEach(box=>box.checked=all.checked);updateStoreCount();};
     updateStoreCount();

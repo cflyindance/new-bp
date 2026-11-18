@@ -397,3 +397,7 @@
 .brand-associate-modal .brand-store-search { margin-bottom: 16px; }
 .brand-associate-modal .brand-store-table { border: 0; border-radius: 0; }
 .brand-associate-modal .brand-store-table table { min-width: 640px; }
+
+.brand-associate-modal .brand-store-table th:nth-child(4) { width: 34%; }
+.brand-associate-modal .brand-store-table th:nth-child(5) { width: 12%; }
+.brand-associate-modal .brand-store-address { overflow-wrap: anywhere; }
