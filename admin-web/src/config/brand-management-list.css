@@ -1,17 +1,5 @@
-[data-brand-management-layout]{--brand-blue:#1677ff;--brand-page:#f1f1f1;--brand-surface:#fff;--brand-text:#222;--brand-muted:#818181;--brand-line:#ededed;background:var(--brand-page);color:var(--brand-text);padding:8px 8px 8px 0}
-[data-brand-management-layout]>div>div{gap:0}
-[data-brand-management-layout] [data-mb-navigation="m"]{width:236px;min-width:236px;background:transparent;border-right:0;color:var(--brand-text)}
-[data-brand-management-layout] .mb-nav-identity{height:73px;margin:0 12px;padding:16px 8px;border-color:#d9d9d9}
-[data-brand-management-layout] .mb-nav-logo{width:32px;height:32px;border-radius:8px;background:#414141;color:white}
-[data-brand-management-layout] .mb-nav-identity h1{font-size:14px;color:var(--brand-text)}
-[data-brand-management-layout] .mb-nav-identity p{font-size:11px;color:var(--brand-muted)}
-[data-brand-management-layout] .mp-submenu-heading{border:0;padding:14px 10px;height:64px;color:var(--brand-text)}
-[data-brand-management-layout] .mp-submenu-heading button{width:30px;height:32px}
-[data-brand-management-layout] .mp-submenu-slide>div{padding:4px 12px}
-[data-brand-management-layout] .mp-submenu-slide a{min-height:48px;display:flex;align-items:center;padding:12px 24px;border-radius:13px;color:var(--brand-text);gap:6px}
-[data-brand-management-layout] .mp-submenu-slide a[aria-current="page"]{background:#e4e4e4;color:var(--brand-blue);font-weight:600}
-[data-brand-management-layout] .mp-submenu-slide a .mb-nav-icon{display:none}
-.brand-list-main{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;border-radius:18px;background:var(--brand-surface);overflow:hidden}
+[data-brand-management-layout]{--brand-blue:#1677ff;--brand-surface:#fff;--brand-text:#222;--brand-muted:#818181;--brand-line:#ededed;}
+.brand-list-main{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;margin:8px 8px 8px 0;border-radius:18px;background:var(--brand-surface);overflow:hidden}
 .brand-list-card{min-height:0;display:flex;flex:1;flex-direction:column;padding:24px 24px 0;color:var(--brand-text)}
 .brand-list-card h1{margin:0}.brand-list-filters{margin:0;flex-shrink:0}.brand-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:20px}
 .brand-list-search{height:48px;width:320px;max-width:100%;border:1px solid #d9d9d9;border-radius:28px;display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--brand-muted);background:var(--brand-surface)}
@@ -43,11 +31,10 @@
 .brand-date-actions{display:flex;align-items:center;justify-content:space-between;margin-top:16px}.brand-date-actions button{border:0;padding:8px 15px;border-radius:8px;font-size:13px;background:#f1f1f1;color:var(--brand-text)}.brand-date-actions button:last-child{background:var(--brand-blue);color:white}.brand-date-panel [role="alert"]{color:#d4380d;font-size:12px;margin:12px 0 0}
 .brand-list-empty{height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--brand-muted);font-size:15px}.brand-list-empty span{font-size:13px}
 .brand-list-card [hidden]{display:none!important}.brand-list-card :is(a,button,select,input):focus-visible{outline:2px solid var(--brand-blue);outline-offset:3px}
-[data-brand-management-layout] .mp-sidebar .mp-submenu-slide a{padding-left:40px;font-size:16px}
-.brand-sidebar-footer{display:flex;align-items:center;justify-content:space-between;margin:12px;padding:18px 8px 8px;border-top:1px solid #d9d9d9;color:var(--brand-muted);font-size:12px}.brand-sidebar-footer button{border:0;background:transparent;display:grid;place-items:center;width:36px;height:36px;border-radius:9px;color:inherit}.brand-sidebar-footer button:hover{background:#e4e4e4}
-.dark [data-brand-management-layout]{--brand-page:#171819;--brand-surface:#222426;--brand-text:#ededed;--brand-muted:#a0a3a6;--brand-line:#36383b}
-.dark [data-brand-management-layout] .mp-submenu-slide a[aria-current="page"],.dark .brand-filter-pill select,.dark .brand-date-trigger,.dark .brand-count,.dark .brand-progress-track{background:#303337}
+.dark [data-brand-management-layout]{--brand-surface:#222426;--brand-text:#ededed;--brand-muted:#a0a3a6;--brand-line:#36383b}
+.dark .brand-filter-pill select,.dark .brand-date-trigger,.dark .brand-count,.dark .brand-progress-track{background:#303337}
 .dark .brand-management-table tbody tr:hover,.dark .brand-list-reset:hover{background:#2a2d30}.dark .brand-avatar{background:#30394c;color:#d9e2f4}.dark .brand-avatar-violet{background:#3d3047}.dark .brand-admin-email{color:var(--brand-text)}
-.dark [data-brand-management-layout] .mp-sidebar .mp-submenu-slide a{color:#ededed}.dark [data-brand-management-layout] .mp-sidebar .mp-submenu-slide a[aria-current="page"]{background:#343941;color:#69a7ff}.dark .brand-sidebar-footer button{background:transparent;color:#b4b8bf}
-@media(max-width:1000px){[data-brand-management-layout] [data-mb-navigation="m"]{width:205px;min-width:205px}.brand-list-card{padding:20px 16px 0}.brand-list-filter-row{gap:8px}.brand-filter-pill select,.brand-date-trigger{font-size:14px}}
-@media(max-width:720px){[data-brand-management-layout] [data-mb-navigation="m"]{width:170px;min-width:170px}.brand-list-card{padding:16px 12px 0}.brand-list-toolbar{gap:10px;flex-wrap:wrap}.brand-list-search{width:100%;height:42px}.brand-create-button{min-height:40px;font-size:14px;margin-left:auto}.brand-list-filter-row{padding:16px 0}.brand-filter-pill select,.brand-date-trigger{height:40px;font-size:12px}.brand-list-reset{font-size:13px;padding:8px}.brand-date-panel{position:fixed;top:180px;left:auto;right:16px}}
+@media(max-width:1000px){.brand-list-card{padding:20px 16px 0}.brand-list-filter-row{gap:8px}.brand-filter-pill select,.brand-date-trigger{font-size:14px}}
+@media(max-width:720px){.brand-list-card{padding:16px 12px 0}.brand-list-toolbar{gap:10px;flex-wrap:wrap}.brand-list-search{width:100%;height:42px}.brand-create-button{min-height:40px;font-size:14px;margin-left:auto}.brand-list-filter-row{padding:16px 0}.brand-filter-pill select,.brand-date-trigger{height:40px;font-size:12px}.brand-list-reset{font-size:13px;padding:8px}.brand-date-panel{position:fixed;top:180px;left:auto;right:16px}}
+
+.brand-toolbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}.brand-toolbar-actions #theme-toggle{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:9px;background:transparent;color:var(--brand-text)}.brand-toolbar-actions #theme-toggle:hover{background:var(--brand-line)}
