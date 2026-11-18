@@ -116,7 +116,7 @@ function dateControls(): string {
       <form class="ma-period" data-ma-form>${dateFields}</form>
     </details>
     ${quickButtons}
-    <form id="brand-usage-filter-form" data-ma-filter-form><select name="status" aria-label="活跃状态">${usageStatusOptions()}</select>${storeBusinessStatusFilter(state.operatingStatus)}</form>
+    <form id="brand-usage-filter-form" data-ma-filter-form>${storeBusinessStatusFilter(state.operatingStatus)}</form>
     <button type="button" class="brand-usage-reset" data-ma-reset><span aria-hidden="true">⟳</span> 重置</button>
   </div>`;
   return `<form class="ma-period" data-ma-form data-activity-browse><span class="ma-field-caption">统计期间</span>${quickButtons}${dateFields}</form>`;
@@ -204,9 +204,9 @@ function rootPage(): string {
     { label: "需关注门店", value: String(follow), note: "最近点单距今 ≥7 天" },
     { label: "期间点单数", value: n(count), note: errors ? "已知合计 · " + errors + " 家数据异常未计入" : "按业务订单去重" },
   ]);
-  const search = `<div class="brand-usage-search"><button type="submit" form="brand-usage-filter-form" aria-label="搜索门店">${usageSearchIcon}</button><input type="search" form="brand-usage-filter-form" name="query" aria-label="搜索门店名称或 MID" placeholder="搜索门店名称或 MID" maxlength="80" value="${esc(state.query)}"></div>`;
+  const storeFilters = `<div class="brand-usage-store-filters" data-activity-browse><select form="brand-usage-filter-form" name="status" aria-label="活跃状态">${usageStatusOptions()}</select><div class="brand-usage-search"><button type="submit" form="brand-usage-filter-form" aria-label="搜索门店">${usageSearchIcon}</button><input type="search" form="brand-usage-filter-form" name="query" aria-label="搜索门店名称或 MID" placeholder="搜索门店名称或 MID" maxlength="80" value="${esc(state.query)}"></div></div>`;
   const headers = brandSummary ? '<th>点单数</th><th>支付 / 取消</th><th>有订单天数</th><th>日均点单</th><th>最近点单</th>' : metricHeaders;
-  return (brandSummary?'':filterControls())+brandMetrics+`<section class="ma-panel${brandSummary?' brand-usage-table':''}"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div>${brandSummary?search:`<span>${rows.length} 家门店</span>`}</div>
+  return (brandSummary?'':filterControls())+brandMetrics+`<section class="ma-panel${brandSummary?' brand-usage-table':''}"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div>${brandSummary?storeFilters:`<span>${rows.length} 家门店</span>`}</div>
     <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th>${brandSummary?'<th scope="col">地址 / 邮编</th>':''}<th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th>${brandSummary?'':'<th>操作</th>'}</tr></thead>
     <tbody>${table||`<tr><td colspan="${brandSummary?10:12}" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>`}</tbody></table></div></section>`;
 
@@ -313,7 +313,11 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
     onMount();
   });
   const brandFilter = root.querySelector<HTMLFormElement>('#brand-usage-filter-form');
-  brandFilter?.querySelectorAll('select').forEach(select=>select.addEventListener('change',()=>brandFilter.requestSubmit()));
+  if (brandFilter) {
+    for (const field of Array.from(brandFilter.elements)) {
+      if (field instanceof HTMLSelectElement) field.addEventListener('change',()=>brandFilter.requestSubmit());
+    }
+  }
   root.querySelector<HTMLInputElement>('[form="brand-usage-filter-form"][name=query]')?.addEventListener('search',event=>{
     if (!(event.currentTarget as HTMLInputElement).value && state.query) brandFilter?.requestSubmit();
   });
