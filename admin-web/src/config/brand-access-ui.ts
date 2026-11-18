@@ -1,4 +1,4 @@
-import { brandAdminOpeningMethod, wasOpenedByEmail } from './brand-access-domain';
+import { wasOpenedByEmail } from './brand-access-domain';
 import { storeBusinessStatusFilter } from './store-business-status-filter';
 import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
@@ -620,15 +620,15 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             </div>`;
           const adminRows = administrators.map(account => {
             const invite=account.invitation;
-            const method=brandAdminOpeningMethod(state,account);
-            const openedVia=method==='email'?'邮箱邀请':method==='password'?'设置密码':'未记录';
+            const openedByEmail=wasOpenedByEmail(state,account);
+            const openedVia=openedByEmail?'邮箱邀请':'设置密码';
             const expired=!!invite&&Date.parse(invite.expiresAt)<=Date.now();
             const label=invite?invite.revoked?'邀请已撤销':expired?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
             const actions=invite
               ? button('重发演示邀请',`invite-resend:${account.id}`)+(merchant.status!=='closed'?button('更正并重发邀请',`invite-correct:${account.id}`):'')
                 +(invite.revoked?'':button('撤销邀请',`invite-revoke:${account.id}`))
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
-              : (merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`):'')+button(wasOpenedByEmail(state,account)?'邮箱重置密码':'重设密码',`admin-password:${account.id}`)+(account.passwordReset&&Date.parse(account.passwordReset.expiresAt)>Date.now()?button('演示完成密码重置',`admin-email-reset:${account.id}`):'')+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
+              : (merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`):'')+button(openedByEmail?'邮箱重置密码':'重设密码',`admin-password:${account.id}`)+(account.passwordReset&&Date.parse(account.passwordReset.expiresAt)>Date.now()?button('演示完成密码重置',`admin-email-reset:${account.id}`):'')+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
             return `<tr data-brand-admin="${esc(account.id)}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
               <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span>${account.id.startsWith('demo-admin-scenario:')?' <span class="ba-tag">演示</span>':''}</td>
               <td>${esc(account.email)}</td><td>${openedVia}</td>
@@ -639,7 +639,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             </tr>`;
           }).join('');
           const legacyStatus=merchant.status==='active'?'已启用':'品牌服务未启用';
-          const legacyRow = legacy ? `<tr data-legacy-admin data-admin-status="${legacyStatus}" data-admin-search="既有品牌管理员 ${esc(merchant.primaryAdminEmail)}"><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>未记录</td><td>${legacyStatus}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>` : '';
+          const legacyRow = legacy ? `<tr data-legacy-admin data-admin-status="${legacyStatus}" data-admin-search="既有品牌管理员 ${esc(merchant.primaryAdminEmail)}"><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>邮箱邀请</td><td>${legacyStatus}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>` : '';
           root.innerHTML = `${toolbar}<div class="ba-table-wrap ba-admin-table"><table><thead><tr><th>管理员</th><th>登录账号</th><th>开通方式</th><th>账号状态</th><th>开通时间</th><th>最近真实登录</th><th>操作</th></tr></thead><tbody>
             ${adminRows}${legacyRow}<tr data-admin-empty${adminRows||legacyRow?' hidden':''}><td colspan="7" class="ba-empty">尚未开通品牌 Admin</td></tr>
           </tbody></table></div>`;

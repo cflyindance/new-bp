@@ -17,13 +17,13 @@ export interface BrandAccount {
 }
 export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[]; logs:(CenterState['logs'][number]&{facts?:import('./brand-audit-types').BrandChangeFacts})[] }
 
-export function brandAdminOpeningMethod(state: BrandAccessState, account: BrandAccount): BrandAccount['openedVia'] {
+export function brandAdminOpeningMethod(state: BrandAccessState, account: BrandAccount): NonNullable<BrandAccount['openedVia']> {
   if (account.openedVia) return account.openedVia;
   if (account.invitation) return 'email';
   const targetSuffix=` · ${account.email}`;
   const log=state.logs.find(item=>item.facts?.target.endsWith(targetSuffix)&&
     (item.facts.title==='接受邮箱邀请'||item.facts.title==='开通管理员'));
-  if (log) return log.facts?.title==='接受邮箱邀请'?'email':'password';
+  return log?.facts?.title==='开通管理员'?'password':'email';
 }
 
 export function wasOpenedByEmail(state: BrandAccessState, account: BrandAccount): boolean {
