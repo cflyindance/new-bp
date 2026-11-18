@@ -17,11 +17,17 @@ export interface BrandAccount {
 }
 export interface BrandAccessState extends CenterState { merchantId: string; accounts: BrandAccount[]; logs:(CenterState['logs'][number]&{facts?:import('./brand-audit-types').BrandChangeFacts})[] }
 
+export function brandAdminOpeningMethod(state: BrandAccessState, account: BrandAccount): BrandAccount['openedVia'] {
+  if (account.openedVia) return account.openedVia;
+  if (account.invitation) return 'email';
+  const targetSuffix=` · ${account.email}`;
+  const log=state.logs.find(item=>item.facts?.target.endsWith(targetSuffix)&&
+    (item.facts.title==='接受邮箱邀请'||item.facts.title==='开通管理员'));
+  if (log) return log.facts?.title==='接受邮箱邀请'?'email':'password';
+}
+
 export function wasOpenedByEmail(state: BrandAccessState, account: BrandAccount): boolean {
-  if (account.openedVia) return account.openedVia === 'email';
-  return !!account.invitation || state.logs.some(log =>
-    log.facts?.title === '接受邮箱邀请' && log.facts.target.endsWith(` · ${account.email}`)
-  );
+  return brandAdminOpeningMethod(state,account)==='email';
 }
 
 /** Never combine one binding's role with another binding's store range. */
