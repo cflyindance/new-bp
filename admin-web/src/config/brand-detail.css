@@ -238,3 +238,76 @@
 .brand-crm-renew form { position: absolute; z-index: 2; right: 0; bottom: calc(100% + 8px); display: grid; gap: 12px; min-width: 210px; padding: 16px; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 8px 24px #0002; }
 .brand-crm-fields { grid-template-columns: repeat(3,minmax(0,1fr)); }
 @media (max-width: 650px) { .brand-crm-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+/* Brand usage controls follow the brand detail canvas. */
+.brand-usage-filters {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-bottom: 24px;
+  --usage-control: color-mix(in srgb, var(--color-foreground) 7%, var(--color-card));
+}
+.brand-usage-date { position: relative; min-width: 0; }
+.brand-usage-date > summary {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px;
+  min-height: 48px; padding: 6px 14px; border-radius: 999px;
+  background: var(--usage-control); font-size: 14px; cursor: pointer;
+  list-style: none; font-variant-numeric: tabular-nums;
+}
+.brand-usage-date > summary::-webkit-details-marker { display: none; }
+.brand-usage-date > summary:focus-visible { outline: 2px solid var(--brand-detail-blue); outline-offset: 2px; }
+.brand-detail-body .brand-usage-date .ma-period {
+  box-sizing: border-box; position: absolute; z-index: 5; inset: calc(100% + 8px) auto auto 0;
+  width: min(420px, calc(100vw - 80px)); padding: 16px; margin: 0;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: 14px; box-shadow: 0 8px 24px #0002;
+}
+.brand-usage-filters .ma-segment {
+  border: 0; border-radius: 999px; align-self: center; overflow: visible;
+  min-height: 48px; padding: 2px; background: var(--usage-control); align-items: center;
+}
+.brand-usage-filters .ma-segment button {
+  min-width: 68px; height: 44px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--color-foreground); font-size: 14px;
+}
+.brand-usage-filters .ma-segment button[aria-pressed=true] { background: var(--color-card); box-shadow: 0 1px 4px #0002; }
+.brand-usage-filters select, .brand-usage-filters .brand-usage-reset {
+  min-width: 0; min-height: 48px; border: 0; border-radius: 999px;
+  font-size: 14px; padding-inline: 12px;
+}
+.brand-usage-filters select { background: var(--usage-control); }
+.brand-usage-filters .brand-usage-reset { background: transparent; }
+.brand-detail-body [data-merchant-usage] .ma-cards { gap: 16px; }
+.brand-detail-body [data-merchant-usage] .ma-card { min-height: 112px; padding: 24px; }
+.brand-detail-body [data-merchant-usage] .ma-card strong { margin-top: 12px; }
+.brand-usage-table { padding: 12px; }
+.brand-usage-table .ma-panel-title { flex-wrap: wrap; padding: 12px 12px 16px; }
+.brand-usage-search {
+  display: flex; align-items: center; width: min(320px,100%); min-height: 48px;
+  padding-inline: 6px 12px; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-card);
+}
+.brand-usage-search:focus-within { outline: 2px solid var(--brand-detail-blue); }
+.brand-usage-search button, .brand-usage-search input {
+  border: 0; background: transparent; box-shadow: none; font-size: 14px;
+}
+.brand-usage-search button { padding-inline: 8px; display: inline-grid; place-items: center; }
+.brand-usage-search input { width: 100%; min-width: 0; padding: 0; }
+.brand-usage-table th { background: transparent; color: var(--color-foreground); }
+.brand-usage-table td, .brand-usage-table th { height: 64px; font-size: 14px; }
+.brand-usage-table th { height: 48px; }
+.brand-usage-table .ma-number { text-align: start; }
+.brand-usage-table [data-ma-entry=name] { color: var(--color-foreground); font-weight: 500; }
+.brand-usage-table .ma-badge { padding: 0; background: transparent; border: 0; font-size: 12px; }
+.brand-usage-table .ma-active { color: #267b12; }
+.brand-usage-table .ma-recent { color: #946513; }
+.brand-usage-table .ma-suspected { color: #a45218; }
+.brand-usage-table :is(.ma-long,.ma-error) { color: #b3313e; }
+.brand-usage-table :is(.ma-never,.ma-unconfigured) { color: var(--color-muted-foreground); }
+.dark .brand-usage-table .ma-active { color: #83d75b; }
+.dark .brand-usage-table .ma-recent { color: #f1c263; }
+.dark .brand-usage-table .ma-suspected { color: #ffad77; }
+.dark .brand-usage-table :is(.ma-long,.ma-error) { color: #ff9099; }
+.brand-detail-body .brand-usage-search input,
+.brand-detail-body .brand-usage-search button { border: 0; background: transparent; }
+.brand-detail-body .brand-usage-search input:focus-visible { outline: none; }
+.brand-detail-body .brand-usage-filters .brand-usage-reset { background: transparent; }
+.brand-detail-body .brand-usage-filters .brand-usage-reset:hover { background: var(--usage-control); }

@@ -91,22 +91,41 @@ function metricCells(m: ActivityMetrics): string {
     '</td><td class="ma-nowrap">' + time(m.latest) + '</td><td class="ma-number">' + n(m.daysSince) + "</td>";
 }
 const metricHeaders = '<th class="ma-number">点单数</th><th class="ma-number">支付完成</th><th class="ma-number">取消数</th><th class="ma-number">有订单天数</th><th class="ma-number">日均点单</th><th>最近点单时间</th><th class="ma-number">连续无订单天数</th>';
-function dateControls(): string {
-  const quick = [["1", "今日"], ["7", "近 7 天"], ["30", "近 30 天"]];
-  return '<form class="ma-period" data-ma-form data-activity-browse>' +
-    '<span class="ma-field-caption">统计期间</span><div class="ma-segment">' + quick.map(([id, label]) =>
-      '<button type="button" data-ma-quick="' + id + '" aria-pressed="' + (state.quick === id) + '">' + label + "</button>").join("") +
-    '</div><label>开始日期<input aria-label="开始日期" name="start" type="date" min="' + shiftDate(data.asOf, -89) + '" max="' + data.asOf + '" value="' + state.period.start + '" required></label>' +
-    '<span class="ma-date-separator">至</span><label>结束日期<input aria-label="结束日期" name="end" type="date" min="' + shiftDate(data.asOf, -89) + '" max="' + data.asOf + '" value="' + state.period.end + '" required></label>' +
-    '<button class="ma-primary" type="submit">查询</button><p class="ma-form-error" data-ma-date-error role="alert" hidden></p></form>';
+const brandUsage = () => activeEmbedded && activeContext?.kind === "brand";
+const usageSearchIcon = '<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg>';
+const usageCalendarIcon = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16M8 14h3m2 0h3m-8 3h3"/></svg>';
+
+function usageStatusOptions(): string {
+  const all = brandUsage() ? '活跃状态' : '全部状态';
+  return `<option value="">${all}</option>` + (Object.entries(STATUS_LABELS) as [ActivityStatus, string][])
+    .filter(([id]) => id !== 'unconfigured')
+    .map(([id,label]) => `<option value="${id}"${state.status === id ? ' selected' : ''}>${label}</option>`).join('');
 }
+
+function dateControls(): string {
+  const quick = [["1", brandUsage() ? "今天" : "今日"], ["7", "近 7 天"], ["30", "近 30 天"]];
+  const quickButtons = `<div class="ma-segment" role="group" aria-label="快捷日期">${quick.map(([id,label]) =>
+    `<button type="button" data-ma-quick="${id}" aria-pressed="${state.quick === id}">${label}</button>`).join('')}</div>`;
+  const dateFields = `<label>开始日期<input aria-label="开始日期" name="start" type="date" min="${shiftDate(data.asOf,-89)}" max="${data.asOf}" value="${state.period.start}" required></label>
+    <span class="ma-date-separator" aria-hidden="true">至</span><label>结束日期<input aria-label="结束日期" name="end" type="date" min="${shiftDate(data.asOf,-89)}" max="${data.asOf}" value="${state.period.end}" required></label>
+    <button class="ma-primary" type="submit">${brandUsage()?'应用':'查询'}</button><p class="ma-form-error" data-ma-date-error role="alert" hidden></p>`;
+  if (brandUsage()) return `<div class="brand-usage-filters" data-activity-browse>
+    <details class="brand-usage-date" data-ma-date-details>
+      <summary aria-label="统计期间 ${state.period.start} 至 ${state.period.end}">${usageCalendarIcon}<span>${state.period.start}</span><span aria-hidden="true">→</span><span>${state.period.end}</span></summary>
+      <form class="ma-period" data-ma-form>${dateFields}</form>
+    </details>
+    ${quickButtons}
+    <form id="brand-usage-filter-form" data-ma-filter-form><select name="status" aria-label="活跃状态">${usageStatusOptions()}</select></form>
+    <button type="button" class="brand-usage-reset" data-ma-reset><span aria-hidden="true">⟳</span> 重置</button>
+  </div>`;
+  return `<form class="ma-period" data-ma-form data-activity-browse><span class="ma-field-caption">统计期间</span>${quickButtons}${dateFields}</form>`;
+}
+
 function filterControls(): string {
   const merchants = [...new Map(data.stores.map(s => [s.merchantId, s.merchantName])).entries()];
   return '<form class="ma-filters" data-ma-filter-form data-activity-browse>' + (activeContext ? '' : '<label>所属品牌<select name="merchant" aria-label="所属品牌"><option value="">全部品牌</option>' +
     merchants.map(([id, name]) => '<option value="' + id + '"' + (state.merchant === id ? " selected" : "") + ">" + esc(name) + "</option>").join("") +
-    '</select></label>') + '<label>活跃状态<select name="status" aria-label="活跃状态"><option value="">全部状态</option>' +
-    (Object.entries(STATUS_LABELS) as [ActivityStatus, string][]).filter(([id]) => id !== "unconfigured").map(([id, label]) =>
-      '<option value="' + id + '"' + (state.status === id ? " selected" : "") + ">" + label + "</option>").join("") +
+    '</select></label>') + '<label>活跃状态<select name="status" aria-label="活跃状态">' + usageStatusOptions() +
     '</select></label><label class="ma-search">门店／品牌<input name="query" aria-label="搜索门店或品牌" placeholder="门店名称 / MID / 品牌名称" maxlength="80" value="' + esc(state.query) +
     '"></label><button type="submit">筛选</button><button type="button" data-ma-reset>重置筛选</button></form>';
 }
@@ -140,10 +159,11 @@ function brandUsageCharts(storeIds: Set<string>): string {
   </div>`;
 }
 function rootPage(): string {
+  const brandSummary = brandUsage();
   const candidates = scopedActivityStores(data, activeContext);
   if (activeContext && !candidates.length) return '<section class="ma-panel ma-empty" data-usage-empty><h3>暂无使用数据</h3><p>当前品牌或门店暂无使用数据。数据接入后，可在此查看活跃情况。</p></section>';
   const stores = candidates.filter(s => (!state.merchant || s.merchantId === state.merchant) &&
-    (!state.query || (s.name + s.id + s.merchantName).toLowerCase().includes(state.query.toLowerCase())) &&
+    (!state.query || (brandSummary ? [s.name,s.id] : [s.name+s.id+s.merchantName]).some(value=>value.toLowerCase().includes(state.query.toLowerCase()))) &&
     (!state.status || metrics({ storeId: s.id }).status === state.status));
   const rows = stores.map(s => ({ store: s, m: metrics({ storeId: s.id }) }));
   const complete = rows.filter(row => row.m.count !== null);
@@ -152,10 +172,11 @@ function rootPage(): string {
   const active = rows.filter(row => row.m.status === "active").length;
   const follow = rows.filter(row => ["recent", "suspected", "long"].includes(row.m.status)).length;
   const table = rows.map(({ store, m }) => '<tr data-ma-store="' + store.id + '"><td><a class="ma-link" data-ma-entry="name" href="' +
-    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + esc(store.merchantName) + ' · ' + esc(store.id) + '</small></td><td>' +
-    badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + metricCells(m) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
+    href({ storeId: store.id }) + '">' + esc(store.name) + '</a><small>' + (brandSummary?'':esc(store.merchantName)+' · ')+esc(store.id) + '</small></td><td>' +
+    badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + (brandSummary
+    ? `<td class="ma-number">${n(m.count)}</td><td class="ma-number">${n(m.paid)} / ${n(m.cancelled)}</td><td class="ma-number">${n(m.activeDays)}</td><td class="ma-number">${m.dailyAverage===null?'—':m.dailyAverage.toFixed(1)}</td><td>${time(m.latest)}</td>`
+    : metricCells(m)) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
     '</td><td class="ma-number">' + n(m.unknown) + '</td><td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td></tr>').join("");
-  const brandSummary = activeEmbedded && activeContext?.kind === "brand";
   const brandMetrics = brandSummary ? (() => {
     const ids = new Set(complete.map(item => item.store.id));
     const allIds = new Set(rows.map(item => item.store.id));
@@ -174,11 +195,12 @@ function rootPage(): string {
     { label: "需关注门店", value: String(follow), note: "最近点单距今 ≥7 天" },
     { label: "期间点单数", value: n(count), note: errors ? "已知合计 · " + errors + " 家数据异常未计入" : "按业务订单去重" },
   ]);
-  return filterControls() + brandMetrics + '<section class="ma-panel"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div><span>' + rows.length +
-    ' 家门店</span></div><div class="ma-table-wrap"><table><thead><tr><th>门店／品牌</th><th>当前活跃状态</th>' + metricHeaders +
-    '<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead><tbody>' +
-    (table || '<tr><td colspan="12" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>') +
-    '</tbody></table></div></section>';
+  const search = `<div class="brand-usage-search"><button type="submit" form="brand-usage-filter-form" aria-label="搜索门店">${usageSearchIcon}</button><input type="search" form="brand-usage-filter-form" name="query" aria-label="搜索门店名称或 MID" placeholder="搜索门店名称或 MID" maxlength="80" value="${esc(state.query)}"></div>`;
+  const headers = brandSummary ? '<th>点单数</th><th>支付 / 取消</th><th>有订单天数</th><th>日均点单</th><th>最近点单</th>' : metricHeaders;
+  return (brandSummary?'':filterControls())+brandMetrics+`<section class="ma-panel${brandSummary?' brand-usage-table':''}"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div>${brandSummary?search:`<span>${rows.length} 家门店</span>`}</div>
+    <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th><th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th><th>操作</th></tr></thead>
+    <tbody>${table||`<tr><td colspan="${brandSummary?10:12}" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>`}</tbody></table></div></section>`;
+
 }
 function scopeSummary(scope: ActivityScope): string {
   const m = metrics(scope);
@@ -246,7 +268,7 @@ export function renderActivityPage(path: string, embedded = false): string {
     scope = state.inlineScope;
   }
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
-  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + renderActivityDemoNotice() + contextHeader(embedded) + dateControls() + rootPage() +
+  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + (brandUsage()?'':renderActivityDemoNotice()) + contextHeader(embedded) + dateControls() + rootPage() + (brandUsage()?renderActivityDemoNotice():'') +
     '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
     '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section></div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }
@@ -280,8 +302,23 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
     state.query = String(form.get("query") ?? "").trim();
     onMount();
   });
+  const brandFilter = root.querySelector<HTMLFormElement>('#brand-usage-filter-form');
+  brandFilter?.querySelector('select')?.addEventListener('change',()=>brandFilter.requestSubmit());
+  root.querySelector<HTMLInputElement>('[form="brand-usage-filter-form"][name=query]')?.addEventListener('search',event=>{
+    if (!(event.currentTarget as HTMLInputElement).value && state.query) brandFilter?.requestSubmit();
+  });
+  const dates = root.querySelector<HTMLDetailsElement>('[data-ma-date-details]');
+  dates?.addEventListener('keydown',event=>{
+    if(event.key!=='Escape'||!dates.open)return;
+    event.preventDefault();dates.open=false;dates.querySelector('summary')?.focus();
+  });
   root.querySelector("[data-ma-reset]")?.addEventListener("click", () => {
-    state.filterDraft = null; state.merchant = ""; state.status = ""; state.query = ""; onMount();
+    state.filterDraft = null; state.merchant = ""; state.status = ""; state.query = "";
+    if (brandFilter) {
+      state.periodDraft = null; state.quick = "7";
+      state.period = {start:shiftDate(data.asOf,-6),end:data.asOf};
+    }
+    onMount();
   });
   const scope = embedded ? state.inlineScope : parsedScope(pagePath);
   const dialog = root.querySelector<HTMLElement>('.ma-store-drawer');
