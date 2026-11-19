@@ -32,3 +32,8 @@
 .display-region-progress li[aria-current=step]{color:#1677ff;font-weight:600}
 .dark .display-region-progress li:not([aria-current]){color:#cbd5e1}
 .display-region-create .display-alert{margin:24px 0 0}
+.display-region-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;flex-shrink:0;padding:16px 24px;border-bottom:1px solid var(--display-border)}
+.display-region-toolbar .display-filters{flex:1 1 430px;min-width:0;margin:0}
+.display-region-toolbar .display-search{max-width:100%}
+.display-region-toolbar>.display-btn{min-height:48px;margin-left:auto}
+.display-page[data-mode=regions] .display-panel,.display-page[data-mode=regions] .display-results-scroll{overflow:visible}

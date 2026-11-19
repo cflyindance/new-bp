@@ -143,12 +143,13 @@ function renderMPlatformMain(path: string): string {
   if(path.split("?")[0].replace(/\/$/,"")===ENTERPRISE_MERCHANT_ROUTE_PREFIX)return `<main class="brand-list-main"><div data-m-platform-content class="flex min-h-0 flex-1 flex-col">${renderMPlatformContent(path)}</div></main>`;
   const routePath = path.split("?")[0].replace(/\/+$/, "");
   const isFullWidthList = MENU_ROUTING_PAGES.some(page => page.path === routePath && (page.view === "projects" || page.view === "registry-log" || page.view === "menu-log"));
+  const scrollPage = isFullWidthList || isDisplayRegionPath(routePath);
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       ${renderMPlatformHeader(path)}
-      <main class="min-h-0 flex-1 flex flex-col animate-fade-in ${isFullWidthList ? "overflow-x-hidden overflow-y-auto p-2 md:p-3" : "overflow-hidden p-4 md:p-6"}">
-        <div class="mx-auto flex w-full flex-col ${isFullWidthList ? "min-w-0 grow shrink-0" : "min-h-0 flex-1 max-w-[90rem]"}">
-          <div data-m-platform-content role="tabpanel" class="flex flex-col ${isFullWidthList ? "min-w-0 grow shrink-0" : "min-h-0 flex-1 overflow-hidden"}">
+      <main class="min-h-0 flex-1 flex flex-col animate-fade-in ${scrollPage ? "overflow-x-hidden overflow-y-auto" : "overflow-hidden"} ${isFullWidthList ? "p-2 md:p-3" : "p-4 md:p-6"}">
+        <div class="mx-auto flex w-full flex-col ${scrollPage ? "min-w-0 grow shrink-0" : "min-h-0 flex-1"} ${isFullWidthList ? "" : "max-w-[90rem]"}">
+          <div data-m-platform-content role="tabpanel" class="flex flex-col ${scrollPage ? "min-w-0 grow shrink-0" : "min-h-0 flex-1 overflow-hidden"}">
             ${renderMPlatformContent(path)}
           </div>
         </div>
