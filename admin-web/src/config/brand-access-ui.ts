@@ -100,7 +100,7 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   }
 }
 
-export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
+export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;categoryActions?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
   const createPicker=Boolean(options.scene);
@@ -156,7 +156,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       };
       return `<div class="ba-edit-tree">${renderBranch()}</div>`;
     };
-    const treeActions=button('展开全部','expand-all')+button('收起全部','collapse-all')+(!treePicker&&!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):'');
+    const treeActions=button('展开全部','expand-all')+button('收起全部','collapse-all')+(!treePicker&&options.categoryActions!==false&&!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):'');
     const createToolbar=`<div class="ba-create-menu-toolbar">
       <div><h3 tabindex="-1">品牌菜单开通</h3><p class="ba-muted">可暂不选择，已选 <strong data-menu-count>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</p></div>
       <div class="ba-actions"><label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>
@@ -263,7 +263,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   },{action:'确定',topActions:true});
   d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>{preview?.close();},{once:true});
-  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch});
+  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch,categoryActions:!batch});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
   const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-template-toolbar]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
   d.querySelector('[name=mode]')!.addEventListener('change',sync);sync();
@@ -624,16 +624,18 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
           const administrators=state.accounts.filter(a=>a.admin),legacy=!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail&&!wasReplacedAdminEmail(state,merchant.primaryAdminEmail)&&!state.accounts.some(a=>a.email.toLowerCase()===merchant.primaryAdminEmail?.toLowerCase());
           const detail = !!root.closest('[data-brand-detail-tab]');
           const accountStatuses=['已启用','已停用','待接受邀请','邀请已过期','邀请已撤销','品牌服务未启用'];
+          const openingMethods=['邮箱邀请','设置密码'] as const;
           const toolbar = `${detail?'':'<header class="ba-head"><h2>品牌管理员</h2></header>'}
             <div class="ba-toolbar ba-store-toolbar">
               <div class="brand-store-search">${storeSearchIcon}<input type="search" data-admin-query aria-label="搜索管理员姓名或账号" placeholder="搜索管理员姓名或账号"></div>
               <select class="brand-admin-status-filter" data-admin-status-filter aria-label="账号状态"><option value="">账号状态</option>${accountStatuses.map(status=>`<option>${status}</option>`).join('')}</select>
+              <select class="brand-admin-method-filter" data-admin-method-filter aria-label="开通方式"><option value="">开通方式</option>${openingMethods.map(method=>`<option>${method}</option>`).join('')}</select>
               <div class="ba-actions">${button('开通品牌 Admin','new-admin',true)}</div>
             </div>`;
           const adminRows = administrators.map(account => {
             const invite=account.invitation;
             const openedByEmail=wasOpenedByEmail(state,account);
-            const openedVia=openedByEmail?'邮箱邀请':'设置密码';
+            const openedVia=openingMethods[openedByEmail?0:1];
             const expired=!!invite&&Date.parse(invite.expiresAt)<=Date.now();
             const label=invite?invite.revoked?'邀请已撤销':expired?'邀请已过期':'待接受邀请':account.enabled?'已启用':'已停用';
             const actions=invite
@@ -641,7 +643,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
                 +(invite.revoked?'':button('撤销邀请',`invite-revoke:${account.id}`))
                 +(invite.revoked||expired?'':button('演示接受邀请',`invite-accept:${account.id}`))
               : (merchant.status!=='closed'?button('编辑品牌 Admin',`admin:${account.id}`):'')+button(openedByEmail?'邮箱重置密码':'重设密码',`admin-password:${account.id}`)+(account.passwordReset&&Date.parse(account.passwordReset.expiresAt)>Date.now()?button('演示完成密码重置',`admin-email-reset:${account.id}`):'')+button(account.enabled?'停用':'启用',`admin-status:${account.id}`);
-            return `<tr data-brand-admin="${esc(account.id)}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
+            return `<tr data-brand-admin="${esc(account.id)}" data-admin-method="${openedVia}" data-admin-status="${label}" data-admin-search="${esc(account.name+' '+account.email)}">
               <td><span class="brand-admin-identity"><span aria-hidden="true">${esc(Array.from(account.name.trim())[0]??'')}</span>${esc(account.name)}</span>${account.id.startsWith('demo-admin-scenario:')?' <span class="ba-tag">演示</span>':''}</td>
               <td>${esc(account.email)}</td><td>${openedVia}</td>
               <td><span class="ba-create-store-status" data-status="${invite?'preparing':account.enabled?'open':'terminated'}">${label}</span>${invite?`<br><small>有效至 ${esc(date(invite.expiresAt))}</small>`:''}</td>
@@ -651,24 +653,29 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
             </tr>`;
           }).join('');
           const legacyStatus=merchant.status==='active'?'已启用':'品牌服务未启用';
-          const legacyRow = legacy ? `<tr data-legacy-admin data-admin-status="${legacyStatus}" data-admin-search="既有品牌管理员 ${esc(merchant.primaryAdminEmail)}"><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>邮箱邀请</td><td>${legacyStatus}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>` : '';
+          const legacyRow = legacy ? `<tr data-legacy-admin data-admin-method="${openingMethods[0]}" data-admin-status="${legacyStatus}" data-admin-search="既有品牌管理员 ${esc(merchant.primaryAdminEmail)}"><td>既有品牌管理员</td><td>${esc(merchant.primaryAdminEmail)}</td><td>${openingMethods[0]}</td><td>${legacyStatus}</td><td>—</td><td>—</td><td><span class="ba-muted">原登录方式</span></td></tr>` : '';
           root.innerHTML = `${toolbar}<div class="ba-table-wrap ba-admin-table"><table><thead><tr><th>管理员</th><th>登录账号</th><th>开通方式</th><th>账号状态</th><th>开通时间</th><th>最近真实登录</th><th>操作</th></tr></thead><tbody>
             ${adminRows}${legacyRow}<tr data-admin-empty${adminRows||legacyRow?' hidden':''}><td colspan="7" class="ba-empty">尚未开通品牌 Admin</td></tr>
           </tbody></table></div>`;
           const search=root.querySelector<HTMLInputElement>('[data-admin-query]')!;
           const status=root.querySelector<HTMLSelectElement>('[data-admin-status-filter]')!;
+          const method=root.querySelector<HTMLSelectElement>('[data-admin-method-filter]')!;
           const filterAdmins=()=>{
             const query=search.value.trim().toLowerCase();
             const rows=[...root.querySelectorAll<HTMLElement>('[data-admin-search]')];
             rows.forEach(row=>{
-              row.hidden=!row.dataset.adminSearch!.toLowerCase().includes(query)||!!status.value&&row.dataset.adminStatus!==status.value;
+              const matchesQuery=row.dataset.adminSearch!.toLowerCase().includes(query);
+              const matchesStatus=!status.value||row.dataset.adminStatus===status.value;
+              const matchesMethod=!method.value||row.dataset.adminMethod===method.value;
+              row.hidden=!(matchesQuery&&matchesStatus&&matchesMethod);
             });
             const empty=root.querySelector<HTMLElement>('[data-admin-empty]')!;
             empty.hidden=rows.some(row=>!row.hidden);
-            empty.querySelector('td')!.textContent=query||status.value?'没有符合条件的管理员':'尚未开通品牌 Admin';
+            empty.querySelector('td')!.textContent=query||status.value||method.value?'没有符合条件的管理员':'尚未开通品牌 Admin';
           };
           search.addEventListener('input',filterAdmins);
           status.addEventListener('change',filterAdmins);
+          method.addEventListener('change',filterAdmins);
         }else{
 
         root.innerHTML=`<header class="ba-head"><div><h2>账号与角色</h2></div>${admin?`<div class="ba-actions">${button('新建角色','new-role')}${button('开通账号','new-account',true)}</div>`:''}</header><section class="ba-card"><h3 style="margin-bottom:16px">登录账号 <span class="ba-tag">${state.accounts.length}</span></h3><div class="ba-table-wrap"><table><thead><tr><th>账号</th><th>身份</th><th>角色与生效门店</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.accounts.map(a=>{const e=state.employees.find(e=>e.id===a.id);return `<tr><td>${esc(a.name)}<br><small>${esc(a.email)}</small></td><td><span class="ba-tag ${a.admin?'active':''}">${a.admin?'品牌 Admin':'普通账号'}</span></td><td>${a.admin?'全部品牌门店（含新增门店）':e?.bindings.map(b=>`${esc(state.roles.find(r=>r.id===b.roleId)?.name??'角色缺失')} · ${b.scope.ids.length} 家门店`).join('<br>')||'未分配'}</td><td>${a.enabled?'已启用':'已停用'}</td><td>${admin?button('管理账号',`account:${a.id}`):'—'}</td></tr>`;}).join('')||`<tr><td colspan="5" class="ba-empty">尚未单独开通账号${merchant.accountProvisioningRequired?'，请先开通品牌 Admin':'；已有品牌管理员继续使用原登录方式'}</td></tr>`}</tbody></table></div></section><section class="ba-card"><h3>品牌角色 <span class="ba-tag">${state.roles.length}</span></h3>${state.roles.map(r=>`<div class="ba-role-line"><div><strong>${esc(r.name)}</strong><p class="ba-muted">${esc(r.description)||'未填写描述'} · ${state.employees.filter(e=>e.bindings.some(b=>b.roleId===r.id)).length} 个账号使用</p></div>${admin?button('编辑权限',`role:${r.id}`):''}</div>`).join('')||'<p class="ba-empty">尚未创建角色。建议按店长、财务等岗位建立，再分配给账号。</p>'}</section>`;
