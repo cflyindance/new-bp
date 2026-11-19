@@ -97,7 +97,42 @@ export function bindEntitlementOverview():void {
   scopeDialog?.close();const stores=getMerchantStores(root.dataset.brandEntitlements!),snapshot=readSubscriptionServiceSnapshot(),grants=snapshot.subscriptions.filter(g=>g.subjectType==='brand'&&g.subjectId===root.dataset.brandEntitlements&&g.packageId===b.dataset.rightsStores&&g.entitlementKind);
   const selected=b.dataset.rightsGrant?grants.filter(g=>g.id===b.dataset.rightsGrant):grants.filter(current).filter(g=>grantActive(g)||!grants.some(g=>current(g)&&grantActive(g)));
   const all=selected.some(g=>g.scopeMode!=='selected'),ids=all?stores.map(s=>s.storeId):[...new Set(selected.flatMap(g=>g.storeIds??[]))];
-  const d=document.createElement('dialog');scopeDialog=d;d.className='ba ba-modal ba-admin-dialog';d.setAttribute('aria-label','适用门店');d.dataset.rightsStoreDialog='';if(b.closest('[data-rights-drawer]'))d.dataset.rightsDrawerChild='';d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><h2>适用门店</h2><button type="button" class="ba-btn" data-close aria-label="关闭">×</button></header><section class="ba-dialog-body">${all?'<p class="ba-muted">全部品牌门店（含新增）</p>':''}${storeBusinessStatusFilter()}<div class="ba-table-wrap"><table><thead><tr><th>门店名称</th><th>MID</th><th>地址</th><th>邮编</th><th>营业状态</th></tr></thead><tbody>${ids.map(id=>{const store=stores.find(s=>s.storeId===id);const status=store?getStoreOperatingStatus(store):undefined;return `<tr data-operating-status="${status?.status??'unknown'}"><td>${esc(store?.name??'门店已移除或不属于当前品牌')}</td><td>${esc(id)}</td><td>${esc(store?.address?.trim()||'—')}</td><td>${esc(store?.postalCode?.trim()||'—')}</td><td>${esc(status?.label??'营业情况未知')}</td></tr>`;}).join('')||'<tr><td colspan="5">暂无匹配门店</td></tr>'}</tbody></table></div><p class="ba-muted" data-operating-empty hidden>没有符合营业状态的门店</p></section><footer class="ba-footer" style="justify-content:flex-end"><button type="button" class="ba-btn" data-close>关闭</button></footer></div>`;
+  const storesById = new Map(stores.map(store => [store.storeId, store]));
+  const rows = ids.map(id => {
+    const store = storesById.get(id);
+    const status = store ? getStoreOperatingStatus(store) : undefined;
+    const state = status?.status ?? 'unknown';
+    const label = state === 'open' ? '营业中' : state === 'terminated' ? '关店' : status?.label ?? '营业情况未知';
+    return `<tr data-operating-status="${state}">
+      <td><div class="brand-store-identity"><div><strong>${esc(store?.name ?? '门店已移除或不属于当前品牌')}</strong><small class="ba-muted">${esc(id)}</small></div></div></td>
+      <td class="brand-store-address">${esc(store?.address?.trim() || '—')}</td>
+      <td>${esc(store?.postalCode?.trim() || '—')}</td>
+      <td><span class="ba-tag ba-create-store-status" data-status="${state}">${esc(label)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const d = document.createElement('dialog');
+  scopeDialog = d;
+  d.className = 'ba ba-modal brand-design-modal brand-rights-store-modal';
+  d.setAttribute('aria-label', '适用门店');
+  d.dataset.rightsStoreDialog = '';
+  if (b.closest('[data-rights-drawer]')) d.dataset.rightsDrawerChild = '';
+  d.innerHTML = `<div class="ba-dialog-inner">
+    <header class="ba-dialog-header">
+      <button type="button" class="ba-btn" data-close aria-label="关闭">×</button>
+      <h2>适用门店</h2>
+    </header>
+    <section class="ba-dialog-body"><div class="brand-modal-card">
+      <div class="brand-rights-store-toolbar">
+        <span>${all ? '全部品牌门店（含新增）' : '指定门店'} <span class="ba-muted">· ${ids.length} 家</span></span>
+        ${storeBusinessStatusFilter('', true)}
+      </div>
+      <div class="ba-table-wrap brand-store-table"><table>
+        <thead><tr><th scope="col">门店名称 / MID</th><th scope="col">地址</th><th scope="col">邮编</th><th scope="col">营业状态</th></tr></thead>
+        <tbody>${rows}<tr data-operating-empty ${rows ? 'hidden' : ''}><td class="ba-empty" colspan="4">${rows ? '没有符合营业状态的门店' : '暂无适用门店'}</td></tr></tbody>
+      </table></div>
+    </div></section>
+  </div>`;
   bindStoreBusinessStatusFilter(d);
   const close=()=>{if(d.open)d.close();d.remove();window.removeEventListener('hashchange',close);if(scopeDialog===d)scopeDialog=undefined;if(b.isConnected)b.focus();};d.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',close));d.addEventListener('cancel',e=>{e.preventDefault();close()});d.addEventListener('close',close,{once:true});d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();});document.body.append(d);d.showModal();window.addEventListener('hashchange',close);
  });
