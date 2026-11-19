@@ -1,7 +1,7 @@
 import {resolveStoreBusinessStatus,type StoreBusinessResult} from './store-business-status';
 import {readStoreBusinessFacts} from './store-business-facts';
 import {DEMO_LOGIN_ACCOUNT,getAuthenticatedEmail} from '../auth/login';
-import {validateBrandCreationFields} from './brand-create-validation';
+import {validateBrandBasicInfo,validateBrandCreationFields} from './brand-create-validation';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
 import {providerScopeActive,providerTargetAllowed,providerBrandListed,assertProviderTarget} from '../auth/provider-access-runtime';
@@ -1095,15 +1095,18 @@ const SEED_BRAND_NAME_OVERRIDES: Record<string, string> = {
 };
 
 function migrateBrandDisplayNames(snapshot: EnterpriseMerchantSnapshot): boolean {
+  const renamed = new Set(snapshot.changelog.filter(entry => entry.action === 'brand.basic-info.update'
+    && entry.facts?.fields.some(field => field.name === '品牌名称')).map(entry => entry.merchantId));
   let changed = false;
   for (const [merchantId, name] of Object.entries(SEED_BRAND_NAME_OVERRIDES)) {
     const merchant = snapshot.merchants.find((m) => m.merchantId === merchantId);
-    if (!merchant || merchant.name === name) continue;
+    if (!merchant || merchant.name === name || renamed.has(merchantId)) continue;
     merchant.name = name;
     merchant.updatedAt = nowIso();
     changed = true;
   }
   for (const merchant of snapshot.merchants) {
+    if (renamed.has(merchant.merchantId)) continue;
     const mount = findExternalOrgMount(snapshot, merchant.merchantId);
     if (!mount) continue;
     const org = snapshot.merchants.find((m) => m.merchantId === mount.merchantId);
@@ -2197,6 +2200,53 @@ function persistBrandConfiguration(snap:EnterpriseMerchantSnapshot):void {
   localStorage.setItem(STORAGE_KEY,JSON.stringify(snap));
   cachedSnapshot=snap;
   window.dispatchEvent(new CustomEvent(SNAPSHOT_CHANGED_EVENT));
+}
+
+export function canEditBrandBasicInfo(merchant: EnterpriseMerchant): boolean {
+  return providerScopeActive() && providerTargetAllowed(merchant.merchantId)
+    && currentMAccess(mPageKey('brands')) === 'edit' && serviceStatus(merchant.status) !== 'closed';
+}
+
+export function saveBrandBasicInfo(
+  id: string,
+  input: { name: string; contactName: string; contactPhone: string },
+  expected: string,
+): boolean {
+  const actor = getAuthenticatedEmail();
+  const snapshot = structuredClone(readSnapshot());
+  const merchant = snapshot.merchants.find(item => item.merchantId === id);
+  if (!merchant) throw Error('品牌不存在。');
+  if (!actor || !canEditBrandBasicInfo(merchant)) throw Error('当前品牌资料不可编辑。');
+  if (brandConfigurationVersion(id) !== expected) throw Error('品牌资料已更新，请重新打开后编辑。');
+
+  validateBrandBasicInfo(input);
+  const next = {
+    name: input.name.trim(),
+    contactName: input.contactName.trim(),
+    contactPhone: input.contactPhone.trim(),
+  };
+  const labels = { name: '品牌名称', contactName: '联系人', contactPhone: '电话' };
+  const changes = (Object.keys(labels) as (keyof typeof labels)[])
+    .filter(key => (merchant[key] ?? '') !== next[key]);
+  if (!changes.length) return false;
+
+  const fields = changes.map(key => ({ name: labels[key], before: merchant[key] || '—', after: next[key] || '—' }));
+  if (changes.includes('name')) {
+    for (const brand of snapshot.brands) {
+      if (brand.merchantId === id && brand.name === merchant.name) brand.name = next.name;
+    }
+  }
+  merchant.name = next.name;
+  merchant.contactName = next.contactName || undefined;
+  merchant.contactPhone = next.contactPhone || undefined;
+  merchant.updatedAt = nowIso();
+  appendChangelog(snapshot, {
+    merchantId: id, action: 'brand.basic-info.update', operatorEmail: actor,
+    detail: '编辑品牌基本信息',
+    facts: { category: '其他', title: '编辑基本信息', target: merchant.name, source: 'M 平台运营', fields },
+  });
+  persistBrandConfiguration(snapshot);
+  return true;
 }
 
 export function saveExplicitBrandMenus(id:string,keys:string[],expected:string,actor:string,source='未标注入口'):void {

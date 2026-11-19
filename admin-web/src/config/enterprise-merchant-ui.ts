@@ -1,6 +1,6 @@
 import './brand-detail.css';
 import {renderBrandListFilters,renderBrandManagementTable,bindBrandManagementList,readBrandListFilter} from './brand-management-list';
-import {getStoreOperatingStatus} from './enterprise-merchant-store';
+import {canEditBrandBasicInfo,getStoreOperatingStatus} from './enterprise-merchant-store';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mActionKey} from '../permissions/m-platform-catalog';
 import type {MerchantOrgStore} from './enterprise-merchant-types';
@@ -19,7 +19,7 @@ import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,f
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
 import { brandRawMenuKeys, brandMenuChoices, readBrandAccess } from './brand-access-store';
-import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
+import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition,openBrandBasicInfoEditor } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
  */
@@ -702,12 +702,15 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
         </dl>
       </section>
       <section class="brand-detail-card brand-detail-full">
-        <h2 class="text-sm font-semibold">基本信息</h2>
+        <div class="brand-basic-info-heading">
+          <h2 class="text-sm font-semibold">基本信息</h2>
+          ${canEditBrandBasicInfo(merchant) ? `<button type="button" class="ba-btn brand-detail-action" data-edit-brand-basic-info="${escapeHtml(merchant.merchantId)}">编辑基本信息</button>` : ""}
+        </div>
         <dl class="brand-detail-fields">
+          ${row("品牌名称", escapeHtml(merchant.name))}
           ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
 
           ${row("组织类型", escapeHtml(getMerchantOrgTypeLabel(merchant.orgType)))}
-          ${row("状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(merchant.status)}">${escapeHtml(getMerchantStatusLabel(merchant.status))}</span>`)}
           ${row("联系人", escapeHtml(merchant.contactName ?? "—"))}
           ${row("电话", escapeHtml(merchant.contactPhone ?? "—"))}
           ${merchant.suspendedReason ? row("暂停原因", escapeHtml(merchant.suspendedReason)) : ""}
@@ -1238,6 +1241,15 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
   bindManagementFilters('store', filter => {if(storeTableHost)storeTableHost.innerHTML=renderEnterpriseStoreTable(filteredManagementStores(filter));});
   if(storeTableHost)storeTableHost.onclick=e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-store-impersonate]');if(!button||button.disabled)return;openDelegatedBackendTab({kind:'store',id:button.dataset.storeImpersonate!,returnPath:merchantHref('/stores')});};
 
+  document.querySelectorAll<HTMLButtonElement>('[data-edit-brand-basic-info]').forEach(button => {
+    button.onclick = () => {
+      try {
+        openBrandBasicInfoEditor(button.dataset.editBrandBasicInfo!, onMount);
+      } catch (error) {
+        window.alert((error as Error).message);
+      }
+    };
+  });
   document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
   document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;openDelegatedBackendTab({kind:'brand',id,returnPath:merchantDetailHref(id)});});
 

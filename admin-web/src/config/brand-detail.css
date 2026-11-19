@@ -605,3 +605,11 @@
 }
 .brand-menu-store-cards dt { color: var(--color-muted-foreground); }
 .brand-menu-store-cards dd { margin: 0; overflow-wrap: anywhere; }
+
+.brand-basic-info-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

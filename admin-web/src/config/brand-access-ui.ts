@@ -2,7 +2,7 @@ import { canCorrectBrandAdminInvitation, wasOpenedByEmail } from './brand-access
 import { storeBusinessStatusFilter } from './store-business-status-filter';
 import {brandChangeDemo} from './brand-change-demo';
 import {renderBrandMoreActions,bindBrandMoreActions} from './brand-more-actions';
-import {getStoreOperatingStatus} from './enterprise-merchant-store';
+import {canEditBrandBasicInfo,getStoreOperatingStatus,saveBrandBasicInfo} from './enterprise-merchant-store';
 import {validateBrandCreationFields} from './brand-create-validation';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {bindFlatBusinessPresets} from './flat-business-presets';
@@ -98,6 +98,32 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
     const sync=()=>confirm.disabled=reason.value.trim().length<2;
     reason.addEventListener('input',sync);sync();
   }
+}
+
+export function openBrandBasicInfoEditor(id: string, onSaved: () => void): void {
+  const merchant = getMerchantById(id);
+  if (!merchant || !canEditBrandBasicInfo(merchant)) throw Error('当前品牌资料不可编辑。');
+  const expected = brandConfigurationVersion(id);
+  dialog('编辑基本信息', merchant.bid ?? id, `<div class="ba-grid">
+    <label class="ba-field"><span>品牌名称 <span class="brand-required" aria-hidden="true">*</span></span>
+      <input name="name" value="${esc(merchant.name)}" required maxlength="60" autofocus>
+    </label>
+    <label class="ba-field">联系人<input name="contactName" value="${esc(merchant.contactName ?? '')}" maxlength="30"></label>
+    <label class="ba-field">电话<input name="contactPhone" type="tel" value="${esc(merchant.contactPhone ?? '')}"></label>
+  </div>`, form => {
+    const data = new FormData(form);
+    const changed = saveBrandBasicInfo(id, {
+      name: String(data.get('name') ?? ''),
+      contactName: String(data.get('contactName') ?? ''),
+      contactPhone: String(data.get('contactPhone') ?? ''),
+    }, expected);
+    if (changed) {
+      showAppToast('基本信息已保存', { variant: 'success' });
+      onSaved();
+      queueMicrotask(() => document.querySelector<HTMLElement>('[data-edit-brand-basic-info]')?.focus());
+    }
+    return true;
+  }, { action: '保存', compact: true, topActions: true });
 }
 
 export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;simpleControls?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
