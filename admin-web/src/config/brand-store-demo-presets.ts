@@ -4,8 +4,23 @@ import {brandMenuChoices} from './brand-menu-choices';
 import {brandStorePerspectiveCeiling} from './enterprise-merchant-services';
 function demoIds(){return ['merchant-zhangji','merchant-tea-one','merchant-menusifu-na'];}
 export const DEMO_PRESET_AT='2026-10-21T00:00:00.000Z';
+function isAdminScenarioBrand(merchant:EnterpriseMerchant):boolean {
+ return merchant.merchantId==='merchant-zhangji'&&!merchant.accountProvisioningRequired&&merchant.primaryAdminEmail==='zhangji.admin@menusifu.cn';
+}
+
+export function demoPendingAdminInvitation(merchant:EnterpriseMerchant,accounts:BrandAccount[]):BrandAccount|undefined {
+ if(!isAdminScenarioBrand(merchant))return;
+ const now=Date.now();
+ if(accounts.some(account=>account.id.startsWith('demo-admin-scenario:')&&account.invitation&&
+    !account.invitation.revoked&&Date.parse(account.invitation.expiresAt)>now))return;
+ const id='demo-admin-scenario:pending-extra',email='zhangji.admin.demo.pending-extra@menusifu.cn';
+ if(accounts.some(account=>account.id===id||account.email.toLowerCase()===email))return;
+ return {id,name:'沈佳宁',email,enabled:false,admin:true,password:'',openedVia:'email',
+  invitation:{sentAt:new Date(now).toISOString(),expiresAt:new Date(now+72*60*60*1000).toISOString()}};
+}
+
 export function demoEmailOpenedAdmins(merchant:EnterpriseMerchant,password:string):BrandAccount[]{
- if(merchant.merchantId!=='merchant-zhangji'||merchant.accountProvisioningRequired||merchant.primaryAdminEmail!=='zhangji.admin@menusifu.cn')return [];
+ if(!isAdminScenarioBrand(merchant))return [];
  return [
   {id:'demo-admin-scenario:email-enabled',name:'梁思敏',email:'zhangji.admin.demo.email-enabled@menusifu.cn',enabled:true,admin:true,password,openedVia:'email',createdAt:DEMO_PRESET_AT},
   {id:'demo-admin-scenario:email-disabled',name:'赵宇航',email:'zhangji.admin.demo.email-disabled@menusifu.cn',enabled:false,admin:true,password,openedVia:'email',createdAt:DEMO_PRESET_AT},

@@ -2,7 +2,7 @@ import { canCorrectBrandAdminInvitation, wasOpenedByEmail } from './brand-access
 import {currentProviderCanTarget as requireProviderBrandTarget} from '../permissions/provider-access-store';
 import {currentMAccount} from '../permissions/m-platform-store';
 import {readProviderState,canProviderEnter,currentProviderAccess} from '../permissions/provider-access-store';
-import {demoBrandAccess,demoEmailOpenedAdmins} from './brand-store-demo-presets';
+import {demoBrandAccess,demoEmailOpenedAdmins,demoPendingAdminInvitation} from './brand-store-demo-presets';
 import {DEMO_LOGIN_PASSWORD} from '../auth/login';
 import {getUiLocale} from '../i18n';
 import {brandMenuRouteVersion} from './enterprise-merchant-services';
@@ -43,10 +43,14 @@ export function readBrandAccess(id: string): BrandAccessState {
   if (state.schema !== 1 || state.merchantId !== id || !Array.isArray(state.accounts) || !Array.isArray(state.roles) || !Array.isArray(state.employees)) throw Error('品牌账号数据无法读取，原数据已保留。');
   if(id==='merchant-zhangji'){
     const merchant=getMerchantById(id);
-    const demoAccounts=merchant?demoEmailOpenedAdmins(merchant,DEMO_LOGIN_PASSWORD):[];
-    state.accounts.push(...demoAccounts.filter(demo=>!state.accounts.some(account=>
-      account.id===demo.id||account.email.toLowerCase()===demo.email
-    )));
+    if(merchant){
+      const demoAccounts=demoEmailOpenedAdmins(merchant,DEMO_LOGIN_PASSWORD);
+      state.accounts.push(...demoAccounts.filter(demo=>!state.accounts.some(account=>
+        account.id===demo.id||account.email.toLowerCase()===demo.email
+      )));
+      const pending=demoPendingAdminInvitation(merchant,state.accounts);
+      if(pending)state.accounts.push(pending);
+    }
   }
   return state;
 }
