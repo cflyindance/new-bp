@@ -19,11 +19,13 @@ export function demoPendingAdminInvitation(merchant:EnterpriseMerchant,accounts:
   invitation:{sentAt:new Date(now).toISOString(),expiresAt:new Date(now+72*60*60*1000).toISOString()}};
 }
 
-export function demoEmailOpenedAdmins(merchant:EnterpriseMerchant,password:string):BrandAccount[]{
+export function demoActivatedAdminScenarios(merchant:EnterpriseMerchant,password:string):BrandAccount[]{
  if(!isAdminScenarioBrand(merchant))return [];
  return [
   {id:'demo-admin-scenario:email-enabled',name:'梁思敏',email:'zhangji.admin.demo.email-enabled@menusifu.cn',enabled:true,admin:true,password,openedVia:'email',createdAt:DEMO_PRESET_AT},
   {id:'demo-admin-scenario:email-disabled',name:'赵宇航',email:'zhangji.admin.demo.email-disabled@menusifu.cn',enabled:false,admin:true,password,openedVia:'email',createdAt:DEMO_PRESET_AT},
+  {id:'demo-admin-scenario:password-enabled',name:'顾雨桐',email:'zhangji.admin.demo.password-enabled@menusifu.cn',enabled:true,admin:true,password,openedVia:'password',createdAt:DEMO_PRESET_AT},
+  {id:'demo-admin-scenario:disabled',name:'周倩',email:'zhangji.admin.demo.disabled@menusifu.cn',enabled:false,admin:true,password,openedVia:'password',createdAt:DEMO_PRESET_AT},
  ];
 }
 /** Only first-party fixtures, never user-created brands. Existing component snapshots win. */
@@ -64,11 +66,10 @@ export function demoBrandAccess(merchant:EnterpriseMerchant,password:string):Bra
    ...(revoked?{revoked:true}:{}),
   });
   accounts.push(
-   {id:'demo-admin-scenario:disabled',name:'周倩',email:'zhangji.admin.demo.disabled@menusifu.cn',enabled:false,admin:true,password,openedVia:'password',createdAt:DEMO_PRESET_AT},
    {id:'demo-admin-scenario:pending',name:'陈嘉宁',email:'zhangji.admin.demo.pending@menusifu.cn',enabled:false,admin:true,password:'',invitation:invitation(12)},
    {id:'demo-admin-scenario:expired',name:'许明远',email:'zhangji.admin.demo.expired@menusifu.cn',enabled:false,admin:true,password:'',invitation:invitation(96)},
    {id:'demo-admin-scenario:revoked',name:'林晓芸',email:'zhangji.admin.demo.revoked@menusifu.cn',enabled:false,admin:true,password:'',invitation:invitation(36,true)},
-   ...demoEmailOpenedAdmins(merchant,password),
+   ...demoActivatedAdminScenarios(merchant,password),
   );
  }
  return {schema:1,employeeAuthorization:'roles-only',merchantId:merchant.merchantId,version:0,accounts,roles:[],employees:[],logs:[]};

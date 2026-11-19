@@ -2,7 +2,7 @@ import { canCorrectBrandAdminInvitation, wasOpenedByEmail } from './brand-access
 import {currentProviderCanTarget as requireProviderBrandTarget} from '../permissions/provider-access-store';
 import {currentMAccount} from '../permissions/m-platform-store';
 import {readProviderState,canProviderEnter,currentProviderAccess} from '../permissions/provider-access-store';
-import {demoBrandAccess,demoEmailOpenedAdmins,demoPendingAdminInvitation} from './brand-store-demo-presets';
+import {demoBrandAccess,demoActivatedAdminScenarios,demoPendingAdminInvitation} from './brand-store-demo-presets';
 import {DEMO_LOGIN_PASSWORD} from '../auth/login';
 import {getUiLocale} from '../i18n';
 import {brandMenuRouteVersion} from './enterprise-merchant-services';
@@ -44,7 +44,7 @@ export function readBrandAccess(id: string): BrandAccessState {
   if(id==='merchant-zhangji'){
     const merchant=getMerchantById(id);
     if(merchant){
-      const demoAccounts=demoEmailOpenedAdmins(merchant,DEMO_LOGIN_PASSWORD);
+      const demoAccounts=demoActivatedAdminScenarios(merchant,DEMO_LOGIN_PASSWORD);
       state.accounts.push(...demoAccounts.filter(demo=>!state.accounts.some(account=>
         account.id===demo.id||account.email.toLowerCase()===demo.email
       )));
