@@ -136,6 +136,10 @@ class DisplayController {
         if(this.platform.regions.some(region=>region.code===data.get('code')&&region.productLine===data.get('slotProductLine')))throw Error('该产线下的区域编码已存在');
       }
       if(step===1&&form.querySelector<HTMLInputElement>('#display-region-example')?.files?.length)throw Error('示例图正在读取，请稍后继续');
+      if(step===1&&!this.regionDraft?.exampleImage){
+        form.querySelector<HTMLButtonElement>('[data-display-action="choose-region-example"]')?.focus();
+        throw Error('请先上传区域示例图');
+      }
     }
     this.showRegionStep(nextStep);
   }
@@ -199,7 +203,7 @@ class DisplayController {
     d.assets.push(...additions);this.dirty=true;this.contentEditor();
   }
   private regionExampleField(draft:RegionInput):string {
-    return `<div class="display-field"><span>区域示例图（可选）</span><p id="display-region-example-guide">建议上传能看出所在页面、并标出广告位置的截图，方便商户识别投放位置。</p><input hidden id="display-region-example" type="file" accept="${REGION_EXAMPLE_TYPES.join(',')}"><div>${btn(draft.exampleImage?'更换示例图':'选择示例图','choose-region-example',{extra:'aria-describedby="display-region-example-guide display-region-example-help"'})}</div><small id="display-region-example-help">PNG、JPEG 或 WebP，最大 512 KB。仅用于商户识别投放位置。</small><div data-region-example-preview>${this.regionExamplePreview(draft)}</div></div>`
+    return `<div class="display-field"><span>区域示例图（${draft.id?'可选':'必传'}）</span><p id="display-region-example-guide">建议上传能看出所在页面、并标出广告位置的截图，方便商户识别投放位置。</p><input hidden id="display-region-example" type="file" accept="${REGION_EXAMPLE_TYPES.join(',')}"><div>${btn(draft.exampleImage?'更换示例图':'选择示例图','choose-region-example',{extra:'aria-describedby="display-region-example-guide display-region-example-help"'})}</div><small id="display-region-example-help">PNG、JPEG 或 WebP，最大 512 KB。仅用于商户识别投放位置。</small><div data-region-example-preview>${this.regionExamplePreview(draft)}</div></div>`
   }
   private regionExamplePreview(draft:RegionInput):string {
     return draft.exampleImage?`<img src="${e(draft.exampleImage)}" alt="区域示例图预览" style="display:block;max-width:100%;max-height:180px;object-fit:contain">${btn('移除示例图','remove-region-example',{link:true})}`:''

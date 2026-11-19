@@ -39,6 +39,7 @@ export function saveRegion(state:DisplayPlatform,input:RegionInput,allowed:boole
   if(!/^[a-z][a-z0-9._-]{0,63}$/.test(code)||code.length>64)fail('区域编码使用小写字母、数字和 . _ - 分隔符，最多 64 字');
   if(existing&&existing.code!==code)fail('区域编码创建后不可修改');if(next.regions.some(r=>r.code===code&&r.productLine===input.productLine&&r.id!==existing?.id))fail('区域编码已存在');
   const ratio=parseRatios(input.ratio).join(' / ');if(!input.mediaKinds.length||input.mediaKinds.some(k=>!['image','video'].includes(k)))fail('至少选择一种有效素材类型');
+  if(!existing&&!input.exampleImage)fail('请先上传区域示例图');
   if(!Number.isInteger(input.maxItems)||input.maxItems<1||input.maxItems>20)fail('素材数量上限为 1～20 的整数');
   if(input.parameters.some(p=>!['interval','idle','transition'].includes(p)))fail('展示参数类型无效');if(input.description.length>200)fail('区域说明最多 200 字');
   const changed=existing&&['ratio','maxItems','mediaKinds','parameters'].some(key=>JSON.stringify(existing[key as keyof DisplayRegion])!==JSON.stringify({...input,ratio}[key as keyof RegionInput]));

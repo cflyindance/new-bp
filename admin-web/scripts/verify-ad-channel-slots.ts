@@ -42,7 +42,7 @@ assert.throws(()=>validateMedia(strict,{...media,mime:'image/svg+xml'}),/格式/
 assert.throws(()=>validateMedia(strict,{...media,bytes:6*1024*1024}),/大小/);
 assert.throws(()=>validateMedia(strict,{...media,kind:'video',mime:'video/mp4',duration:121}),/时长/);
 assert.throws(()=>validateMedia({...strict,mediaKinds:['image']},{...media,kind:'video',mime:'video/mp4',duration:10}),/不支持/);
-const input={...unbound,bindings:{eMenu:{minimumVersion:'1.0.0',mediaKinds:['image' as const]}}};
+const input={exampleImage:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aA5kAAAAASUVORK5CYII=',...unbound,bindings:{eMenu:{minimumVersion:'1.0.0',mediaKinds:['image' as const]}}};
 const platform=saveRegion(createPlatformState(),input,true);assert.equal(platform.regions.filter(s=>s.code==='home').length,2);
 assert.throws(()=>saveRegion(platform,{...input,id:undefined},true),/编码已存在/);
 assert.equal(samePosition({adSlot:snapshot(home)},{adSlot:{...snapshot(home),id:'other',productLine:'eMenu'}}),false);
