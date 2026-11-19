@@ -276,8 +276,8 @@ export function renderActivityPage(path: string, embedded = false): string {
   }
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
   return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + (brandUsage()?'':renderActivityDemoNotice()) + contextHeader(embedded) + dateControls() + rootPage() +
-    '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
-    '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section></div>' + (scope ? storeDrawer(scope) : '') + '</div>';
+    (brandUsage() ? '' : '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
+    '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section>') + '</div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }
 export function bindActivityPage(onMount: () => void, pagePath = location.hash.slice(1)): void {
   const root = document.querySelector<HTMLElement>("[data-ma-page]");
