@@ -699,7 +699,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           ${metric("可用管理员", availableAdmins, "人", "accounts")}
         </div>
         <dl class="brand-detail-fields brand-detail-fields-two">
-          ${row("业态", escapeHtml(cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—"))}
+          ${row("包含业态", escapeHtml(cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—"))}
           ${row("产线", escapeHtml(cap?.productLineIds.map(productLineLabel).join("、") || "—"))}
           ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
           ${row("预设同步", formatDate(cap?.syncedPresetAt))}
