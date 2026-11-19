@@ -5,33 +5,29 @@ const kinds:Record<string,string>={image:'图片',video:'视频'};
 function number(name:string,label:string,value:number,max:number){return `<label class="display-field"><span>${e(label)}</span><input class="display-input" aria-label="${e(label)}" name="${name}" type="number" min="1" max="${max}" value="${value}" required></label>`}
 function choices(name:string,values:string[],selected:string[],labels:Record<string,string>={}){return `<div class="display-checks">${values.map(v=>`<label><input type="checkbox" aria-label="${labels[v]??v.split('/')[1].toUpperCase()}" name="${name}" value="${v}" ${selected.includes(v)?'checked':''}>${labels[v]??v.split('/')[1].toUpperCase()}</label>`).join('')}</div>`}
 function dimensionSummary({width,height}:Pick<AdSpec,'width'|'height'>):string{return Number.isInteger(width)&&width>0&&Number.isInteger(height)&&height>0?`${width} × ${height} px · ${ratio({width,height})}`:'—'}
-const devicePresets:Partial<Record<string,string>>={Kiosk:'自助终端',CDS:'顾客显示屏',取餐屏:'取餐显示屏',Waitlist:'排队叫号屏'};
-const layoutPresets=['竖屏','横屏'];
-const commonDevicePresets=['移动端','平板'];
-const customOption='custom';
+const devicePresets:Partial<Record<string,string>>={Kiosk:'自助终端',取餐屏:'取餐显示屏',Waitlist:'排队叫号屏'};
+const layoutPresets=[['横屏','横版'],['竖屏','竖版']] as const;
+const commonDevicePresets=['移动端','平板','PC 端'];
+const legacyOption='legacy';
 function applicabilityField(prefix:string,value:string):string {
- return `<div data-slot-applicability><div class="display-field-grid"><label class="display-field">适用设备<select class="display-input" data-slot-device aria-label="适用设备" required></select></label><label class="display-field">适用版式<select class="display-input" data-slot-layout aria-label="适用版式" required></select></label></div><div data-slot-custom hidden><label class="display-field">自定义版式／设备<input class="display-input" data-slot-custom-value maxlength="80" placeholder="例如：双屏设备副屏"></label></div><input type="hidden" name="${prefix}applicability" value="${e(value)}"></div>`;
+ return `<div data-slot-applicability><div class="display-field-grid"><label class="display-field">适用设备<select class="display-input" data-slot-device aria-label="适用设备" required></select></label><label class="display-field">适用版式<select class="display-input" data-slot-layout aria-label="适用版式" required></select></label></div><input type="hidden" name="${prefix}applicability" value="${e(value)}"></div>`;
 }
 function syncApplicability(section:HTMLElement,devicePreset:string,initialize=false):void {
  const device=section.querySelector<HTMLSelectElement>('[data-slot-device]')!;
  const layout=section.querySelector<HTMLSelectElement>('[data-slot-layout]')!;
- const custom=section.querySelector<HTMLInputElement>('[data-slot-custom-value]')!;
  const stored=section.querySelector<HTMLInputElement>('input[type=hidden]')!;
  if(initialize){
   const presets=devicePreset?[devicePreset,...commonDevicePresets]:commonDevicePresets;
-  device.replaceChildren(new Option('请选择设备',''),...presets.map(option=>new Option(option,option)),new Option('自定义设备',customOption));
+  device.replaceChildren(new Option('请选择设备',''),...presets.map(option=>new Option(option,option)));
   const [storedDevice,storedLayout,...extra]=stored.value.split('／');
-  const matched=!extra.length&&presets.includes(storedDevice)&&layoutPresets.includes(storedLayout);
-  device.value=matched?storedDevice:stored.value?customOption:'';
-  layout.replaceChildren(new Option('请选择版式',''),...layoutPresets.map(option=>new Option(option,option)),new Option('自定义版式',customOption));
+  const matched=!extra.length&&presets.includes(storedDevice)&&layoutPresets.some(([value])=>value===storedLayout);
+  if(!matched&&stored.value){const previous=new Option('历史值：'+stored.value,legacyOption);previous.disabled=true;device.add(previous);}
+  device.value=matched?storedDevice:stored.value?legacyOption:'';
+  layout.replaceChildren(new Option('请选择版式',''),...layoutPresets.map(([value,label])=>new Option(label,value)));
   layout.value=matched?storedLayout:'';
-  custom.value=matched?'':stored.value;
  }
- layout.disabled=!device.value||device.value===customOption;
- const usesCustom=device.value===customOption||(!layout.disabled&&layout.value===customOption);
- section.querySelector<HTMLElement>('[data-slot-custom]')!.hidden=!usesCustom;
- custom.disabled=!usesCustom;custom.required=usesCustom;
- stored.value=usesCustom?custom.value:device.value&&layout.value?device.value+'／'+layout.value:'';
+ layout.disabled=!device.value||device.value===legacyOption;
+ if(device.value!==legacyOption)stored.value=device.value&&layout.value?device.value+'／'+layout.value:'';
 }
 function row(s:AdSpec,i:number){const p='slot-spec-'+i+'-';return `<section class="display-slot-spec" data-slot-spec="${i}" aria-label="素材规格 ${i+1}"><header class="display-slot-header"><h4>素材规格 ${i+1}</h4><button type="button" class="display-btn display-slot-remove" aria-label="删除素材规格 ${i+1}" data-slot-remove="${i}">删除此规格</button></header><div class="display-slot-group"><h5>适用范围</h5><div class="display-field-grid"><label class="display-field">规格名称<input class="display-input" name="${p}name" aria-label="规格${i+1}名称" value="${e(s.name)}" maxlength="30" required></label><label class="display-field">规格编码<input class="display-input" name="${p}id" aria-label="规格${i+1}编码" value="${e(s.id)}" required></label></div>${applicabilityField(p,s.applicability)}</div><div class="display-slot-group"><h5>尺寸与展示</h5><div class="display-field-grid">${number(p+'width','规格'+(i+1)+'宽度（px）',s.width,16384)}${number(p+'height','规格'+(i+1)+'高度（px）',s.height,16384)}</div><output class="display-muted display-slot-ratio" aria-label="自动计算比例" data-slot-ratio>${dimensionSummary(s)}</output><div class="display-field-grid"><label class="display-field">尺寸不符时<select class="display-input" aria-label="规格${i+1}尺寸校验" name="${p}sizeMode"><option value="recommend" ${s.sizeMode==='recommend'?'selected':''}>仅提示</option><option value="strict" ${s.sizeMode==='strict'?'selected':''}>阻止上传</option></select></label><label class="display-field">展示方式<select class="display-input" aria-label="规格${i+1}展示方式" name="${p}fit"><option value="contain" ${s.fit==='contain'?'selected':''}>完整显示，可能留白</option><option value="cover" ${s.fit==='cover'?'selected':''}>铺满区域，可能裁切</option></select></label></div></div><div class="display-slot-group"><h5>上传限制</h5><div class="display-field">素材类型${choices(p+'mediaKinds',['image','video'],s.mediaKinds,kinds)}</div><section data-slot-media="image" ${s.mediaKinds.includes('image')?'':'hidden'}><h6>图片</h6><label class="display-field">图片格式${choices(p+'imageFormats',['image/jpeg','image/png','image/gif','image/webp'],s.imageFormats)}</label><div class="display-field-grid">${number(p+'imageMaxMB','规格'+(i+1)+'单张图片大小上限（MB）',s.imageMaxMB,100)}${number(p+'maxImages','规格'+(i+1)+'图片数量上限',s.maxImages,20)}</div></section><section data-slot-media="video" ${s.mediaKinds.includes('video')?'':'hidden'}><h6>视频</h6><label class="display-field">视频格式${choices(p+'videoFormats',['video/mp4','video/webm'],s.videoFormats)}</label><div class="display-field-grid">${number(p+'videoMaxMB','规格'+(i+1)+'单个视频大小上限（MB）',s.videoMaxMB,500)}${number(p+'videoMaxSeconds','规格'+(i+1)+'视频时长上限（秒）',s.videoMaxSeconds,3600)}</div></section></div></section>`}
 export function slotProductLineField(slot:Partial<AdSlot>):string{return `<label class="display-field"><span>所属产线 *</span><select class="display-input" name="slotProductLine" aria-label="所属产线" ${slot.productLine?'disabled':''} required><option value="">请选择产线</option>${CHANNELS.map(c=>`<option ${slot.productLine===c?'selected':''}>${c}</option>`).join('')}</select></label>`}
@@ -41,8 +37,7 @@ export function bindSlotFields(form:HTMLFormElement,original:Partial<AdSlot>):vo
  function lockCodes(){if(!original.id)return;form.querySelectorAll<HTMLInputElement>('input[name$="-id"]').forEach(input=>input.readOnly=!!original.specs?.some(s=>s.id===input.value));}
  function initApplicability(){const productLine=original.productLine||(form.elements.namedItem('slotProductLine') as HTMLSelectElement).value;form.querySelectorAll<HTMLElement>('[data-slot-applicability]').forEach(section=>syncApplicability(section,devicePresets[productLine]??'',true));}
  lockCodes();initApplicability();
- form.addEventListener('change',event=>{const control=event.target as HTMLInputElement;if(control.name==='slotProductLine'){form.querySelectorAll<HTMLSelectElement>('[data-slot-device]').forEach(device=>{if(device.value&&device.value!==customOption&&!commonDevicePresets.includes(device.value))device.closest('[data-slot-applicability]')!.querySelector<HTMLInputElement>('input[type=hidden]')!.value=''});initApplicability();return}const section=control.closest<HTMLElement>('[data-slot-applicability]');if(!section)return;if(control.matches('[data-slot-device]'))section.querySelector<HTMLSelectElement>('[data-slot-layout]')!.value='';syncApplicability(section,'');});
- form.addEventListener('input',event=>{const control=event.target as HTMLInputElement;if(control.matches('[data-slot-custom-value]'))syncApplicability(control.closest<HTMLElement>('[data-slot-applicability]')!,'');});
+ form.addEventListener('change',event=>{const control=event.target as HTMLInputElement;if(control.name==='slotProductLine'){form.querySelectorAll<HTMLSelectElement>('[data-slot-device]').forEach(device=>{if(device.value&&device.value!==legacyOption&&!commonDevicePresets.includes(device.value))device.closest('[data-slot-applicability]')!.querySelector<HTMLInputElement>('input[type=hidden]')!.value=''});initApplicability();return}const section=control.closest<HTMLElement>('[data-slot-applicability]');if(!section)return;if(control.matches('[data-slot-device]'))section.querySelector<HTMLSelectElement>('[data-slot-layout]')!.value='';syncApplicability(section,'');});
  form.addEventListener('click',event=>{const target=(event.target as Element).closest<HTMLElement>('[data-slot-add],[data-slot-remove]');if(!target)return;event.preventDefault();const values=readSlotFields(form,original).specs;if(target.hasAttribute('data-slot-add'))values.push({...newSpec('spec-'+(values.length+1)),applicability:'',name:''});else values.splice(Number(target.dataset.slotRemove),1);form.querySelector('[data-slot-specs]')!.innerHTML=values.map(row).join('');lockCodes();initApplicability();form.dispatchEvent(new Event('input',{bubbles:true}))});
  form.addEventListener('input',event=>{const section=(event.target as Element).closest<HTMLElement>('[data-slot-spec]');if(!section)return;const i=Number(section.dataset.slotSpec),w=Number(form.querySelector<HTMLInputElement>(`[name="slot-spec-${i}-width"]`)?.value),h=Number(form.querySelector<HTMLInputElement>(`[name="slot-spec-${i}-height"]`)?.value);section.querySelector('[data-slot-ratio]')!.textContent=dimensionSummary({width:w,height:h})});
  form.addEventListener('change',event=>{const control=event.target as HTMLInputElement;if(!control.matches('input[name$="-mediaKinds"]'))return;const limits=control.closest('[data-slot-spec]')?.querySelector<HTMLElement>(`[data-slot-media="${control.value}"]`);if(limits)limits.hidden=!control.checked});
