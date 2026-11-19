@@ -223,7 +223,7 @@ function openStoreEffectiveMenus(id:string,storeId:string,source:Source):void {
   d.querySelectorAll('[data-effective-close]').forEach(b=>b.addEventListener('click',()=>d.close()));d.addEventListener('close',()=>d.remove(),{once:true});document.body.append(d);bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-effective-tree]')!,choices,keys,{emptyText:'该门店当前没有生效菜单。'});d.showModal();
 }
 
-export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Source,onSaved:()=>void,{batch=false}={}):void {
+export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Source,onSaved:()=>void):void {
   authorizeBrandManagement(id,source);
   const cap=getMerchantCapability(id),version=brandConfigurationVersion(id),stores=getMerchantStores(id).filter(s=>storeIds.includes(s.storeId));
   if(!cap||!stores.length)return;
@@ -260,14 +260,14 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
     current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
     current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!.onclick=()=>{
       if(saving||!current.open)return;const error=current.querySelector<HTMLElement>('[data-store-preview-error]')!,save=current.querySelector<HTMLButtonElement>('[data-store-preview-save]')!;error.hidden=true;
-      try{saving=true;save.disabled=true;saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),(source==='merchant'?'品牌 Admin':'M 平台运营')+' '+templateSourceFor(d.querySelector('[data-menu-picker]')));current.close();d.close();d.remove();showAppToast('门店菜单已保存',{variant:'success'});onSaved();}
+      try{saving=true;save.disabled=true;saveBrandStoreMenus(id,storeIds,selected,mode,version,authorizeBrandManagement(id,source),source==='merchant'?'品牌 Admin':'M 平台运营');current.close();d.close();d.remove();showAppToast('门店菜单已保存',{variant:'success'});onSaved();}
       catch(err){error.hidden=false;error.textContent=(err as Error).message;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
   },{action:'确定',topActions:true});
   d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>{preview?.close();},{once:true});
-  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch,simpleControls:true});
+  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:false,simpleControls:true});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
   const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-template-toolbar]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
   d.querySelector('[name=mode]')!.addEventListener('change',sync);sync();
@@ -758,7 +758,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         if(source==='m-platform'&&action.startsWith('details:'))storeDetails?.open(id,action.slice(8));
         if(action.startsWith('effective:'))openStoreEffectiveMenus(id,action.slice(10),source);
         if(action.startsWith('store:'))openBrandStoreMenuEditor(id,[action.slice(6)],source,render);
-        if(action==='batch'){const ids=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]:checked')].map(c=>c.dataset.storeId!);if(!ids.length)throw Error('请先选择需要配置的门店。');openBrandStoreMenuEditor(id,ids,source,render,{batch:true});}
+        if(action==='batch'){const ids=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]:checked')].map(c=>c.dataset.storeId!);if(!ids.length)throw Error('请先选择需要配置的门店。');openBrandStoreMenuEditor(id,ids,source,render);}
       }catch(e){showAppToast((e as Error).message,{variant:'error'});}});
     };try{render();}catch(e){root.innerHTML=`<p class="ba-error">${esc((e as Error).message)}</p>`;}
   });
