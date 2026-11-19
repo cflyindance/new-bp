@@ -1,6 +1,6 @@
 import {resolveStoreBusinessStatus,type StoreBusinessResult} from './store-business-status';
 import {readStoreBusinessFacts} from './store-business-facts';
-import {getAuthenticatedEmail} from '../auth/login';
+import {DEMO_LOGIN_ACCOUNT,getAuthenticatedEmail} from '../auth/login';
 import {validateBrandCreationFields} from './brand-create-validation';
 import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
@@ -1534,7 +1534,7 @@ export function recordMerchantFirstLogin(id:string):void {
 }
 
 export function ensureBrandStoreDemoPresets():void {
- const snap=readSnapshot();if(fillBrandStoreDemoPresets(snap,snap.brandStoreDemoFresh===true)){delete snap.brandStoreDemoFresh;enrichLicenseFields(snap);writeSnapshot(snap);}
+ const snap=readSnapshot();if(fillBrandStoreDemoPresets(snap,snap.brandStoreDemoFresh===true,getAuthenticatedEmail()?.toLowerCase()===DEMO_LOGIN_ACCOUNT)){delete snap.brandStoreDemoFresh;enrichLicenseFields(snap);writeSnapshot(snap);}
 }
 
 export function getEnterpriseMerchantSnapshotForAuthorization():EnterpriseMerchantSnapshot{return readSnapshot();}
@@ -1973,7 +1973,8 @@ export function getStoreStatusLabel(status: MerchantOrgStore["status"]): string 
 
 export function getStoreOperatingStatus(store:MerchantOrgStore,now=new Date()):StoreBusinessResult {
  const timezone=getMerchantById(store.merchantId)?.timezone??'Asia/Shanghai';
- return resolveStoreBusinessStatus(store,timezone,readStoreBusinessFacts(store.storeId,timezone,now),now);
+ const scenario=store.linkedMerchantId==='demo-store-sh-daning'?'zero':store.linkedMerchantId==='demo-store-sh-nanxiang'?'missing':undefined;
+ return resolveStoreBusinessStatus(store,timezone,readStoreBusinessFacts(store.storeId,timezone,now,scenario),now);
 }
 
 export function statusBadgeClass(status: MerchantStatus): string {

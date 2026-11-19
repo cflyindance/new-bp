@@ -1,5 +1,6 @@
 import type {EnterpriseMerchantSnapshot,EnterpriseMerchant} from './enterprise-merchant-types';
 import type {BrandAccessState,BrandAccount} from './brand-access-domain';
+import {fillBrandLifecycleDemo,lifecycleDemoAdminEmail} from './brand-lifecycle-demo';
 import {brandMenuChoices} from './brand-menu-choices';
 import {brandStorePerspectiveCeiling} from './enterprise-merchant-services';
 function demoIds(){return ['merchant-zhangji','merchant-tea-one','merchant-menusifu-na'];}
@@ -29,8 +30,13 @@ export function demoActivatedAdminScenarios(merchant:EnterpriseMerchant,password
  ];
 }
 /** Only first-party fixtures, never user-created brands. Existing component snapshots win. */
-export function fillBrandStoreDemoPresets(snap:EnterpriseMerchantSnapshot,fresh=false):boolean{
- if(snap.brandStoreDemoVersion===1)return false;
+export function fillBrandStoreDemoPresets(snap:EnterpriseMerchantSnapshot,fresh=false,includeLifecycle=false):boolean{
+ if(snap.brandStoreDemoVersion===2)return false;
+ if(snap.brandStoreDemoVersion===1){
+  if(!includeLifecycle||!fillBrandLifecycleDemo(snap))return false;
+  snap.brandStoreDemoVersion=2;
+  return true;
+ }
  const existingActions=new Set(snap.changelog.filter(l=>l.storeId).map(l=>l.storeId));
  snap.storeCapabilities??=[];
  for(const id of demoIds()){
@@ -52,11 +58,12 @@ export function fillBrandStoreDemoPresets(snap:EnterpriseMerchantSnapshot,fresh=
    snap.storeCapabilities.push({storeId:store.storeId,merchantId:id,menuMode:independent?'independent':'inherit',enabledKeys:independent?[...selected].filter(k=>ceiling.includes(k)):[],updatedAt:DEMO_PRESET_AT,updatedBy:'演示预设'});
   }
  }
- snap.brandStoreDemoVersion=1;return true;
+ snap.brandStoreDemoVersion=includeLifecycle&&fillBrandLifecycleDemo(snap)?2:1;return true;
 }
 export function demoBrandAccess(merchant:EnterpriseMerchant,password:string):BrandAccessState|undefined{
  const emails:Record<string,string>={'merchant-zhangji':'zhangji.admin@menusifu.cn','merchant-tea-one':'tea.one@menusifu.cn','merchant-menusifu-na':'na.demo@menusifu.cn'};
- if(!demoIds().includes(merchant.merchantId)||merchant.accountProvisioningRequired||merchant.primaryAdminEmail!==emails[merchant.merchantId])return undefined;
+ const expectedEmail=emails[merchant.merchantId]??lifecycleDemoAdminEmail(merchant.merchantId);
+ if(!expectedEmail||merchant.accountProvisioningRequired||merchant.primaryAdminEmail!==expectedEmail)return undefined;
  const accounts:BrandAccount[]=[{id:'demo-admin:'+merchant.merchantId,name:merchant.contactName??'演示品牌管理员',email:merchant.primaryAdminEmail,enabled:true,admin:true,password,openedVia:'password',createdAt:DEMO_PRESET_AT}];
  if(merchant.merchantId==='merchant-zhangji'){
   const hour=60*60*1000,now=Date.now();
