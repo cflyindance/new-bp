@@ -278,13 +278,13 @@ function openBrandMenus(id:string,onSaved:()=>void):void {
     current.addEventListener('close',()=>{current.remove();if(preview===current)preview=null;if(d.isConnected)d.querySelector<HTMLButtonElement>('[type=submit]')?.focus();},{once:true});
     current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!.onclick=()=>{
       if(saving||!current.open)return;const save=current.querySelector<HTMLButtonElement>('[data-brand-preview-save]')!,error=current.querySelector<HTMLElement>('[data-brand-preview-error]')!;error.hidden=true;
-      try{saving=true;save.disabled=true;saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'),'M 平台运营 '+templateSourceFor(d.querySelector('[data-menu-picker]')));current.close();d.close();d.remove();showAppToast('品牌菜单已保存',{variant:'success'});onSaved();}
+      try{saving=true;save.disabled=true;saveExplicitBrandMenus(id,next,version,authorizeBrandManagement(id,'m-platform'),'M 平台运营');current.close();d.close();d.remove();showAppToast('品牌菜单已保存',{variant:'success'});onSaved();}
       catch(err){error.textContent=(err as Error).message;error.hidden=false;}finally{saving=false;save.disabled=false;}
     };
     document.body.append(current);renderTree();current.showModal();
   },{action:'确定',topActions:true});
   d.classList.add('brand-menu-edit-modal');
-  d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id});
+  d.addEventListener('close',()=>preview?.close(),{once:true});read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,before,{brandId:id,templates:false});
 }
 
 function brandStoreLocation(store:{address?:string;postalCode?:string}|undefined):string {
