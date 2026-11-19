@@ -264,7 +264,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
 function openBrandMenus(id:string,onSaved:()=>void):void {
   const cap=getMerchantCapability(id)!;const version=brandConfigurationVersion(id),before=[...brandRawMenuKeys(id)];
   const choices=brandMenuChoices(cap.productLineIds);let read=()=>before,preview:HTMLDialogElement|null=null;
-  const d=dialog('编辑品牌菜单','继承模式的门店自动同步；独立配置的门店按本店设置生效。','<div class="ba-note">取消品牌菜单后，品牌门店对应菜单同步失效。账号角色中原授权保留记录，超出品牌上限的部分不生效。</div><div data-menu-picker></div>',()=>{
+  const d=dialog('编辑品牌菜单','继承模式的门店自动同步；独立配置的门店按本店设置生效。','<div data-menu-picker></div>',()=>{
     if(preview?.open)return;
     if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
     const next=[...read()],added=next.filter(k=>!before.includes(k)),removed=before.filter(k=>!next.includes(k));
