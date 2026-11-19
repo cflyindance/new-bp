@@ -18,7 +18,7 @@ import {brandStorePerspectiveCeiling} from './enterprise-merchant-services';
 import {renderManagementFilters,bindManagementFilters,filteredManagementBrands,filteredManagementStores,savedManagementFilter} from './management-list-filters';
 import {serviceStatus} from './brand-service-policy';
 import {brandOnboardingProgress,brandServiceReadiness,type BrandServiceAction} from './brand-service-lifecycle';
-import { brandRawMenuKeys, brandMenuChoices, brandPrimaryAdminEmail, readBrandAccess } from './brand-access-store';
+import { brandRawMenuKeys, brandMenuChoices, readBrandAccess } from './brand-access-store';
 import { renderBrandWorkspace, bindBrandWorkspaces, renderBrandCreateWizard, bindBrandCreateWizard, openBrandStoreMenuEditor,openBrandServiceTransition } from './brand-access-ui';
 /**
  * M 平台 · 入驻品牌管理中心 · 页面 UI
@@ -39,7 +39,6 @@ import { DEFAULT_ENTERPRISE_ID, getActiveEnterprise, listEnterprises, readActive
 import {
   apiGetMerchantReports,
   apiListMerchants,
-  apiPostCrmSync,
   getMerchantApiCallLog,
   merchantApiPath,
 } from "./enterprise-merchant-api";
@@ -66,7 +65,6 @@ import {
   getMerchants,
   getEnterpriseStoreList,
   getProductLineOptions,
-  getContractStatusLabel,
   getLicenseStatusLabel,
   getStoreStatusLabel,
   licenseStatusBadgeClass,
@@ -74,7 +72,6 @@ import {
   mountMerchantToOrg,
   productLineLabel,
   recordMerchantPresetSyncOnly,
-  renewMerchantContract,
   saveMerchantCapability,
   statusBadgeClass,
   syncMerchantFromCrm,
@@ -702,26 +699,21 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
           ${row("包含业态", escapeHtml(cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—"))}
           ${row("产线", escapeHtml(cap?.productLineIds.map(productLineLabel).join("、") || "—"))}
           ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
-          ${row("预设同步", formatDate(cap?.syncedPresetAt))}
         </dl>
       </section>
       <section class="brand-detail-card brand-detail-full">
         <h2 class="text-sm font-semibold">基本信息</h2>
         <dl class="brand-detail-fields">
-          ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.merchantId)}</span>`)}
-          ${row("BID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
+          ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
 
           ${row("编码", escapeHtml(merchant.code))}
           ${row("组织类型", escapeHtml(getMerchantOrgTypeLabel(merchant.orgType)))}
           ${row("状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(merchant.status)}">${escapeHtml(getMerchantStatusLabel(merchant.status))}</span>`)}
           ${row("联系人", escapeHtml(merchant.contactName ?? "—"))}
           ${row("电话", escapeHtml(merchant.contactPhone ?? "—"))}
-          ${row("主管理员", escapeHtml(brandPrimaryAdminEmail(merchant.merchantId) || "待开通"))}
           ${row("合同到期", formatDate(merchant.contractExpiresAt))}
           ${row("License", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${licenseStatusBadgeClass(merchant.licenseStatus)}">${escapeHtml(getLicenseStatusLabel(merchant.licenseStatus))}</span>`)}
           ${merchant.suspendedReason ? row("暂停原因", escapeHtml(merchant.suspendedReason)) : ""}
-          ${row("邀请邮件", formatDate(merchant.onboardingInviteSentAt))}
-          ${row("初始化完成时间", formatDate(merchant.onboardingCompletedAt))}
           ${
             merchant.status === "closing"
               ? row("冷静期至", formatDate(merchant.closingEndsAt))
@@ -729,28 +721,6 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
                 ? row("关闭时间", formatDate(merchant.closedAt))
                 : ""
           }
-        </dl>
-      </section>
-      <section class="brand-detail-card brand-detail-full">
-        <div class="brand-crm-heading">
-          <h2 class="text-sm font-semibold">CRM / 合同（Salesforce 演示）</h2>
-          <div class="brand-crm-actions">
-            <button type="button" data-merchant-crm-sync="${escapeHtml(id)}">从 CRM 同步</button>
-            <details class="brand-crm-renew">
-              <summary>合同续期</summary>
-              <form data-merchant-contract-renew-form data-merchant-id="${escapeHtml(id)}">
-                <label class="ba-field">续期至<input name="contractExpiresAt" type="date" required></label>
-                <button type="submit" class="ba-btn ba-primary">确认续期</button>
-              </form>
-            </details>
-          </div>
-        </div>
-        <dl class="brand-detail-fields brand-crm-fields">
-          ${row("CRM 合同 ID", escapeHtml(merchant.crmContractId ?? "—"))}
-          ${row("CRM 账户 ID", escapeHtml(merchant.crmAccountId ?? "—"))}
-          ${row("合同状态", escapeHtml(getContractStatusLabel(merchant.contractStatus)))}
-          ${row("上次同步", formatDate(merchant.crmLastSyncedAt))}
-          ${row("到期自动暂停", merchant.licenseAutoSuspend === false ? "否" : "是")}
         </dl>
       </section>
     </div>`;
@@ -1273,28 +1243,6 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
 
   document.querySelectorAll<HTMLButtonElement>('[data-brand-service]').forEach(button=>button.onclick=()=>{try{openBrandServiceTransition(button.dataset.merchantId!,button.dataset.brandService as BrandServiceAction,onMount);}catch(error){window.alert((error as Error).message);}});
   document.querySelectorAll<HTMLButtonElement>('[data-merchant-lifecycle="impersonate"]').forEach(button=>button.onclick=()=>{const id=button.dataset.merchantId!;openDelegatedBackendTab({kind:'brand',id,returnPath:merchantDetailHref(id)});});
-
-  document.querySelectorAll<HTMLButtonElement>("[data-merchant-crm-sync]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const merchantId = btn.dataset.merchantCrmSync;
-      if (!merchantId) return;
-      await apiPostCrmSync(merchantId);
-      window.alert("CRM 合同已同步。");
-      onMount();
-    });
-  });
-
-  document.querySelectorAll<HTMLFormElement>("[data-merchant-contract-renew-form]").forEach((form) => {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const merchantId = form.dataset.merchantId;
-      if (!merchantId) return;
-      const expiresAt = String(new FormData(form).get("contractExpiresAt") ?? "");
-      if (!expiresAt) return;
-      renewMerchantContract(merchantId, { contractExpiresAt: expiresAt, restoreActive: true });
-      onMount();
-    });
-  });
 
   document.querySelectorAll<HTMLButtonElement>("[data-merchant-api-demo]").forEach((btn) => {
     btn.addEventListener("click", async () => {

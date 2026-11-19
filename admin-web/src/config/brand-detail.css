@@ -246,15 +246,6 @@
 .brand-detail-ring[data-configured=true] { --ring-first: var(--brand-detail-blue); }
 .brand-detail-ring[data-enabled=true] { --ring-second: var(--brand-detail-blue); }
 .brand-detail-ring[data-signed-in=true] { --ring-third: var(--brand-detail-blue); }
-.brand-crm-heading, .brand-crm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.brand-crm-heading { justify-content: space-between; }
-.brand-crm-actions > button, .brand-crm-renew summary { display: grid; place-items: center; min-height: 44px; padding: 0 14px; border-radius: 12px; background: color-mix(in srgb,var(--color-foreground) 6%,var(--color-card)); cursor: pointer; list-style: none; }
-.brand-crm-renew summary { color: var(--brand-detail-blue); }
-.brand-crm-renew summary::-webkit-details-marker { display: none; }
-.brand-crm-renew { position: relative; }
-.brand-crm-renew form { position: absolute; z-index: 2; right: 0; bottom: calc(100% + 8px); display: grid; gap: 12px; min-width: 210px; padding: 16px; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 8px 24px #0002; }
-.brand-crm-fields { grid-template-columns: repeat(3,minmax(0,1fr)); }
-@media (max-width: 650px) { .brand-crm-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 
 /* Brand usage controls follow the brand detail canvas. */
 .brand-usage-filters {
