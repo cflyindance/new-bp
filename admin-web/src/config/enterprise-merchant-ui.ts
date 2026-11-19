@@ -697,7 +697,7 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
         </div>
         <dl class="brand-detail-fields brand-detail-fields-two">
           ${row("包含业态", escapeHtml(cap?.businessTypeIds.map(businessTypeLabel).join("、") || "—"))}
-          ${row("产线", escapeHtml(cap?.productLineIds.map(productLineLabel).join("、") || "—"))}
+          ${row("包含产线", escapeHtml(cap?.productLineIds.map(productLineLabel).join("、") || "—"))}
           ${row("开通时间", formatDate(merchant.activatedAt ?? merchant.createdAt))}
         </dl>
       </section>
@@ -706,13 +706,10 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
         <dl class="brand-detail-fields">
           ${row("品牌 ID", `<span class="font-mono text-xs">${escapeHtml(merchant.bid ?? "—")}</span>`)}
 
-          ${row("编码", escapeHtml(merchant.code))}
           ${row("组织类型", escapeHtml(getMerchantOrgTypeLabel(merchant.orgType)))}
           ${row("状态", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(merchant.status)}">${escapeHtml(getMerchantStatusLabel(merchant.status))}</span>`)}
           ${row("联系人", escapeHtml(merchant.contactName ?? "—"))}
           ${row("电话", escapeHtml(merchant.contactPhone ?? "—"))}
-          ${row("合同到期", formatDate(merchant.contractExpiresAt))}
-          ${row("License", `<span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${licenseStatusBadgeClass(merchant.licenseStatus)}">${escapeHtml(getLicenseStatusLabel(merchant.licenseStatus))}</span>`)}
           ${merchant.suspendedReason ? row("暂停原因", escapeHtml(merchant.suspendedReason)) : ""}
           ${
             merchant.status === "closing"
