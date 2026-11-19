@@ -219,7 +219,7 @@ function openStoreEffectiveMenus(id:string,storeId:string,source:Source):void {
   d.querySelectorAll('[data-effective-close]').forEach(b=>b.addEventListener('click',()=>d.close()));d.addEventListener('close',()=>d.remove(),{once:true});document.body.append(d);bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-effective-tree]')!,choices,keys,{emptyText:'该门店当前没有生效菜单。'});d.showModal();
 }
 
-export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Source,onSaved:()=>void):void {
+export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Source,onSaved:()=>void,{batch=false}={}):void {
   authorizeBrandManagement(id,source);
   const cap=getMerchantCapability(id),version=brandConfigurationVersion(id),stores=getMerchantStores(id).filter(s=>storeIds.includes(s.storeId));
   if(!cap||!stores.length)return;
@@ -260,7 +260,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   },{action:'确定',topActions:true});
   d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>{preview?.close();},{once:true});
-  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling});
+  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
   const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-template-toolbar]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
   d.querySelector('[name=mode]')!.addEventListener('change',sync);sync();
@@ -744,7 +744,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         if(source==='m-platform'&&action.startsWith('details:'))storeDetails?.open(id,action.slice(8));
         if(action.startsWith('effective:'))openStoreEffectiveMenus(id,action.slice(10),source);
         if(action.startsWith('store:'))openBrandStoreMenuEditor(id,[action.slice(6)],source,render);
-        if(action==='batch'){const ids=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]:checked')].map(c=>c.dataset.storeId!);if(!ids.length)throw Error('请先选择需要配置的门店。');openBrandStoreMenuEditor(id,ids,source,render);}
+        if(action==='batch'){const ids=[...root.querySelectorAll<HTMLInputElement>('[data-store-id]:checked')].map(c=>c.dataset.storeId!);if(!ids.length)throw Error('请先选择需要配置的门店。');openBrandStoreMenuEditor(id,ids,source,render,{batch:true});}
       }catch(e){showAppToast((e as Error).message,{variant:'error'});}});
     };try{render();}catch(e){root.innerHTML=`<p class="ba-error">${esc((e as Error).message)}</p>`;}
   });

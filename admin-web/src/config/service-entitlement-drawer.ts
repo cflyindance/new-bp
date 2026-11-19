@@ -10,7 +10,7 @@ export function openEntitlementDrawer(root:HTMLElement,trigger:HTMLButtonElement
  const anchor=content.parentElement!,name=row.querySelector('[data-ent-menu],strong')?.textContent??'服务';
  const scrollHost=(()=>{let n=root.parentElement;while(n){if(['auto','scroll'].includes(getComputedStyle(n).overflowY))return n;n=n.parentElement;}return document.scrollingElement as HTMLElement;})(),position=scrollHost.scrollTop;
  const d=document.createElement('dialog');d.className='ba ba-modal ba-admin-dialog ba-rights-drawer';d.dataset.rightsDrawer='';d.setAttribute('aria-labelledby','rights-drawer-title');
- d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><div><h2 id="rights-drawer-title">${esc(name)} · 历史权益</h2></div><button type="button" class="ba-btn" data-rights-drawer-close aria-label="关闭历史权益">×</button></header><section class="ba-dialog-body"></section><footer class="ba-footer" style="justify-content:flex-end"><button type="button" class="ba-btn" data-rights-drawer-close>关闭</button></footer></div>`;
+ d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><button type="button" class="ba-btn" data-rights-drawer-close aria-label="关闭历史权益">×</button><div><h2 id="rights-drawer-title">历史权益</h2><p class="ba-muted">${esc(name)}</p></div></header><section class="ba-dialog-body"></section></div>`;
  d.querySelector('.ba-dialog-body')!.append(content);
  let closed=false;
  const observer=new MutationObserver(()=>{if(!root.isConnected)close();});
