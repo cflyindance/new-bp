@@ -31,5 +31,4 @@
 .display-region-progress li[aria-current=step],.display-region-progress li.complete{border-color:#1677ff}
 .display-region-progress li[aria-current=step]{color:#1677ff;font-weight:600}
 .dark .display-region-progress li:not([aria-current]){color:#cbd5e1}
-.display-region-navigation{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid var(--display-border,#eee)}
 .display-region-create .display-alert{margin:24px 0 0}
