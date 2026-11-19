@@ -729,7 +729,6 @@ function renderMerchantDetailOverview(merchant: NonNullable<ReturnType<typeof ge
                 ? row("关闭时间", formatDate(merchant.closedAt))
                 : ""
           }
-          ${row("时区", escapeHtml(merchant.timezone))}
         </dl>
       </section>
       <section class="brand-detail-card brand-detail-full">
