@@ -136,9 +136,9 @@ function brandUsageCharts(storeIds: Set<string>): string {
   const channels = new Map<string, number>();
   for (const order of orders) {
     const day = order.submittedAt.slice(0, 10);
-    const channel = order.binding?.line ?? "待识别";
+    const channel = order.binding?.line;
     days.set(day, (days.get(day) ?? 0) + 1);
-    channels.set(channel, (channels.get(channel) ?? 0) + 1);
+    if (channel) channels.set(channel, (channels.get(channel) ?? 0) + 1);
   }
   const range = Array.from({length: dateNumber(state.period.end)-dateNumber(state.period.start)+1}, (_, index) => shiftDate(state.period.start,index));
   const maxDay = Math.max(1,...days.values());
@@ -147,7 +147,7 @@ function brandUsageCharts(storeIds: Set<string>): string {
     const count = days.get(day) ?? 0;
     return `<span title="${day} · ${count} 单" style="--bar:${count/maxDay*100}%"></span>`;
   }).join("");
-  const lines = [...PRODUCT_LINES,"待识别"].map(line => {
+  const lines = PRODUCT_LINES.map(line => {
     const count = channels.get(line) ?? 0;
     return `<div><span>${line}</span><i aria-hidden="true" style="--bar:${count/maxChannel*100}%"></i><strong>${count}</strong></div>`;
   }).join("");
@@ -185,18 +185,16 @@ function rootPage(): string {
     badge(m.status) + (m.status === "never" ? '<small>' + neverNote({ storeId: store.id }) + '</small>' : '') + '</td>' + (brandSummary
     ? `<td class="ma-number">${n(m.count)}</td><td class="ma-number">${n(m.paid)} / ${n(m.cancelled)}</td><td class="ma-number">${n(m.activeDays)}</td><td class="ma-number">${m.dailyAverage===null?'—':m.dailyAverage.toFixed(1)}</td><td>${time(m.latest)}</td>`
     : metricCells(m)) + '<td class="ma-number">' + m.boundDevices + ' / ' + n(m.usedDevices) +
-    '</td><td class="ma-number">' + n(m.unknown) + '</td>' + (brandSummary ? '' : '<td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td>') + '</tr>';}).join("");
+    '</td>' + (brandSummary ? '' : '<td><a class="ma-link ma-nowrap" data-ma-entry="detail" href="' + href({ storeId: store.id }) + '">查看详情 →</a>' + activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '</td>') + '</tr>';}).join("");
   const brandMetrics = brandSummary ? (() => {
     const ids = new Set(complete.map(item => item.store.id));
     const allIds = new Set(rows.map(item => item.store.id));
     const bound = new Set([...allIds].flatMap(storeId=>currentBindings(data,{storeId}).map(binding=>binding.deviceId)));
     const used = new Set(periodOrders(resolved,state.period).filter(order=>ids.has(order.storeId)&&order.binding).map(order=>order.binding!.deviceId));
-    const unknown = complete.reduce((sum,item)=>sum+(item.m.unknown??0),0);
     return summaryCards([
       { label: "当前筛选门店", value: String(rows.length), note: "" },
       { label: "期间点单数", value: n(count), note: errors ? errors + " 家数据异常未计入" : "" },
       { label: "绑定 / 有订单设备", value: bound.size + " / " + used.size, note: "" },
-      { label: "来源待识别", value: n(unknown), note: "" },
     ]) + brandUsageCharts(ids);
   })() : summaryCards([
     { label: "门店", value: String(rows.length), note: "当前筛选范围" },
@@ -207,8 +205,8 @@ function rootPage(): string {
   const storeFilters = `<div class="brand-usage-store-filters" data-activity-browse><select form="brand-usage-filter-form" name="status" aria-label="活跃状态">${usageStatusOptions()}</select><div class="brand-usage-search"><button type="submit" form="brand-usage-filter-form" aria-label="搜索门店">${usageSearchIcon}</button><input type="search" form="brand-usage-filter-form" name="query" aria-label="搜索门店名称或 MID" placeholder="搜索门店名称或 MID" maxlength="80" value="${esc(state.query)}"></div></div>`;
   const headers = brandSummary ? '<th>点单数</th><th>支付 / 取消</th><th>有订单天数</th><th>日均点单</th><th>最近点单</th>' : metricHeaders;
   return (brandSummary?'':filterControls())+brandMetrics+`<section class="ma-panel${brandSummary?' brand-usage-table':''}"><div class="ma-panel-title"><div><h3 data-ma-list-title tabindex="-1">门店使用情况</h3></div>${brandSummary?storeFilters:`<span>${rows.length} 家门店</span>`}</div>
-    <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th>${brandSummary?'<th scope="col">地址 / 邮编</th>':''}<th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th><th class="ma-number">来源待识别</th>${brandSummary?'':'<th>操作</th>'}</tr></thead>
-    <tbody>${table||`<tr><td colspan="${brandSummary?10:12}" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>`}</tbody></table></div></section>`;
+    <div class="ma-table-wrap"><table><thead><tr><th>${brandSummary?'门店':'门店／品牌'}</th>${brandSummary?'<th scope="col">地址 / 邮编</th>':''}<th>当前活跃状态</th>${headers}<th class="ma-number">绑定 / 有订单设备</th>${brandSummary?'':'<th>操作</th>'}</tr></thead>
+    <tbody>${table||`<tr><td colspan="${brandSummary?9:11}" class="ma-empty">没有符合筛选条件的门店，请调整条件或重置筛选。</td></tr>`}</tbody></table></div></section>`;
 
 }
 function scopeSummary(scope: ActivityScope): string {
@@ -252,7 +250,7 @@ function storeDrawer(scope: ActivityScope): string {
     '<button type="button" data-ma-drawer-close aria-label="关闭门店详情">关闭 ×</button></header>' +
     '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' + (brandUsage()?'':renderActivityDemoNotice()) +
     (store.quality === 'error' ? '<p class="ma-error-note" role="alert">该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : '') + scopeSummary(selected) +
-    (!scope.line ? lineOverview(scope) + (m.unknown ? '<p class="ma-inline-note">来源待识别：' + n(m.unknown) + ' 单。未计入任何产线或设备。</p>' : '') : '') + devicesPage(scope) + '</div></section></div>';
+    (!scope.line ? lineOverview(scope) : '') + devicesPage(scope) + '</div></section></div>';
 }
 export function renderActivityPage(path: string, embedded = false): string {
   const previousAsOf = data.asOf;
