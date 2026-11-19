@@ -308,7 +308,7 @@ export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string 
   const selected = jsonMenuEditorStore.selectedNode();
   const ancestors = selectedAncestors();
   if (!dialogState && selected) dialogState = buildEditFormState(state.selectedPath);
-  return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] bg-[#f7f8fa] px-6 pb-3 pt-6" data-json-menu-editor>
+  return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] bg-[#f7f8fa] px-6 pt-6 ${view === "projects" ? "pb-0" : "pb-3"}" data-json-menu-editor>
     ${view === "nav" ? `<header class="shrink-0 bg-transparent pb-6">
       <div class="flex items-center justify-between gap-5">
         <div class="min-w-0"><div class="flex items-center gap-2.5"><h1 class="text-2xl font-bold tracking-tight text-slate-900">${MENU_ROUTING_PAGES.find(page => page.view === view)!.title}</h1></div></div>
