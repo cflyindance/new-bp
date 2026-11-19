@@ -13,7 +13,7 @@ export function buildMNavigationModules(authorized: MModule[]): MModule[] {
     const resource = routing.pages[0];
     modules.push({ id:'menu-config-nav', title:'菜单配置', pages: MENU_ROUTING_PAGES.filter(p=>p.view==='nav'||p.view==='menu-log').map(page=>({...resource,title:page.title,path:page.path})) });
     routing.pages = MENU_ROUTING_PAGES.filter(p=>p.view==='menu-root'||p.view==='registry').map(page=>({...resource,title:page.title,path:page.path}));
-    modules.push({ id:'registry-nav', title:'页面注册中心', pages: MENU_ROUTING_PAGES.filter(p=>p.view==='projects'||p.view==='pages'||p.view==='registry-log').map(page=>({...resource,title:page.title,path:page.path})) });
+    modules.push({ id:'registry-nav', title:'页面注册中心', pages: MENU_ROUTING_PAGES.filter(p=>p.view==='projects'||p.view==='registry-log').map(page=>({...resource,title:page.title,path:page.path})) });
   }
   const presetIndex = modules.findIndex(module=>module.pages.some(p=>p.id==='presets'));
   if (presetIndex >= 0) {
