@@ -5,7 +5,7 @@ import { seedBusinessRegistries } from './page-registry-business-seeds';
 import {appendOperation} from './operation-log';
 
 export const REGISTRY_PROJECTS_KEY = 'menusifu:page-registry:v2';
-export interface RegistryProject { id: string; name: string; microName?: string; microUrl?: string; microRoute?: string; status?: 'active' | 'disabled' }
+export interface RegistryProject { id: string; name: string; microName?: string; microUrl?: string; microRoute?: string; engineeringOwner?: string; productOwner?: string; description?: string; status?: 'active' | 'disabled' }
 export function validateProjectMicroApp(p: RegistryProject): void {
   if (!p.microName?.trim()) throw new Error('请填写微应用标识');
   try { if (!['http:', 'https:'].includes(new URL(p.microUrl ?? '').protocol)) throw new Error(); } catch { throw new Error('应用入口 URL 必须是 HTTP(S) 地址'); }

@@ -16,6 +16,7 @@ export function renderOperationActionTag(action:string):string {
 const labels:Record<string,string>={
  name:'名称',title:'页面名称',titleEn:'英文名称',module:'维护模块',status:'启用状态',path:'路径地址',url:'应用入口地址',
  projects:'项目',pages:'页面',directories:'目录',assignments:'页面归属',menu:'菜单',children:'下级菜单',routing:'页面配置',
+ engineeringOwner:'研发负责人',productOwner:'产品负责人',
  microName:'微应用标识',microUrl:'应用入口地址',microRoute:'微应用路由',microAppConfig:'微应用配置',externalConfig:'外部链接配置',
  parentId:'父级目录',directoryId:'所属目录',projectId:'所属项目',pageId:'所属页面',parent:'父级目录',parentKey:'父级菜单',targetKey:'关联菜单',
  type:'页面类型',key:'菜单标识',icon:'图标',display:'是否显示',disabled:'是否禁用',extraInfo:'扩展信息',

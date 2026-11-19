@@ -1,0 +1,34 @@
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const {chromium}=createRequire(import.meta.url)('C:/Users/27273/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+try{
+ const p=await browser.newPage(),base=process.env.PREVIEW_URL??'http://127.0.0.1:65293';
+ await p.goto(base);
+ await p.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('demo.menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('demo.menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+ await p.goto(base+'/#/m-platform/nav-blueprint/page-registry/projects');
+ await p.locator('[data-project-create]').click();
+ const form=p.locator('[data-project-save]'),save=p.locator('button[form=project-config-form]');
+ const field=key=>form.locator('[name='+key+']');
+ for(const [key,value] of Object.entries({name:'负责人回归项目',microName:'owners-regression',microUrl:'https://example.com/app',microRoute:'/owners-regression',engineeringOwner:'   ',productOwner:' 李娜 '}))await field(key).fill(value);
+ await save.click();await form.getByText('请填写研发负责人').waitFor();
+ await field('engineeringOwner').fill(' 张明 ');await field('productOwner').fill('   ');
+ await save.click();await form.getByText('请填写产品负责人').waitFor();
+ await field('productOwner').fill(' 李娜 ');await save.click();await form.waitFor({state:'detached'});
+ const row=p.locator('tr').filter({hasText:'负责人回归项目'});
+ await row.locator('[data-project-action=edit]').click();
+ assert.equal(await field('engineeringOwner').inputValue(),'张明');
+ assert.equal(await field('productOwner').inputValue(),'李娜');
+ assert.equal(await field('description').inputValue(),'');
+ await field('description').fill('第一行\n第二行');
+ await p.keyboard.press('Escape');await p.getByRole('button',{name:'继续编辑'}).click();
+ assert.equal(await field('description').inputValue(),'第一行\n第二行');
+ await save.click();await form.waitFor({state:'detached'});
+ await p.reload();await row.locator('[data-project-action=edit]').click();
+ assert.equal(await field('description').inputValue(),'第一行\n第二行');
+ await p.locator('[data-project-close]').click();
+ await p.locator('tr').filter({hasText:'商品中心'}).locator('[data-project-action=edit]').click();
+ assert.equal(await field('engineeringOwner').inputValue(),'');
+ assert.ok(await field('engineeringOwner').getAttribute('required')!==null);
+ console.log('PASS: required owners, optional description, trim, edit persistence, draft guard, legacy project compatibility');
+}finally{await browser.close();}
