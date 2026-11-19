@@ -21,3 +21,15 @@
 .display-reference-flow>.standalone-page-header{margin-bottom:0}.display-reference-flow>.standalone-page-header .display-btn{font-size:16px}.display-reference-flow>.standalone-page-header .display-btn.primary{border:0}.display-reference-description+.display-reference-date-field{margin-top:0}
 
 .display-reference-flow>header.standalone-page-header[data-standalone-page-header]{margin-bottom:0}.display-reference-flow>header.standalone-page-header[data-standalone-page-header] .standalone-page-title>h1{font-size:20px;font-weight:600;line-height:48px}.display-reference-flow .standalone-page-heading{gap:16px}
+
+.display-region-create>.standalone-page-header{margin-bottom:0}
+.display-region-create .standalone-page-actions .display-btn{min-height:48px}
+.display-region-create .display-full-body{max-width:1020px}
+.display-region-create [hidden]{display:none}
+.display-region-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;margin:0 0 24px;padding:0}
+.display-region-progress li{border-bottom:2px solid #d9d9d9;padding:0 0 10px;color:#595959}
+.display-region-progress li[aria-current=step],.display-region-progress li.complete{border-color:#1677ff}
+.display-region-progress li[aria-current=step]{color:#1677ff;font-weight:600}
+.dark .display-region-progress li:not([aria-current]){color:#cbd5e1}
+.display-region-navigation{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid var(--display-border,#eee)}
+.display-region-create .display-alert{margin:24px 0 0}
