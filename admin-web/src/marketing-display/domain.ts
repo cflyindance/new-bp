@@ -6,8 +6,10 @@ export const REGIONS_PATH='/m-platform/display-regions';
 export const DISPLAY_TERMINALS=CHANNELS;
 export type MediaKind='image'|'video';
 export type Parameter='interval'|'idle'|'transition';
+export const REGION_EXAMPLE_MAX_BYTES=512*1024;
+export const REGION_EXAMPLE_TYPES=['image/png','image/jpeg','image/webp'];
 export interface TerminalBinding { minimumVersion:string; mediaKinds:MediaKind[] }
-export interface DisplayRegion {productLine?:string;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
+export interface DisplayRegion {productLine?:string;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;exampleImage?:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
 export interface DisplayPlatform {schema:1;revision:number;regions:DisplayRegion[]}
 export interface DisplayAsset {id:string;name:string;kind:MediaKind;url:string;variant:string}
 export interface DisplayContent {id:string;name:string;regionId:string;assets:DisplayAsset[];settings:{interval?:number;idle?:number;transition?:string};version:number;updatedAt:number;legacyId?:string}
@@ -15,7 +17,7 @@ export interface PublicationSnapshot {contentId:string;name:string;version:numbe
 export interface DisplayPlacement {id:string;contentId:string;regionId:string;storeIds:string[];terminals:string[];startAt:number;endAt:number;timeZone:string;status:'draft'|'published'|'revoked';disabledTargets?:string[];snapshot?:PublicationSnapshot;publishedAt?:number;updatedAt:number}
 export interface MerchantDisplayState {schema:1;scope:string;revision:number;contents:DisplayContent[];placements:DisplayPlacement[];legacyIds:string[]}
 export interface DisplayContext {scope:string;storeIds:string[];canWrite:boolean}
-export type RegionInput=Pick<DisplayRegion,'name'|'code'|'scene'|'description'|'ratio'|'mediaKinds'|'maxItems'|'parameters'|'bindings'|'productLine'|'specs'|'specVersion'|'specHistory'>&{id?:string};
+export type RegionInput=Pick<DisplayRegion,'name'|'code'|'scene'|'description'|'exampleImage'|'ratio'|'mediaKinds'|'maxItems'|'parameters'|'bindings'|'productLine'|'specs'|'specVersion'|'specHistory'>&{id?:string};
 export type ContentInput=Pick<DisplayContent,'name'|'regionId'|'assets'|'settings'>&{id?:string;legacyId?:string};
 export type PlacementInput=Pick<DisplayPlacement,'contentId'|'storeIds'|'terminals'|'startAt'|'endAt'>&{id?:string;timeZone?:string};
 export interface TerminalRequest {scope:string;storeId:string;terminal:string;regionCode:string;version:string;now:number;variant?:string}
@@ -31,6 +33,7 @@ export function parseRatios(ratio:string):string[]{const values=ratio.split('/')
 export function saveRegion(state:DisplayPlatform,input:RegionInput,allowed:boolean):DisplayPlatform {
   if(!allowed)fail('暂无区域管理权限');const next=clone(state),existing=next.regions.find(r=>r.id===input.id);
   input=updateContract(existing,input as DisplayRegion) as RegionInput;
+  if(input.exampleImage!==undefined&&(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(input.exampleImage)||input.exampleImage.split(',')[1].length>4*Math.ceil(REGION_EXAMPLE_MAX_BYTES/3)))fail('区域示例图须为不超过 512 KB 的 PNG、JPEG 或 WebP 图片');
   const name=input.name.trim(),code=input.code.trim(),scene=input.scene.trim();
   if(!name||name.length>30)fail('区域名称必填，最多 30 字');if(!scene||scene.length>20)fail('所属场景必填，最多 20 字');
   if(!/^[a-z][a-z0-9._-]{0,63}$/.test(code)||code.length>64)fail('区域编码使用小写字母、数字和 . _ - 分隔符，最多 64 字');
