@@ -100,11 +100,12 @@ export function openBrandServiceTransition(id:string,action:BrandServiceAction,o
   }
 }
 
-export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;categoryActions?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
+export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;simpleControls?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
   const createPicker=Boolean(options.scene);
   const treePicker=Boolean(options.brandId)||createPicker;
+  const simpleControls=treePicker||options.simpleControls;
   const roots=available.filter(c=>c.level===1),byKey=new Map(available.map(c=>[c.key,c]));
   let active=roots[0]?.key??'',query='',selectedOnly=false,reviewAll=false;
   const collapsed=new Set<string>();
@@ -126,11 +127,11 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     const categoryScroll=host.querySelector('nav')?.scrollTop??0;
     const treeScroll=host.querySelector('.ba-menu-list')?.scrollTop??0;
     const pageCount=(key:string)=>{const pages=descendants(key).filter(c=>c.isPage===true);return `${pages.filter(c=>selected.has(c.key)).length}/${pages.length}`;};
-    const filterCategories=treePicker&&selectedOnly;
+    const filterCategories=simpleControls&&selectedOnly;
     const visibleRoots=filterCategories?roots.filter(root=>descendants(root.key).some(child=>selected.has(child.key))):roots;
     const visibleRootKeys=new Set(visibleRoots.map(root=>root.key));
-    if(treePicker&&!visibleRootKeys.has(active))active=visibleRoots[0]?.key??'';
-    const filterSelectedRows=selectedOnly&&!treePicker;
+    if(simpleControls&&!visibleRootKeys.has(active))active=visibleRoots[0]?.key??'';
+    const filterSelectedRows=selectedOnly&&!simpleControls;
     const matches=new Set<string>();
     const includeWithParents=(c:MenuChoice)=>{matches.add(c.key);let parent=c.parent;const seen=new Set<string>();while(parent&&!seen.has(parent)){seen.add(parent);matches.add(parent);parent=byKey.get(parent)?.parent;}};
     const filtered=Boolean(query||filterSelectedRows||reviewAll);
@@ -156,13 +157,16 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       };
       return `<div class="ba-edit-tree">${renderBranch()}</div>`;
     };
-    const treeActions=button('展开全部','expand-all')+button('收起全部','collapse-all')+(!treePicker&&options.categoryActions!==false&&!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):'');
+    const treeActions=simpleControls?'':button('展开全部','expand-all')+button('收起全部','collapse-all')+(!reviewAll&&!query?button('全选当前分类','select-module')+button('清空当前分类','clear-module'):'');
+    const selectionActions=`<div class="ba-actions ba-menu-selection-actions">
+      <label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅查看已选</label>
+      <button type="button" class="ba-btn" data-create-select-all ${available.length?'':'disabled'}>${available.length&&available.every(c=>selected.has(c.key))?'取消全选':'全选菜单'}</button>
+    </div>`;
     const createToolbar=`<div class="ba-create-menu-toolbar">
       <div><h3 tabindex="-1">品牌菜单开通</h3><p class="ba-muted">可暂不选择，已选 <strong data-menu-count>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</p></div>
-      <div class="ba-actions"><label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>
-        <button type="button" class="ba-btn" data-create-select-all ${available.length?'':'disabled'}>${available.length&&available.every(c=>selected.has(c.key))?'取消全选':'全选菜单'}</button></div>
+      ${selectionActions}
     </div><div class="ba-create-menu-search">${storeSearchIcon}<input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称" value="${esc(query)}"></div>`;
-    host.innerHTML=`${createPicker?createToolbar:`<div class="ba-toolbar ba-menu-picker-toolbar"><input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称或路由" value="${esc(query)}"><span class="ba-tag" data-menu-count>已选 ${options.brandId?'':`${roots.filter(c=>selected.has(c.key)||descendants(c.key).some(x=>selected.has(x.key))).length} 个分类 · `}<strong>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</span><label class="ba-tree-select-all"><input type="checkbox" data-menu-select-all aria-label="全选全部菜单">全选全部菜单</label>${options.brandId?`<label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>`:`<button type="button" class="ba-btn" data-only-selected aria-pressed="${selectedOnly}">${selectedOnly?'✓ ':''}仅看已选</button>`}<button type="button" class="ba-btn" data-menu-review aria-pressed="${reviewAll}">${reviewAll?'返回配置':'查看已选'}</button></div>`}<div class="ba-menu ba-tree-picker${treePicker?' ba-brand-edit-picker':''}"><nav aria-label="菜单分类">${visibleRoots.map(r=>`<div class="ba-tree-class"><input type="checkbox" data-key="${esc(r.key)}" aria-label="开通整个分类${esc(r.title)}" ${selected.has(r.key)?'checked':''}><button type="button" class="${active===r.key&&!reviewAll?'active':''}" data-module="${esc(r.key)}"><span>${esc(r.title)}</span><span class="ba-tree-nav-count">${pageCount(r.key)}</span></button></div>`).join('')}</nav><div class="ba-tree-pane"><header class="ba-tree-heading"><strong>${reviewAll?'已选菜单核对':query?'搜索结果':esc(byKey.get(active)?.title??'菜单选择')}</strong> <div class="ba-actions">${treeActions}</div></header><div class="ba-menu-list">${treePicker?editableTree():`<table class="ba-tree-table"><thead><tr><th scope="col">菜单名称</th><th scope="col">${options.roles?'权限':'状态'}</th></tr></thead><tbody>${rows.map(row).join('')||`<tr><td colspan="2" class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</td></tr>`}</tbody></table>`}</div></div></div>`;
+    host.innerHTML=`${createPicker?createToolbar:`<div class="ba-toolbar ba-menu-picker-toolbar"><input data-menu-search aria-label="搜索菜单" placeholder="搜索菜单名称或路由" value="${esc(query)}"><span class="ba-tag" data-menu-count>已选 ${options.brandId?'':`${roots.filter(c=>selected.has(c.key)||descendants(c.key).some(x=>selected.has(x.key))).length} 个分类 · `}<strong>${available.filter(c=>c.isPage===true&&selected.has(c.key)).length}</strong> 个页面</span>${simpleControls?selectionActions:`<label class="ba-tree-select-all"><input type="checkbox" data-menu-select-all aria-label="全选全部菜单">全选全部菜单</label>${options.brandId?`<label class="ba-tree-select-all"><input type="checkbox" data-only-selected ${selectedOnly?'checked':''}>仅看已选</label>`:`<button type="button" class="ba-btn" data-only-selected aria-pressed="${selectedOnly}">${selectedOnly?'✓ ':''}仅看已选</button>`}<button type="button" class="ba-btn" data-menu-review aria-pressed="${reviewAll}">${reviewAll?'返回配置':'查看已选'}</button>`}</div>`}<div class="ba-menu ba-tree-picker${treePicker?' ba-brand-edit-picker':''}"><nav aria-label="菜单分类">${visibleRoots.map(r=>`<div class="ba-tree-class"><input type="checkbox" data-key="${esc(r.key)}" aria-label="开通整个分类${esc(r.title)}" ${selected.has(r.key)?'checked':''}><button type="button" class="${active===r.key&&!reviewAll?'active':''}" data-module="${esc(r.key)}"><span>${esc(r.title)}</span><span class="ba-tree-nav-count">${pageCount(r.key)}</span></button></div>`).join('')}</nav><div class="ba-tree-pane"><header class="ba-tree-heading"><strong>${reviewAll?'已选菜单核对':query?'搜索结果':esc(byKey.get(active)?.title??'菜单选择')}</strong> ${treeActions?`<div class="ba-actions">${treeActions}</div>`:''}</header><div class="ba-menu-list">${treePicker?editableTree():`<table class="ba-tree-table"><thead><tr><th scope="col">菜单名称</th><th scope="col">${options.roles?'权限':'状态'}</th></tr></thead><tbody>${rows.map(row).join('')||`<tr><td colspan="2" class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</td></tr>`}</tbody></table>`}</div></div></div>`;
 
     if(createPicker){
       host.querySelector('nav')!.scrollTop=categoryScroll;
@@ -263,7 +267,7 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   },{action:'确定',topActions:true});
   d.classList.add('brand-menu-edit-modal');
   d.addEventListener('close',()=>{preview?.close();},{once:true});
-  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch,categoryActions:!batch});
+  read=bindMenuPicker(d.querySelector('[data-menu-picker]')!,choices,initial,{allowed:ceiling,templates:!batch,simpleControls:true});
   bindOpenedBrandMenuTree(d.querySelector<HTMLElement>('[data-inherit-preview]')!,choices,inherited);
   const sync=()=>{const inherit=d.querySelector<HTMLSelectElement>('[name=mode]')!.value==='inherit';d.querySelector<HTMLElement>('[data-inherit-preview]')!.hidden=!inherit;d.querySelector<HTMLElement>('[data-menu-picker]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-template-toolbar]')!.hidden=inherit;d.querySelector<HTMLElement>('[data-inherit-note]')!.hidden=!inherit;};
   d.querySelector('[name=mode]')!.addEventListener('change',sync);sync();
