@@ -588,3 +588,29 @@
   inline-size: 16px;
   block-size: 16px;
 }
+
+.brand-menu-store-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 12px;
+  max-block-size: min(240px, 30dvh);
+  margin: 0 0 20px;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.brand-menu-store-cards li {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-muted);
+}
+.brand-menu-store-cards dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+.brand-menu-store-cards dt { color: var(--color-muted-foreground); }
+.brand-menu-store-cards dd { margin: 0; overflow-wrap: anywhere; }

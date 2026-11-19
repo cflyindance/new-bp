@@ -227,7 +227,10 @@ export function openBrandStoreMenuEditor(id:string,storeIds:string[],source:Sour
   const initial=stores.length===1?(getStoreCapability(stores[0].storeId)?.enabledKeys??[]).filter(k=>ceiling.has(k)):[];
   const defaultMode=stores.length===1?(getStoreCapability(stores[0].storeId)?.menuMode==='inherit'?'inherit':'replace'):'add';
   let read=()=>initial,preview:HTMLDialogElement|null=null;
-  const d=dialog(stores.length===1?`配置菜单`:`批量配置 ${stores.length} 家门店`,'',`<div class="ba-note">${stores.map(s=>`<div>${esc(s.name)} · ${esc(s.storeId)}<br>${brandStoreLocation(s)}</div>`).join('')}</div><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
+  const d=dialog(stores.length===1?`配置菜单`:`批量配置 ${stores.length} 家门店`,'',`<ul class="brand-menu-store-cards" aria-label="已选门店">${stores.map(store=>`<li>
+    <div class="brand-store-identity">${storeListIcon}<div><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small></div></div>
+    <dl><dt>地址</dt><dd>${esc(store.address?.trim()||'—')}</dd><dt>邮编</dt><dd>${esc(store.postalCode?.trim()||'—')}</dd></dl>
+  </li>`).join('')}</ul><label class="ba-field">菜单配置方式<select name="mode"><option value="inherit" ${defaultMode==='inherit'?'selected':''}>继承品牌菜单</option><option value="replace" ${defaultMode==='replace'?'selected':''}>独立配置${stores.length>1?'：替换所选门店菜单':''}</option>${stores.length>1?'<option value="add" selected>独立配置：增量开通</option>':''}</select></label><p class="ba-muted" style="margin:12px 0" data-inherit-note>仅继承品牌已开通且门店视角可见的菜单，品牌菜单增减自动同步。切换为独立配置后按本店设置生效。</p><div data-inherit-preview></div><div data-menu-picker></div>`,(form)=>{
     if(preview?.open)return;
     if(brandConfigurationVersion(id)!==version)throw Error('品牌或门店配置已更新，请保留选择，刷新后重新编辑。');
     const mode=new FormData(form).get('mode') as 'inherit'|'add'|'replace',selected=mode==='inherit'?[]:[...read()];
