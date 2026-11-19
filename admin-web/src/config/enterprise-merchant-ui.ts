@@ -653,7 +653,7 @@ function renderBrandProgress(merchant: NonNullable<ReturnType<typeof getMerchant
   const needsMenu = progress === "待配置品牌菜单";
   const configured = !needsAdmin && !needsMenu;
   const enabled = status === "active";
-  const signedIn = configured && ["已首次登录", "初始化已完成"].includes(progress);
+  const signedIn = configured && progress === "已首次登录";
   const complete = Number(configured) + Number(enabled) + Number(signedIn);
   const issues = status === "onboarding" ? brandServiceReadiness(id) : [];
   return `<section class="brand-detail-card brand-detail-progress">

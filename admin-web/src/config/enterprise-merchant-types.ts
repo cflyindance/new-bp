@@ -64,7 +64,6 @@ export interface EnterpriseMerchant {
   updatedAt: string;
   activatedAt?: string;
   onboardingInviteSentAt?: string;
-  onboardingCompletedAt?: string;
   firstLoginAt?:string;
   closingStartedAt?: string;
   closingEndsAt?: string;

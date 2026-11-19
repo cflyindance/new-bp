@@ -7,7 +7,7 @@ import {serviceStatus} from './brand-service-policy';
 type Kind='brand'|'store';
 export type ManagementFilter=Record<string,string>;
 const key=(kind:Kind)=>`menusifu:management-filters:v1:${kind}`;
-export function savedManagementFilter(kind:Kind):ManagementFilter {try{const value=JSON.parse(sessionStorage.getItem(key(kind))??'{}');return value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).filter((entry):entry is [string,string]=>entry[0]!=='groupId'&&typeof entry[1]==='string')):{}}catch{return {}}}
+export function savedManagementFilter(kind:Kind):ManagementFilter {try{const value=JSON.parse(sessionStorage.getItem(key(kind))??'{}');return value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).filter((entry):entry is [string,string]=>entry[0]!=='groupId'&&!(kind==='brand'&&entry[0]==='progress'&&entry[1]==='初始化已完成')&&typeof entry[1]==='string')):{}}catch{return {}}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const brands=()=>getMerchants({allEnterprises:true,excludeLinkedStoreTenants:true});
 function hasBrandPages(id:string){const keys=brandRawMenuKeys(id);return brandMenuChoices().some(c=>c.isPage&&keys.has(c.key));}
@@ -29,7 +29,7 @@ export function renderManagementFilters(kind:Kind){
  const menu=field('menu',store?'生效菜单':'品牌菜单',store?[['no','无生效菜单'],['yes','有生效菜单']]:[['no','未配置'],['yes','已配置']],f);
  const primary=store
   ?brand+status+field('brandStatus','所属品牌服务状态',states,f)
-  :status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
+  :status+field('progress','开通进度',['待开通管理员','待配置品牌菜单','待首次登录','已首次登录'].map(s=>[s,s]),f)+menu+field('stores','品牌门店',[['no','无门店'],['yes','有门店']],f);
  const secondary=store
   ?field('mode','菜单配置方式',[['inherit','继承品牌菜单'],['independent','独立配置']],f)+menu
   :input('from','创建时间起','date',f)+input('to','创建时间止','date',f);

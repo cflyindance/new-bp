@@ -10,10 +10,10 @@ const stages = [
   { code: 'chengbei-bakes', name: '城北烘焙', contactName: '许嘉怡' },
   { code: 'xiling-bistro', name: '西岭小馆', contactName: '陈宇航' },
   { code: 'linjiang-kitchen', name: '临江小厨', contactName: '顾思远' },
-  { code: 'gucheng-tea', name: '古城茶舍', contactName: '周佳宁' },
 ];
 
 export function lifecycleDemoAdminEmail(id: string): string | undefined {
+  if (id === 'demo-brand-gucheng-tea') return 'gucheng-tea@example.com';
   const fixture = stages.slice(1).find(stage => id === 'demo-brand-' + stage.code);
   return fixture ? fixture.code + '@example.com' : undefined;
 }
@@ -63,7 +63,6 @@ export function fillBrandLifecycleDemo(snap: EnterpriseMerchantSnapshot): boolea
       primaryAdminEmail: lifecycleDemoAdminEmail(merchantId),
       activatedAt: index >= 2 ? activatedAt : undefined,
       firstLoginAt: index >= 3 ? firstLoginAt : undefined,
-      onboardingCompletedAt: index === 4 ? '2026-10-15T04:00:00.000Z' : undefined,
     }, index >= 2);
   });
 

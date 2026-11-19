@@ -22,7 +22,6 @@ import {
   syncEnterprisePresetsToMerchant,
   type EnterpriseToMerchantSyncResult,
 } from "./platform-preset-enterprise-sync";
-import { markPlatformPresetOnboardingComplete } from "./platform-preset-onboarding";
 import {
   brandCapabilityCeilingKeys,
   inheritedPaidBrandMenuKeys,
@@ -2582,27 +2581,6 @@ export function sendOnboardingInvite(merchantId: string, operatorEmail = DEMO_OP
   });
   writeSnapshot(snap);
   return preview;
-}
-
-export function completeMerchantOnboarding(merchantId: string, operatorEmail = DEMO_OPERATOR): EnterpriseMerchant | null {
-  const snap = readSnapshot();
-  const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
-  if (!merchant || merchant.status !== "active") return null;
-  merchant.onboardingCompletedAt = nowIso();
-  merchant.updatedAt = nowIso();
-  if (!merchant.activatedAt) merchant.activatedAt = nowIso();
-  if (merchant.primaryAdminEmail) markPlatformPresetOnboardingComplete(merchant.primaryAdminEmail);
-  syncMerchantCapabilityPresets(merchantId, false);
-  const cap = snap.capabilities.find((c) => c.merchantId === merchantId);
-  if (cap) cap.syncedPresetAt = nowIso();
-  appendChangelog(snap, {
-    merchantId,
-    action: "onboarding.complete",
-    operatorEmail,
-    detail: "初始化完成，品牌服务状态保持不变",
-  });
-  writeSnapshot(snap);
-  return merchant;
 }
 
 export function getClosingDaysRemaining(merchant: EnterpriseMerchant): number | null {

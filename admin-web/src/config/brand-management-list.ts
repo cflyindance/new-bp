@@ -11,7 +11,7 @@ import {currentMAccess} from '../permissions/m-platform-store';
 import {mPageKey,mActionKey} from '../permissions/m-platform-catalog';
 
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-const stages=['待开通管理员','待配置品牌菜单','待首次登录','已首次登录','初始化已完成'];
+const stages=['待开通管理员','待配置品牌菜单','待首次登录','已首次登录'];
 const icon=(paths:string)=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${paths}</svg>`;
 const searchIcon=icon('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>');
 const calendarIcon=icon('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2"/>');
@@ -42,7 +42,7 @@ export function renderBrandManagementTable(merchants:ReturnType<typeof getMercha
     const keys=brandRawMenuKeys(m.merchantId),pages=choices.filter(c=>c.isPage&&keys.has(c.key)).length,stores=countStoresForMerchant(m.merchantId),stage=brandOnboardingProgress(m.merchantId),stageIndex=stages.indexOf(stage);
     return `<tr data-enterprise-merchant-row="${esc(m.merchantId)}"><td><a class="brand-name-link" href="${merchantDetailHref(m.merchantId)}"><span class="brand-avatar ${i%2?'brand-avatar-violet':''}">${buildingIcon}</span><span class="brand-name-text"><strong title="${esc(m.name)}">${esc(m.name)}</strong><small>${esc(m.bid??'—')}</small></span></a></td>
     <td><span class="brand-service-status" data-state="${serviceStatus(m.status)}"><i aria-hidden="true"></i>${esc(getMerchantStatusLabel(m.status))}</span></td>
-    <td><div class="brand-progress" aria-label="开通进度：${esc(stage)}"><span>${esc(stage)}</span><span class="brand-progress-track" aria-hidden="true"><span style="width:${stageIndex<0?0:(stageIndex+1)*20}%"></span></span></div></td>
+    <td><div class="brand-progress" aria-label="开通进度：${esc(stage)}"><span>${esc(stage)}</span><span class="brand-progress-track" aria-hidden="true"><span style="width:${stageIndex<0?0:(stageIndex+1)*100/stages.length}%"></span></span></div></td>
     <td><a class="brand-count ${pages?'':'brand-count-empty'}" href="${merchantDetailHref(m.merchantId,'capabilities')}" aria-label="查看${esc(m.name)}品牌菜单，${pages?pages+'个页面':'未配置'}">${pages||'未配置'}</a></td>
     <td><a class="brand-count ${stores?'':'brand-count-empty'}" href="${merchantDetailHref(m.merchantId,'org')}" aria-label="查看${esc(m.name)}的品牌门店，共 ${stores} 家">${stores}</a></td>
     <td class="brand-created-date">${esc(m.createdAt?.slice(0,10)||'—')}</td>

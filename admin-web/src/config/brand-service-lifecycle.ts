@@ -16,7 +16,7 @@ export function brandOnboardingProgress(id:string):string{
  const m=getMerchantById(id);if(!m)return '—';const access=readBrandAccess(id);
  if(!access.accounts.some(a=>a.admin&&a.enabled)&&!(!m.accountProvisioningRequired&&m.primaryAdminEmail&&!access.accounts.some(a=>a.email.toLowerCase()===m.primaryAdminEmail!.toLowerCase())))return '待开通管理员';
  const keys=brandRawMenuKeys(id);if(!brandMenuChoices(getMerchantCapability(id)?.productLineIds).some(c=>c.isPage&&keys.has(c.key)))return '待配置品牌菜单';
- if(m.onboardingCompletedAt)return '初始化已完成';return m.firstLoginAt||access.accounts.some(a=>a.admin&&a.lastLoginAt)?'已首次登录':'待首次登录';
+ return m.firstLoginAt||access.accounts.some(a=>a.admin&&a.lastLoginAt)?'已首次登录':'待首次登录';
 }
 export const brandServiceVersion=(id:string)=>JSON.stringify({config:brandConfigurationVersion(id),access:readBrandAccess(id).version});
 export function transitionBrandService(id:string,action:BrandServiceAction,reason:string,expected:string):void{
