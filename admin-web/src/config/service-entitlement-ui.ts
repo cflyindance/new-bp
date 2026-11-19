@@ -34,11 +34,21 @@ export function renderBrandServiceEntitlements(brandId:string,options:{readOnly?
   return renderEntitlementOverview(brandId,!!options.embedded,mayManage,options.cards);
 }
 
+function entitlementSummary(title:string,detail:string):string {
+  return `<div class="entitlement-form-summary">
+    <span class="entitlement-form-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12m0-12H8a2.5 2.5 0 1 1 2.3-3.5L12 8Zm0 0h4a2.5 2.5 0 1 0-2.3-3.5L12 8Z"/></svg></span>
+    <div><strong>${esc(title)}</strong><small>${esc(detail)}</small></div>
+  </div>`;
+}
 let activeDialog:HTMLDialogElement|null=null;
-function openDialog(title:string,body:string,action:string,submit:(data:FormData)=>void,onSaved:()=>void):HTMLDialogElement {
+function openDialog(title:string,subtitle:string,body:string,action:string,submit:(data:FormData)=>void,onSaved:()=>void,danger=false):HTMLDialogElement {
   activeDialog?.close();activeDialog?.remove();
-  const d=document.createElement('dialog');activeDialog=d;d.className='ba ba-modal ba-admin-dialog';d.setAttribute('aria-label',title);d.setAttribute('data-service-gate','');if(document.querySelector('[data-rights-drawer][open]'))d.dataset.rightsDrawerChild='';
-  d.innerHTML=`<form><header class="ba-dialog-header"><h2>${esc(title)}</h2>${btn('×','data-ent-close aria-label="关闭"')}</header><section class="ba-dialog-body">${body}<p class="ba-error" role="alert" data-ent-error></p></section><footer class="ba-footer"><span class="ba-muted">取消不写入</span><div class="ba-actions">${btn('取消','data-ent-close')}<button type="submit" class="ba-btn ba-primary">${esc(action)}</button></div></footer></form>`;
+  const d=document.createElement('dialog');activeDialog=d;d.className='ba ba-modal brand-design-modal brand-form-modal entitlement-form-modal';d.setAttribute('aria-label',title);d.setAttribute('data-service-gate','');if(document.querySelector('[data-rights-drawer][open]'))d.dataset.rightsDrawerChild='';
+  d.innerHTML=`<form><header class="ba-dialog-header">
+    ${btn('×','data-ent-close data-close aria-label="关闭"')}
+    <div><h2>${esc(title)}</h2><small>${esc(subtitle)}</small></div>
+    <button type="submit" class="ba-btn ${danger?'ba-danger':'ba-primary'}">${esc(action)}</button>
+    </header><section class="ba-dialog-body">${body}<p class="ba-error" role="alert" data-ent-error></p></section></form>`;
   const close=()=>{if(d.open)d.close();d.remove();window.removeEventListener('hashchange',close);if(activeDialog===d)activeDialog=null;};
   d.querySelectorAll('[data-ent-close]').forEach(b=>b.addEventListener('click',close));
   d.addEventListener('close',close,{once:true});d.addEventListener('cancel',e=>{e.preventDefault();close();});
@@ -51,22 +61,34 @@ export function openServiceEntitlement(brandId:string,packageId:string,kind:Serv
   if(!pkg?.commercial)return;
   const stores=getMerchantStores(brandId),now=Date.now();
   const defaultDate=new Date(now+30*86400000);defaultDate.setMinutes(defaultDate.getMinutes()-defaultDate.getTimezoneOffset());
-  const body=`<p class="ba-note" style="margin-bottom:18px">${esc(pkg.name)} · ${esc(price(pkg))}<br>${kind==='trial'?`确认后立即开始${pkg.commercial.trialDays}天试用；同一品牌仅一次，不自动扣费。`:'仅记录外部开通或运营赠送，不发起在线支付。'}</p><label class="ba-field">适用门店范围<select name="scopeMode"><option value="all">全部品牌门店（含后续新增）</option><option value="selected">指定门店</option></select></label><fieldset class="brand-entitlement-store-scope" data-scope-stores hidden><legend>指定门店</legend>${storeBusinessStatusFilter()}<div class="brand-entitlement-store-options">${stores.map(s=>`<label data-operating-status="${getStoreOperatingStatus(s).status}"><input type="checkbox" name="storeIds" value="${esc(s.storeId)}"><span><strong>${esc(s.name)}</strong><small>${esc(s.storeId)}</small><small class="block">地址 ${esc(s.address?.trim()||'—')}</small><small class="block">邮编 ${esc(s.postalCode?.trim()||'—')}</small><small class="block">${esc(getStoreOperatingStatus(s).label)}</small></span></label>`).join('')||'<p class="ba-muted">暂无可选门店</p>'}</div><p class="ba-muted" data-operating-empty hidden>没有符合营业状态的门店</p></fieldset>${kind==='paid'?`<label class="ba-field" style="margin-top:16px">成交单价（${esc(pkg.currency)} / ${pkg.commercial.billingUnit==='store'?'门店':'品牌'} / ${interval(pkg.billingInterval)}）<input type="number" name="price" min="0.01" step="0.01" value="${(pkg.priceMinor/100).toFixed(2)}" required></label>`:''}${['paid','gift'].includes(kind)?`<label class="ba-field" style="margin-top:16px">到期时间<input type="datetime-local" name="endAt" value="${defaultDate.toISOString().slice(0,16)}" required><small class="block text-muted-foreground">按当前设备时区输入，保存精确UTC时刻。</small></label><label class="ba-field" style="margin-top:16px">${kind==='gift'?'赠送原因':'外部合同 / 开通记录编号'}<input name="reference" maxlength="200" required></label>`:kind==='trial'?`<p class="ba-muted" style="margin-top:16px">预计结束：${new Date(now+pkg.commercial.trialDays*86400000).toLocaleString('zh-CN')}</p>`:''}`;
-  const d=openDialog(`${kindLabel(kind)} · ${pkg.name}`,body,kind==='trial'?'确认开始试用':'确认'+kindLabel(kind),data=>{
+  const billingUnit=pkg.commercial.billingUnit==='store'?'门店':'品牌';
+  const billingPeriod=interval(pkg.billingInterval);
+  const amount=kind==='paid'?price(pkg):`${money(0,pkg.currency)} / ${billingUnit} / ${billingPeriod}`;
+  const detail=kind==='trial'?`${pkg.commercial.trialDays} 天试用 · ${amount}`:kind==='free'?`长期有效 · ${amount}`:amount;
+  const body=`${entitlementSummary(kindLabel(kind),detail)}
+    <p class="ba-muted">${kind==='trial'?'确认后立即开始试用，同一品牌仅一次，不自动扣费。':'仅记录外部开通或运营赠送，不发起在线支付。'}</p>
+    <fieldset class="entitlement-scope"><legend>适用门店范围</legend>
+      <div class="entitlement-scope-options">
+        <label><input type="radio" name="scopeMode" value="all" checked><span>全部品牌门店<small>含后续新增</small></span></label>
+        <label><input type="radio" name="scopeMode" value="selected"><span>指定门店<small>从已绑定门店中选择</small></span></label>
+      </div></fieldset><fieldset class="brand-entitlement-store-scope" data-scope-stores hidden><legend>指定门店</legend>${storeBusinessStatusFilter()}<div class="brand-entitlement-store-options">${stores.map(s=>`<label data-operating-status="${getStoreOperatingStatus(s).status}"><input type="checkbox" name="storeIds" value="${esc(s.storeId)}"><span><strong>${esc(s.name)}</strong><small>${esc(s.storeId)}</small><small class="block">地址 ${esc(s.address?.trim()||'—')}</small><small class="block">邮编 ${esc(s.postalCode?.trim()||'—')}</small><small class="block">${esc(getStoreOperatingStatus(s).label)}</small></span></label>`).join('')||'<p class="ba-muted">暂无可选门店</p>'}</div><p class="ba-muted" data-operating-empty hidden>没有符合营业状态的门店</p></fieldset>${kind==='paid'?`<label class="ba-field">成交单价（${esc(pkg.currency)} / ${pkg.commercial.billingUnit==='store'?'门店':'品牌'} / ${interval(pkg.billingInterval)}）<input type="number" name="price" min="0.01" step="0.01" value="${(pkg.priceMinor/100).toFixed(2)}" required></label>`:''}${['paid','gift'].includes(kind)?`<label class="ba-field">到期时间<input type="datetime-local" name="endAt" value="${defaultDate.toISOString().slice(0,16)}" required><small class="block text-muted-foreground">按当前设备时区输入，保存精确UTC时刻。</small></label><label class="ba-field">${kind==='gift'?'赠送原因':'外部合同 / 开通记录编号'}<input name="reference" maxlength="200" required></label>`:kind==='trial'?`<p class="ba-muted">预计结束：${new Date(now+pkg.commercial.trialDays*86400000).toLocaleString('zh-CN')}</p>`:''}`;
+  const d=openDialog(kindLabel(kind),pkg.name,body,kind==='trial'?'确认开始试用':'确认'+kindLabel(kind),data=>{
     const raw=String(data.get('endAt')??'');
     recordServiceEntitlement({brandId,packageId,kind,scopeMode:String(data.get('scopeMode')) as 'all'|'selected',storeIds:data.getAll('storeIds').map(String),priceMinor:Math.round(Number(data.get('price'))*100),endAt:raw?new Date(raw).toISOString():undefined,reference:String(data.get('reference')??'')},source);
   },onSaved);
-  bindStoreBusinessStatusFilter(d.querySelector<HTMLElement>('[data-scope-stores]')!);
+  const storeScope=d.querySelector<HTMLElement>('[data-scope-stores]')!;
+  bindStoreBusinessStatusFilter(storeScope);
+  const scopes=d.querySelectorAll<HTMLInputElement>('[name=scopeMode]');
+  const syncScope=()=>{storeScope.hidden=!d.querySelector('[name=scopeMode][value=selected]:checked');};
+  scopes.forEach(input=>input.addEventListener('change',syncScope));
   if (preset) {
-    const scope = d.querySelector<HTMLSelectElement>('[name=scopeMode]')!;
-    scope.value = preset.scopeMode ?? 'all';
-    d.querySelector<HTMLElement>('[data-scope-stores]')!.hidden = scope.value !== 'selected';
+    scopes.forEach(input=>{input.checked=input.value===(preset.scopeMode??'all');});
+    syncScope();
     d.querySelectorAll<HTMLInputElement>('[name=storeIds]').forEach(input => { input.checked = !!preset.storeIds?.includes(input.value); });
     const notice = document.createElement('p'); notice.className = 'ba-note';
     notice.textContent = '确认后从办理时新建权益记录，保留原记录及到期空档。请核对适用门店、成交价和开通依据。';
     d.querySelector('.ba-dialog-body')!.prepend(notice);
   }
-  d.querySelector('select')!.onchange=e=>{d.querySelector<HTMLElement>('[data-scope-stores]')!.hidden=(e.target as HTMLSelectElement).value!=='selected';};
 }
 
 export function openServiceEntitlementChange(id:string,operation:'extend'|'disable',onSaved:()=>void):void {
@@ -79,26 +101,18 @@ export function openServiceEntitlementChange(id:string,operation:'extend'|'disab
   const scoped=grant.scopeMode==='selected'?brandStores.filter(store=>grant.storeIds?.includes(store.storeId)):brandStores;
   const storeCards=scoped.map(store=>`<li><strong>${esc(store.name)}</strong><small>${esc(store.storeId)}</small><small class="block">地址 ${esc(store.address?.trim()||'—')}</small><small class="block">邮编 ${esc(store.postalCode?.trim()||'—')}</small></li>`).join('');
   const packageName=snapshot.packages.find(pkg=>pkg.id===grant.packageId)?.name??'服务权益';
-  const body=extend?`<p class="ba-note">仅延长当前记录的期限，保留成交价及开通依据；价格或合同变化时请办理新开通。</p><label class="ba-field">新的到期时间<input type="datetime-local" name="value" required></label>${gift?'<label class="ba-field">延长赠送原因<textarea name="reason" required maxlength="200"></textarea></label>':''}`:`<p class="brand-modal-warning"><strong>本条权益将立即停止，历史记录保留</strong><br>其他有效权益继续提供重叠页面。实际失去 ${impact.lost}，其他订阅保留 ${impact.retained}。</p>
+  const body=extend?`${entitlementSummary(kindLabel(grant.entitlementKind),`当前到期时间 · ${date(grant.endAt)}`)}<p class="ba-muted">仅延长当前记录的期限，保留成交价及开通依据；价格或合同变化时请办理新开通。</p><label class="ba-field">新的到期时间<input type="datetime-local" name="value" required></label>${gift?'<label class="ba-field">延长赠送原因<textarea name="reason" required maxlength="200"></textarea></label>':''}`:`<p class="brand-modal-warning"><strong>本条权益将立即停止，历史记录保留</strong><br>其他有效权益继续提供重叠页面。实际失去 ${impact.lost}，其他订阅保留 ${impact.retained}。</p>
     <h3>权益适用门店（${scoped.length} 家）</h3><ul class="brand-log-objects">${storeCards||'<li>暂无适用门店</li>'}</ul>
     <label class="ba-field">停用原因 *<textarea name="value" required maxlength="200" placeholder="填写停用原因"></textarea></label>`;
-  const modal=openDialog(title,body,extend?(gift?'确认延长赠送':'确认续期'):'确认停用',data=>{
+  const modal=openDialog(title,packageName,body,extend?(gift?'确认延长赠送':'确认续期'):'确认停用',data=>{
     const latest=readSubscriptionServiceSnapshot(),currentStores=getMerchantStores(grant.subjectId).map(s=>s.storeId);
     const boundaries=snapshot.subscriptions.flatMap(g=>[g.startAt,g.endAt]).filter((s):s is string=>!!s).map(Date.parse);
     if(Date.now()-previewAt>=300000||boundaries.some(t=>previewAt<t&&t<=Date.now())||JSON.stringify({snapshot:latest,stores:currentStores})!==token)throw Error('权益或状态已变化，请关闭弹框后重新查看影响。');
     const raw=String(data.get('value')??'');
     changeServiceEntitlement(id,operation,extend?new Date(raw).toISOString():raw,String(data.get('reason')??''));
-  },onSaved);
+  },onSaved,!extend);
   if(!extend){
-    modal.classList.add('brand-design-modal','brand-form-modal');
-    const header=modal.querySelector('header')!,heading=header.querySelector('h2')!;
-    const subtitle=document.createElement('small');subtitle.textContent=packageName;
-    const titleBlock=document.createElement('div');titleBlock.append(heading,subtitle);
-    const close=header.querySelector('[data-ent-close]')!;
     const submit=modal.querySelector<HTMLButtonElement>('[type=submit]')!;
-    header.replaceChildren(close,titleBlock,submit);
-    modal.querySelector('footer')!.remove();
-    submit.classList.replace('ba-primary','ba-danger');
     const reason=modal.querySelector<HTMLTextAreaElement>('textarea')!;
     const sync=()=>submit.disabled=!reason.value.trim();
     reason.addEventListener('input',sync);sync();

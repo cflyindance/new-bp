@@ -547,3 +547,44 @@
 @media (max-width: 640px) {
   .brand-hardware-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.entitlement-form-modal .ba-dialog-body { display: grid; align-content: start; gap: 20px; }
+.entitlement-form-modal .ba-dialog-body > :is(.ba-note,.ba-error,.brand-entitlement-store-scope) { margin: 0; }
+.entitlement-form-modal .ba-error:empty { display: none; }
+.entitlement-form-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--color-primary) 6%, var(--color-card)), color-mix(in srgb, var(--color-primary) 12%, var(--color-card)));
+}
+.entitlement-form-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-card);
+}
+.entitlement-form-summary strong { font-size: 16px; }
+.entitlement-form-summary small, .entitlement-scope-options small { display: block; margin-top: 4px; }
+.entitlement-scope legend { margin-bottom: 12px; font-weight: 600; }
+.entitlement-scope-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; }
+.entitlement-scope-options label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.entitlement-scope-options label:has(:checked) { border-color: var(--color-primary); }
+.entitlement-scope-options input[type=radio] {
+  accent-color: var(--color-primary);
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+}
