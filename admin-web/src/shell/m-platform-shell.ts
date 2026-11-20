@@ -26,6 +26,8 @@ import {
   NAV_BLUEPRINT_ROUTE_PREFIX,
 } from "../config/nav-blueprint-ui";
 import { mPageForPath } from '../permissions/m-platform-catalog';
+import { notificationPath } from '../config/activity-notifications';
+import { renderNotifications, bindNotifications } from '../config/activity-notifications-ui';
 import { activityPageTitle, bindActivityPage, isActivityPath, renderActivityPage } from '../config/merchant-activity-ui';
 import { deviceActivityPageTitle, bindDeviceActivityPage, isDeviceActivityPath, renderDeviceActivityPage } from '../config/device-activity-ui';
 import {
@@ -61,6 +63,7 @@ export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 export function isMPlatformContentPath(path: string): boolean {
   return (
     isDisplayRegionPath(path) ||
+    path === notificationPath ||
     isMPlatformPresetPath(path) ||
     isBusinessMenuTemplatePath(path) ||
     isNavBlueprintPath(path) ||
@@ -88,6 +91,7 @@ function resolveMPlatformPageTitle(path: string): { title: string; module: strin
   if(isBusinessMenuTemplatePath(path))return {title:'业态与菜单模板',module:'M 平台'};
   return (
     findNavBlueprintPageTitle(path) ??
+    (path === notificationPath ? { title: '异常跟进', module: '系统使用分析' } : null) ??
     activityPageTitle(path) ??
     deviceActivityPageTitle(path) ??
     findSubscriptionAdminPageTitle(path) ??
@@ -124,6 +128,7 @@ function renderMPlatformHeader(path: string): string {
 function renderMPlatformContent(path: string): string {
   if (!mCanVisit(path)) return mDenied();
   if (isDisplayRegionPath(path)) return renderMarketingDisplayPage(path);
+  if (path === notificationPath) return renderNotifications();
   if (isDeviceActivityPath(path)) return renderDeviceActivityPage(path);
   if (isActivityPath(path)) return renderActivityPage(path);
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
@@ -230,6 +235,8 @@ export function bindMPlatformShell(onMount: () => void): void {
     bindSubscriptionServicePage(onMount);
   } else if (isActivityPath(path)) {
     bindActivityPage(onMount);
+  } else if (path === notificationPath) {
+    bindNotifications(onMount);
   } else if (isDeviceActivityPath(path)) {
     bindDeviceActivityPage(onMount);
   } else if (isMPlatformPermissionsPath(path)) {

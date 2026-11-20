@@ -106,6 +106,7 @@ function deniedControl(target: Element, type: string): boolean {
   if (target.closest('[data-ent-menu],[data-service-menu-preview]')) return false;
   if (keys.length && keys.every(a => !a.write)) return false;
   if (target.closest('[data-pp-enable],[data-rbac-l4-editable],[data-nb-edit-l1],[data-nb-drag-handle],[data-nb-draggable-row]')) return true;
+  if (page.id === 'activity-follow-up' && target.closest('[data-notification-browse]')) return false;
   if (target.closest(readonlyBrowse) || page.id === 'merchant-activity' && target.closest('[data-activity-browse]') || page.id === 'device-activity' && target.closest('[data-device-activity-browse]')) return false;
   if (anchor) return false;
   if (control instanceof HTMLButtonElement && control.type === 'button' && /关闭|取消|返回/.test(control.textContent ?? '')) return false;

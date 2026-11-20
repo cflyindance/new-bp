@@ -5,12 +5,17 @@ export interface MLog { id: string; at: string; actor: string; action: string; o
 export interface MState { schema: 1; catalogVersion?: 2|3; revision: number; roles: MRole[]; employees: MEmployee[]; logs: MLog[] }
 /** Preserve explicit decisions; only the existing system role gains new catalog resources. */
 export function migrateMActivityModule(state: MState): MState {
-  if(state.catalogVersion===3)return state;
+  if(state.catalogVersion===3 && !state.roles.some(role => role.system && role.id === 'm-system-admin' &&
+    [...M_RESOURCES.keys()].some(key => key.includes(':activity-follow-up') && !Object.hasOwn(role.grants, key)))) return state;
   const next=structuredClone(state);
   for(const role of next.roles){
     if(state.catalogVersion!==2&&!Object.hasOwn(role.grants,'m:module:activity-analysis'))role.grants['m:module:activity-analysis']=role.grants['m:module:merchants']==='read'?'read':'hidden';
     if(role.id==='m-system-admin'&&role.system)for(const key of ['m:page:provider-roles','m:action:provider-roles:manage','m:action:stores:impersonate'])
       if(!Object.hasOwn(role.grants,key))role.grants[key]='edit';
+  }
+  const admin = next.roles.find(role => role.system && role.id === 'm-system-admin');
+  if (admin) for (const key of M_RESOURCES.keys()) {
+    if (key.includes(':activity-follow-up') && !Object.hasOwn(admin.grants, key)) admin.grants[key] = 'edit';
   }
   next.catalogVersion=3;return next;
 }
