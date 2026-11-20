@@ -114,9 +114,15 @@ export function renderJsonMenuTree(
   const search = searchValue.trim().toLowerCase();
   return `<section class="flex min-h-0 w-[34%] min-w-[360px] max-w-[430px] shrink-0 flex-col border-r border-slate-100 bg-[#fafafa]" data-jme-tree-panel>
     <header class="shrink-0 border-b border-slate-200 px-6 pb-4 pt-6">
-      <div class="flex items-center justify-between"><h2 class="text-lg font-bold text-slate-900">导航结构</h2><button type="button" data-jme-open-add="" class="text-sm font-semibold text-blue-500 hover:text-blue-700" title="新增一级菜单" aria-label="新增一级菜单">＋ 一级导航</button></div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold text-slate-900">导航结构</h2>
+        <div class="ml-auto flex items-center gap-2">
+          <label class="inline-flex h-8 cursor-pointer items-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-600 focus-within:ring-2 focus-within:ring-blue-500">导入 JSON<input type="file" accept="application/json,.json" data-jme-import aria-label="导入 JSON" class="sr-only"></label>
+          <button type="button" data-jme-export class="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500">导出 JSON</button>
+        </div>
+      </div>
       <label class="mt-4 flex min-w-0 items-center rounded-full border border-slate-200 bg-white px-3 focus-within:border-blue-500"><span class="text-slate-400">⌕</span><input type="search" name="json-menu-tree-search" data-jme-search value="${escapeHtml(searchValue)}" placeholder="搜索导航名称、Key 或路径" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" class="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"></label>
-      <div class="mt-4 flex items-center gap-3 text-sm"><span class="font-medium text-slate-800">${visits.length} 项</span>${expandableCount ? `<button type="button" data-jme-toggle-expand-all class="ml-auto text-slate-500 hover:text-blue-600">${allExpanded ? "收起" : "展开"}</button>` : ""}</div>
+      <div class="mt-4 flex items-center gap-3 text-sm"><span class="font-medium text-slate-800">${visits.length} 项</span><div class="ml-auto flex items-center gap-3"><button type="button" data-jme-open-add="" class="text-sm font-semibold text-blue-500 hover:text-blue-700" title="新增一级菜单" aria-label="新增一级菜单">＋ 一级导航</button>${expandableCount ? `<button type="button" data-jme-toggle-expand-all class="text-slate-500 hover:text-blue-600">${allExpanded ? "收起" : "展开"}</button>` : ""}</div></div>
     </header>
     <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1" data-jme-tree-scroll>
       ${document.menu.length ? `<ol>${document.menu.map((node, index) => `<div data-jme-drop-parent="" data-jme-drop-index="${index}" class="h-1 rounded hover:bg-teal-300"></div>${renderNode(document, node, [index], [], selectedPath, issues, expanded, search)}`).join("")}<div data-jme-drop-parent="" data-jme-drop-index="${document.menu.length}" class="h-2 rounded hover:bg-teal-300"></div></ol>` : `<div class="grid h-full min-h-72 place-items-center text-center"><div><div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-xl text-slate-400">☷</div><p class="mt-3 text-sm font-medium">暂无菜单</p><p class="mt-1 text-xs text-slate-500">从新增一级菜单开始配置</p></div></div>`}

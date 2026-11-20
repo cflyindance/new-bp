@@ -28,7 +28,7 @@ import { JSON_MENU_FORM_SECTIONS, resolveActiveJsonMenuFormSection, type JsonMen
 import { getPageRegistrations, getBuiltInPageRegistrations } from "./page-registration-catalog";
 import { bindRegisteredPage, matchRegisteredPage } from "./page-registration-domain";
 import { registrationUi, registryView, registryRows, registrationModal, pickerRows } from "./page-registration-ui";
-import { MENU_ROUTING_PAGES, type MenuRoutingView } from "./menu-routing-navigation";
+import type { MenuRoutingView } from "./menu-routing-navigation";
 import { bindRegistryWorkspace, renderRegistryProjects } from './page-registry-workspace-ui';
 import { pickerTree, focusPickerPage } from './page-registration-picker-tree';
 import { saveLocalPageRegistration } from './local-page-registration';
@@ -308,15 +308,8 @@ export function renderJsonMenuEditorPage(view: MenuRoutingView = "nav"): string 
   const selected = jsonMenuEditorStore.selectedNode();
   const ancestors = selectedAncestors();
   if (!dialogState && selected) dialogState = buildEditFormState(state.selectedPath);
-  return `<div class="flex min-w-0 flex-col ${view === "projects" ? "grow shrink-0" : "min-h-0 flex-1 overflow-hidden rounded-[22px] bg-[#f7f8fa] px-6 pt-6 pb-3"}" data-json-menu-editor>
-    ${view === "nav" ? `<header class="shrink-0 bg-transparent pb-6">
-      <div class="flex items-center justify-between gap-5">
-        <div class="min-w-0"><div class="flex items-center gap-2.5"><h1 class="text-2xl font-bold tracking-tight text-slate-900">${MENU_ROUTING_PAGES.find(page => page.view === view)!.title}</h1></div></div>
-        <div class="flex shrink-0 flex-wrap items-center justify-end gap-3"><label class="cursor-pointer rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 hover:border-blue-400 hover:text-blue-600">导入 JSON<input type="file" accept="application/json,.json" data-jme-import aria-label="导入 JSON" class="sr-only"></label><button type="button" data-jme-export class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 hover:border-blue-400 hover:text-blue-600">导出 JSON</button></div>
-      </div>
-      <div class="mt-1.5 flex items-center"><span class="text-sm text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span></div>
-      ${state.message ? `<div class="mt-2 rounded-lg ${state.status === "error" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"} px-3 py-2 text-xs">${escapeHtml(state.message)}</div>` : ""}
-    </header>` : ""}
+  return `<div class="flex min-w-0 flex-col ${view === "projects" ? "grow shrink-0" : view === "nav" ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-hidden rounded-[22px] bg-[#f7f8fa] px-6 pt-6 pb-3"}" data-json-menu-editor>
+    ${view === "nav" && state.message ? `<div class="mb-3 shrink-0 rounded-lg ${state.status === "error" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"} px-3 py-2 text-xs">${escapeHtml(state.message)}</div>` : ""}
     ${view === "projects" ? renderRegistryProjects() : view === "registry" || view === "pages" ? registryView() : `<div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_16px_0_rgba(15,23,42,0.035)]">
       ${renderJsonMenuTree(document, state.selectedPath, state.issues, searchValue, expandedPaths)}
       ${renderJsonMenuNodeFormPanel(document, dialogState, state.issues, state.published)}
