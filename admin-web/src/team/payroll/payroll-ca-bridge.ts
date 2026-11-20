@@ -1,6 +1,7 @@
 import { calculateCaliforniaOvertime } from './payroll-ca-overtime';
 import {calculationBasisSlices,createCalculationPopover} from './payroll-calculation-popover';
 import {groupPayrollRates} from './payroll-rate-groups';
+import {groupPaidBreaks,renderPaidBreakSummary} from './payroll-paid-break-summary';
 import {mergeContinuousOvertime} from './payroll-continuous-merge';
 import {validateContinuousRule} from './payroll-overtime-migration';
 import {calculateContinuousOvertime} from './payroll-continuous-overtime';
@@ -104,9 +105,11 @@ export function renderCaliforniaSummary(result:Extract<CaOvertimeResult,{status:
   return renderCaliforniaSummaryView(result,cash?'amount':'hours');
 }
 /** All three cards consume the same ordered, multiplier/rate-grouped final slices. */
-export function renderCaliforniaSummaryView(result:Extract<CaOvertimeResult,{status:'ready'}>,view:'hours'|'rate'|'amount'):string {
+export function renderCaliforniaSummaryView(result:Extract<CaOvertimeResult,{status:'ready'}>,view:'hours'|'rate'|'amount',paidBreakHtml=renderPaidBreakSummary({groups:[],valid:true},view)):string {
   const row=(name:string,value:string)=>`<div class="payroll-sum-row"><dt>${escape(name)}</dt><dd>${value}</dd></div>`;
-  return groupPayrollRates(result.slices).map(g=>row(g.label,view==='hours'?`${money(g.minutes/60)} h`:view==='rate'?`$${money(g.rate)}/h`:`$${money(g.amount)}`)).join('')+
+  const groups=groupPayrollRates(result.slices);
+  const renderGroup=(g:ReturnType<typeof groupPayrollRates>[number])=>row(g.label,view==='hours'?`${money(g.minutes/60)} h`:view==='rate'?`$${money(g.rate)}/h`:`$${money(g.amount)}`);
+  return groups.filter(g=>g.regular).map(renderGroup).join('')+paidBreakHtml+groups.filter(g=>!g.regular).map(renderGroup).join('')+
     row('合计',view==='rate'?'—':view==='hours'?`${money(sum(result.slices,false))} h`:`$${money(sum(result.slices,true))}`);
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
@@ -148,12 +151,24 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
       status.textContent=californiaPayrollStatusMessage(employee,current);status.hidden=!status.textContent;
       status.dataset.caOvertimeState=current?.status||'not-enabled';
       cards.forEach((card,i)=>{
+        const view=i===0?'hours':i===1?'rate':'amount';
+        const paid=groupPaidBreaks(employee);
         let display=card.parentElement?.querySelector<HTMLElement>('[data-ca-summary]');
         card.hidden=current?.status==='ready';card.style.display=card.hidden?'none':'';
         if(current?.status==='ready'){
           if(!display){display=document.createElement('dl');display.dataset.caSummary='';display.className='payroll-ca-summary';card.after(display)}
-          display.innerHTML=renderCaliforniaSummaryView(current as Extract<CaOvertimeResult,{status:'ready'}>,i===0?'hours':i===1?'rate':'amount');
-        }else display?.remove();
+          // Nonzero breaks have no verified allocation in the current CA contract.
+          display.innerHTML=renderCaliforniaSummaryView(current as Extract<CaOvertimeResult,{status:'ready'}>,view,renderPaidBreakSummary(paid,view,false));
+        }else{
+          display?.remove();
+          const old=card.querySelector<HTMLElement>(['#sum-paid-break-h','#sum-paid-break-amt','#sum-paid-break-income'][i])?.closest<HTMLElement>('.payroll-sum-row');
+          if(old){
+            old.style.display='none';
+            let replacement=card.querySelector<HTMLElement>('[data-paid-break-rows]');
+            if(!replacement){replacement=document.createElement('div');replacement.dataset.paidBreakRows='';old.after(replacement);}
+            replacement.innerHTML=renderPaidBreakSummary(paid,view,current?.status!=='blocked');
+          }
+        }
       });
       if(employee.ratePresentationDemo){
         root.querySelectorAll<HTMLInputElement|HTMLButtonElement>('.payroll-seg-table input,.payroll-seg-table button:not([data-ca-basis-date])').forEach(control=>control.disabled=true);

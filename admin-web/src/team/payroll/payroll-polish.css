@@ -725,6 +725,7 @@
 .payroll-ca-summary{margin:0;padding:0}
 .payroll-ca-summary .payroll-sum-row{display:flex;justify-content:space-between;gap:12px;margin:8px 0}
 .payroll-ca-summary dd{margin:0;white-space:nowrap}
+.team-payroll-page .payroll-paid-break-row dd::before,.team-payroll-page .payroll-paid-break-row dd::after{content:none!important}
 .team-payroll-page .payroll-ca-summary .payroll-sum-row dd::before,.team-payroll-page .payroll-ca-summary .payroll-sum-row dd::after{content:none!important}
 .team-payroll-page .payroll-ca-basis-trigger{display:inline-block;margin:0 0 0 8px;padding:0;border:0;background:transparent;color:var(--primary,#1677ff);font-size:12px;font-weight:400;line-height:inherit;min-height:0;height:auto;cursor:pointer;white-space:nowrap}
 .payroll-ca-basis-trigger:focus-visible,.payroll-ca-basis-popover button:focus-visible{outline:2px solid var(--primary,#1677ff);outline-offset:3px}
