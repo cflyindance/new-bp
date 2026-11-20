@@ -59,11 +59,6 @@
   color:var(--ma-accent)}
 .ma-crumbs a:hover {
   text-decoration:underline}
-.ma-demo-note {
-  font-size:12px;
-  color:var(--color-muted-foreground);
-  padding:10px 0;
-  margin:0}
 .ma-period,.ma-filters {
   display:flex;
   align-items:end;
@@ -392,7 +387,6 @@
 .ma-empty h3{font-weight:600;margin-bottom:10px}
 .ma-empty p{color:var(--color-muted-foreground);line-height:1.7}
 
-.ma-demo-note{padding:10px 14px;margin-bottom:14px;border:1px solid var(--color-border);border-left:3px solid var(--ma-accent);border-radius:6px;background:var(--color-card);color:var(--color-muted-foreground);line-height:1.6}
 
 @media(min-width:1001px) { .ma-cards:has(+ .brand-usage-charts) { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 
@@ -462,13 +456,6 @@
   color:#fff;
 }
 .ma-page:where([data-ma-page]:not([data-activity-embedded]),[data-device-activity-page]) .ma-filters button:not(.ma-primary) { min-height:48px; border-color:transparent; background:transparent; }
-.ma-page:where([data-ma-page]:not([data-activity-embedded]),[data-device-activity-page]) .ma-demo-note {
-  border:0;
-  background:transparent;
-  padding:0;
-  color:var(--ma-muted);
-  font-size:12px;
-}
 .ma-page:where([data-ma-page]:not([data-activity-embedded]),[data-device-activity-page],.an-page) :is(.ma-card,.ma-panel,.ma-line-card,.an-panel,.an-dialog,.an-recipient) {
   background:var(--ma-surface);
   border-color:var(--ma-line);
@@ -498,4 +485,11 @@
 .an-page .an-dialog-body { background:var(--ma-surface); }
 @media(max-width:760px) {
   .ma-page:is([data-ma-page]:not([data-activity-embedded]),[data-device-activity-page],.an-page) { padding:12px; }
+}
+
+/* The M shell owns scrolling for the standalone activity lists. */
+[data-activity-scroll-host] .ma-page:is([data-ma-page],[data-device-activity-page],.an-page) {
+  overflow:visible;
+  background:transparent;
+  padding:0;
 }
