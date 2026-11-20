@@ -725,16 +725,18 @@
 .payroll-ca-summary .payroll-sum-row{display:flex;justify-content:space-between;gap:12px;margin:8px 0}
 .payroll-ca-summary dd{margin:0;white-space:nowrap}
 .team-payroll-page .payroll-ca-summary .payroll-sum-row dd::before,.team-payroll-page .payroll-ca-summary .payroll-sum-row dd::after{content:none!important}
-.payroll-ca-day-details{text-align:left;font-size:12px;white-space:normal;margin:0;padding:0 8px}
-.payroll-seg-table [data-ca-day-detail-row]>td{padding:4px 8px;background:var(--surface-subtle,#f7f8fa)}
-.payroll-ca-day-details summary{cursor:pointer;color:var(--primary,#1677ff);width:max-content;padding:4px 0}
-.payroll-ca-day-details summary:focus-visible{outline:2px solid var(--primary,#1677ff);outline-offset:2px;border-radius:4px}
-.payroll-ca-day-details ul{list-style:none;margin:8px 0 0;padding:0}
-.payroll-ca-day-details li{padding:8px 0;border-top:1px solid var(--border,#ededed);display:grid;grid-template-columns:110px minmax(260px,1fr);gap:4px 16px;align-items:start}
-.payroll-ca-day-details .payroll-ca-evidence{grid-column:2 / -1}
-.payroll-ca-day-details p{margin:8px 0;font-weight:600}
-@media(max-width:800px){.payroll-ca-day-details li{display:block}.payroll-ca-day-details strong{display:block}}
-.payroll-ca-day-details span{display:block;line-height:1.6}
+.team-payroll-page .payroll-ca-basis-trigger{display:inline-block;margin:0 0 0 8px;padding:0;border:0;background:transparent;color:var(--primary,#1677ff);font-size:12px;font-weight:400;line-height:inherit;min-height:0;height:auto;cursor:pointer;white-space:nowrap}
+.payroll-ca-basis-trigger:focus-visible,.payroll-ca-basis-popover button:focus-visible{outline:2px solid var(--primary,#1677ff);outline-offset:3px}
+.payroll-ca-basis-popover{position:fixed;inset:auto;margin:0;width:360px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);box-sizing:border-box;overflow:auto;padding:16px;border:1px solid var(--border,#ededed);border-radius:8px;background:var(--surface,#fff);color:var(--text,#1f1f1f);box-shadow:0 4px 16px #0002;z-index:1600;font-size:13px;line-height:1.6;text-align:left;white-space:normal}
+.payroll-ca-basis-popover[hidden]{display:none!important}
+.payroll-ca-basis-popover header,.payroll-ca-basis-result{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.payroll-ca-basis-popover header>button{padding:0;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:var(--muted,#666);cursor:pointer;font-size:20px;flex-shrink:0}
+.payroll-ca-basis-group{padding:12px 0;border-bottom:1px solid var(--border,#ededed)}
+.payroll-ca-basis-group:last-child{border-bottom:0;padding-bottom:0}
+.payroll-ca-basis-group p{margin:4px 0 8px;color:var(--muted,#666)}
+.payroll-ca-basis-result{font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.payroll-ca-basis-result strong{margin-left:auto;white-space:nowrap}
+.payroll-ca-basis-note{font-size:12px;color:var(--muted,#666);margin:12px 0 0}
 .payroll-ca-formula{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .payroll-ca-interval,.payroll-ca-evidence{color:var(--muted,#666)}
 .payroll-ca-summary dt{display:flex;align-items:center;gap:4px}

@@ -1,4 +1,5 @@
 import { calculateCaliforniaOvertime } from './payroll-ca-overtime';
+import {calculationBasisSlices,createCalculationPopover} from './payroll-calculation-popover';
 import {mergeContinuousOvertime} from './payroll-continuous-merge';
 import {validateContinuousRule} from './payroll-overtime-migration';
 import {calculateContinuousOvertime} from './payroll-continuous-overtime';
@@ -125,9 +126,9 @@ export function renderCaliforniaSummaryView(result:Extract<CaOvertimeResult,{sta
   return html+row('合计',result.slices,false,true);
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
-  const relevant=rows.filter(s=>s.kind==='weekly'||s.kind==='continuous'||s.kind==='seventh-day'||s.kind!=='regular'&&s.evidence.includes('最高倍率'));
+  const relevant=calculationBasisSlices(rows);
   if(!relevant.length)return '';
-  return `<details class="payroll-ca-day-details"><summary>计算依据 · ${escape(relevant[0].date)}</summary><ul>${relevant.map(s=>`<li><strong>${escape(labels[s.kind])}</strong><span class="payroll-ca-formula">归属 ${money(s.minutes/60)} h × $${money(s.regularRate*s.multiplier)}/h = $${money(s.amount)}</span><span class="payroll-ca-evidence">${escape(s.evidence)}</span></li>`).join('')}</ul></details>`;
+  return `<button type="button" class="payroll-ca-basis-trigger" data-ca-basis-date="${escape(relevant[0].date)}" aria-label="计算依据 · ${escape(relevant[0].date)}" aria-haspopup="dialog" aria-expanded="false" aria-controls="payroll-ca-basis-popover">计算依据</button>`;
 }
 export function californiaPayrollStatusMessage(employee:Employee,result:CaOvertimeResult|null):string {
   if(result?.status==='blocked')return result.reason;
@@ -137,6 +138,7 @@ export function californiaPayrollStatusMessage(employee:Employee,result:CaOverti
 export function createCaliforniaPayrollBridge(root:ShadowRoot){
   root.host.setAttribute('data-payroll-ca-version','20261111');
   let current:CaOvertimeResult|null=null;
+  const basis=createCalculationPopover(root,()=>current);
   return {
     buildInput:buildCaliforniaPayrollInput,
     continuousRules:availableContinuousRules,
@@ -154,6 +156,7 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
     },
     freeze(employee:Employee,period:Record<string,any>){const result=resolveCaliforniaPayroll(employee,period);if(result?.status==='ready')employee.californiaOvertimeSnapshot=structuredClone(result);},
     render(employee:Employee,period:Record<string,any>){
+      basis.close();
       current=resolveCaliforniaPayroll(employee,period);
       const cards=root.querySelectorAll<HTMLElement>('.payroll-sum-dl');
       let status=root.querySelector<HTMLElement>('[data-ca-overtime-status]');
@@ -168,19 +171,14 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
           display.innerHTML=renderCaliforniaSummaryView(current as Extract<CaOvertimeResult,{status:'ready'}>,i===0?'hours':i===1?'rate':'amount');
         }else display?.remove();
       });
-      root.querySelectorAll('[data-ca-day-detail-row]').forEach(row=>row.remove());
       root.querySelectorAll<HTMLElement>('[data-ca-day-kind]').forEach(cell=>{
         if(current?.status!=='ready'){cell.textContent='—';return;}
         const rows=current.slices.filter(s=>s.date===iso(cell.dataset.caDayDate));
         const kind=cell.dataset.caDayKind;
         cell.textContent=money(sum(kind==='total'||kind==='amount'?rows:rows.filter(s=>s.kind===kind),kind==='amount'));
         if(kind==='amount'){
-          const html=renderCaliforniaDayBreakdown(rows),primary=cell.closest('tr');
-          if(!html||!primary) return;
-          const siblings=Array.from(primary.parentElement!.querySelectorAll<HTMLTableRowElement>('tr[data-day-index]')).filter(row=>row.dataset.dayIndex===primary.dataset.dayIndex);
-          const detail=document.createElement('tr');detail.dataset.caDayDetailRow=cell.dataset.caDayDate;
-          const content=document.createElement('td');content.colSpan=Array.from(primary.cells).reduce((n,td)=>n+td.colSpan,0);
-          content.innerHTML=html;detail.append(content);(siblings.at(-1)||primary).after(detail);
+          const html=renderCaliforniaDayBreakdown(rows);
+          if(html)cell.insertAdjacentHTML('beforeend',html);
         }
       });
       if(employee.californiaOvertimeInput||employee.californiaOvertimeSnapshot)root.querySelectorAll<HTMLElement>('.payroll-seg-week-block').forEach(block=>{
@@ -193,6 +191,6 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
       });
       return current;
     },
-    destroy(){root.host.removeAttribute('data-payroll-ca-version');},
+    destroy(){basis.destroy();root.host.removeAttribute('data-payroll-ca-version');},
   };
 }
