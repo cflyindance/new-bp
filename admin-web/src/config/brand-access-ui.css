@@ -248,6 +248,8 @@
 }
 
 .ba-paid-menu-status { display: inline-flex; align-items: center; gap: 4px; }
+.ba-opened-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ba-opened-tree .ba-paid-menu-status { margin-inline-start: 8px; vertical-align: middle; }
 .ba-paid-menu-status button { color: var(--color-primary); border-radius: 6px; min-width: 24px; min-height: 24px; }
 .ba-paid-menu-popover {
   position: fixed;
