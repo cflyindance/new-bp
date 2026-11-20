@@ -1,3 +1,4 @@
+import { auditComparison, auditDetailShell, auditFields, showAuditDetail } from './brand-audit-detail';
 import type {SubscriptionAuditEntry} from './subscription-service-domain';
 
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -24,8 +25,34 @@ export function entitlementAuditPresentation(a:SubscriptionAuditEntry):{service:
  }
  if(a.action==='entitlement.disable'){summary=`权益已停用${c.reason?`；原因：${c.reason}`:''}`;fields.push(['停用原因',c.reason||'未记录']);}
  if(c.priceMinor!==undefined&&typeof c.priceMinor==='number'&&Number.isSafeInteger(c.priceMinor)&&c.priceMinor>=0){let amount=(c.priceMinor/100).toFixed(2);try{amount=new Intl.NumberFormat('zh-CN',{style:'currency',currency:c.currency!}).format(c.priceMinor/100);}catch{amount+='（币种未记录）';}fields.push(['成交金额',amount]);}
- if(c.reference)fields.push(['开通依据',c.reference]);
+ if(c.reference)fields.push([c.kind==='gift'?'赠送原因':c.kind==='paid'?'开通依据':'开通说明',c.reference]);
  return {service,operation,summary,fields};
+}
+
+function entitlementComparison(record: SubscriptionAuditEntry, entry: ReturnType<typeof entitlementAuditPresentation>): string {
+ const change=record.entitlementChange;
+ if(!change) return `<p class="ba-muted">历史记录未保存变更前后的完整字段。</p>${auditFields(entry.fields)}`;
+ const create=record.action==='entitlement.create'||record.action==='entitlement.demo';
+ const extension=record.action==='entitlement.extend';
+ const disabled=record.action==='entitlement.disable';
+ const activeStatus=change.kind==='trial'?'试用中':'生效中';
+ const recordedAt=Date.parse(record.at), start=Date.parse(change.startAt);
+ const started=Number.isFinite(recordedAt)&&Number.isFinite(start);
+ const status=started?(start>recordedAt?'待生效':activeStatus):'未记录';
+ const amount=entry.fields.find(([label])=>label==='成交金额')?.[1]??'未记录';
+ const scope=change.scope||'未记录';
+ const interval=(end:string)=>`${date(change.startAt)} 至 ${end}`;
+ const labels=['开通状态','有效期','开通方式','成交金额','适用门店'];
+ const previous=[create?'未创建':status,create?'—':extension&&!change.previousEndRecorded?'未记录':interval(date(extension?change.previousEndAt:change.endAt,'长期')),create?'—':method(change.kind),create?'—':amount,create?'—':scope];
+ const next=[disabled?'已停用':status,interval(date(change.endAt,'长期')),method(change.kind),amount,scope];
+ const object=`<strong class="brand-audit-object">${esc(entry.service)}</strong>`;
+ const notes=entry.fields.filter(([label])=>['开通依据','赠送原因','开通说明','停用原因','延长原因'].includes(label));
+ return auditComparison(object+auditFields(labels.map((label,i)=>[label,previous[i]])),object+auditFields(labels.map((label,i)=>[label,next[i]])))+(notes.length?auditFields(notes):'');
+}
+
+function entitlementDetailControl(record: SubscriptionAuditEntry, entry: ReturnType<typeof entitlementAuditPresentation>): string {
+ return `<button type="button" class="ba-btn" data-rights-audit-detail aria-haspopup="dialog">查看详情</button>
+  <template>${auditDetailShell(record.actor,record.at,`${entry.operation} · ${entry.summary}`,entitlementComparison(record,entry))}</template>`;
 }
 
 export function renderEntitlementAudit(records:SubscriptionAuditEntry[],cards=false):string {
@@ -33,7 +60,7 @@ export function renderEntitlementAudit(records:SubscriptionAuditEntry[],cards=fa
  const cardList=`<div class="brand-rights-audit-cards">${sorted.map((a,i)=>{
   const entry=entitlementAuditPresentation(a);
   const fields=entry.fields.filter(([key])=>!['开始时间','到期时间'].includes(key));
-  return `<article data-rights-audit-row data-service="${esc(entry.service.toLowerCase())}" data-operation="${esc(entry.operation)}" data-at="${esc(a.at)}"${i>=20?' hidden':''}><header><strong>${esc(entry.service)}</strong><time>${esc(date(a.at))}</time><span class="ba-tag" data-stop="${a.action==='entitlement.disable'}">${esc(entry.operation)}</span></header><div><small>变更内容</small><p>${esc(entry.summary)}</p><dl>${[['操作人',a.actor||'未记录'],...fields].map(([key,value])=>`<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></div></article>`;
+  return `<article data-rights-audit-row data-service="${esc(entry.service.toLowerCase())}" data-operation="${esc(entry.operation)}" data-at="${esc(a.at)}"${i>=20?' hidden':''}><header><strong>${esc(entry.service)}</strong><time>${esc(date(a.at))}</time><span class="ba-tag" data-stop="${a.action==='entitlement.disable'}">${esc(entry.operation)}</span></header><div><small>变更内容</small><p>${esc(entry.summary)}</p><dl>${[['操作人',a.actor||'未记录'],...fields].map(([key,value])=>`<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>${entitlementDetailControl(a,entry)}</div></article>`;
  }).join('')}<p class="ba-empty" data-rights-audit-empty${sorted.length?' hidden':''}>${sorted.length?'没有符合条件的变更记录':'暂无服务变更记录'}</p></div>`;
  return `<section data-service-entitlement-browse data-audit-total="${sorted.length}"><div class="rights-filter-toolbar">
   <input class="rights-filter-search" type="search" data-rights-audit-query aria-label="搜索服务名称" placeholder="搜索服务名称">
@@ -46,11 +73,17 @@ export function renderEntitlementAudit(records:SubscriptionAuditEntry[],cards=fa
     </div>
   </details>
   <button type="button" class="ba-btn rights-filter-reset" data-rights-audit-reset><span aria-hidden="true">⟳</span> 重置</button>
- </div><p class="ba-muted rights-filter-count" data-rights-audit-count aria-live="polite"></p><p class="ba-error" role="alert" data-rights-audit-error hidden></p>${cards?cardList:`<div class="ba-table-wrap" style="margin-top:16px"><table style="min-width:900px"><thead><tr><th>时间</th><th>服务名称</th><th>操作</th><th>变更内容</th><th>操作人</th><th>详情</th></tr></thead><tbody>${sorted.map((a,i)=>{const p=entitlementAuditPresentation(a);return `<tr data-rights-audit-row data-service="${esc(p.service.toLowerCase())}" data-operation="${esc(p.operation)}" data-at="${esc(a.at)}"${i>=20?' hidden':''}><td style="white-space:nowrap">${esc(date(a.at))}</td><td>${esc(p.service)}</td><td style="white-space:nowrap"><span class="ba-tag">${esc(p.operation)}</span></td><td style="max-width:440px;overflow-wrap:anywhere">${esc(p.summary)}</td><td style="overflow-wrap:anywhere">${esc(a.actor||'未记录')}</td><td><details><summary>查看详情</summary><dl style="min-width:200px;max-width:350px;overflow-wrap:anywhere">${p.fields.map(([k,v])=>`<dt class="ba-muted" style="margin-top:10px">${esc(k)}</dt><dd style="margin:4px 0">${esc(v)}</dd>`).join('')}</dl></details></td></tr>`;}).join('')}<tr data-rights-audit-empty${sorted.length?' hidden':''}><td colspan="6" class="ba-empty">${sorted.length?'没有符合条件的变更记录':'暂无服务变更记录'}</td></tr></tbody></table></div>`}${sorted.length>20?'<button type="button" class="ba-btn" style="margin-top:12px" data-rights-audit-more>显示更多记录</button>':''}</section>`;
+ </div><p class="ba-muted rights-filter-count" data-rights-audit-count aria-live="polite"></p><p class="ba-error" role="alert" data-rights-audit-error hidden></p>${cards?cardList:`<div class="ba-table-wrap" style="margin-top:16px"><table style="min-width:900px"><thead><tr><th>时间</th><th>服务名称</th><th>操作</th><th>变更内容</th><th>操作人</th><th>详情</th></tr></thead><tbody>${sorted.map((a,i)=>{const p=entitlementAuditPresentation(a);return `<tr data-rights-audit-row data-service="${esc(p.service.toLowerCase())}" data-operation="${esc(p.operation)}" data-at="${esc(a.at)}"${i>=20?' hidden':''}><td style="white-space:nowrap">${esc(date(a.at))}</td><td>${esc(p.service)}</td><td style="white-space:nowrap"><span class="ba-tag">${esc(p.operation)}</span></td><td style="max-width:440px;overflow-wrap:anywhere">${esc(p.summary)}</td><td style="overflow-wrap:anywhere">${esc(a.actor||'未记录')}</td><td>${entitlementDetailControl(a,p)}</td></tr>`;}).join('')}<tr data-rights-audit-empty${sorted.length?' hidden':''}><td colspan="6" class="ba-empty">${sorted.length?'没有符合条件的变更记录':'暂无服务变更记录'}</td></tr></tbody></table></div>`}${sorted.length>20?'<button type="button" class="ba-btn" style="margin-top:12px" data-rights-audit-more>显示更多记录</button>':''}</section>`;
 }
 const auditViews=new Map<string,{q:string;operation:string;from:string;to:string;limit:number}>();
 export function bindEntitlementAudit(root:HTMLElement):void {
  const panel=root.querySelector<HTMLElement>('[data-service-entitlement-browse]');if(!panel)return;
+ panel.querySelectorAll<HTMLButtonElement>('[data-rights-audit-detail]').forEach(button=>button.onclick=()=>{
+  const template=button.nextElementSibling as HTMLTemplateElement;
+  const detail=document.createElement('dialog');
+  detail.append(template.content.cloneNode(true));
+  showAuditDetail(detail,button);
+ });
  const key=root.dataset.brandEntitlements!+(root.hasAttribute('data-rights-cards')?':cards':''),view=auditViews.get(key)??{q:'',operation:'',from:'',to:'',limit:20};auditViews.set(key,view);
  const q=panel.querySelector<HTMLInputElement>('[data-rights-audit-query]')!,op=panel.querySelector<HTMLSelectElement>('[data-rights-audit-operation]')!,from=panel.querySelector<HTMLInputElement>('[data-rights-audit-from]')!,to=panel.querySelector<HTMLInputElement>('[data-rights-audit-to]')!;
  q.value=view.q;op.value=view.operation;from.value=view.from;to.value=view.to;
