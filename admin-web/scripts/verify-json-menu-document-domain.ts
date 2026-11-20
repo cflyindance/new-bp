@@ -65,6 +65,17 @@ const directoryDocument: MenuDocument = { ...empty, name: "Directory", menu: [em
 assert.deepEqual(serializeMenuDocument(directoryDocument).menu[0]?.children, [], "empty directory marker must survive serialization");
 
 const valid: MenuDocument = { ...empty, name: "Valid", menu: [parent] };
+const visibilityDocument = structuredClone(valid);
+visibilityDocument.menu[0]!.paidMenu = true;
+visibilityDocument.menu[0]!.visibleToAllMerchants = true;
+const visibleLeaf = visibilityDocument.menu[0]!.children![0]!;
+visibleLeaf.visibleToAllMerchants = true;
+const visibilitySerialized = serializeMenuDocument(visibilityDocument);
+assert.equal(visibilitySerialized.menu[0]?.paidMenu, true);
+assert.equal(visibilitySerialized.menu[0]?.visibleToAllMerchants, undefined);
+assert.equal(visibilitySerialized.menu[0]?.children?.[0]?.visibleToAllMerchants, true);
+Object.assign(visibleLeaf, { visibleToAllMerchants: "yes" });
+assert.ok(validateMenuDocument(visibilityDocument).some(issue => issue.code === "INVALID_MERCHANT_VISIBILITY"));
 const validIssues = validateMenuDocument(valid);
 assert(!validIssues.some((issue) => issue.severity === "error"), JSON.stringify(validIssues));
 assert.equal(parent.microAppConfig?.iframe, false, "explicit false must remain distinguishable");

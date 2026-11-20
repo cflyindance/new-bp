@@ -361,6 +361,7 @@ function assignDialogField(field: string, raw: string): void {
   if (parts[0] === "i18nInfo") { node.i18nInfo ??= {}; if (remove) delete node.i18nInfo[parts[1] as keyof typeof node.i18nInfo]; else node.i18nInfo[parts[1] as keyof typeof node.i18nInfo] = raw; }
   if (field === "display") { if (remove) delete node.display; else node.display = boolValue; }
   if (field === "paidMenu") node.paidMenu = boolValue === true ? true : undefined;
+  if (field === "visibleToAllMerchants") node.visibleToAllMerchants = boolValue;
   if (field === "disabled") { if (remove) delete node.disabled; else node.disabled = boolValue; }
   if (parts[0] === "microAppConfig") {
     node.microAppConfig ??= {};
@@ -518,7 +519,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
     pageModeTouched: dialogState.pageModeTouched,
   });
   if (!normalized.ok) { dialogState.error = normalized.error; return null; }
-  if (dialogState.pageMode === 'directory') delete normalized.node.paidMenu;
+  if (dialogState.pageMode === 'directory' || normalized.node.children?.length || normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
   const extraInfoText = dialogState.extraInfoText?.trim();
   if (extraInfoText) {
     try {
@@ -937,7 +938,19 @@ export function bindJsonMenuEditor(mount: () => void): void {
     if (input.matches('[data-page-registration-type]')) { const form = input.closest<HTMLFormElement>('form'); if (form) syncPageRegistrationType(form); return; }
     if (input.matches("[data-page-registry-status]")) { registrationUi.status = input.value; const rows = document.querySelector<HTMLElement>("[data-page-registry-rows]"); if (rows) rows.innerHTML = registryRows(); return; }
     if (input.dataset.jmeRootField) { jsonMenuEditorStore.updateRoot((document) => (document as unknown as Record<string, unknown>)[input.dataset.jmeRootField!] = input.value); onMount(); return; }
-    if (input.dataset.jmeDialogField) { assignDialogField(input.dataset.jmeDialogField, input.value); if (input.dataset.jmeDialogField === "accessControl.bool") rerenderPreservingMenuFormScroll(onMount); return; }
+    if (input.dataset.jmeDialogField) {
+      const field = input.dataset.jmeDialogField;
+      assignDialogField(field, input.value);
+      if (field === "paidMenu") {
+        const isPaid = input.value === "true";
+        input.closest("[data-jme-paid-menu-field]")?.querySelector("#jme-paid-menu-hint")?.toggleAttribute("hidden", !isPaid);
+        input.closest("[data-jme-paid-menu-field]")?.querySelector("[data-jme-merchant-visibility]")?.toggleAttribute("hidden", isPaid);
+        if (isPaid) input.setAttribute("aria-describedby", "jme-paid-menu-hint");
+        else input.removeAttribute("aria-describedby");
+      }
+      if (field === "accessControl.bool") rerenderPreservingMenuFormScroll(onMount);
+      return;
+    }
     if (input.matches("[data-jme-dialog-parent]") && dialogState) { dialogState.parentPath = decodeMenuNodePath(input.value); if (dialogState.pageMode === "directory" && dialogState.parentPath.length >= 2) dialogState.pageMode = "inner"; dialogState.error = undefined; onMount(); }
   });
 

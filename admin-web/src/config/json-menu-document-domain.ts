@@ -43,6 +43,7 @@ export interface MenuNode {
   display?: boolean;
   disabled?: boolean;
   paidMenu?: boolean;
+  visibleToAllMerchants?: boolean;
   extraInfo?: unknown;
   children?: MenuNode[];
 }
@@ -56,7 +57,7 @@ export type MenuValidationSeverity = "error" | "warning";
 export interface MenuValidationIssue { code: string; severity: MenuValidationSeverity; message: string; path?: MenuNodePath; field?: string; }
 
 export const MENU_ROOT_FIELDS = ["_id", "name", "menu", "updatedBy", "createdDate"] as const;
-export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "registeredPageId", "accessControl", "display", "disabled", "paidMenu", "extraInfo", "children"] as const;
+export const MENU_NODE_FIELDS = ["id", "name", "key", "path", "icon", "i18nKey", "i18nInfo", "type", "url", "targetKey", "parentKey", "externalConfig", "microAppConfig", "registeredPageId", "accessControl", "display", "disabled", "paidMenu", "visibleToAllMerchants", "extraInfo", "children"] as const;
 export const MENU_I18N_FIELDS = ["zh-CN", "zh-HK", "en-US"] as const;
 export const MENU_MICRO_APP_FIELDS = ["name", "url", "iframe", "keepAlive", "path", "defaultPage", "routeType"] as const;
 export const MENU_EXTERNAL_CONFIG_FIELDS = ["target", "features"] as const;
@@ -264,6 +265,9 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
     const compatibility = isCompatibilityProtected(document.menu, path);
     if (node.paidMenu !== undefined && typeof node.paidMenu !== 'boolean') {
       issues.push({ code: 'INVALID_PAID_MENU', severity: 'error', message: '是否收费菜单必须为布尔值。', path, field: 'paidMenu' });
+    }
+    if (node.visibleToAllMerchants !== undefined && typeof node.visibleToAllMerchants !== "boolean") {
+      issues.push({ code: "INVALID_MERCHANT_VISIBILITY", severity: "error", message: "是否所有商户都可以看到必须为布尔值。", path, field: "visibleToAllMerchants" });
     }
     unknownFields(node, MENU_NODE_FIELDS).forEach((field) => issues.push({ code: "UNKNOWN_NODE_FIELD", severity: "error", message: `节点字段不在参考结构中：${field}`, path, field }));
     if (compatibility && isExplicitCompatibilityType(node)) issues.push({ code: "LEGACY_TYPE", severity: "warning", message: `${node.type} 节点及其子树按原数据只读保留`, path, field: "type" });
