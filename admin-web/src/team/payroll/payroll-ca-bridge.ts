@@ -125,8 +125,9 @@ export function renderCaliforniaSummaryView(result:Extract<CaOvertimeResult,{sta
   return html+row('合计',result.slices,false,true);
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
-  if(!rows.some(s=>s.kind!=='regular'))return '';
-  return `<details class="payroll-ca-day-details"><summary>计薪明细 · ${escape(rows[0].date)}</summary><ul>${rows.map(s=>`<li><strong>${escape(labels[s.kind])}</strong><span class="payroll-ca-interval">当日累计 ${money(s.fromMinute/60)}–${money(s.toMinute/60)} h</span><span class="payroll-ca-formula">${money(s.minutes/60)} h × $${money(s.regularRate)} × ${s.multiplier} = $${money(s.amount)}</span><span class="payroll-ca-evidence">${escape(s.evidence)}</span></li>`).join('')}</ul><p>当日合计 ${money(sum(rows,false))} h · $${money(sum(rows,true))}</p></details>`;
+  const relevant=rows.filter(s=>s.kind==='weekly'||s.kind==='continuous'||s.kind==='seventh-day'||s.kind!=='regular'&&s.evidence.includes('最高倍率'));
+  if(!relevant.length)return '';
+  return `<details class="payroll-ca-day-details"><summary>计算依据 · ${escape(relevant[0].date)}</summary><ul>${relevant.map(s=>`<li><strong>${escape(labels[s.kind])}</strong><span class="payroll-ca-formula">归属 ${money(s.minutes/60)} h × $${money(s.regularRate*s.multiplier)}/h = $${money(s.amount)}</span><span class="payroll-ca-evidence">${escape(s.evidence)}</span></li>`).join('')}</ul></details>`;
 }
 export function californiaPayrollStatusMessage(employee:Employee,result:CaOvertimeResult|null):string {
   if(result?.status==='blocked')return result.reason;

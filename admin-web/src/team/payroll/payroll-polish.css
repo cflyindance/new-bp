@@ -730,7 +730,7 @@
 .payroll-ca-day-details summary{cursor:pointer;color:var(--primary,#1677ff);width:max-content;padding:4px 0}
 .payroll-ca-day-details summary:focus-visible{outline:2px solid var(--primary,#1677ff);outline-offset:2px;border-radius:4px}
 .payroll-ca-day-details ul{list-style:none;margin:8px 0 0;padding:0}
-.payroll-ca-day-details li{padding:12px 0;border-top:1px solid var(--border,#ededed);display:grid;grid-template-columns:110px minmax(160px,1fr) minmax(260px,1.5fr);gap:4px 16px;align-items:start}
+.payroll-ca-day-details li{padding:8px 0;border-top:1px solid var(--border,#ededed);display:grid;grid-template-columns:110px minmax(260px,1fr);gap:4px 16px;align-items:start}
 .payroll-ca-day-details .payroll-ca-evidence{grid-column:2 / -1}
 .payroll-ca-day-details p{margin:8px 0;font-weight:600}
 @media(max-width:800px){.payroll-ca-day-details li{display:block}.payroll-ca-day-details strong{display:block}}
