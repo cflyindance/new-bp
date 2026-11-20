@@ -10,7 +10,7 @@ import {
 import { readActiveImpersonation } from "./enterprise-merchant-impersonate";
 import { getMerchantById, getStoreById } from "./enterprise-merchant-store";
 import { installPublishedPaidMenuPathReader } from "./enterprise-merchant-services";
-import { NAV_MODULES, type NavModule } from "./navigation";
+import { NAV_MODULES, type NavItem, type NavModule } from "./navigation";
 import { getSubscriptionRouteCatalog } from "./subscription-service-domain";
 import {
   getEffectiveLegacySubscriptionRoutes,
@@ -49,7 +49,14 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
   if (!routeIds) return modules;
   return modules
     .map((module) => {
-      const children = module.children.filter((child) => isPaidMenuVisible(child.path) && (hasCommercialRoute(child.path) || routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id)))));
+      const retain = (child: NavItem): NavItem[] => {
+        if (!isPaidMenuVisible(child.path)) return [];
+        const routeId = child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id));
+        if (hasCommercialRoute(child.path) || isMenuVisibleToAllMerchants(child.path) || routeIds.has(routeId)) return [child];
+        const children = child.children?.flatMap(retain);
+        return children?.length ? [{ ...child, children }] : [];
+      };
+      const children = module.children.flatMap(retain);
       if (!children.length) return null;
       return { ...module, children };
     })
@@ -79,8 +86,14 @@ export function isPaidMenuVisible(path: string): boolean {
   return matchingPaidMenus(path).every(node => publishedPaidServicesForMenu(node.id).length > 0);
 }
 
+export function isMenuVisibleToAllMerchants(rawPath: string): boolean {
+  const path = rawPath.split("?")[0]?.replace(/\/$/, "");
+  return serviceEntitlementData().catalog.some(node => node.visibleToAllMerchants === true && node.path.replace(/\/$/, "") === path);
+}
+
 export function isPathAllowedBySubscription(path: string): boolean {
   if (!isPaidMenuVisible(path)) return false;
+  if (isMenuVisibleToAllMerchants(path)) return true;
   path = path.split("?")[0] ?? path;
   if (isStoreInformationPage(path)) path = "/stores/settings";
   if (path === "/nav-home" || path === "/login" || path.startsWith("/login/") || path === "/onboarding" || path.startsWith("/onboarding/")) return true;

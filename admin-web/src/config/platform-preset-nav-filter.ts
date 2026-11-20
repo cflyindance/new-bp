@@ -218,6 +218,7 @@ function filterBrandNodes<T extends BrandNavNode>(items:T[]):T[] {
     if (!isPaidMenuVisible(item.path)) return [];
     const children=item.children?filterBrandNodes(item.children):undefined;
     const sidebarChildren=item.sidebarChildren?filterBrandNodes(item.sidebarChildren):undefined;
+    if(item.sidebarChildren?.length && !sidebarChildren?.length)return [];
     if(!isBrandPathAllowed(item.path)&&!children?.length&&!sidebarChildren?.length)return [];
     return [{...item,...(children?{children}:{}),...(sidebarChildren?{sidebarChildren}:{})} as T];
   });

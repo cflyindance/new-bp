@@ -16,6 +16,7 @@ export interface SubscriptionMenuTreeNode {
   level: number;
   selectable: boolean;
   paidMenu?: boolean;
+  visibleToAllMerchants?: boolean;
   children: SubscriptionMenuTreeNode[];
 }
 
@@ -49,9 +50,10 @@ function resolvePublishedMenuTitle(node: MenuNode, routeNodeId: string): string 
     ?? routeNodeId;
 }
 
-function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string): SubscriptionMenuTreeNode {
+function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string, ancestorPaid = false): SubscriptionMenuTreeNode {
   const routeNodeId = node.id?.trim() || node.key?.trim() || `menu-${path.join("-")}`;
   const routePath = node.path?.trim() || node.url?.trim() || undefined;
+  const paid = ancestorPaid || node.paidMenu === true;
   return {
     routeNodeId,
     parentRouteNodeId,
@@ -59,8 +61,9 @@ function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeI
     path: routePath,
     level: path.length,
     selectable: !isMenuDirectory(node) && node.disabled !== true,
-    paidMenu: node.paidMenu === true,
-    children: (node.children ?? []).map((child, index) => adaptPublishedMenuNode(child, [...path, index], routeNodeId)),
+    paidMenu: paid,
+    visibleToAllMerchants: !paid && node.display !== false && node.visibleToAllMerchants === true,
+    children: (node.children ?? []).map((child, index) => adaptPublishedMenuNode(child, [...path, index], routeNodeId, paid)),
   };
 }
 
@@ -153,12 +156,12 @@ export function flattenSubscriptionMenuTree(roots: SubscriptionMenuTreeNode[]): 
   return output;
 }
 
-export function getPublishedSubscriptionRouteCatalog(): Array<{ id: string; title: string; path: string; parentId?: string; level: number; paidMenu?: boolean }> {
+export function getPublishedSubscriptionRouteCatalog(): Array<{ id: string; title: string; path: string; parentId?: string; level: number; paidMenu?: boolean; visibleToAllMerchants?: boolean }> {
   const tree = getPublishedSubscriptionMenuTree();
   if (!tree) return [];
   return flattenSubscriptionMenuTree(tree.roots)
     .filter((node) => node.selectable && node.path)
-    .map((node) => ({ id: node.routeNodeId, title: node.title, path: node.path!, parentId: node.parentRouteNodeId, level: node.level, paidMenu: node.paidMenu }));
+    .map((node) => ({ id: node.routeNodeId, title: node.title, path: node.path!, parentId: node.parentRouteNodeId, level: node.level, paidMenu: node.paidMenu, visibleToAllMerchants: node.visibleToAllMerchants }));
 }
 
 export function filterSubscriptionMenuTree(roots: SubscriptionMenuTreeNode[], rawQuery: string): SubscriptionMenuTreeNode[] {

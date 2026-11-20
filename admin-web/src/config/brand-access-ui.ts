@@ -23,7 +23,7 @@ import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuK
 import { ensureBrandCreationDemoStores, associateBrandStores, canRemoveBrandStore, removeBrandStore, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
-import { matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
+import { isMenuVisibleToAllMerchants, matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
 import { serviceEntitlementData } from './service-entitlement-data';
 import { serviceAccess } from './service-entitlement-domain';
 
@@ -129,6 +129,7 @@ export function openBrandBasicInfoEditor(id: string, onSaved: () => void): void 
 export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:string[],options:{allowed?:Set<string>;roles?:boolean;grants?:Record<string,Access>;templates?:boolean;simpleControls?:boolean;brandId?:string;scene?:BrandMenuSceneOptions}={}):()=>string[] {
   const available=choices.filter(c=>!options.allowed||options.allowed.has(c.key));
   const selected=new Set(initial),grants=options.grants;
+  const platformOpen = new Set(available.filter(choice => !options.roles && choice.isPage && choice.path && isMenuVisibleToAllMerchants(choice.path)).map(choice => choice.key));
   const createPicker=Boolean(options.scene);
   const treePicker=Boolean(options.brandId)||createPicker;
   const simpleControls=treePicker||options.simpleControls;
@@ -164,7 +165,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     if(filtered)for(const c of available){if(!reviewAll&&rootOf(c)!==active&&!query)continue;if((filterSelectedRows||reviewAll)&&!selected.has(c.key))continue;if(query&&!`${c.title} ${c.path??''} ${pathOf(c)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))continue;includeWithParents(c);}
     const displayRows=options.roles?available:compactBrandMenuRows(available),displayKeys=new Set(displayRows.map(c=>c.key));
     const rows=displayRows.filter(c=>(!filterCategories||visibleRootKeys.has(rootOf(c)))&&((reviewAll||query)||rootOf(c)===active)&&(c.level!==1||reviewAll||query)&&(filtered?matches.has(c.key):!hiddenByParent(c)));
-    const rowContent=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),status=paidStatus(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';const name=`<div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${selected.has(c.key)?'checked':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div>`;const grant=`<div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${status ? `<span class="ba-tag">${esc(status)}</span>` : ''}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div>`;return {name,grant};};
+    const rowContent=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),managed=platformOpen.has(c.key),status=managed?'平台默认开放':paidStatus(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';const name=`<div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${managed||selected.has(c.key)?'checked':''} ${managed?'disabled title="由 M 平台管理"':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div>`;const grant=`<div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${status ? `<span class="ba-tag">${esc(status)}</span>` : ''}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div>`;return {name,grant};};
     const row=(c:MenuChoice)=>{const {name,grant}=rowContent(c);return `<tr data-menu-row="${esc(c.key)}"><td>${name}</td><td>${grant}</td></tr>`;};
     const editableTree=()=>{
       if(!rows.length)return `<p class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</p>`;
@@ -208,7 +209,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     search.oninput=()=>{const pos=search.selectionStart;query=search.value;render();const next=host.querySelector<HTMLInputElement>('[data-menu-search]')!;next.focus();next.setSelectionRange(pos,pos);};
     host.querySelectorAll<HTMLButtonElement>('[data-module]').forEach(b=>b.onclick=()=>{active=b.dataset.module!;reviewAll=false;render();});
     const toggle=(key:string,on:boolean)=>{
-      for(const c of [byKey.get(key)!,...descendants(key)]){if(!c)continue;if(on){selected.add(c.key);if(grants)grants[c.key]=grants[c.key]??'read';}else{selected.delete(c.key);if(grants)grants[c.key]='hidden';}}
+      for(const c of [byKey.get(key)!,...descendants(key)]){if(!c||platformOpen.has(c.key))continue;if(on){selected.add(c.key);if(grants)grants[c.key]=grants[c.key]??'read';}else{selected.delete(c.key);if(grants)grants[c.key]='hidden';}}
       if(on){let p=byKey.get(key)?.parent;while(p){selected.add(p);if(grants)grants[p]='read';p=byKey.get(p)?.parent;}}
       else{let p=byKey.get(key)?.parent;while(p){if(!descendants(p).some(c=>selected.has(c.key))){selected.delete(p);if(grants)grants[p]='hidden';}p=byKey.get(p)?.parent;}}
     };
@@ -226,7 +227,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
   };render();
   if(!options.roles&&options.templates!==false){const apply=(keys:string[])=>{selected.clear();keys.forEach(k=>selected.add(k));render();};if(options.scene)bindFlatBusinessPresets(host,choices,()=>[...selected],apply,options.scene,options.allowed);else bindBusinessTemplateToolbar(host,choices,()=>[...selected],apply,options.allowed);}
-  return()=>[...selected];
+  return()=>[...new Set([...initial.filter(key=>platformOpen.has(key)), ...[...selected].filter(key=>!platformOpen.has(key))])];
 }
 
 function brandMenuSelectionSummary(keys:string[],choices:MenuChoice[]):string {
