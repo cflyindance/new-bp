@@ -23,7 +23,7 @@ import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuK
 import { ensureBrandCreationDemoStores, associateBrandStores, canRemoveBrandStore, removeBrandStore, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
-import { isMenuVisibleToAllMerchants, matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
+import { isMenuVisibleToAllMerchants, isPaidMenuVisible, matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
 import { serviceEntitlementData } from './service-entitlement-data';
 import { serviceAccess } from './service-entitlement-domain';
 
@@ -146,11 +146,30 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     const menu = matchingPaidMenus(choice.path).find(node => node.path === choice.path);
     if (!menu) return '';
     const services = publishedPaidServicesForMenu(menu.id);
-    if (!services.length) return '待发布收费服务';
-    if (!options.brandId) return '收费服务已发布';
-    return services.some(pkg => serviceAccess(serviceEntitlementData().snapshot, pkg, { brandId: options.brandId }).usable) ? '收费服务已开通' : '收费服务未开通';
+    const badge = (label: string, description: string) => `<span class="ba-paid-menu-status">
+      <span class="ba-tag">${label}</span>
+      <button type="button" data-paid-menu-help aria-label="${esc(choice.title)}：${label}说明" aria-expanded="false">ⓘ</button>
+      <span class="ba-paid-menu-popover" popover="auto">${description}</span>
+    </span>`;
+    if (!services.length || !isPaidMenuVisible(choice.path)) return badge('待发布收费服务',
+      '收费服务发布前，商户后台不会显示此菜单。请确保此菜单及其所属收费上级菜单已加入发布的收费服务。发布后，菜单按品牌配置和账号权限显示。');
+    const brandId = options.brandId;
+    if (!brandId) return badge('收费服务已发布',
+      '菜单按品牌配置和账号权限显示，使用时需要适用范围内有生效权益。创建品牌后，可前往「服务权益」办理开通。');
+    const { snapshot } = serviceEntitlementData();
+    if (services.some(pkg => serviceAccess(snapshot, pkg, { brandId }).usable)) {
+      return badge('收费服务已开通', '当前品牌已有生效权益，覆盖全部品牌门店（含后续新增）。商户仍需相应菜单和账号权限才能使用。');
+    }
+    const stores = scopedStores ??= getMerchantStores(brandId);
+    const covered = stores.filter(store => services.some(pkg => serviceAccess(snapshot, pkg, { brandId, storeId: store.storeId }).usable)).length;
+    if (covered) return badge(covered < stores.length ? '部分门店已开通' : '指定门店已开通',
+      `当前有 ${covered} 家门店的权益已生效。商户需有相应菜单和账号权限才能使用，其他门店需开通适用权益。`);
+    return badge('收费服务未开通',
+      '当前品牌和可管理门店均无生效权益。已获菜单权限的商户可能看到菜单，权益生效后，覆盖范围内的商户才能使用。请前往「服务权益」办理。');
   };
+  let scopedStores: ReturnType<typeof getMerchantStores> | undefined;
   const render=()=>{
+    scopedStores = undefined;
     const categoryScroll=host.querySelector('nav')?.scrollTop??0;
     const treeScroll=host.querySelector('.ba-menu-list')?.scrollTop??0;
     const pageCount=(key:string)=>{const pages=descendants(key).filter(c=>c.isPage===true);return `${pages.filter(c=>selected.has(c.key)).length}/${pages.length}`;};
@@ -165,7 +184,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
     if(filtered)for(const c of available){if(!reviewAll&&rootOf(c)!==active&&!query)continue;if((filterSelectedRows||reviewAll)&&!selected.has(c.key))continue;if(query&&!`${c.title} ${c.path??''} ${pathOf(c)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))continue;includeWithParents(c);}
     const displayRows=options.roles?available:compactBrandMenuRows(available),displayKeys=new Set(displayRows.map(c=>c.key));
     const rows=displayRows.filter(c=>(!filterCategories||visibleRootKeys.has(rootOf(c)))&&((reviewAll||query)||rootOf(c)===active)&&(c.level!==1||reviewAll||query)&&(filtered?matches.has(c.key):!hiddenByParent(c)));
-    const rowContent=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),managed=platformOpen.has(c.key),status=managed?'平台默认开放':paidStatus(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';const name=`<div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${managed||selected.has(c.key)?'checked':''} ${managed?'disabled title="由 M 平台管理"':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div>`;const grant=`<div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${status ? `<span class="ba-tag">${esc(status)}</span>` : ''}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div>`;return {name,grant};};
+    const rowContent=(c:MenuChoice)=>{const children=descendants(c.key).filter(child=>displayKeys.has(child.key)),state=stateOf(c),managed=platformOpen.has(c.key),status=managed?'<span class="ba-tag">平台默认开放</span>':paidStatus(c),type=c.level===1?'目录':c.isPage===true?'页面':c.kind==='setting'?'设置项':'分组';const name=`<div class="ba-tree-name" style="--menu-depth:${Math.max(0,c.level-(reviewAll||query?1:2))}">${children.length?`<button type="button" class="ba-menu-toggle" data-menu-toggle="${esc(c.key)}" aria-expanded="${filtered||!collapsed.has(c.key)}" aria-label="${!filtered&&collapsed.has(c.key)?'展开':'收起'}${esc(c.title)}" ${filtered?'disabled':''}>${!filtered&&collapsed.has(c.key)?'▸':'▾'}</button>`:'<span class="ba-menu-toggle-space" aria-hidden="true"></span>'}<input type="checkbox" data-key="${esc(c.key)}" aria-label="开通${esc(c.title)}" ${managed||selected.has(c.key)?'checked':''} ${managed?'disabled title="由 M 平台管理"':''}><span class="ba-tree-title">${esc(c.title)}</span><span class="ba-tree-type">${type}</span>${query&&pathOf(c)?`<span class="ba-tree-path">${esc(pathOf(c))}</span>`:''}</div>`;const grant=`<div class="ba-tree-grant">${options.roles&&c.kind==='setting'&&selected.has(c.key)?`<select data-edit="${esc(c.key)}" aria-label="${esc(c.title)}编辑权限"><option value="read" ${grants?.[c.key]!=='edit'?'selected':''}>仅查看</option><option value="edit" ${grants?.[c.key]==='edit'?'selected':''}>可编辑</option></select>`:''}${status}${state==='部分开通'?'<span class="ba-tree-partial">部分开通</span>':''}</div>`;return {name,grant};};
     const row=(c:MenuChoice)=>{const {name,grant}=rowContent(c);return `<tr data-menu-row="${esc(c.key)}"><td>${name}</td><td>${grant}</td></tr>`;};
     const editableTree=()=>{
       if(!rows.length)return `<p class="ba-empty">${reviewAll||selectedOnly?'暂无已选菜单':'没有匹配菜单'}</p>`;
@@ -222,6 +241,20 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       host.dispatchEvent(new Event('change',{bubbles:true}));
     });
     host.querySelectorAll<HTMLInputElement>('[data-key]').forEach(c=>{c.onchange=()=>{toggle(c.dataset.key!,c.checked);render();host.dispatchEvent(new Event('change',{bubbles:true}));};const children=descendants(c.dataset.key!);c.indeterminate=children.some(x=>selected.has(x.key))&&!children.every(x=>selected.has(x.key));});
+    host.querySelectorAll<HTMLButtonElement>('[data-paid-menu-help]').forEach(button => {
+      const popover = button.nextElementSibling as HTMLElement;
+      button.popoverTargetElement = popover;
+      popover.addEventListener('toggle', () => {
+        const open = popover.matches(':popover-open');
+        button.setAttribute('aria-expanded', String(open));
+        if (!open) return;
+        const anchor = button.getBoundingClientRect();
+        const bounds = popover.getBoundingClientRect();
+        popover.style.left = Math.max(8, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - 8)) + 'px';
+        popover.style.top = (anchor.bottom + bounds.height + 8 <= innerHeight
+          ? anchor.bottom + 6 : Math.max(8, anchor.top - bounds.height - 6)) + 'px';
+      });
+    });
     host.querySelectorAll<HTMLSelectElement>('[data-edit]').forEach(el=>el.onchange=()=>{if(grants)grants[el.dataset.edit!]=el.value as Access;});
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
