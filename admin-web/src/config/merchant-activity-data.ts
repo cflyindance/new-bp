@@ -22,6 +22,3 @@ export function refreshActivityDemoData(): boolean {
   return true;
 }
 refreshActivityDemoData();
-export function renderActivityDemoNotice(): string {
-  return '<p class="ma-demo-note" role="note">演示数据：品牌和门店来自管理资料；订单、设备绑定、开通天数及活跃状态为测试场景。统计时区统一为 Asia/Shanghai，不代表实际经营数据。</p>';
-}

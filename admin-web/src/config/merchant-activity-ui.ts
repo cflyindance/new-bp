@@ -10,7 +10,7 @@ import {
   shiftDate, summarizeActivity, validatePeriod,
   type ActivityMetrics, type ActivityPeriod, type ActivityScope, type ActivityStatus,
 } from "./merchant-activity-domain";
-import { activityDemoData as data, activityDemoOrders as resolved, refreshActivityDemoData, renderActivityDemoNotice } from "./merchant-activity-data";
+import { activityDemoData as data, activityDemoOrders as resolved, refreshActivityDemoData } from "./merchant-activity-data";
 
 import { ACTIVITY_PATH, activityScopeHref, parseActivityScope } from './merchant-activity-drilldown';
 export { ACTIVITY_PATH } from './merchant-activity-drilldown';
@@ -248,7 +248,7 @@ function storeDrawer(scope: ActivityScope): string {
     '<header class="ma-drawer-heading"><div><p>门店详情</p><h2 id="ma-drawer-title">' + esc(store.name) + '</h2><div class="ma-drawer-context"><span>' + esc(store.merchantName) + '</span>' + badge(m.status) +
     activityManagementLinks(store, activeEmbedded ? activeContext?.kind === 'brand' ? 'both' : activeContext?.kind : undefined) + '<span>最近点单 ' + time(m.latest) + '</span></div><p>统计期间：' + state.period.start + ' 至 ' + state.period.end + '</p></div>' +
     '<button type="button" data-ma-drawer-close aria-label="关闭门店详情">关闭 ×</button></header>' +
-    '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' + (brandUsage()?'':renderActivityDemoNotice()) +
+    '<div class="ma-drawer-tabs" role="tablist" aria-label="查看产线">' + tabs + '</div><div class="ma-drawer-body" id="ma-drawer-content" role="tabpanel" aria-label="' + (scope.line ?? '全部产线') + '">' +
     (store.quality === 'error' ? '<p class="ma-error-note" role="alert">该门店订单数据不可用，指标显示“—”，不作为真实零订单。</p>' : '') + scopeSummary(selected) +
     (!scope.line ? lineOverview(scope) : '') + devicesPage(scope) + '</div></section></div>';
 }
@@ -275,7 +275,7 @@ export function renderActivityPage(path: string, embedded = false): string {
     scope = state.inlineScope;
   }
   if (scope === undefined) return '<section class="ma-page"><h2>未找到演示页面</h2><a class="ma-link" href="' + (route ? href() : '#' + ACTIVITY_PATH) + '">返回分析列表</a></section>';
-  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + (brandUsage()?'':renderActivityDemoNotice()) + contextHeader(embedded) + dateControls() + rootPage() +
+  return '<div class="ma-page" data-ma-page' + (embedded ? ' data-activity-embedded="true"' : '') + '><div data-ma-background' + (scope ? ' inert' : '') + '>' + contextHeader(embedded) + dateControls() + rootPage() +
     (brandUsage() ? '' : '<section class="ma-rules"><strong>活跃判定</strong><p>最近点单距今 0～6 天：活跃；7～13 天：近期未使用；14～29 天：疑似停用；≥30 天：长期未使用。从未点单：尚未使用。</p>' +
     '<p>点单量按成功提交的业务订单去重，取消单仍计入；草稿不计入。跨设备收款不改变点单来源。状态按截至日期判断，查询期间只影响订单及使用频率指标。</p><p>绑定设备按截至日期统计；有订单设备按查询期间统计，可能包含历史绑定设备。不同产线的设备数可能包含同一台跨产线使用设备，门店总设备数按设备 ID 去重。</p></section>') + '</div>' + (scope ? storeDrawer(scope) : '') + '</div>';
 }
@@ -284,7 +284,7 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
   if (!root) return;
   releaseEmbeddedModal?.();
   const embedded = root.dataset.activityEmbedded === 'true';
-  const scrollHost = embedded ? root.closest<HTMLElement>('[data-merchant-usage]')?.parentElement ?? root : root;
+  const scrollHost = embedded ? root.closest<HTMLElement>('[data-merchant-usage]')?.parentElement ?? root : root.closest<HTMLElement>('[data-activity-scroll-host]') ?? root;
   root.querySelectorAll<HTMLButtonElement>("[data-ma-quick]").forEach(button => button.addEventListener("click", () => {
     state.periodDraft = null;
     state.quick = button.dataset.maQuick!;
@@ -348,7 +348,7 @@ export function bindActivityPage(onMount: () => void, pagePath = location.hash.s
   scrollHost.scrollTop = state.rootScroll;
   if (dialog) {
     if (embedded) releaseEmbeddedModal = lockEmbeddedModal(dialog, scrollHost);
-    else root.style.overflow = 'hidden';
+    else scrollHost.style.overflow = 'hidden';
   }
   scrollHost.addEventListener('scroll', () => { if (!dialog) state.rootScroll = scrollHost.scrollTop; });
   const saveDraft = (selector: string) => { const form = root.querySelector<HTMLFormElement>(selector); return form ? Object.fromEntries([...new FormData(form)].map(([key, value]) => [key, String(value)])) : null; };
