@@ -42,7 +42,8 @@ export function renderEntitlementOverview(brandId:string,embedded:boolean,mayMan
   const extend = grantActive(g) && snapshot.packages.some(p => p.id === g.packageId && packageOnSale(p))
     && mayManage('extend') && ['paid','gift'].includes(g.entitlementKind!)
     ? button(g.entitlementKind === 'gift' ? '延长赠送' : '续期', `data-ent-extend="${esc(g.id)}"`, card ? 'rights-record-extend' : '') : '';
-  const disable = !g.disabledAt && mayManage('disable') ? button('停用', `data-ent-disable="${esc(g.id)}"`) : '';
+  const canDisable = current(g) && (!g.endAt || Date.parse(g.endAt) > Date.parse(g.startAt));
+  const disable = canDisable && mayManage('disable') ? button('停用', `data-ent-disable="${esc(g.id)}"`) : '';
   const more = (items: string, size: string) => items
     ? `<div class="rights-more-${size}">${renderBrandMoreActions('更多权益操作', items)}</div>` : '';
   return card
@@ -61,14 +62,15 @@ export function renderEntitlementOverview(brandId:string,embedded:boolean,mayMan
   let state=result.usable?(result.grant?.entitlementKind==='trial'?'试用中':'生效中'):covered.length?'部分门店可用':result.label==='仅指定门店可用'?'无可用门店':result.label;
   if(state==='未开通'&&live.some(g=>Date.parse(g.startAt)>Date.now()))state='待生效';
   if(state==='未开通'&&related.length){const latest=[...related].sort((a,b)=>Date.parse(b.disabledAt??b.endAt??b.startAt)-Date.parse(a.disabledAt??a.endAt??a.startAt))[0]!;state=status(latest);if(state==='生效中')state='无可用门店';}
+  const hasActiveEntitlement = live.some(grant => grantActive(grant));
   const canOpen = mayManage() && packageOnSale(pkg) && pkg.commercial;
   const create = (kind: 'free'|'paid'|'gift'|'trial', label: string, style = '') =>
     button(label, `data-ent-new="${kind}" data-pkg="${esc(pkg.id)}"`, style);
   const primary = canOpen ? pkg.commercial?.chargeType === 'free'
     ? create('free', '免费开通', 'rights-service-primary')
-    : create('paid', '付费开通', 'rights-service-primary') : '';
+    : create('paid', hasActiveEntitlement ? '新增付费权益' : '付费开通', 'rights-service-primary') : '';
   const paidService = canOpen && pkg.commercial?.chargeType !== 'free';
-  const gift = paidService ? create('gift', '赠送', 'rights-service-secondary') : '';
+  const gift = paidService ? create('gift', hasActiveEntitlement ? '新增赠送权益' : '赠送', 'rights-service-secondary') : '';
   const trial = paidService && result.canTrial ? create('trial', '开始试用') : '';
   const exists=snapshot.packages.some(p=>p.id===pkg.id);
 
