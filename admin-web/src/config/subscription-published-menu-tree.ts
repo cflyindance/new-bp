@@ -6,7 +6,7 @@ import {
   type NavBlueprintSnapshot,
 } from "./nav-blueprint-store";
 import type { PermissionTreeNode } from "./permission-registry";
-import { isMenuDirectory, type MenuDocument, type MenuNode } from "./json-menu-document-domain";
+import { isMenuDirectory, resolveMerchantOpeningScope, type MerchantOpeningScope, type MenuDocument, type MenuNode } from "./json-menu-document-domain";
 
 export interface SubscriptionMenuTreeNode {
   routeNodeId: string;
@@ -51,11 +51,11 @@ function resolvePublishedMenuTitle(node: MenuNode, routeNodeId: string): string 
     ?? routeNodeId;
 }
 
-function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string, ancestorPaid = false, inheritedScope: boolean | 'closed' = false): SubscriptionMenuTreeNode {
+function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string, ancestorPaid = false, inheritedScope: MerchantOpeningScope = false): SubscriptionMenuTreeNode {
   const routeNodeId = node.id?.trim() || node.key?.trim() || `menu-${path.join("-")}`;
   const routePath = node.path?.trim() || node.url?.trim() || undefined;
   const paid = ancestorPaid || node.paidMenu === true;
-  const openingScope = node.merchantOpeningClosed === true ? 'closed' : node.visibleToAllMerchants ?? inheritedScope;
+  const openingScope = resolveMerchantOpeningScope(node, inheritedScope);
   return {
     routeNodeId,
     parentRouteNodeId,
