@@ -8,6 +8,7 @@ import {escapeDisplay as e,displayTag as tag,displayButton as btn,displayField a
 import {readMaterialCategories,readMaterialImages,MATERIAL_IMAGES_STORAGE_KEY} from '../config/image-material-library';
 import {renderMediaGroups,renderAssetPreview} from './legacy-views';
 import {renderFlowStores,resolveFlowStorePage,selectFlowStorePage,renderFlowChannels,availableFlowTerminals,renderFlowTime,readFlowWallTime} from './flow-views';
+import {checkUploadDimensions,DISPLAY_UPLOAD_RULES,validateDisplayUpload} from './ad-slot-catalog';
 import {storeDisplayVideo,hydrateDisplayMedia,hydrateLegacyMedia} from './media-storage';
 import {openConfirmDialog} from '../ui/app-confirm-dialog';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
@@ -189,17 +190,42 @@ class DisplayController {
   }
   private uploadSource(ratio:string):void {
     this.captureContent();this.uploadRatio=ratio;const d=this.contentDraft!,r=this.region(d.regionId)!;const kind=this.mediaTypes[ratio]??d.assets.find(a=>a.variant===ratio)?.kind??r.mediaKinds[0];this.mediaTypes[ratio]=kind;
-    this.openDialog('选择上传方式',`<div class="display-source-options">${btn('<strong>本地上传</strong><span>从电脑选择文件上传</span>','choose-local')}<label class="display-check"><input type="checkbox" id="display-copy-library" ${kind==='video'?'disabled':''}>同时保存到图片素材库${kind==='video'?'（视频不支持）':''}</label>${btn('<strong>素材库选择</strong><span>从图片素材库中选择</span>','library',{disabled:kind==='video'})}</div><input type="file" id="display-upload" aria-label="上传展示素材" ${kind==='image'?'multiple':''} accept="${kind==='image'?'image/png,image/jpeg,image/webp,image/gif':'video/mp4,video/webm'}" hidden>`,btn('取消','library-back'));
+    const rule=DISPLAY_UPLOAD_RULES[kind];
+    this.openDialog('选择上传方式',`<p class="display-muted">支持 ${rule.label}，单文件不超过 ${rule.maxMB} MB${kind==='video'?`，视频不超过 ${DISPLAY_UPLOAD_RULES.video.maxSeconds} 秒`:''}。</p><div class="display-source-options">${btn('<strong>本地上传</strong><span>从电脑选择文件上传</span>','choose-local')}<label class="display-check"><input type="checkbox" id="display-copy-library" ${kind==='video'?'disabled':''}>同时保存到图片素材库${kind==='video'?'（视频不支持）':''}</label>${btn('<strong>素材库选择</strong><span>从图片素材库中选择</span>','library',{disabled:kind==='video'})}</div><input type="file" id="display-upload" aria-label="上传展示素材" ${kind==='image'?'multiple':''} accept="${rule.formats.join(',')}" hidden>`,btn('取消','library-back'));
+  }
+  private async readMediaDimensions(file:File,kind:MediaKind):Promise<{width:number;height:number;duration?:number}> {
+    const url=URL.createObjectURL(file);
+    try{
+      return await new Promise((resolve,reject)=>{
+        const failure=()=> reject(Error('无法读取素材尺寸，请更换文件后重试'));
+        if(kind==='image'){const image=new Image();image.onload=()=>resolve({width:image.naturalWidth,height:image.naturalHeight});image.onerror=failure;image.src=url;return;}
+        const video=document.createElement('video');video.preload='metadata';video.onloadedmetadata=()=>{if(video.videoWidth&&video.videoHeight)resolve({width:video.videoWidth,height:video.videoHeight,duration:video.duration});else failure()};video.onerror=failure;video.src=url;
+      });
+    }finally{URL.revokeObjectURL(url)}
   }
   private async readUploads(input:HTMLInputElement):Promise<void> {
     const files=[...(input.files??[])];if(!files.length)return;const d=this.contentDraft!,r=this.region(d.regionId)!,ratio=this.uploadRatio,kind=this.mediaTypes[ratio]??'image',copy=!!this.dialog?.querySelector<HTMLInputElement>('#display-copy-library')?.checked;
     const count=d.assets.filter(a=>a.variant===ratio).length;if(d.assets.length+files.length>r.maxItems||count+files.length>(kind==='video'?1:5))throw Error(kind==='video'?'每种比例最多1个视频':'每种比例最多5张图片，且不能超过区域总量上限');
-    for(const file of files){if(!['image/png','image/jpeg','image/webp','image/gif','video/mp4','video/webm'].includes(file.type)||!file.type.startsWith(kind+'/'))throw Error('不支持该文件格式');if(kind==='video'&&file.size>20*1024*1024)throw Error('视频大小不能超过20MB')}
+    for(const file of files)validateDisplayUpload(kind,file);
     const dialog=this.dialog;const additions:DisplayAsset[]=[];
+    const warnings:ReturnType<typeof checkUploadDimensions>[]= [];
+    if(r.specs?.length||kind==='video'){
+      for(const file of files){const {width,height,duration}=await this.readMediaDimensions(file,kind);validateDisplayUpload(kind,file,duration);const warning=checkUploadDimensions(r.specs??[],ratio,kind,width,height);if(warning)warnings.push({...warning,message:file.name+'：'+warning.message});}
+    }
+    if(this.contentDraft!==d||this.dialog!==dialog||!dialog?.isConnected)return;
+    if(warnings.some(warning=>warning?.confirm)){
+      const accepted=await openConfirmDialog({title:'素材比例与推荐尺寸不同',message:warnings.map(warning=>warning?.message).join('\n')+'\n实际展示以终端为准。',confirmLabel:'继续使用',cancelLabel:'更换素材'});
+      if(!accepted){input.value='';return}
+    }
+    if(this.contentDraft!==d||this.dialog!==dialog||!dialog?.isConnected)return;
     for(const file of files){const url=kind==='video'?await storeDisplayVideo(file):await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('素材读取失败，请重试'));reader.readAsDataURL(file)});additions.push({id:crypto.randomUUID(),name:file.name,url,kind,variant:ratio})}
     if(this.contentDraft!==d||this.dialog!==dialog||!dialog?.isConnected)return;
     if(copy){const images=readMaterialImages();const records=additions.map(a=>({id:a.id,name:a.name,url:a.url,category:r.builtin?'屏保素材':'广告素材'}));try{localStorage.setItem(MATERIAL_IMAGES_STORAGE_KEY,JSON.stringify([...records,...images]))}catch{throw Error('保存到图片素材库失败，当前内容尚未添加，请关闭同步保存后重试')}}
     d.assets.push(...additions);this.dirty=true;this.contentEditor();
+    if(warnings.length&&!warnings.some(warning=>warning?.confirm)){
+      const notice=document.createElement('p');notice.className='display-alert';notice.setAttribute('role','status');notice.textContent=warnings.map(warning=>warning?.message).join(' ');
+      this.dialog?.querySelector('header')?.after(notice);
+    }
   }
   private regionExampleField(draft:RegionInput):string {
     return `<div class="display-field"><span>区域示例图（${draft.id?'可选':'必传'}）</span><p id="display-region-example-guide">建议上传能看出所在页面、并标出广告位置的截图，方便商户识别投放位置。</p><input hidden id="display-region-example" type="file" accept="${REGION_EXAMPLE_TYPES.join(',')}"><div>${btn(draft.exampleImage?'更换示例图':'选择示例图','choose-region-example',{extra:'aria-describedby="display-region-example-guide display-region-example-help"'})}</div><small id="display-region-example-help">PNG、JPEG 或 WebP，最大 512 KB。仅用于商户识别投放位置。</small><div data-region-example-preview>${this.regionExamplePreview(draft)}</div></div>`
@@ -277,7 +303,7 @@ class DisplayController {
   private async publicationAction(id:string,action:'publish'|'revoke'):Promise<void> {this.liveContext();if(!await openConfirmDialog({title:action==='publish'?'上架此投放？':'下架此投放？',message:action==='publish'?'将按当前方案内容生成发布快照，并向所选门店与终端提供。':'下架后终端更新将停止使用该投放。同一内容的其他投放不受影响。',confirmLabel:action==='publish'?'确认上架':'确认下架'}))return;const context=this.liveContext(),latest=readDisplayPlatform();const next=action==='publish'?publishPlacement(this.state,latest,id,context,Date.now()):revokePlacement(this.state,id,context);this.state=saveMerchantDisplay(next,this.state.revision);this.saved(action==='publish'?'投放已上架，等待终端同步':'投放已下架')}
   private preview(id:string):void {
     const c=this.content(id);if(!c)throw Error('内容不存在');if(this.previewState?.id!==id)this.previewState={id,variant:c.assets[0]?.variant??'default',index:0,zoom:1};const v=this.previewState!;
-    this.dirty=false;this.openDialog('内容预览 · '+c.name,`<div class="display-alert">${e(this.region(c.regionId)?.name)} · 素材实际预览，具体位置、触发与布局由产线实现。</div>${renderAssetPreview(c.assets,v.variant,v.index,v.zoom)}`,'','full');
+    this.dirty=false;this.openDialog('内容预览 · '+c.name,`<div class="display-alert">${e(this.region(c.regionId)?.name)} · 素材预览，实际展示以终端为准。</div>${renderAssetPreview(c.assets,v.variant,v.index,v.zoom)}`,'','full');
     this.dialog?.addEventListener('keydown',event=>{if((event.target as HTMLElement).matches('input,select,textarea,video'))return;const key=event.key,action=key==='ArrowLeft'?'preview-previous':key==='ArrowRight'?'preview-next':key==='+'||key==='='?'preview-zoom-in':key==='-'?'preview-zoom-out':'';if(action){event.preventDefault();this.previewAction(action,'')}});
   }
   private previewAction(action:string,id:string):void {const v=this.previewState;if(!v)return;const count=this.content(v.id)!.assets.filter(a=>a.variant===v.variant).length;if(action==='preview-variant'){v.variant=id;v.index=0;v.zoom=1}if(action==='preview-next')v.index=Math.min(count-1,v.index+1);if(action==='preview-previous')v.index=Math.max(0,v.index-1);if(action==='preview-zoom-in')v.zoom=Math.min(3,v.zoom+.25);if(action==='preview-zoom-out')v.zoom=Math.max(.25,v.zoom-.25);if(action==='preview-reset')v.zoom=1;this.preview(v.id);this.dialog?.querySelector<HTMLElement>('.display-asset-stage')?.focus()}
