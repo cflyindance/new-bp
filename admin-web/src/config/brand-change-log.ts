@@ -1,8 +1,8 @@
 import {esc} from '../permissions/center-editor';
-import {bindOpenedBrandMenuTree} from './brand-menu-read-tree';
+import { auditComparison, auditDetailShell, auditFields, auditValue, showAuditDetail } from './brand-audit-detail';
 import type {MenuChoice} from './brand-menu-choices';
 import type {MerchantChangeLogEntry} from './enterprise-merchant-types';
-const labels:Record<string,string>={'store.capability.update':'配置门店菜单','brand.menu.update':'修改品牌菜单','org.store.associate':'关联门店','merchant.create':'创建品牌'};
+const labels:Record<string,string>={'store.capability.update':'配置门店菜单','brand.menu.update':'修改品牌菜单','org.store.associate':'添加新门店','merchant.create':'创建品牌'};
 const modeName=(mode:string)=>({inherit:'继承品牌菜单',independent:'独立配置',add:'独立配置 · 增量开通',replace:'独立配置 · 替换',brand:'品牌菜单'}[mode]??'历史记录未保存');
 export function menuChangeKeys(entry:MerchantChangeLogEntry){
  if(entry.menuChange)return {added:entry.menuChange.added,removed:entry.menuChange.removed};
@@ -54,26 +54,55 @@ export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEnt
   applyFilters();
  });
  host.querySelectorAll<HTMLButtonElement>('[data-change-detail]').forEach(button=>button.onclick=()=>{
-  const row=rows[Number(button.dataset.changeDetail)],d=document.createElement('dialog');d.className='ba ba-modal ba-change-detail';d.setAttribute('aria-label','变更详情');let index=0,filter:'added'|'removed'='added';
-  if(brandDetail)d.classList.add('brand-design-modal','brand-log-modal');
-  const objects=row.map(entry=>{
-   const store=stores.find(store=>store.storeId===entry.storeId);
-   const name=entry.storeId?entry.menuChange?.storeName??store?.name:undefined;
-   return `<li><strong>${esc(name??target(entry))}</strong>${entry.storeId?`<small>${esc(entry.storeId)}</small><small>地址 ${esc(store?.address?.trim()||'—')}</small><small>邮编 ${esc(store?.postalCode?.trim()||'—')}</small>`:''}</li>`;
-  }).join('');
-  d.innerHTML=`<div class="ba-dialog-inner"><header class="ba-dialog-header"><button type="button" class="ba-btn" data-log-close aria-label="关闭详情">×</button><h2>变更详情</h2></header>
-   <section class="ba-dialog-body"><section class="brand-modal-card"><h3>涉及对象</h3><ul class="brand-log-objects">${objects}</ul>
-    ${row.length>1?`<label class="ba-field">查看门店<select data-log-store>${row.map((entry,i)=>`<option value="${i}">${esc(target(entry))}</option>`).join('')}</select></label>`:''}
-   </section><section class="brand-modal-card"><div data-log-fields></div><div class="ba-actions ba-preview-filters"><button class="ba-btn" type="button" data-log-filter="added">新增菜单</button><button class="ba-btn" type="button" data-log-filter="removed">关闭菜单</button></div><div data-log-tree></div><div data-log-unknown></div></section>
-   </section></div>`;
-  const render=()=>{
-   const e=row[index],diff=menuChangeKeys(e),choices=e.menuChange?.choices??current,map=new Set(choices.map(c=>c.key));
-   const fields=e.facts?.fields??[];d.querySelector('[data-log-fields]')!.innerHTML=fields.length?`<h3>变更字段</h3><div class="ba-table-wrap"><table><thead><tr><th>字段</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${fields.map(f=>`<tr><td>${esc(f.name)}</td><td>${esc(f.before)}</td><td>${esc(f.after)}</td></tr>`).join('')}</tbody></table></div>`:!diff?'<p class="ba-muted">该历史记录仅保留操作摘要，未保存字段前后值。</p>':'';
-   d.querySelectorAll<HTMLButtonElement>('[data-log-filter]').forEach(b=>{b.hidden=!diff;b.setAttribute('aria-pressed',String(b.dataset.logFilter===filter));});
-   const tree=d.querySelector<HTMLElement>('[data-log-tree]')!;d.querySelector('[data-log-unknown]')!.innerHTML='';
-   if(diff){const keys=diff[filter];bindOpenedBrandMenuTree(tree,choices,new Set(keys.filter(k=>map.has(k))),{emptyText:filter==='added'?'没有新增菜单':'没有关闭菜单'});const unknown=keys.filter(k=>!map.has(k));d.querySelector('[data-log-unknown]')!.innerHTML=unknown.length?`<h3>历史菜单（无法识别名称）</h3><ul>${unknown.map(k=>`<li>${esc(k)}</li>`).join('')}</ul>`:'';}else tree.innerHTML='';
-   if(!e.menuChange&&diff){const note=document.createElement('p');note.className='ba-muted';note.textContent='历史菜单名称与层级按当前路由识别。';tree.prepend(note);}
+  const row=rows[Number(button.dataset.changeDetail)], first=row[0];
+  const dialog=document.createElement('dialog');
+  dialog.className='ba-change-detail brand-log-modal';
+  const storeName=(entry: MerchantChangeLogEntry) => entry.menuChange?.storeName
+   ?? (entry.facts?.target.endsWith(' · '+entry.storeId) ? entry.facts.target.slice(0,-(' · '+entry.storeId).length) : undefined)
+   ?? stores.find(store=>store.storeId===entry.storeId)?.name ?? target(entry);
+  const storeInfo=(entry: MerchantChangeLogEntry) => {
+   const store=stores.find(item=>item.storeId===entry.storeId);
+   return `<strong>${esc(storeName(entry))}</strong><small>${esc(entry.storeId??'')}</small><small>地址 ${esc(store?.address?.trim()||'—')} · 邮编 ${esc(store?.postalCode?.trim()||'—')}</small>`;
   };
-  d.querySelector<HTMLSelectElement>('[data-log-store]')?.addEventListener('change',e=>{index=Number((e.target as HTMLSelectElement).value);render();});d.querySelectorAll<HTMLButtonElement>('[data-log-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.logFilter as typeof filter;render();});d.querySelectorAll('[data-log-close]').forEach(b=>b.addEventListener('click',()=>d.close()));d.addEventListener('close',()=>{d.remove();button.focus();},{once:true});document.body.append(d);render();d.showModal();
+  const storeList=(entries: MerchantChangeLogEntry[]) => entries.length
+   ? `<strong class="brand-audit-object">本次涉及 ${entries.length} 家门店</strong><ul class="brand-audit-stores">${entries.map(entry=>`<li>${storeInfo(entry)}</li>`).join('')}</ul>`
+   : '<p class="ba-muted">本次涉及的门店未归属该品牌</p>';
+  const membership=first.action==='org.store.associate'||first.action==='org.store.remove';
+  const selection=row.length>1 ? `<label class="ba-field">切换门店<select data-log-store>${row.map((entry,i)=>`<option value="${i}">${esc(target(entry))}</option>`).join('')}</select></label>` : '';
+  const operation=first.action==='org.store.associate'?'添加新门店':title(first);
+  dialog.innerHTML=auditDetailShell(first.operatorEmail,first.at,row.length>1?`${operation} · ${row.length} 家门店`:operation,`
+   ${membership ? auditComparison(storeList(first.action==='org.store.remove'?row:[]),storeList(first.action==='org.store.associate'?row:[])) : ''}
+   ${row.length>1||first.storeId ? `<div class="brand-audit-scope"><div data-log-target></div>${selection}</div>` : ''}
+   <div data-log-fields></div><div data-log-tree></div>`);
+  const render=(index: number)=>{
+   const entry=row[index], diff=menuChangeKeys(entry);
+   const fields=entry.facts?.fields??[];
+   const object=`<strong class="brand-audit-object">${esc(entry.storeId ? storeName(entry) : target(entry))}</strong>`;
+   const selected=dialog.querySelector('[data-log-target]');
+   if(selected&&entry.storeId)selected.innerHTML=storeInfo(entry);
+   dialog.querySelector('[data-log-fields]')!.innerHTML=fields.length
+    ? auditComparison(object+auditFields(fields.map(f=>[f.name,f.before])),object+auditFields(fields.map(f=>[f.name,f.after])))
+    : diff ? (!entry.storeId ? object : '') : `${object}<p class="ba-muted">该历史记录仅保留操作摘要，未保存字段前后值。</p><p>${esc(entry.detail)}</p>`;
+   const menus=dialog.querySelector('[data-log-tree]')!;
+   if(!diff){menus.innerHTML='';return;}
+   const choices=new Map((entry.menuChange?.choices??current).map(choice=>[choice.key,choice]));
+   const label=(key: string)=>{
+    const chain:string[]=[];
+    const seen=new Set<string>();
+    for(let choice=choices.get(key);choice&&!seen.has(choice.key);choice=choice.parent?choices.get(choice.parent):undefined){
+     chain.unshift(choice.title);seen.add(choice.key);
+    }
+    return chain.join(' / ') || `历史菜单（${key}）`;
+   };
+   const added=new Set(diff.added),removed=new Set(diff.removed);
+   const changes=[...new Set([...added,...removed])].filter(key=>added.has(key)!==removed.has(key));
+   menus.innerHTML=`${entry.menuChange?'':'<p class="ba-muted">历史菜单名称与层级按当前路由识别。</p>'}
+    ${changes.length ? `<div class="ba-table-wrap"><table class="brand-audit-menu-table"><thead><tr><th scope="col">变更菜单</th><th scope="col">原值</th><th scope="col">新值</th></tr></thead><tbody>
+     ${changes.map(key=>`<tr><td>${esc(label(key))}</td><td>${auditValue(added.has(key)?'未开通':'已开通',true)}</td><td>${auditValue(added.has(key)?'已开通':'未开通',true)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="ba-muted">菜单范围无变更</p>'}`;
+  };
+  dialog.querySelector<HTMLSelectElement>('[data-log-store]')?.addEventListener('change',event=>render(Number((event.target as HTMLSelectElement).value)));
+  render(0);
+  showAuditDetail(dialog,button);
  });
 }
