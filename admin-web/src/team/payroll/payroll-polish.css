@@ -738,6 +738,10 @@
 .payroll-ca-formula{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .payroll-ca-interval,.payroll-ca-evidence{color:var(--muted,#666)}
 .payroll-ca-summary dt{display:flex;align-items:center;gap:4px}
+.payroll-ca-summary .payroll-sum-row{min-height:28px;align-items:baseline}
+.payroll-ca-summary .payroll-ca-summary-tier dt{padding-left:12px;font-size:12px}
+.payroll-ca-summary .payroll-ca-summary-tier{min-height:24px;margin:4px 0;padding:2px 0}
+.team-payroll-page .payroll-sum-card--amount .payroll-sum-total dd::before{content:none}
 :host .payroll-ca-continuous-help{display:inline-flex;align-items:center;justify-content:center;width:24px;height:20px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--muted,#666);cursor:help;vertical-align:middle}
 :host .payroll-ca-continuous-help:hover,:host .payroll-ca-continuous-help:focus-visible{color:var(--primary,#1677ff);outline:2px solid var(--primary,#1677ff);outline-offset:1px}
 .payroll-ca-continuous-tooltip{position:fixed;z-index:1600;width:320px;max-width:calc(100vw - 16px);box-sizing:border-box;padding:16px;background:var(--surface,#fff);color:var(--text,#1f1f1f);border:1px solid var(--border,#ededed);border-radius:8px;box-shadow:0 4px 16px #0002;font-size:12px;line-height:1.6}

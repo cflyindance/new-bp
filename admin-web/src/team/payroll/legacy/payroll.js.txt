@@ -4344,12 +4344,13 @@ html,body{height:auto!important;overflow:visible!important}
     $("#sum-ot2-h").textContent = fmtMoney(sums.ot2);
     $("#sum-total-h").textContent = fmtMoney(totalHours);
 
-    $("#sum-reg-amt").textContent = fmtMoney(regAmt);
+    const hourlyRates = (getter) => [...new Set((emp.segments || []).map(day => getter(day, emp)))].map(rate => fmtMoney(rate)).join(" / ") || "—";
+    $("#sum-reg-amt").textContent = hourlyRates(getDayRate);
     const sumPaidBreakAmt = $("#sum-paid-break-amt");
-    if (sumPaidBreakAmt) sumPaidBreakAmt.textContent = fmtMoney(paidBreakAmt);
-    $("#sum-ot-amt").textContent = fmtMoney(otAmt);
-    $("#sum-ot2-amt").textContent = fmtMoney(ot2Amt);
-    $("#sum-total-amt").textContent = fmtMoney(totalAmt);
+    if (sumPaidBreakAmt) sumPaidBreakAmt.textContent = hourlyRates(getDayRate);
+    $("#sum-ot-amt").textContent = hourlyRates(getDayOtRate);
+    $("#sum-ot2-amt").textContent = hourlyRates(getDayOt2Rate);
+    $("#sum-total-amt").textContent = "—";
 
     const totalIncome = totalAmt;
     const attendanceIncomeEl = $("#sum-attendance-income");
