@@ -1,3 +1,4 @@
+import { SERVICE_ENTITLEMENT_DEMO_VERSION } from './service-entitlement-demo';
 import { bindStoreBusinessStatusFilter,storeBusinessStatusFilter } from './store-business-status-filter';
 import './brand-access-ui.css';
 import { openServiceMenuPreview } from './service-entitlement-menu-preview';
@@ -124,7 +125,7 @@ export function bindBrandServiceEntitlements(onMount:()=>void):void {
   const root=document.querySelector<HTMLElement>('[data-brand-entitlements]');if(!root)return;
   bindEntitlementOverview();
   const demoVersion=readSubscriptionServiceSnapshot().entitlementDemoVersion;
-  if(demoVersion!==1)void ensurePublishedSubscriptionMenuTree().then(()=>{if(document.contains(root)&&readSubscriptionServiceSnapshot().entitlementDemoVersion===1)onMount();}).catch(()=>{});
+  if((demoVersion??0)<SERVICE_ENTITLEMENT_DEMO_VERSION)void ensurePublishedSubscriptionMenuTree().then(()=>{if(document.contains(root)&&(readSubscriptionServiceSnapshot().entitlementDemoVersion??0)>=SERVICE_ENTITLEMENT_DEMO_VERSION)onMount();}).catch(()=>{});
   root.querySelectorAll<HTMLButtonElement>('[data-ent-menu]').forEach(b=>b.onclick=()=>{void openServiceMenuPreview(b.dataset.entMenu!);});
   root.querySelectorAll<HTMLButtonElement>('[data-ent-new]').forEach(b=>b.onclick=()=>openServiceEntitlement(root.dataset.brandEntitlements!,b.dataset.pkg!,b.dataset.entNew as ServiceEntitlementKind,'m-platform',onMount));
   root.querySelectorAll<HTMLButtonElement>('[data-ent-extend],[data-ent-disable]').forEach(b=>b.onclick=()=>{

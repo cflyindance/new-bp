@@ -8,7 +8,7 @@ import {seedGrowthMenuDemo} from './subscription-growth-menu-demo';
 import { validateCommercialPolicy } from './service-entitlement-domain';
 import { seedPaidMenuDemo } from './paid-menu-demo';
 import { resolveMenuDocumentRepositoryMode } from './json-menu-document-repository-mode';
-import { seedServiceEntitlementDemo } from './service-entitlement-demo';
+import { SERVICE_ENTITLEMENT_DEMO_VERSION, seedServiceEntitlementDemo } from './service-entitlement-demo';
 import { getMerchantStores, getMerchants } from "./enterprise-merchant-store";
 import {
   getSubscriptionRouteCatalog,
@@ -155,7 +155,7 @@ function appendPaidMenuDemo(snapshot: SubscriptionServiceSnapshot): boolean {
 }
 
 function appendEntitlementDemo(snapshot:SubscriptionServiceSnapshot):boolean {
-  if(snapshot.entitlementDemoVersion===1||getPublishedSubscriptionMenuTree()?.source!=='menu-document')return false;
+  if((snapshot.entitlementDemoVersion??0)>=SERVICE_ENTITLEMENT_DEMO_VERSION||getPublishedSubscriptionMenuTree()?.source!=='menu-document')return false;
   const demoIds=new Set(['merchant-zhangji','merchant-tea-one','merchant-menusifu-na','merchant-sakura-sushi','merchant-burger-co']);
   return seedServiceEntitlementDemo(snapshot,getPublishedSubscriptionRouteCatalog(),getMerchants({allEnterprises:true}).filter(m=>demoIds.has(m.merchantId)).map(m=>({id:m.merchantId,stores:getMerchantStores(m.merchantId).map(s=>s.storeId)})));
 }
