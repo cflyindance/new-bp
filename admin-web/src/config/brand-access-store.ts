@@ -8,6 +8,7 @@ import {getUiLocale} from '../i18n';
 import {brandMenuRouteVersion} from './enterprise-merchant-services';
 import type {AdminAuditContext,BrandChangeFacts} from './brand-audit-types';
 import { installBrandAccessRuntime } from '../auth/brand-access-runtime';
+import { getPublishedSubscriptionRouteCatalog } from './subscription-published-menu-tree';
 import { centerKeysForRaw } from './brand-menu-catalog';
 export { centerKeysForRaw } from './brand-menu-catalog';
 import { buildCenterCatalog, actionKey, pageKey, settingKey, type Catalog } from '../permissions/center-catalog';
@@ -62,14 +63,28 @@ export function brandRawMenuKeys(id: string): Set<string> {
 }
 
 
+function platformOpenPageKeys(catalog: Catalog): Set<string> {
+  const paths = new Set(getPublishedSubscriptionRouteCatalog().filter(node => node.visibleToAllMerchants).map(node => node.path));
+  const keys = new Set<string>();
+  for (const resource of catalog.resources.values()) {
+    if (resource.type !== 'page' || resource.compatibilityOnly || !resource.path || !paths.has(resource.path)) continue;
+    keys.add(resource.key);
+    const parent = resource.parent && catalog.resources.get(resource.parent);
+    if (parent && parent.type === 'module') keys.add(parent.key);
+  }
+  return keys;
+}
+
 export function brandCatalog(id: string,catalog:Catalog=buildCenterCatalog()): {catalog: Catalog; ceiling: Set<string>} {
   const derived=mappedRuntimeKeys(brandRawMenuKeys(id),catalog);
   const cap = getMerchantCapability(id);
   const manifest = cap?.menuResourceKeys;
-  if (!cap || !manifest) return { catalog, ceiling: derived };
+  if (!cap) return { catalog, ceiling: derived };
+  const platformOpen = platformOpenPageKeys(catalog);
+  if (!manifest) return { catalog, ceiling: new Set([...derived, ...platformOpen]) };
   const inherited = new Set(cap.productLineIds.flatMap(line => [...inheritedPaidBrandMenuKeys(cap, resolveMerchantServiceProductLine([line]))]));
   const inheritedResources = mappedRuntimeKeys(inherited, catalog);
-  return { catalog, ceiling: new Set([...derived].filter(key => manifest.includes(key) || inheritedResources.has(key))) };
+  return { catalog, ceiling: new Set([...derived].filter(key => manifest.includes(key) || inheritedResources.has(key)).concat([...platformOpen])) };
 }
 
 export { brandMenuChoices, type MenuChoice } from './brand-menu-choices';
@@ -237,7 +252,11 @@ function brandRuntime():Runtime|undefined {
   const lockedStore=readActiveImpersonation()?.storeId;
   const store=lockedStore||sessionStorage.getItem('header-scope-filter-store') || sessionStorage.getItem('menusifu:chain-anchor-store-v1');
   const storeIds=store ? [store] : brandAccountStores(p.state,p.account,all);
-  const caps=new Map(all.map(s=>[s.id,mappedRuntimeKeys(new Set(getStoreCapability(s.id)?.enabledKeys??[]),catalog)]));
+  const platformOpen = platformOpenPageKeys(catalog);
+  const caps=new Map(all.map(s=>{
+    const storeKeys = mappedRuntimeKeys(new Set(getStoreCapability(s.id)?.enabledKeys??[]),catalog);
+    return [s.id, new Set([...storeKeys, ...platformOpen])];
+  }));
   return runtimeTick={p,catalog,ceiling,all,storeIds,caps,brandPerspective:!lockedStore&&perspective!=='store',values:new Map(),paths:new Map()};
 }
 export function currentBrandAccess(key:string):Access|undefined {
