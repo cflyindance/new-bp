@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {createPayrollRateDemo,payrollRateScenarios} from '../src/team/payroll/payroll-rate-demo';
+import {groupPayrollRates} from '../src/team/payroll/payroll-rate-groups';
+import {resolveCaliforniaPayroll,renderCaliforniaSummaryView} from '../src/team/payroll/payroll-ca-bridge';
+import {renderCalculationBasis} from '../src/team/payroll/payroll-calculation-popover';
+import {buildBatchExportInput,DEFAULT_BATCH_EXPORT_OPTIONS} from '../src/team/payroll/payroll-batch-export-data';
+const expected=[[6,56,1370],[3,50,1160],[2,50,1100],[2,56,1280]];
+payrollRateScenarios.forEach((scenario,index)=>{
+  const data=createPayrollRateDemo(scenario,'test-store'),period=data.periods[0],employee=data.employees[period.id][0];
+  assert.equal(data.demo,true);assert.equal(data.rateScenario,scenario);assert.equal(employee.confirmed,true);
+  assert.ok(period.id.startsWith('demo:'));assert.equal(employee.ratePresentationDemo,true);
+  assert.throws(()=>buildBatchExportInput({data,view:'workspace',periodId:period.id,employeeId:employee.id,employeeStoreFilter:'test-store'},DEFAULT_BATCH_EXPORT_OPTIONS,[]),/预置展示结果/);
+  const before=JSON.stringify(data),result=resolveCaliforniaPayroll(employee,period);
+  if(result?.status!=='ready')throw Error('ready');
+  const groups=groupPayrollRates(result.slices);
+  assert.deepEqual([groups.length,result.totalHours,result.totalAmount],expected[index]);
+  assert.equal(groups.reduce((n,g)=>n+g.minutes/60,0),result.totalHours);
+  assert.equal(groups.reduce((n,g)=>n+g.amount,0),result.totalAmount);
+  const labels=(view:'hours'|'rate'|'amount')=>[...renderCaliforniaSummaryView(result,view).matchAll(/<dt>(.*?)<\/dt>/g)].map(m=>m[1]);
+  assert.deepEqual(labels('hours'),labels('rate'));assert.deepEqual(labels('rate'),labels('amount'));
+  const basis=renderCalculationBasis(result.slices,result.continuousRule);
+  assert.match(basis,/每日加班/);assert.match(basis,/每周加班/);
+  if(scenario.startsWith('multi'))assert.match(basis,/连勤加班/);
+  const intervals=new Set<string>();for(const s of result.slices){const key=[s.date,s.fromMinute,s.toMinute].join(':');assert.ok(!intervals.has(key));intervals.add(key);}
+  assert.equal(JSON.stringify(data),before);
+});
+const data=createPayrollRateDemo('two-same','store'),result=data.employees[data.periods[0].id][0].californiaOvertimeSnapshot!;
+if(result.status!=='ready')throw Error('ready');
+const sample=result.slices.find(s=>s.kind==='daily')!;
+const mixed=groupPayrollRates([sample,{...sample,regularRate:24}]);
+assert.equal(mixed.length,2);assert.ok(mixed.every(g=>g.label.includes('/h')));
+assert.equal(groupPayrollRates([sample,{...sample,regularRate:15,multiplier:2}]).length,2);
+assert.equal(groupPayrollRates([{...sample,minutes:0}]).length,0);
+console.log('PASS four demo scenarios, dynamic multiplier/rate groups, source retention, totals, non-overlap and no mutation.');

@@ -1,6 +1,6 @@
   // Runtime-local fixture state: never persisted into the actual payroll snapshot.
   let actualPayrollSnapshot = null;
-  function changePayrollDemoScenario(scenario) {
+  function changePayrollDemoScenario(scenario, rateScenario = '') {
     if (!payrollReady) return;
     readFormIntoDraft();
     runAfterUnsavedWorkspaceConfirm(() => {
@@ -14,7 +14,7 @@
         if (!actualPayrollSnapshot) actualPayrollSnapshot = structuredClone(buildSnapshot());
         const scope = window.TipOutGlobalScopeFilter.readGlobalScopeFilter();
         const store = $('#payroll-store-filter')?.value || scope.storeLabel || '示例门店';
-        state.data = window.createPayrollScheduleDemo(scenario, store);
+        state.data = rateScenario ? window.createPayrollRateDemo(rateScenario, store) : window.createPayrollScheduleDemo(scenario, store);
         const target = scenario === 'switch' ? '2027-07-01' : scenario === 'transition' ? '2027-09-01' : '2027-07-01';
         const period = state.data.periods.find(p => p.startDate <= target && p.endDate >= target);
         state.periodId = period.id;
@@ -30,11 +30,17 @@
         const active = button.dataset.payrollScenario === scenario;
         button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active));
       });
-      $('#payroll-demo-indicator').textContent = scenario ? '示例数据 · 本次修改仅用于演示' : '';
+      $('#payroll-demo-indicator').textContent = scenario ? rateScenario ? '示例数据 · 预置计薪结果，仅用于展示' : '示例数据 · 本次修改仅用于演示' : '';
+      if ($('#payroll-rate-scenario')) $('#payroll-rate-scenario').value = state.data.rateScenario || '';
       if ($('#payroll-store-trigger')) $('#payroll-store-trigger').disabled = !!scenario;
     });
   }
   $all('[data-payroll-scenario]').forEach(button => button.addEventListener('click', () => changePayrollDemoScenario(button.dataset.payrollScenario)));
+  $('#payroll-rate-scenario')?.addEventListener('change', event => {
+    const selected = event.target.value;
+    event.target.value = state.data.rateScenario || '';
+    changePayrollDemoScenario('biweekly', selected);
+  });
   $all('[data-attendance-view]').forEach(button => button.addEventListener('click', () => {
     readFormIntoDraft();
     payrollAttendanceView = button.dataset.attendanceView;

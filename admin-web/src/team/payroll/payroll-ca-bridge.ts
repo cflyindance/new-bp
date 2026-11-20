@@ -1,5 +1,6 @@
 import { calculateCaliforniaOvertime } from './payroll-ca-overtime';
 import {calculationBasisSlices,createCalculationPopover} from './payroll-calculation-popover';
+import {groupPayrollRates} from './payroll-rate-groups';
 import {mergeContinuousOvertime} from './payroll-continuous-merge';
 import {validateContinuousRule} from './payroll-overtime-migration';
 import {calculateContinuousOvertime} from './payroll-continuous-overtime';
@@ -102,28 +103,11 @@ function sum(rows:CaPaySlice[],cash:boolean){return rows.reduce((n,s)=>n+(cash?s
 export function renderCaliforniaSummary(result:Extract<CaOvertimeResult,{status:'ready'}>,cash:boolean):string {
   return renderCaliforniaSummaryView(result,cash?'amount':'hours');
 }
-/** All three cards consume the same ordered rows, including zero-hour configured tiers. */
+/** All three cards consume the same ordered, multiplier/rate-grouped final slices. */
 export function renderCaliforniaSummaryView(result:Extract<CaOvertimeResult,{status:'ready'}>,view:'hours'|'rate'|'amount'):string {
-  const row=(name:string,rows:CaPaySlice[],child=false,subtotal=false)=>{
-    const rates=[...new Set(rows.map(s=>s.regularRate*s.multiplier))];
-    const value=view==='hours'?`${money(sum(rows,false))} h`:view==='amount'?`$${money(sum(rows,true))}`:!subtotal&&rates.length===1?`$${money(rates[0])}/h`:'—';
-    return `<div class="payroll-sum-row${child?' payroll-ca-summary-tier':''}"><dt>${escape(name)}</dt><dd>${value}</dd></div>`;
-  };
-  const groups=(name:string,rows:CaPaySlice[],child=false)=>{
-    const rates=[...new Set(rows.map(s=>s.regularRate*s.multiplier))].sort((a,b)=>a-b);
-    return rates.length<=1?row(name,rows,child):rates.map(rate=>row(`${name} · $${money(rate)}/h`,rows.filter(s=>s.regularRate*s.multiplier===rate),child)).join('');
-  };
-  let html='';
-  for(const kind of ['regular','daily','daily-double','weekly','seventh-day','continuous'] as CaHourKind[]){
-    const rows=result.slices.filter(s=>s.kind===kind);
-    if(kind==='continuous'){
-      const rule=result.continuousRule;if(!rule)continue;
-      html+=row(`连勤加班 · ${rule.dayNumber}天`,rows,false,true);
-      html+=groups(`累计${rule.hoursBeforeOvertime}–${rule.secondaryHoursBeforeOvertime}小时`,rows.filter(s=>s.continuousTier===1),true);
-      html+=groups(`累计超${rule.secondaryHoursBeforeOvertime}小时`,rows.filter(s=>s.continuousTier===2),true);
-    }else if(kind!=='seventh-day'||rows.length)html+=groups(labels[kind],rows);
-  }
-  return html+row('合计',result.slices,false,true);
+  const row=(name:string,value:string)=>`<div class="payroll-sum-row"><dt>${escape(name)}</dt><dd>${value}</dd></div>`;
+  return groupPayrollRates(result.slices).map(g=>row(g.label,view==='hours'?`${money(g.minutes/60)} h`:view==='rate'?`$${money(g.rate)}/h`:`$${money(g.amount)}`)).join('')+
+    row('合计',view==='rate'?'—':view==='hours'?`${money(sum(result.slices,false))} h`:`$${money(sum(result.slices,true))}`);
 }
 export function renderCaliforniaDayBreakdown(rows:CaPaySlice[]):string {
   const relevant=calculationBasisSlices(rows);
@@ -142,7 +126,7 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
   return {
     buildInput:buildCaliforniaPayrollInput,
     continuousRules:availableContinuousRules,
-    assertLegacyExport(employee:Employee,period:Record<string,any>){assertSupportedLegacyExport(resolveCaliforniaPayroll(employee,period));},
+    assertLegacyExport(employee:Employee,period:Record<string,any>){if(employee.ratePresentationDemo)throw Error('此场景为预置展示结果，不支持导出。');assertSupportedLegacyExport(resolveCaliforniaPayroll(employee,period));},
     apply:applyCaliforniaPayroll,
     resolve:resolveCaliforniaPayroll,
     amounts(employee:Employee,date?:string){
@@ -171,6 +155,9 @@ export function createCaliforniaPayrollBridge(root:ShadowRoot){
           display.innerHTML=renderCaliforniaSummaryView(current as Extract<CaOvertimeResult,{status:'ready'}>,i===0?'hours':i===1?'rate':'amount');
         }else display?.remove();
       });
+      if(employee.ratePresentationDemo){
+        root.querySelectorAll<HTMLInputElement|HTMLButtonElement>('.payroll-seg-table input,.payroll-seg-table button:not([data-ca-basis-date])').forEach(control=>control.disabled=true);
+      }
       root.querySelectorAll<HTMLElement>('[data-ca-day-kind]').forEach(cell=>{
         if(current?.status!=='ready'){cell.textContent='—';return;}
         const rows=current.slices.filter(s=>s.date===iso(cell.dataset.caDayDate));
