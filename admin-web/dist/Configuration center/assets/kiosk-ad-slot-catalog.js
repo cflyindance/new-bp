@@ -22,8 +22,10 @@ var KioskAdSlots = (() => {
   var ad_slot_catalog_exports = {};
   __export(ad_slot_catalog_exports, {
     CHANNELS: () => CHANNELS,
+    DISPLAY_UPLOAD_RULES: () => DISPLAY_UPLOAD_RULES,
     PLATFORM_KEY: () => PLATFORM_KEY,
     available: () => available,
+    checkUploadDimensions: () => checkUploadDimensions,
     defaults: () => defaults,
     displayName: () => displayName,
     newSpec: () => newSpec,
@@ -32,6 +34,7 @@ var KioskAdSlots = (() => {
     samePosition: () => samePosition,
     snapshot: () => snapshot,
     updateContract: () => updateContract,
+    validateDisplayUpload: () => validateDisplayUpload,
     validateMedia: () => validateMedia,
     validateSnapshot: () => validateSnapshot,
     validateSpecs: () => validateSpecs,
@@ -39,13 +42,23 @@ var KioskAdSlots = (() => {
   });
   var CHANNELS = ["Kiosk", "eMenu", "CDS", "\u53D6\u9910\u5C4F", "Waitlist"];
   var PLATFORM_KEY = "menusifu:display-regions:v1";
+  var DISPLAY_UPLOAD_RULES = {
+    image: { formats: ["image/jpeg", "image/png", "image/gif", "image/webp"], label: "JPEG\u3001PNG\u3001GIF\u3001WebP", maxMB: 5 },
+    video: { formats: ["video/mp4", "video/webm"], label: "MP4\u3001WebM", maxMB: 20, maxSeconds: 120 }
+  };
+  function validateDisplayUpload(kind, file, duration) {
+    const rule = DISPLAY_UPLOAD_RULES[kind];
+    if (!rule.formats.includes(file.type)) throw Error("\u683C\u5F0F\u4E0D\u652F\u6301\uFF0C\u8BF7\u9009\u62E9 " + rule.label + " \u6587\u4EF6");
+    if (file.size > rule.maxMB * 1024 * 1024) throw Error("\u5355\u4E2A\u6587\u4EF6\u4E0D\u80FD\u8D85\u8FC7 " + rule.maxMB + " MB");
+    if (kind === "video" && duration !== void 0 && (!Number.isFinite(duration) || duration <= 0 || duration > DISPLAY_UPLOAD_RULES.video.maxSeconds)) throw Error("\u89C6\u9891\u65F6\u957F\u987B\u5927\u4E8E 0 \u79D2\u4E14\u4E0D\u8D85\u8FC7 " + DISPLAY_UPLOAD_RULES.video.maxSeconds + " \u79D2");
+  }
   var canonical = (value) => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).sort().reduce((out, key) => ({ ...out, [key]: v[key] }), {}) : v);
   var copy = (x) => structuredClone(x);
   function fail(text) {
     throw Error(text);
   }
   function newSpec(id = "portrait", width = 1080, height = 1920) {
-    return { id, name: height > width ? "\u7AD6\u7248" : "\u6A2A\u7248", width, height, applicability: height > width ? "\u7AD6\u5C4F\u6807\u51C6\u7248\u5F0F" : "\u6A2A\u5C4F\u6807\u51C6\u7248\u5F0F", mediaKinds: ["image", "video"], imageFormats: ["image/jpeg", "image/png", "image/gif", "image/webp"], videoFormats: ["video/mp4", "video/webm"], imageMaxMB: 5, videoMaxMB: 20, videoMaxSeconds: 120, maxImages: 5, maxVideos: 1, sizeMode: "recommend", fit: "contain" };
+    return { id, name: height > width ? "\u7AD6\u7248" : "\u6A2A\u7248", width, height, applicability: height > width ? "\u7AD6\u5C4F\u6807\u51C6\u7248\u5F0F" : "\u6A2A\u5C4F\u6807\u51C6\u7248\u5F0F", mediaKinds: ["image", "video"], imageFormats: [...DISPLAY_UPLOAD_RULES.image.formats], videoFormats: [...DISPLAY_UPLOAD_RULES.video.formats], imageMaxMB: DISPLAY_UPLOAD_RULES.image.maxMB, videoMaxMB: DISPLAY_UPLOAD_RULES.video.maxMB, videoMaxSeconds: DISPLAY_UPLOAD_RULES.video.maxSeconds, maxImages: 5, maxVideos: 1, sizeMode: "recommend", fit: "contain" };
   }
   function ratio(spec) {
     let a = spec.width, b = spec.height;
@@ -130,6 +143,16 @@ var KioskAdSlots = (() => {
       next.specVersion = (existing.specVersion ?? 1) + 1;
     }
     return next;
+  }
+  function checkUploadDimensions(specs, variant, kind, width, height) {
+    const candidates = specs.filter((spec2) => (variant === "default" || ratio(spec2) === variant) && spec2.mediaKinds.includes(kind));
+    if (!candidates.length || candidates.some((spec2) => spec2.width === width && spec2.height === height)) return;
+    if (candidates.every((spec2) => spec2.sizeMode === "strict")) fail("\u5F53\u524D\u9002\u7528\u89C4\u683C\u8981\u6C42 " + candidates.map((spec2) => spec2.width + " \xD7 " + spec2.height + " px").join(" \u6216 ") + "\uFF0C\u5B9E\u9645\u4E3A " + width + " \xD7 " + height + " px\uFF0C\u8BF7\u66F4\u6362\u7D20\u6750\u3002");
+    const recommended = candidates.filter((spec2) => spec2.sizeMode !== "strict");
+    const matchesRatio = (spec2) => width * spec2.height === height * spec2.width;
+    const spec = recommended.find(matchesRatio) ?? recommended[0];
+    const confirm = !matchesRatio(spec);
+    return { confirm, message: "\u5B9E\u9645 " + width + " \xD7 " + height + " px\uFF0C\u63A8\u8350 " + spec.width + " \xD7 " + spec.height + " px\u3002" + (confirm ? "\u6BD4\u4F8B\u4E0D\u540C\uFF0C\u7EC8\u7AEF\u5C55\u793A\u53EF\u80FD\u88C1\u5207\u6216\u7559\u767D\u3002" : "\u6BD4\u4F8B\u4E00\u81F4\uFF0C\u50CF\u7D20\u5C3A\u5BF8\u4E0D\u540C\uFF0C\u6E05\u6670\u5EA6\u53EF\u80FD\u53D7\u5F71\u54CD\u3002") };
   }
   function validateMedia(spec, media) {
     if (!spec.mediaKinds.includes(media.kind)) fail(`${spec.name}\u4E0D\u652F\u6301\u6B64\u7D20\u6750\u7C7B\u578B`);
