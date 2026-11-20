@@ -23,9 +23,8 @@ import { authorizeBrandManagement, brandCatalog, brandMenuChoices, brandRawMenuK
 import { ensureBrandCreationDemoStores, associateBrandStores, canRemoveBrandStore, removeBrandStore, brandConfigurationVersion, createMerchant, getBusinessTypeOptions, getMerchantById, getMerchantCapability, getMerchantChangelog, getMerchantStores, getProductLineOptions, getStoreCapability, getStoreStatusLabel, listBrandAssociationCandidates, saveBrandStoreMenus, saveExplicitBrandMenus } from './enterprise-merchant-store';
 import { merchantDetailHref } from './enterprise-merchant-scope';
 import { showAppToast } from '../ui/app-toast';
-import { isMenuVisibleToAllMerchants, isPaidMenuVisible, matchingPaidMenus, publishedPaidServicesForMenu } from './subscription-service-runtime';
-import { serviceEntitlementData } from './service-entitlement-data';
-import { serviceAccess } from './service-entitlement-domain';
+import { isMenuVisibleToAllMerchants } from './subscription-service-runtime';
+import { bindPaidMenuStatusHelp, createPaidMenuStatusRenderer } from './brand-paid-menu-status';
 
 type Source='m-platform'|'merchant';
 const button=(text:string,action:string,primary=false)=>`<button type="button" class="ba-btn ${primary?'ba-primary':''}" data-ba="${action}">${text}</button>`;
@@ -141,35 +140,8 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
   const descendants=(key:string)=>available.filter(c=>{let parent=c.parent;const seen=new Set<string>();while(parent&&!seen.has(parent)){if(parent===key)return true;seen.add(parent);parent=byKey.get(parent)?.parent;}return false;});
   const stateOf=(c:MenuChoice)=>{const children=descendants(c.key);return selected.has(c.key)&&children.every(x=>selected.has(x.key))?'已开通':selected.has(c.key)||children.some(x=>selected.has(x.key))?'部分开通':'未开通';};
   const pathOf=(c:MenuChoice)=>{const names:string[]=[];let parent=c.parent;const seen=new Set<string>();while(parent&&byKey.has(parent)&&!seen.has(parent)){seen.add(parent);const node=byKey.get(parent)!;names.unshift(node.title);parent=node.parent;}return names.join(' / ');};
-  const paidStatus = (choice: MenuChoice): string => {
-    if (options.roles || !choice.path) return '';
-    const menu = matchingPaidMenus(choice.path).find(node => node.path === choice.path);
-    if (!menu) return '';
-    const services = publishedPaidServicesForMenu(menu.id);
-    const badge = (label: string, description: string) => `<span class="ba-paid-menu-status">
-      <span class="ba-tag">${label}</span>
-      <button type="button" data-paid-menu-help aria-label="${esc(choice.title)}：${label}说明" aria-expanded="false">ⓘ</button>
-      <span class="ba-paid-menu-popover" popover="auto">${description}</span>
-    </span>`;
-    if (!services.length || !isPaidMenuVisible(choice.path)) return badge('待发布收费服务',
-      '收费服务发布前，商户后台不会显示此菜单。请确保此菜单及其所属收费上级菜单已加入发布的收费服务。发布后，菜单按品牌配置和账号权限显示。');
-    const brandId = options.brandId;
-    if (!brandId) return badge('收费服务已发布',
-      '菜单按品牌配置和账号权限显示，使用时需要适用范围内有生效权益。创建品牌后，可前往「服务权益」办理开通。');
-    const { snapshot } = serviceEntitlementData();
-    if (services.some(pkg => serviceAccess(snapshot, pkg, { brandId }).usable)) {
-      return badge('收费服务已开通', '当前品牌已有生效权益，覆盖全部品牌门店（含后续新增）。商户仍需相应菜单和账号权限才能使用。');
-    }
-    const stores = scopedStores ??= getMerchantStores(brandId);
-    const covered = stores.filter(store => services.some(pkg => serviceAccess(snapshot, pkg, { brandId, storeId: store.storeId }).usable)).length;
-    if (covered) return badge(covered < stores.length ? '部分门店已开通' : '指定门店已开通',
-      `当前有 ${covered} 家门店的权益已生效。商户需有相应菜单和账号权限才能使用，其他门店需开通适用权益。`);
-    return badge('收费服务未开通',
-      '当前品牌和可管理门店均无生效权益。已获菜单权限的商户可能看到菜单，权益生效后，覆盖范围内的商户才能使用。请前往「服务权益」办理。');
-  };
-  let scopedStores: ReturnType<typeof getMerchantStores> | undefined;
   const render=()=>{
-    scopedStores = undefined;
+    const paidStatus = options.roles ? () => '' : createPaidMenuStatusRenderer(options.brandId);
     const categoryScroll=host.querySelector('nav')?.scrollTop??0;
     const treeScroll=host.querySelector('.ba-menu-list')?.scrollTop??0;
     const pageCount=(key:string)=>{const pages=descendants(key).filter(c=>c.isPage===true);return `${pages.filter(c=>selected.has(c.key)).length}/${pages.length}`;};
@@ -241,20 +213,7 @@ export function bindMenuPicker(host:HTMLElement,choices:MenuChoice[],initial:str
       host.dispatchEvent(new Event('change',{bubbles:true}));
     });
     host.querySelectorAll<HTMLInputElement>('[data-key]').forEach(c=>{c.onchange=()=>{toggle(c.dataset.key!,c.checked);render();host.dispatchEvent(new Event('change',{bubbles:true}));};const children=descendants(c.dataset.key!);c.indeterminate=children.some(x=>selected.has(x.key))&&!children.every(x=>selected.has(x.key));});
-    host.querySelectorAll<HTMLButtonElement>('[data-paid-menu-help]').forEach(button => {
-      const popover = button.nextElementSibling as HTMLElement;
-      button.popoverTargetElement = popover;
-      popover.addEventListener('toggle', () => {
-        const open = popover.matches(':popover-open');
-        button.setAttribute('aria-expanded', String(open));
-        if (!open) return;
-        const anchor = button.getBoundingClientRect();
-        const bounds = popover.getBoundingClientRect();
-        popover.style.left = Math.max(8, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - 8)) + 'px';
-        popover.style.top = (anchor.bottom + bounds.height + 8 <= innerHeight
-          ? anchor.bottom + 6 : Math.max(8, anchor.top - bounds.height - 6)) + 'px';
-      });
-    });
+    bindPaidMenuStatusHelp(host);
     host.querySelectorAll<HTMLSelectElement>('[data-edit]').forEach(el=>el.onchange=()=>{if(grants)grants[el.dataset.edit!]=el.value as Access;});
     host.querySelector('[data-ba=select-module]')?.addEventListener('click',()=>{toggle(active,true);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
     host.querySelector('[data-ba=clear-module]')?.addEventListener('click',()=>{toggle(active,false);render();host.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -676,7 +635,7 @@ export function bindBrandWorkspaces(storeDetails?: {canView:(brandId:string,stor
         const detail = !!root.closest('[data-brand-detail-tab]');
         root.innerHTML=`<header class="ba-head"${detail&&pageCount?' hidden':''}><h2>品牌菜单</h2>${source==='m-platform'?button('编辑品牌菜单','edit-menu',true):'<span class="ba-tag">品牌菜单由 M 平台开通</span>'}</header>${detail?'':stats}<div data-menu-read></div>`;
         const menu = root.querySelector<HTMLElement>('[data-menu-read]')!;
-        bindOpenedBrandMenuTree(menu, choices, keys);
+        bindOpenedBrandMenuTree(menu, choices, keys, { paidStatusBrandId: source === 'm-platform' ? id : undefined });
         if (detail) {
           const toolbar = menu.querySelector('.ba-toolbar');
           const edit = root.querySelector('[data-ba=edit-menu]');
