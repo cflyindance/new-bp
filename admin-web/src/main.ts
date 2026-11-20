@@ -298,6 +298,7 @@ import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-gua
 import { withPageInitialization } from "./config/page-initialization";
 import { bindIframeSaveDeployBridge } from "./config/iframe-save-deploy-bridge";
 import { bindMarketingScreensaverFullscreenFlow } from "./config/marketing-screensaver-fullscreen";
+import { ensureDisplayDemo } from "./marketing-display/demo";
 import { isMarketingDisplayPath, renderMarketingDisplayPage, bindMarketingDisplayPage } from "./marketing-display/ui";
 import { bindTipOutRulesFullscreenFlow } from "./config/tipout-rules-fullscreen";
 import {
@@ -1969,6 +1970,7 @@ function renderInventoryExpiryIframeSplit(): string {
 /** 主区全宽嵌入营销中心屏保功能页 */
 function renderMarketingScreensaverIframePanel(): string {
   if (location.hash.slice(1).split("?")[0].replace(/\/$/, "") === "/marketing/screensaver") {
+    try { ensureDisplayDemo(true); } catch (error) { console.warn("广告演示数据未初始化", error); }
     return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
