@@ -16,8 +16,8 @@
     function editable(){var current=existing?latest():null;return !existing||!!current&&policy.canEditTarget(current);}
     function assertSave(){if(existing)policy.assertSave(latest(),opened,selected||{});}
     var picking=!selected&&editable();
-    var section=document.createElement('section');section.className='mx-auto w-full max-w-2xl rounded-2xl border border-[#f0f0f0] bg-white p-8 shadow-sm';
-    section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div id="adSlotGrid" class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="展示位置"></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
+    var section=document.createElement('section');section.className='mx-auto w-full max-w-4xl rounded-2xl border border-[#f0f0f0] bg-white p-4 sm:p-8 shadow-sm';
+    section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div class="grid gap-4 sm:grid-cols-2"><div class="min-w-0"><label id="adSlotSearchLabel" class="mb-3 block"><input id="adSlotSearch" type="search" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm" aria-label="搜索展示位置" placeholder="搜索位置名称或场景"></label><div id="adSlotGrid" class="grid content-start gap-2" role="radiogroup" aria-label="展示位置"></div></div><details id="adSlotPreview" class="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3"><summary class="cursor-pointer text-sm font-medium sm:hidden">查看位置示例</summary><div id="adSlotPreviewContent" aria-live="polite"></div></details></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
     var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
@@ -49,11 +49,33 @@
       });
     }
     function radio(name,value,label,checked){return '<label class="flex cursor-pointer items-center gap-3 rounded-xl border p-4 '+(checked?'border-primary bg-[#e6f4ff]':'border-[#d9d9d9]')+'"><input type="radio" name="'+name+'" value="'+esc(value)+'"'+(checked?' checked':'')+'><span>'+esc(label)+'</span></label>';}
+    var slotGrid=section.querySelector('#adSlotGrid'),slotSearch=section.querySelector('#adSlotSearch'),preview=section.querySelector('#adSlotPreview'),previewContent=section.querySelector('#adSlotPreviewContent');
+    var desktopPreview=window.matchMedia('(min-width: 640px)');
+    function syncPreviewLayout(){preview.open=desktopPreview.matches;}
+    desktopPreview.addEventListener('change',syncPreviewLayout);
+    syncPreviewLayout();
+    function safeExample(slot){return slot&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(slot.exampleImage||'');}
     function slotOption(slot){
-      var option=radio('adSlot',slot.id,slot.name,selected&&slot.id===selected.id);
-      if(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(slot.exampleImage||''))return option;
-      return '<div class="flex flex-col gap-2">'+option+'<button type="button" data-example-slot="'+slots.indexOf(slot)+'" class="rounded-lg border bg-gray-50 p-2 text-sm text-primary" aria-label="查看'+esc(slot.name).replace(/"/g,'&quot;')+'的区域示例图"><img src="'+slot.exampleImage+'" alt="" class="mx-auto h-24 w-full object-contain">查看示例图</button></div>';
+      var checked=selected&&slot.id===selected.id;
+      return '<label class="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 '+(checked?'border-primary bg-[#e6f4ff]':'border-[#d9d9d9]')+'"><input type="radio" name="adSlot" value="'+esc(slot.id).replace(/"/g,'&quot;')+'"'+(checked?' checked':'')+'><span class="min-w-0 break-words text-sm">'+esc(slot.name)+(slot.scene?'<span class="block text-xs text-gray-500">'+esc(slot.scene)+'</span>':'')+'</span></label>';
     }
+    function renderSlotPicker(options){
+      var showSearch=options.length>=6;
+      section.querySelector('#adSlotSearchLabel').style.display=showSearch?'':'none';
+      var term=showSearch?slotSearch.value.trim().toLowerCase():'';
+      var visible=options.filter(function(slot){return [slot.name,slot.scene].some(function(text){return String(text||'').toLowerCase().includes(term);});});
+      var message=!channel?'请先选择渠道':!options.length?'该渠道暂无可用广告位，请联系平台管理员配置并登记接入':'没有匹配的展示位置';
+      slotGrid.innerHTML=visible.length?visible.map(slotOption).join(''):'<p class="text-sm text-gray-500">'+message+'</p>';
+    }
+    function renderSlotPreview(options){
+      var slot=selected&&options.find(function(item){return item.id===selected.id;});
+      preview.hidden=!options.length;
+      if(!options.length){previewContent.replaceChildren();return;}
+      var heading=slot?esc(slot.name):'尚未选择展示位置';
+      var body=safeExample(slot)?'<img src="'+slot.exampleImage+'" alt="'+esc(slot.name).replace(/"/g,'&quot;')+'的投放位置" class="h-full w-full object-contain">':'<p class="px-3 text-center text-sm text-gray-500">'+(slot?'该位置暂无示例图':'请选择左侧展示位置')+'</p>';
+      previewContent.innerHTML='<h3 class="my-2 break-words text-sm font-medium">'+heading+'</h3><div class="flex h-44 items-center justify-center rounded-lg border border-gray-200 bg-white p-2">'+body+'</div>'+(safeExample(slot)?'<button type="button" data-example-slot="'+slots.indexOf(slot)+'" class="mt-2 rounded-md px-2 py-2 text-sm text-primary">查看大图</button>':'');
+    }
+    slotSearch.addEventListener('input',function(){renderSlotPicker(api.available(slots,channel));});
     section.addEventListener('click',function(event){
       var trigger=event.target.closest('[data-example-slot]');if(!trigger)return;
       var slot=slots[Number(trigger.dataset.exampleSlot)];if(!slot)return;
@@ -65,7 +87,7 @@
     function refresh(){
       section.style.display=picking?'':'none';form.style.display=picking?'none':'';action.style.display=picking?'none':'';next.style.display=picking?'':'none';title.textContent=picking?'选择渠道与广告位':oldTitle;
       document.getElementById('adChannelGrid').innerHTML=api.CHANNELS.map(function(c){return radio('adChannel',c,c,c===channel);}).join('');
-      var options=api.available(slots,channel);document.getElementById('adSlotGrid').innerHTML=!channel?'<p class="col-span-2 text-sm text-gray-500">请先选择渠道</p>':options.length?options.map(function(s){return slotOption(s);}).join(''):'<p class="col-span-2 text-sm text-gray-500">该渠道暂无可用广告位，请联系平台管理员配置并登记接入</p>';
+      var options=api.available(slots,channel);renderSlotPicker(options);renderSlotPreview(options);
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
       summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
       summary.querySelector('button').hidden=!existing||!editable();
@@ -77,9 +99,11 @@
       var progress=document.querySelector('.step-progress-inner');if(progress)progress.style.width=picking?'25%':'50%';
     }
     section.addEventListener('change',async function(event){
-      var input=event.target;if(!editable()){cancelChange();refresh();return;}flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected&&Object.values(bank).some(function(v){return v.length;})){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;var defaultScreen=api.available(slots,channel).find(function(s){return s.code==='screensaver';});selected=defaultScreen?api.snapshot(defaultScreen):null;bank=selected?cache[selected.id+'@'+selected.version]||{}:{};active={};catalogError='';}
+      var input=event.target;if(input.name!=='adChannel'&&input.name!=='adSlot')return;if(!editable()){cancelChange();refresh();return;}flush();if(selected&&hooks&&Object.values(bank).some(function(v){return v.length;})&&!(await confirmChange('更换渠道或广告位后，素材将按目标规格重新校验。是否继续？'))){refresh();return;}if(selected&&Object.values(bank).some(function(v){return v.length;})){cache.__legacy={portrait:[],landscape:[]};selected.specs.forEach(function(s){cache.__legacy[roleFor(s)]=cache.__legacy[roleFor(s)].concat(bank[s.id]||[]);});}if(input.name==='adChannel'){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;channel=input.value;slotSearch.value='';syncPreviewLayout();var defaultScreen=api.available(slots,channel).find(function(s){return s.code==='screensaver';});selected=defaultScreen?api.snapshot(defaultScreen):null;bank=selected?cache[selected.id+'@'+selected.version]||{}:{};active={};catalogError='';}
       else if(input.name==='adSlot'){var slot=slots.find(function(s){return s.id===input.value;});if(slot){flush();if(selected)cache[selected.id+'@'+selected.version]=bank;selected=api.snapshot(slot);bank=cache[selected.id+'@'+selected.version]||{};active={};}}
       refresh();
+      var restored=Array.from(section.querySelectorAll('input[type="radio"]')).find(function(radio){return radio.name===input.name&&radio.value===input.value;});
+      if(restored)restored.focus();
     });
     next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length){var carried=cache.__legacy[role]||[],targetItems=bank[spec(role).id]||[];carried.forEach(function(item){if(!targetItems.some(function(v){return v===item||(v.mediaRef&&v.mediaRef===item.mediaRef)||(v.url&&v.url===item.url);}))targetItems.push(item);});bank[spec(role).id]=targetItems;}else orphaned=orphaned.concat(cache.__legacy[role]||[]);});delete cache.__legacy;}picking=false;staged=null;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();scheduleCompatibility();});
     window.addEventListener('storage',function(event){if(event.key==='kiosk_themes'){if(!editable())cancelChange();refresh();}if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
