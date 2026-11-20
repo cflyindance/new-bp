@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import {CHANNELS,withDefaults,displayName,defaults,available,snapshot,validateSnapshot,updateContract,newSpec,validateSpecs,validateMedia,samePosition} from '../src/marketing-display/ad-slot-catalog';
+import {CHANNELS,withDefaults,displayName,defaults,available,snapshot,validateSnapshot,updateContract,newSpec,validateSpecs,validateMedia,checkUploadDimensions,validateDisplayUpload,samePosition} from '../src/marketing-display/ad-slot-catalog';
+assert.doesNotThrow(()=>validateDisplayUpload('video',{type:'video/mp4',size:20*1024*1024},120));
+assert.throws(()=>validateDisplayUpload('video',{type:'video/quicktime',size:1}),/格式不支持/);
+assert.throws(()=>validateDisplayUpload('image',{type:'image/png',size:5*1024*1024+1}),/单个文件/);
+assert.throws(()=>validateDisplayUpload('video',{type:'video/mp4',size:1},121),/视频时长/);
+const dimensionsSpec=newSpec();
+assert.equal(checkUploadDimensions([dimensionsSpec],'9:16','image',1080,1920),undefined);
+assert.equal(checkUploadDimensions([dimensionsSpec],'9:16','image',540,960)?.confirm,false);
+assert.equal(checkUploadDimensions([dimensionsSpec],'9:16','video',900,900)?.confirm,true);
+assert.throws(()=>checkUploadDimensions([{...dimensionsSpec,sizeMode:'strict'}],'9:16','image',540,960),/请更换素材/);
 import {createPlatformState,saveRegion} from '../src/marketing-display/domain';
 const initial=defaults(),home=initial.find(s=>s.code==='home')!;
 assert.deepEqual(CHANNELS,['Kiosk','eMenu','CDS','取餐屏','Waitlist']);

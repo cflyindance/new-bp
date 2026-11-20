@@ -47,7 +47,6 @@
 .display-slot-group h6{font-size:13px;margin-bottom:12px}
 .display-slot-group .display-field{margin:0 0 16px;font-weight:400}
 .display-slot-group > :last-child,.display-slot-group > :last-child .display-field{margin-bottom:0}
-.display-slot-group [data-slot-media]:not([hidden]) ~ [data-slot-media]{margin-top:24px}
 .display-slot-ratio{display:block;margin:-8px 0 16px}
 .dark .display-slot-spec{--display-slot-border:#394859;--display-slot-header:#202e3c}
 @media(max-width:600px){.display-slot-header,.display-slot-group{padding-left:16px;padding-right:16px}.display-slot-group .display-field-grid{grid-template-columns:1fr;gap:0}}

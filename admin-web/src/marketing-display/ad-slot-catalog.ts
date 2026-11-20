@@ -2,6 +2,16 @@
 export const CHANNELS = ['Kiosk','eMenu','CDS','取餐屏','Waitlist'] as const;
 export const PLATFORM_KEY = 'menusifu:display-regions:v1';
 export type Kind = 'image'|'video';
+export const DISPLAY_UPLOAD_RULES={
+  image:{formats:['image/jpeg','image/png','image/gif','image/webp'],label:'JPEG、PNG、GIF、WebP',maxMB:5},
+  video:{formats:['video/mp4','video/webm'],label:'MP4、WebM',maxMB:20,maxSeconds:120},
+};
+export function validateDisplayUpload(kind:Kind,file:{type:string;size:number},duration?:number):void {
+  const rule=DISPLAY_UPLOAD_RULES[kind];
+  if(!rule.formats.includes(file.type))throw Error('格式不支持，请选择 '+rule.label+' 文件');
+  if(file.size>rule.maxMB*1024*1024)throw Error('单个文件不能超过 '+rule.maxMB+' MB');
+  if(kind==='video'&&duration!==undefined&&(!Number.isFinite(duration)||duration<=0||duration>DISPLAY_UPLOAD_RULES.video.maxSeconds))throw Error('视频时长须大于 0 秒且不超过 '+DISPLAY_UPLOAD_RULES.video.maxSeconds+' 秒');
+}
 export interface AdSpec {
   id:string; name:string; width:number; height:number; applicability:string;
   mediaKinds:Kind[]; imageFormats:string[]; videoFormats:string[];
@@ -20,7 +30,7 @@ const canonical=(value:unknown):string=>JSON.stringify(value,(_,v)=>v&&typeof v=
 const copy=<T>(x:T):T=>structuredClone(x);
 function fail(text:string):never {throw Error(text)}
 export function newSpec(id='portrait',width=1080,height=1920):AdSpec {
-  return {id,name:height>width?'竖版':'横版',width,height,applicability:height>width?'竖屏标准版式':'横屏标准版式',mediaKinds:['image','video'],imageFormats:['image/jpeg','image/png','image/gif','image/webp'],videoFormats:['video/mp4','video/webm'],imageMaxMB:5,videoMaxMB:20,videoMaxSeconds:120,maxImages:5,maxVideos:1,sizeMode:'recommend',fit:'contain'};
+  return {id,name:height>width?'竖版':'横版',width,height,applicability:height>width?'竖屏标准版式':'横屏标准版式',mediaKinds:['image','video'],imageFormats:[...DISPLAY_UPLOAD_RULES.image.formats],videoFormats:[...DISPLAY_UPLOAD_RULES.video.formats],imageMaxMB:DISPLAY_UPLOAD_RULES.image.maxMB,videoMaxMB:DISPLAY_UPLOAD_RULES.video.maxMB,videoMaxSeconds:DISPLAY_UPLOAD_RULES.video.maxSeconds,maxImages:5,maxVideos:1,sizeMode:'recommend',fit:'contain'};
 }
 export function ratio(spec:Pick<AdSpec,'width'|'height'>):string {let a=spec.width,b=spec.height;while(b){const r=a%b;a=b;b=r}return `${spec.width/a}:${spec.height/a}`}
 export function validateSpecs(specs:AdSpec[]):void {
@@ -76,6 +86,16 @@ export function updateContract(existing:AdSlot|undefined,input:AdSlot):AdSlot {
     next.specHistory.push({version:existing.specVersion??1,specs:copy(existing.specs)});next.specVersion=(existing.specVersion??1)+1;
   }
   return next;
+}
+export function checkUploadDimensions(specs:AdSpec[],variant:string,kind:Kind,width:number,height:number):{message:string;confirm:boolean}|undefined {
+  const candidates=specs.filter(spec=>(variant==='default'||ratio(spec)===variant)&&spec.mediaKinds.includes(kind));
+  if(!candidates.length||candidates.some(spec=>spec.width===width&&spec.height===height))return;
+  if(candidates.every(spec=>spec.sizeMode==='strict'))fail('当前适用规格要求 '+candidates.map(spec=>spec.width+' × '+spec.height+' px').join(' 或 ')+'，实际为 '+width+' × '+height+' px，请更换素材。');
+  const recommended=candidates.filter(spec=>spec.sizeMode!=='strict');
+  const matchesRatio=(spec:AdSpec)=>width*spec.height===height*spec.width;
+  const spec=recommended.find(matchesRatio)??recommended[0];
+  const confirm=!matchesRatio(spec);
+  return {confirm,message:'实际 '+width+' × '+height+' px，推荐 '+spec.width+' × '+spec.height+' px。'+(confirm?'比例不同，终端展示可能裁切或留白。':'比例一致，像素尺寸不同，清晰度可能受影响。')};
 }
 export interface MediaMetadata {kind:Kind;mime:string;bytes:number;width:number;height:number;duration?:number}
 export function validateMedia(spec:AdSpec,media:MediaMetadata):string[] {
