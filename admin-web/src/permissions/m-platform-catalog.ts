@@ -11,6 +11,7 @@ export interface MPage { id: string; title: string; path: string; editable: bool
 export interface MModule { id: string; title: string; pages: MPage[] }
 const action = (id: string, title: string, selector: string, write = true): MAction => ({ id, title, selector, write });
 const page = (id: string, title: string, path: string, editable = true, actions: MAction[] = []): MPage => ({ id, title, path, editable, actions });
+import { notificationPage, notificationPath } from '../config/activity-notifications';
 const merchants = '/m-platform/merchants';
 const permissions = '/m-platform/permissions';
 export const M_MODULES: MModule[] = [
@@ -53,6 +54,12 @@ export const M_MODULES: MModule[] = [
   ] },
   { id: 'activity-analysis', title: '系统使用分析', pages: [
     page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
+    page(notificationPage, '异常跟进', notificationPath, true, [
+      action('follow', '记录跟进', '[data-command=follow]'),
+      action('owners', '配置负责人', '[data-command=brand],[data-command=store]'),
+      action('settings', '设置通知', '[data-command=settings]'),
+      action('send', '模拟通知', '[data-command=preview],[data-command=check]'),
+    ]),
     page('device-activity', '设备活跃分析', `${merchants}/device-activity`, false),
   ] },
   { id: 'hardware', title: '硬件资产中心', pages: [

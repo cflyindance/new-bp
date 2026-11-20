@@ -6,7 +6,7 @@ import { groupMNavigation } from '../src/permissions/m-platform-navigation';
 const original = JSON.stringify(M_MODULES);
 const grouped = groupMNavigation(M_MODULES);
 assert.equal(JSON.stringify(M_MODULES), original, 'presentation cannot mutate authorization catalog');
-assert.deepEqual(grouped.find(m => m.id === 'activity-analysis')?.pages.map(p => p.id), ['merchant-activity', 'device-activity']);
+assert.deepEqual(grouped.find(m => m.id === 'activity-analysis')?.pages.map(p => p.id), ['merchant-activity', 'activity-follow-up', 'device-activity']);
 assert.ok(grouped.find(m => m.id === 'merchants')?.pages.every(p => !p.id.endsWith('activity')));
 assert.deepEqual(grouped.flatMap(m => m.pages.map(p => p.id)).sort(), M_MODULES.flatMap(m => m.pages.map(p => p.id)).sort(), 'every page appears exactly once');
 assert.equal(grouped.findIndex(m => m.id === 'activity-analysis'), grouped.findIndex(m => m.id === 'merchants') + 1);
