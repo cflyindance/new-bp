@@ -15,12 +15,12 @@ const key = 'menusifu:activity-follow-up:v1';
 const esc = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const can = (action: string) => currentMAccess(mActionKey(notificationPage, action)) === 'edit';
 const button = (label: string, command: string, id = '', primary = false) =>
-  `<button type="button" class="rounded-md border border-border px-3 py-2 ${primary ? 'bg-primary text-primary-foreground' : 'bg-card'}" ${command === 'tab' ? `aria-pressed="${primary}"` : ''} data-command="${command}" data-id="${esc(id)}">${label}</button>`;
+  `<button type="button" class="an-button ${primary ? 'an-primary' : 'an-secondary-button'}" ${(command === 'tab' || command === 'owner-view') ? `aria-pressed="${primary}"` : ''} data-command="${command}" data-id="${esc(id)}">${label}</button>`;
 const table = (headers: string[], rows: string[], empty = '暂无记录') =>
   `<div class="overflow-auto"><table class="an-table w-full text-left"><thead class="bg-muted"><tr>${headers.map(label => `<th class="p-3">${label}</th>`).join('')}</tr></thead><tbody>${rows.join('') || `<tr><td class="p-6" colspan="${headers.length}">${empty}</td></tr>`}</tbody></table></div>`;
 const tr = (...cells: string[]) => '<tr class="border-b border-border">' + cells.map(cell => '<td class="p-3">' + cell + '</td>').join('') + '</tr>';
 let ownerView = 'people';
-let view = 'cases', filter = 'open', message = '';
+let view = 'cases', filter = 'open', query = '', message = '';
 function read(): State {
   const raw = localStorage.getItem(key);
   if (raw === null) return emptyState();
@@ -66,10 +66,21 @@ export function renderNotifications(): string {
     const s = snapshot();
     let content = '';
     if (view === 'cases') {
-      const rows = s.rows.filter(row => filter === 'all' || (filter === 'open' ? row.current.level > 0 : String(row.current.level) === filter));
-      content = `<div class="an-toolbar flex flex-wrap items-end justify-between gap-3">
-        ${field('异常状态', `<select data-notification-browse id="notification-filter" class="rounded border border-border bg-background p-2">${[['open', '当前异常'], ['all', '全部'], ...levels.map((label, i) => [String(i), label])].map(([id, label]) => `<option value="${id}" ${filter === id ? 'selected' : ''}>${label}</option>`).join('')}</select>`)}
-        <div class="flex gap-2">${can('send') ? button('检查异常', 'check') + button('预览邮件', 'preview', '', true) : ''}</div></div>` +
+      const matches = (level: number, id: string) => id === 'all' || (id === 'open' ? level > 0 : String(level) === id);
+      const rows = s.rows.filter(({ store, current }) => matches(current.level, filter) &&
+        (store.name + ' ' + store.merchantName).toLowerCase().includes(query.toLowerCase()));
+      const statuses = [['open', '当前异常'], ...[1, 2, 3, 4, 0].map(i => [String(i), levels[i]]), ['all', '全部']];
+      content = `<div class="an-list-tools">
+        <form data-notification-browse id="notification-search" role="search" class="an-search">
+          <input type="search" name="query" aria-label="搜索门店或品牌" placeholder="搜索门店或品牌" value="${esc(query)}">
+          <button class="an-button an-secondary-button" type="submit">搜索</button>
+          ${query ? button('清除', 'clear-search') : ''}
+        </form>
+        <div class="an-tool-actions">${can('send') ? button('检查异常', 'check') + button('预览邮件', 'preview', '', true) : ''}</div>
+      </div>
+      <div data-notification-browse class="an-status-filters" aria-label="按异常状态筛选">
+        ${statuses.map(([id, label]) => `<button type="button" data-command="case-filter" data-id="${id}" aria-pressed="${filter === id}">${label} <span>${s.rows.filter(row => matches(row.current.level, id)).length}</span></button>`).join('')}
+      </div>` +
         table(['品牌 / 门店', '异常状态', '最近订单', '无单天数', '销售 / 客户经理', '跟进状态', '最近通知', '操作'], rows.map(row => {
           const { store, current } = row;
           const owner = ownersFor(s.state, store);
@@ -82,7 +93,7 @@ export function renderNotifications(): string {
             `<div class="an-actions">${can('follow') && current.level !== 4 ? button('记录跟进', 'follow', store.id) : ''}<a class="text-primary" href="${esc(href)}">查看使用情况</a></div>`);
         }), '没有符合条件的门店');
     } else if (view === 'owners') {
-      content = `<div data-notification-browse class="an-toolbar flex flex-wrap gap-2" aria-label="负责人配置方式">${button('按人员', 'owner-view', 'people', ownerView === 'people')}${button('按门店／品牌', 'owner-view', 'stores', ownerView === 'stores')}</div>`;
+      content = `<div data-notification-browse class="an-toolbar an-mode-switch" aria-label="负责人配置方式">${button('按人员', 'owner-view', 'people', ownerView === 'people')}${button('按门店／品牌', 'owner-view', 'stores', ownerView === 'stores')}</div>`;
       if (ownerView === 'people') {
         content += table(['员工', '负责销售的门店', '负责客户经理的门店', '操作'], s.people.filter(person => person.enabled).map(person => {
           const list = (role: 'sales' | 'manager') => {
@@ -90,7 +101,7 @@ export function renderNotifications(): string {
             return assigned.length ? `<strong>${assigned.length} 家</strong><div class="an-secondary an-store-list">${assigned.map(store => esc(store.merchantName + ' / ' + store.name)).join('、')}</div>` : '—';
           };
           return tr(`<strong>${esc(person.name)}</strong><div class="an-secondary">${esc(person.email)}</div>`, list('sales'), list('manager'),
-            can('owners') ? `<div class="an-actions">${button('配置销售门店', 'sales', person.id)}${button('配置客户经理门店', 'manager', person.id)}</div>` : '—');
+            can('owners') ? `<div class="an-actions an-owner-actions">${button('配置销售门店', 'sales', person.id)}${button('配置客户经理门店', 'manager', person.id)}</div>` : '—');
         }));
       } else {
         const brands = [...new Map(s.stores.map(store => [store.merchantId, store])).values()].filter(store => providerTargetAllowed(store.merchantId));
@@ -116,10 +127,11 @@ export function renderNotifications(): string {
         tr(esc(log.day), esc(log.email), esc(visible.get(log.store)), esc(levels[log.level]), log.result === 'success' ? '模拟成功' : '模拟失败')));
     }
     return `<section class="ma-page an-page" id="activity-follow-up">
-      <p role="note" class="text-muted-foreground">演示数据 · 统计截至 ${esc(s.day)}（Asia/Shanghai） · 邮件仅模拟，定时任务待接入</p>
+
       <div data-notification-browse class="an-tabs" aria-label="异常跟进视图">${Object.entries(tabs).map(([id, label]) => button(label, 'tab', id, view === id)).join('')}</div>
       <p role="status">${esc(message)}</p>
       <div class="an-panel rounded-lg border border-border bg-card">${content}</div>
+      <p role="note" class="text-muted-foreground">演示数据 · 统计截至 ${esc(s.day)}（Asia/Shanghai） · 邮件仅模拟，定时任务待接入</p>
       <dialog id="notification-dialog" aria-labelledby="notification-dialog-title" class="an-dialog m-auto max-h-[85vh] max-w-[95vw] overflow-auto rounded-lg border border-border bg-card p-0 text-foreground backdrop:bg-black/40"></dialog>
     </section>`;
   } catch {
@@ -131,14 +143,15 @@ export function bindNotifications(mount: () => void) {
   const root = document.querySelector<HTMLElement>('#activity-follow-up');
   const dialog = root?.querySelector<HTMLDialogElement>('dialog');
   if (!root || !dialog) return;
-  root.querySelector('#notification-filter')?.addEventListener('change', event => {
-    filter = (event.target as HTMLSelectElement).value;
+  root.querySelector<HTMLFormElement>('#notification-search')?.addEventListener('submit', event => {
+    event.preventDefault();
+    query = String(new FormData(event.currentTarget as HTMLFormElement).get('query') ?? '').trim();
     mount();
-    document.querySelector<HTMLElement>('#notification-filter')?.focus();
+    document.querySelector<HTMLInputElement>('#notification-search input')?.focus();
   });
   function open(title: string, body: string, action: string, commit: (form: FormData) => void, label = '保存') {
-    dialog!.innerHTML = `<form class="grid"><div class="an-dialog-header flex items-center justify-between gap-4"><button type="button" data-close aria-label="关闭">×</button>
-      <h2 id="notification-dialog-title" class="font-semibold">${title}</h2><button class="rounded bg-primary px-3 py-2 text-primary-foreground" type="submit">${label}</button></div>
+    dialog!.innerHTML = `<form class="grid"><div class="an-dialog-header"><button type="button" class="an-close" data-close aria-label="关闭">×</button>
+      <h2 id="notification-dialog-title" class="font-semibold">${title}</h2><button class="an-button an-primary" type="submit">${label}</button></div>
       <div class="an-dialog-body">${body}<p data-error role="alert"></p></div></form>`;
     const form = dialog!.querySelector('form')!;
     let dirty = false;
@@ -163,6 +176,14 @@ export function bindNotifications(mount: () => void) {
     const control = (event.target as Element).closest<HTMLElement>('button[data-command]');
     if (!control) return;
     const id = control.dataset.id ?? '', command = control.dataset.command;
+    if (command === 'case-filter' || command === 'clear-search') {
+      if (command === 'case-filter') filter = id;
+      else query = '';
+      mount();
+      const focus = command === 'case-filter' ? '.an-status-filters [aria-pressed="true"]' : '#notification-search input';
+      document.querySelector<HTMLElement>(focus)?.focus();
+      return;
+    }
     if (command === 'owner-view') { ownerView = id; message = ''; mount(); return; }
     if (command === 'tab') { view = id; message = ''; mount(); return; }
     try {
