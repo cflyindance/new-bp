@@ -519,7 +519,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
     pageModeTouched: dialogState.pageModeTouched,
   });
   if (!normalized.ok) { dialogState.error = normalized.error; return null; }
-  if (dialogState.pageMode === 'directory' || normalized.node.children?.length || normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
+  if (dialogState.pageMode === 'directory' || normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
   const extraInfoText = dialogState.extraInfoText?.trim();
   if (extraInfoText) {
     try {
@@ -957,7 +957,7 @@ export function bindJsonMenuEditor(mount: () => void): void {
   document.body.addEventListener("focusout", (event) => {
     const input = event.target as HTMLInputElement;
     const field = input.dataset.jmeDialogField;
-    if (!field || !dialogState || dialogState.mode !== "edit") return;
+    if (!field || !dialogState || dialogState.mode !== "edit" || input.type === "radio") return;
     assignDialogField(field, input.value);
     if (field === "name") {
       if (!jsonMenuEditorStore.replaceSelected(dialogState.draft)) return;

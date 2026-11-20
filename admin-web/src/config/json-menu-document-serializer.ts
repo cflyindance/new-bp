@@ -22,7 +22,7 @@ function copyDefined<T extends Record<string, unknown>>(source: T, fields: reado
 
 function serializeNode(node: MenuNode): MenuNode {
   const output = copyDefined(node as unknown as Record<string, unknown>, MENU_NODE_FIELDS) as MenuNode;
-  if (node.paidMenu === true || isMenuDirectory(node) || node.children?.length) delete output.visibleToAllMerchants;
+  if (node.paidMenu === true || isMenuDirectory(node)) delete output.visibleToAllMerchants;
   if (node.i18nInfo) {
     const value = copyDefined(node.i18nInfo as Record<string, unknown>, MENU_I18N_FIELDS);
     if (Object.keys(value).length) output.i18nInfo = value;
