@@ -65,9 +65,25 @@
 
 [data-rights-cards] [data-rights-service] { container-type: inline-size; }
 [data-rights-cards] [data-rights-current-row] > [data-rights-group-name] {
+  padding-inline-end: 84px;
+}
+[data-rights-cards] .rights-card-footer { display: block; }
+[data-rights-cards] .rights-card-footer:hover { background: transparent; }
+[data-rights-cards] .rights-card-footer > td { display: block; height: auto; border: 0; padding: 0; }
+[data-rights-cards] .rights-card-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  padding-inline-end: 0;
-  padding-top: 18px;
+  gap: 12px 20px;
+  padding-top: 12px;
+}
+[data-rights-cards] .rights-card-footer [data-rights-record-actions] { margin: 0; }
+[data-rights-cards] [data-rights-record-actions][hidden] { display: none; }
+@container (max-width: 560px) {
+  [data-rights-cards] .rights-card-footer-actions > div {
+    flex-basis: 100%;
+  }
 }
 [data-rights-cards] [data-rights-group-actions] {
   justify-content: flex-end;
