@@ -44,15 +44,16 @@ function paidMenuField(node: MenuNode, locked: boolean, hasParent: boolean, grou
       <option value="false">否</option>
       <option value="true" ${node.paidMenu === true ? "selected" : ""}>是</option>
     </select>
-    </label><p id="jme-paid-menu-hint" class="mt-1 text-xs text-muted-foreground" ${node.paidMenu === true ? "" : "hidden"}>${parent ? '此父级下的页面按收费菜单处理。请在收费服务中添加需要展示的下级页面并发布服务。' : '请在收费服务中添加此菜单并发布服务。服务发布前，商户看不到此菜单。'}</p>
+    </label><p id="jme-paid-menu-hint" class="mt-1 text-xs text-muted-foreground" ${node.paidMenu === true ? "" : "hidden"}>${parent ? '下级菜单按收费菜单处理。请将需要展示的下级菜单加入收费服务并发布。' : '将此菜单加入收费服务并发布后，才会向商户展示。'}</p>
     <div class="mt-4" data-jme-merchant-visibility ${node.paidMenu === true ? "hidden" : ""}>
         <fieldset class="space-y-3 text-sm" ${locked ? "disabled" : ""}>
           <legend class="mb-2 font-medium">商户开放范围</legend>
-          ${hasParent ? `<label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="inherit" ${node.visibleToAllMerchants === undefined ? "checked" : ""}><span>继承父级设置<span class="block text-xs text-muted-foreground">父级调整后，此菜单随之更新。</span></span></label>` : ""}
-          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="false" ${(hasParent ? node.visibleToAllMerchants === false : node.visibleToAllMerchants !== true) ? "checked" : ""}><span>按品牌菜单配置开放<span class="block text-xs text-muted-foreground">${group ? '继承此设置的下级由品牌配置开放。' : '此页面由品牌菜单配置决定是否开放。'}</span></span></label>
-          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="true" ${node.visibleToAllMerchants === true ? "checked" : ""}><span>默认向所有商户开放<span class="block text-xs text-muted-foreground">${group ? '继承此设置的下级无需逐品牌勾选。' : '发布后无需逐品牌勾选。账号仍须具备相应页面权限。'}</span></span></label>
+          ${hasParent ? `<label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="inherit" ${node.visibleToAllMerchants === undefined ? "checked" : ""}><span>继承父级<span class="block text-xs text-muted-foreground">跟随父级的开放设置。父级调整后同步生效。</span></span></label>` : ""}
+          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="false" ${(hasParent ? node.visibleToAllMerchants === false : node.visibleToAllMerchants !== true) ? "checked" : ""}><span>由品牌配置<span class="block text-xs text-muted-foreground">品牌开通此菜单后，有权限的账号可见。</span></span></label>
+          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="true" ${node.visibleToAllMerchants === true ? "checked" : ""}><span>默认向所有商户开放<span class="block text-xs text-muted-foreground">品牌无需单独开通，有权限的账号可见。</span></span></label>
         </fieldset>
-      ${group ? '<p class="mt-3 text-xs text-muted-foreground">商户账号能看到至少一个下级菜单时，此分组自动显示。</p>' : ""}
+      ${parent ? '<p class="mt-3 text-xs text-muted-foreground">下级默认继承此设置，也可单独调整。</p>' : ""}
+      ${group ? '<p class="mt-1 text-xs text-muted-foreground">有可见的下级菜单时，此分组才显示。</p>' : ""}
     </div>
   </div>`;
 }
