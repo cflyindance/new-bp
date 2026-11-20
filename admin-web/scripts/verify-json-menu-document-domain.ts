@@ -63,6 +63,18 @@ assert(validateMenuDocument(draftWithNewDuplicate, publishedWithDuplicate).some(
 
 const directoryDocument: MenuDocument = { ...empty, name: "Directory", menu: [emptyDirectory] };
 assert.deepEqual(serializeMenuDocument(directoryDocument).menu[0]?.children, [], "empty directory marker must survive serialization");
+const parentScope: MenuDocument = { ...directoryDocument, menu: [{
+  ...emptyDirectory,
+  visibleToAllMerchants: true,
+  children: [
+    { id: "inherits", name: "Inherits", key: "inherits", path: "/inherit" },
+    { id: "override", name: "Override", key: "override", path: "/override", visibleToAllMerchants: false },
+  ],
+}] };
+const serializedScope = serializeMenuDocument(parentScope).menu[0]!;
+assert.equal(serializedScope.visibleToAllMerchants, true);
+assert.equal(Object.hasOwn(serializedScope.children![0]!, "visibleToAllMerchants"), false);
+assert.equal(serializedScope.children![1]?.visibleToAllMerchants, false);
 
 const valid: MenuDocument = { ...empty, name: "Valid", menu: [parent] };
 const visibilityDocument = structuredClone(valid);

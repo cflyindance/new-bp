@@ -267,7 +267,7 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
       issues.push({ code: 'INVALID_PAID_MENU', severity: 'error', message: '是否收费菜单必须为布尔值。', path, field: 'paidMenu' });
     }
     if (node.visibleToAllMerchants !== undefined && typeof node.visibleToAllMerchants !== "boolean") {
-      issues.push({ code: "INVALID_MERCHANT_VISIBILITY", severity: "error", message: "是否所有商户都可以看到必须为布尔值。", path, field: "visibleToAllMerchants" });
+      issues.push({ code: "INVALID_MERCHANT_VISIBILITY", severity: "error", message: "商户开放范围必须为布尔值。", path, field: "visibleToAllMerchants" });
     }
     unknownFields(node, MENU_NODE_FIELDS).forEach((field) => issues.push({ code: "UNKNOWN_NODE_FIELD", severity: "error", message: `节点字段不在参考结构中：${field}`, path, field }));
     if (compatibility && isExplicitCompatibilityType(node)) issues.push({ code: "LEGACY_TYPE", severity: "warning", message: `${node.type} 节点及其子树按原数据只读保留`, path, field: "type" });

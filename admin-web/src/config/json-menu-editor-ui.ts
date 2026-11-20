@@ -361,7 +361,10 @@ function assignDialogField(field: string, raw: string): void {
   if (parts[0] === "i18nInfo") { node.i18nInfo ??= {}; if (remove) delete node.i18nInfo[parts[1] as keyof typeof node.i18nInfo]; else node.i18nInfo[parts[1] as keyof typeof node.i18nInfo] = raw; }
   if (field === "display") { if (remove) delete node.display; else node.display = boolValue; }
   if (field === "paidMenu") node.paidMenu = boolValue === true ? true : undefined;
-  if (field === "visibleToAllMerchants") node.visibleToAllMerchants = boolValue;
+  if (field === "visibleToAllMerchants") {
+    if (boolValue === undefined) delete node.visibleToAllMerchants;
+    else node.visibleToAllMerchants = boolValue;
+  }
   if (field === "disabled") { if (remove) delete node.disabled; else node.disabled = boolValue; }
   if (parts[0] === "microAppConfig") {
     node.microAppConfig ??= {};
@@ -519,7 +522,7 @@ function validateAndNormalizeDialog(): MenuNode | null {
     pageModeTouched: dialogState.pageModeTouched,
   });
   if (!normalized.ok) { dialogState.error = normalized.error; return null; }
-  if (dialogState.pageMode === 'directory' || normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
+  if (normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
   const extraInfoText = dialogState.extraInfoText?.trim();
   if (extraInfoText) {
     try {

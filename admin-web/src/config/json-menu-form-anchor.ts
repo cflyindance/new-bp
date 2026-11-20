@@ -1,4 +1,4 @@
-export const JSON_MENU_FORM_SECTIONS = ["localization", "basic", "page", "status", "extra"] as const;
+export const JSON_MENU_FORM_SECTIONS = ["localization", "basic", "page", "merchant-opening", "status", "extra"] as const;
 export type JsonMenuFormSection = (typeof JSON_MENU_FORM_SECTIONS)[number];
 
 export function resolveActiveJsonMenuFormSection(

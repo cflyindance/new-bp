@@ -50,10 +50,11 @@ function resolvePublishedMenuTitle(node: MenuNode, routeNodeId: string): string 
     ?? routeNodeId;
 }
 
-function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string, ancestorPaid = false): SubscriptionMenuTreeNode {
+function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeId?: string, ancestorPaid = false, inheritedScope = false): SubscriptionMenuTreeNode {
   const routeNodeId = node.id?.trim() || node.key?.trim() || `menu-${path.join("-")}`;
   const routePath = node.path?.trim() || node.url?.trim() || undefined;
   const paid = ancestorPaid || node.paidMenu === true;
+  const openToAll = node.visibleToAllMerchants ?? inheritedScope;
   return {
     routeNodeId,
     parentRouteNodeId,
@@ -62,8 +63,8 @@ function adaptPublishedMenuNode(node: MenuNode, path: number[], parentRouteNodeI
     level: path.length,
     selectable: !isMenuDirectory(node) && node.disabled !== true,
     paidMenu: paid,
-    visibleToAllMerchants: !paid && node.display !== false && node.visibleToAllMerchants === true,
-    children: (node.children ?? []).map((child, index) => adaptPublishedMenuNode(child, [...path, index], routeNodeId, paid)),
+    visibleToAllMerchants: !paid && node.display !== false && openToAll,
+    children: (node.children ?? []).map((child, index) => adaptPublishedMenuNode(child, [...path, index], routeNodeId, paid, openToAll)),
   };
 }
 
