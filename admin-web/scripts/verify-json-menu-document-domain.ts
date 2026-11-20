@@ -75,6 +75,14 @@ const serializedScope = serializeMenuDocument(parentScope).menu[0]!;
 assert.equal(serializedScope.visibleToAllMerchants, true);
 assert.equal(Object.hasOwn(serializedScope.children![0]!, "visibleToAllMerchants"), false);
 assert.equal(serializedScope.children![1]?.visibleToAllMerchants, false);
+const closedScope = structuredClone(parentScope);
+closedScope.menu[0]!.merchantOpeningClosed = true;
+const serializedClosed = serializeMenuDocument(closedScope).menu[0]!;
+assert.equal(serializedClosed.merchantOpeningClosed, true);
+assert.equal(serializedClosed.visibleToAllMerchants, undefined);
+assert.equal(serializedClosed.children?.[1]?.visibleToAllMerchants, false);
+closedScope.menu[0]!.paidMenu = true;
+assert.equal(serializeMenuDocument(closedScope).menu[0]?.merchantOpeningClosed, undefined);
 
 const valid: MenuDocument = { ...empty, name: "Valid", menu: [parent] };
 const visibilityDocument = structuredClone(valid);

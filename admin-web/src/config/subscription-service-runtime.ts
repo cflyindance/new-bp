@@ -52,7 +52,7 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
       const retain = (child: NavItem): NavItem[] => {
         if (!isPaidMenuVisible(child.path)) return [];
         const routeId = child.id === "qc-tables" ? "qc-floor-plan" : orderCenterGateId(storeInformationGateId(child.id));
-        if (hasCommercialRoute(child.path) || isMenuVisibleToAllMerchants(child.path) || routeIds.has(routeId)) return [child];
+        if (!isMerchantMenuClosed(child.path) && (hasCommercialRoute(child.path) || isMenuVisibleToAllMerchants(child.path) || routeIds.has(routeId))) return [child];
         const children = child.children?.flatMap(retain);
         return children?.length ? [{ ...child, children }] : [];
       };
@@ -91,8 +91,22 @@ export function isMenuVisibleToAllMerchants(rawPath: string): boolean {
   return serviceEntitlementData().catalog.some(node => node.visibleToAllMerchants === true && node.path.replace(/\/$/, "") === path);
 }
 
+export function isMerchantMenuClosed(rawPath: string): boolean {
+  const path = rawPath.split("?")[0]?.replace(/\/$/, "");
+  let longest = 0;
+  let closed = false;
+  for (const node of serviceEntitlementData().catalog) {
+    const base = node.path.replace(/\/$/, "");
+    if (!base || base.length < longest || (path !== base && !path?.startsWith(`${base}/`))) continue;
+    if (base.length > longest) closed = false;
+    longest = base.length;
+    closed ||= node.merchantOpeningClosed === true;
+  }
+  return closed;
+}
+
 export function isPathAllowedBySubscription(path: string): boolean {
-  if (!isPaidMenuVisible(path)) return false;
+  if (isMerchantMenuClosed(path) || !isPaidMenuVisible(path)) return false;
   if (isMenuVisibleToAllMerchants(path)) return true;
   path = path.split("?")[0] ?? path;
   if (isStoreInformationPage(path)) path = "/stores/settings";

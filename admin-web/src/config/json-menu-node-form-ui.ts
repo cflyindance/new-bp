@@ -23,7 +23,6 @@ const menuFormSectionLabels: Record<JsonMenuFormSection, string> = {
   page: "关联页面",
   "merchant-opening": "商户开放",
   localization: "菜单展示名称",
-  status: "状态权限",
   extra: "高级",
 };
 
@@ -39,6 +38,7 @@ function renderMenuActions(encodedPath?: string): string {
 export type { MenuPageMode } from "./json-menu-page-mode";
 function paidMenuField(node: MenuNode, locked: boolean, hasParent: boolean, group = false): string {
   const parent = group || Boolean(node.children?.length);
+  const closed = node.merchantOpeningClosed === true;
   return `<div class="mt-4" data-jme-paid-menu-field><label class="block text-sm font-medium">是否收费菜单
     <select data-jme-dialog-field="paidMenu" ${node.paidMenu === true ? 'aria-describedby="jme-paid-menu-hint"' : ""} class="mt-2 w-full rounded-md border border-border bg-background px-3 py-2" ${locked ? "disabled" : ""}>
       <option value="false">否</option>
@@ -48,9 +48,10 @@ function paidMenuField(node: MenuNode, locked: boolean, hasParent: boolean, grou
     <div class="mt-4" data-jme-merchant-visibility ${node.paidMenu === true ? "hidden" : ""}>
         <fieldset class="space-y-3 text-sm" ${locked ? "disabled" : ""}>
           <legend class="mb-2 font-medium">商户开放范围</legend>
-          ${hasParent ? `<label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="inherit" ${node.visibleToAllMerchants === undefined ? "checked" : ""}><span>继承父级<span class="block text-xs text-muted-foreground">跟随父级的开放设置。父级调整后同步生效。</span></span></label>` : ""}
-          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="false" ${(hasParent ? node.visibleToAllMerchants === false : node.visibleToAllMerchants !== true) ? "checked" : ""}><span>由品牌配置<span class="block text-xs text-muted-foreground">品牌开通此菜单后，有权限的账号可见。</span></span></label>
-          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="true" ${node.visibleToAllMerchants === true ? "checked" : ""}><span>默认向所有商户开放<span class="block text-xs text-muted-foreground">品牌无需单独开通，有权限的账号可见。</span></span></label>
+          ${hasParent ? `<label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="inherit" ${!closed && node.visibleToAllMerchants === undefined ? "checked" : ""}><span>继承父级<span class="block text-xs text-muted-foreground">跟随父级的开放设置。父级调整后同步生效。</span></span></label>` : ""}
+          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="false" ${!closed && (hasParent ? node.visibleToAllMerchants === false : node.visibleToAllMerchants !== true) ? "checked" : ""}><span>由品牌配置<span class="block text-xs text-muted-foreground">品牌开通此菜单后，有权限的账号可见。</span></span></label>
+          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="true" ${!closed && node.visibleToAllMerchants === true ? "checked" : ""}><span>默认向所有商户开放<span class="block text-xs text-muted-foreground">品牌无需单独开通，有权限的账号可见。</span></span></label>
+          <label class="flex items-start gap-2"><input type="radio" name="menu-opening-scope" data-jme-dialog-field="visibleToAllMerchants" value="closed" ${closed ? "checked" : ""}><span>所有商户不开放<span class="block text-xs text-muted-foreground">${group ? '继承此设置的下级对所有商户隐藏。' : '发布后，所有商户均无法查看此菜单。'}</span></span></label>
         </fieldset>
       ${parent ? '<p class="mt-3 text-xs text-muted-foreground">下级默认继承此设置，也可单独调整。</p>' : ""}
       ${group ? '<p class="mt-1 text-xs text-muted-foreground">有可见的下级菜单时，此分组才显示。</p>' : ""}
@@ -367,11 +368,6 @@ export function renderJsonMenuNodeFormPanel(
           ${paidMenuField(node, structureLocked, state.parentPath.length > 0, state.pageMode === "directory")}
         </section>
         <section class="max-w-5xl py-6" data-jme-advanced-settings>
-          <section class="border-b border-slate-100 py-7" data-jme-advanced-group="status-permission" data-jme-form-section="status">
-            <h4 class="text-base font-bold text-slate-900">状态与权限</h4>
-            <div class="mt-5 grid max-w-5xl grid-cols-3 gap-5">${triState("是否显示", "display", node.display)}${triState("是否禁用", "disabled", node.disabled)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div>
-            ${node.accessControl?.bool === true ? `<div class="mt-5 max-w-5xl">${textareaField("权限名称（多个权限使用英文逗号分隔）", "accessControl.permission.value", node.accessControl.permission?.value?.join(", "), "例如：menu_view, menu_edit")}</div>` : ""}
-          </section>
           <section class="pt-7" data-jme-advanced-group="extra-info" data-jme-form-section="extra">
             <h4 class="text-base font-bold text-slate-900">高级扩展</h4><p class="mt-1 text-sm text-slate-400">仅接受 JSON 对象；错误保留原输入并定位</p>
             <div class="mt-5 max-w-5xl">${textareaField("额外信息 extraInfo（JSON 对象或数组）", "extraInfo", state.extraInfoText ?? (node.extraInfo === undefined ? "" : JSON.stringify(node.extraInfo, null, 2)), "{\n  \"source\": \"m-platform\"\n}")}</div>
@@ -408,7 +404,7 @@ export function renderJsonMenuNodeDialog(document: MenuDocument, state: MenuNode
         <div class="mt-5"><p class="text-xs font-medium text-slate-700"><span class="mr-1 text-red-500">*</span>菜单用途</p><div class="mt-2 inline-flex overflow-hidden rounded-md border border-slate-300">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
         ${paidMenuField(node, structureLocked, state.parentPath.length > 0, state.pageMode === "directory")}
         ${pageModeFields(document, state, "")}
-        <details class="mt-5 rounded-xl border border-slate-200" open><summary class="cursor-pointer list-none px-4 py-3.5 text-sm font-medium text-slate-800">高级设置 <span class="float-right text-xs font-normal text-slate-400">多语言、权限、显示</span></summary><div class="space-y-4 border-t border-slate-100 p-4"><div class="grid grid-cols-3 gap-3">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"])}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}</div><div class="grid grid-cols-2 gap-4">${triState("是否显示", "display", node.display)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div><div class="grid grid-cols-2 gap-4">${field("服务名称", "accessControl.serviceName", node.accessControl?.serviceName, "service_name", false, true)}${field("功能权限（逗号分隔）", "accessControl.permission.value", node.accessControl?.permission?.value?.join(", "), "permission_a, permission_b", false, true)}</div></div></details>
+        <details class="mt-5 rounded-xl border border-slate-200" open><summary class="cursor-pointer list-none px-4 py-3.5 text-sm font-medium text-slate-800">高级设置 <span class="float-right text-xs font-normal text-slate-400">多语言</span></summary><div class="space-y-4 border-t border-slate-100 p-4"><div class="grid grid-cols-3 gap-3">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"])}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}</div></div></details>
       </div>
       <footer class="flex shrink-0 items-center justify-end border-t border-slate-100 bg-white px-7 py-4"><div class="flex gap-2"><button type="button" data-jme-dialog-close class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">取消</button><button type="submit" class="rounded-lg bg-teal-700 px-5 py-2 text-sm font-medium text-white shadow-[0_3px_8px_rgba(15,118,110,0.14)] hover:bg-teal-800">${state.mode === "add" ? "确认新增" : "保存修改"}</button></div></footer>
     </form>${renderLinkTargetDialog(document, state)}

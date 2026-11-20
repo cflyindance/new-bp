@@ -364,6 +364,8 @@ function assignDialogField(field: string, raw: string): void {
   if (field === "visibleToAllMerchants") {
     if (boolValue === undefined) delete node.visibleToAllMerchants;
     else node.visibleToAllMerchants = boolValue;
+    if (raw === "closed") node.merchantOpeningClosed = true;
+    else delete node.merchantOpeningClosed;
   }
   if (field === "disabled") { if (remove) delete node.disabled; else node.disabled = boolValue; }
   if (parts[0] === "microAppConfig") {
@@ -522,7 +524,10 @@ function validateAndNormalizeDialog(): MenuNode | null {
     pageModeTouched: dialogState.pageModeTouched,
   });
   if (!normalized.ok) { dialogState.error = normalized.error; return null; }
-  if (normalized.node.paidMenu === true) delete normalized.node.visibleToAllMerchants;
+  if (normalized.node.paidMenu === true) {
+    delete normalized.node.visibleToAllMerchants;
+    delete normalized.node.merchantOpeningClosed;
+  }
   const extraInfoText = dialogState.extraInfoText?.trim();
   if (extraInfoText) {
     try {
@@ -951,7 +956,6 @@ export function bindJsonMenuEditor(mount: () => void): void {
         if (isPaid) input.setAttribute("aria-describedby", "jme-paid-menu-hint");
         else input.removeAttribute("aria-describedby");
       }
-      if (field === "accessControl.bool") rerenderPreservingMenuFormScroll(onMount);
       return;
     }
     if (input.matches("[data-jme-dialog-parent]") && dialogState) { dialogState.parentPath = decodeMenuNodePath(input.value); if (dialogState.pageMode === "directory" && dialogState.parentPath.length >= 2) dialogState.pageMode = "inner"; dialogState.error = undefined; onMount(); }

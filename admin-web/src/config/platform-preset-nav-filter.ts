@@ -22,7 +22,7 @@ import { isMvpProductVersion } from "./product-version";
 import { getModuleSettingsCatalog } from "./module-settings-catalog";
 import { isModuleSettingsPathAllowedByPreset } from "./platform-preset-settings-filter";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
-import { filterNavModulesBySubscription, isPaidMenuVisible, isPathAllowedBySubscription } from "./subscription-service-runtime";
+import { filterNavModulesBySubscription, isMerchantMenuClosed, isPaidMenuVisible, isPathAllowedBySubscription } from "./subscription-service-runtime";
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
   if (moduleId === "store-mgmt") featureId = storeInformationGateId(featureId);
@@ -209,7 +209,7 @@ export function getFilteredNavModuleSheetSubnav(m: NavModule): ProductCenterSide
 }
 
 function filterBrandMenus(modules:NavModule[]):NavModule[] {
-  return modules.flatMap(m=>{if (!isPaidMenuVisible(m.path)) return []; const children=filterBrandNodes(m.children);return children.length ? [{...m,children}] : isBrandPathAllowed(m.path)?[{...m,children}]:[];});
+  return modules.flatMap(m=>{if (!isPaidMenuVisible(m.path)) return []; const children=filterBrandNodes(m.children);return children.length ? [{...m,children}] : !isMerchantMenuClosed(m.path)&&isBrandPathAllowed(m.path)?[{...m,children}]:[];});
 }
 
 interface BrandNavNode {path:string;children?:BrandNavNode[];sidebarChildren?:BrandNavNode[]}
@@ -219,7 +219,7 @@ function filterBrandNodes<T extends BrandNavNode>(items:T[]):T[] {
     const children=item.children?filterBrandNodes(item.children):undefined;
     const sidebarChildren=item.sidebarChildren?filterBrandNodes(item.sidebarChildren):undefined;
     if(item.sidebarChildren?.length && !sidebarChildren?.length)return [];
-    if(!isBrandPathAllowed(item.path)&&!children?.length&&!sidebarChildren?.length)return [];
+    if((isMerchantMenuClosed(item.path)||!isBrandPathAllowed(item.path))&&!children?.length&&!sidebarChildren?.length)return [];
     return [{...item,...(children?{children}:{}),...(sidebarChildren?{sidebarChildren}:{})} as T];
   });
 }
