@@ -30,3 +30,53 @@
 .an-tabs button { background:transparent; }
 .an-dialog-body input[type=checkbox] { width:18px; height:18px; min-width:0; min-height:0; margin:0; vertical-align:middle; }
 .an-dialog-body .an-table:has(input[name=stores]) th:first-child { width:56px; }
+
+/* Activity follow-up uses the platform tokens and the standard list and editor patterns. */
+.an-page { font-size:14px; line-height:1.5; }
+.an-panel { border-radius:12px; }
+.an-toolbar { padding:16px 24px; }
+.an-toolbar select { min-height:48px; min-width:160px; }
+.an-button { min-height:36px; padding:0 12px; border:1px solid var(--color-border); border-radius:8px; font-weight:500; white-space:nowrap; }
+.an-primary { color:var(--color-primary-foreground); background:var(--color-primary); border-color:var(--color-primary); }
+.an-secondary-button { color:var(--color-foreground); background:var(--color-card); }
+.an-button:hover,.an-close:hover { filter:brightness(.94); }
+.an-button:focus-visible,.an-close:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+.an-toolbar .an-button { min-height:48px; }
+.an-tabs button { min-height:44px; }
+.an-table th { height:48px; }
+.an-table :is(th,td):first-child { padding-left:24px; }
+.an-table :is(th,td):last-child { padding-right:24px; }
+.an-table :is(th,td):last-child:has(.an-actions) { text-align:right; }
+.an-table:has(.an-actions) th:last-child { text-align:right; }
+.an-actions { justify-content:flex-end; }
+.an-owner-actions .an-button { padding:0; border:0; background:transparent; color:var(--color-primary); }
+.an-mode-switch { display:flex; flex-wrap:wrap; gap:8px; }
+.an-mode-switch .an-button { min-height:36px; }
+.an-mode-switch .an-primary { background:color-mix(in srgb,var(--color-primary) 10%,var(--color-card)); color:var(--color-primary); }
+.an-dialog { border-radius:16px; }
+.an-dialog-header { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px 20px; }
+.an-dialog-header h2 { font-size:16px; }
+.an-close { width:36px; height:36px; border:1px solid var(--color-border); border-radius:8px; font-size:20px; }
+.an-dialog-body input[type=checkbox] { cursor:pointer; }
+.an-dialog-body label:has(input[type=checkbox]) { display:flex; flex-direction:row-reverse; align-items:center; justify-content:flex-end; gap:8px; }
+.an-dialog-body .an-table :is(th,td):first-child { padding-left:12px; }
+.an-dialog-body .an-table :is(th,td):last-child { padding-right:12px; text-align:left; }
+@media(max-width:760px) { .an-toolbar { padding:12px; } .an-dialog-header,.an-dialog-body { padding:12px; } }
+
+.an-page { --an-blue:light-dark(#1677ff,#77b2ff); --an-blue-bg:light-dark(#eaf3ff,#173153); }
+.dark .an-page { color-scheme:dark; }
+.an-page .an-primary { background:light-dark(#1677ff,#1664c7); border-color:transparent; color:white; }
+.an-page .an-tabs button[aria-pressed=true] { background:transparent; color:var(--an-blue); border-bottom-color:var(--an-blue); }
+.an-page .an-mode-switch .an-primary { color:var(--an-blue); background:var(--an-blue-bg); }
+.an-list-tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px 24px 12px; }
+.an-search,.an-tool-actions { display:flex; align-items:center; gap:8px; }
+.an-search { flex:1 1 320px; max-width:460px; min-width:0; }
+.an-search input { min-width:0; flex:1; height:48px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-background); padding:0 12px; }
+.an-list-tools .an-button { min-height:48px; }
+.an-status-filters { display:flex; flex-wrap:wrap; gap:8px; padding:0 24px 16px; }
+.an-status-filters button { padding:6px 10px; border:1px solid var(--color-border); border-radius:999px; color:var(--color-foreground); background:var(--color-card); }
+.an-status-filters button:hover,.an-status-filters button[aria-pressed=true] { color:var(--an-blue); background:var(--an-blue-bg); border-color:var(--an-blue); }
+.an-status-filters span { margin-left:4px; font-variant-numeric:tabular-nums; font-weight:600; }
+.an-status-filters button:focus-visible,.an-search input:focus-visible { outline:2px solid var(--an-blue); outline-offset:2px; }
+.an-page > [role=note] { font-size:12px; }
+@media(max-width:760px) { .an-list-tools,.an-status-filters { padding-left:12px; padding-right:12px; } }
