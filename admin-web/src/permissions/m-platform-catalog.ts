@@ -56,7 +56,7 @@ export const M_MODULES: MModule[] = [
     page('merchant-activity', '门店活跃分析', `${merchants}/activity`, false),
     page(notificationPage, '异常跟进', notificationPath, true, [
       action('follow', '记录跟进', '[data-command=follow]'),
-      action('owners', '配置负责人', '[data-command=brand],[data-command=store]'),
+      action('owners', '配置负责人', '[data-command=sales],[data-command=manager],[data-command=brand],[data-command=store]'),
       action('settings', '设置通知', '[data-command=settings]'),
       action('send', '模拟通知', '[data-command=preview],[data-command=check]'),
     ]),

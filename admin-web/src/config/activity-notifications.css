@@ -1,0 +1,32 @@
+.an-page { display:grid; align-content:start; gap:16px; padding:20px 24px 32px; }
+.an-tabs { display:flex; flex-wrap:wrap; gap:20px; border-bottom:1px solid var(--color-border); }
+.an-tabs button { border:0; border-bottom:2px solid transparent; border-radius:0; color:var(--color-muted-foreground); padding:12px 4px; }
+.an-tabs button[aria-pressed=true] { border-color:var(--color-primary); color:var(--color-primary); font-weight:650; }
+.an-panel { min-width:0; overflow:hidden; }
+.an-toolbar { padding:16px; }
+.an-table { min-width:max-content; }
+.an-table th { font-size:12px; font-weight:600; color:var(--color-muted-foreground); white-space:nowrap; }
+.an-table td { height:64px; }
+.an-table tbody tr:hover { background:color-mix(in srgb,var(--color-muted) 45%,transparent); }
+.an-table tbody tr:last-child { border-bottom:0; }
+.an-store { display:block; font-weight:650; }
+.an-secondary { color:var(--color-muted-foreground); font-size:12px; }
+.an-actions { display:flex; align-items:center; gap:12px; white-space:nowrap; }
+.an-status { display:inline-flex; align-items:center; gap:5px; border:1px solid currentColor; border-radius:5px; padding:2px 7px; white-space:nowrap; }
+.an-status::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.an-dialog { width:760px; }
+.an-dialog form { padding:0; gap:0; }
+.an-dialog-header { position:sticky; top:0; z-index:1; padding:14px 20px; background:var(--color-card); border-bottom:1px solid var(--color-border); }
+.an-dialog-body { display:grid; gap:14px; padding:20px; }
+.an-dialog-body :is(select,textarea,input:not([type=checkbox])) { width:100%; border:1px solid var(--color-border); border-radius:6px; background:var(--color-background); padding:8px 10px; }
+.an-dialog-body [data-error]:empty,.an-page > [role=status]:empty { display:none; }
+.an-dialog-body [data-error] { color:var(--color-destructive); }
+.an-recipient { overflow:hidden; border:1px solid var(--color-border); border-radius:8px; }
+.an-recipient > header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:12px; }
+@media(max-width:760px) { .an-page { padding:12px; } .an-tabs { gap:12px; } }
+
+.an-store-list { max-width:260px; white-space:normal; overflow-wrap:anywhere; }
+.an-dialog-body input[type=checkbox] { accent-color:var(--color-primary); }
+.an-tabs button { background:transparent; }
+.an-dialog-body input[type=checkbox] { width:18px; height:18px; min-width:0; min-height:0; margin:0; vertical-align:middle; }
+.an-dialog-body .an-table:has(input[name=stores]) th:first-child { width:56px; }
