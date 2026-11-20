@@ -9,6 +9,7 @@ import periodCalendarCode from "./legacy/payroll-period-calendar.js.txt?raw";
 import payrollCode from "./legacy/payroll.js.txt?raw";
 import scheduleControlsCode from "./legacy/payroll-schedule-controls.js.txt?raw";
 import { createPayrollScheduleDemo } from './payroll-schedule-demo';
+import { createPayrollRateDemo } from './payroll-rate-demo';
 import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
@@ -327,6 +328,7 @@ export function mountLegacyPayrollRuntime(
   const globalTarget: LegacyGlobal = {
     PayrollOvertimeBridge: californiaOvertimeBridge,
     createPayrollScheduleDemo,
+    createPayrollRateDemo,
     document: scopedDocument,
     location: locationFacade,
     parent: null,

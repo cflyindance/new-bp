@@ -8,7 +8,7 @@ assert.throws(()=>buildCaliforniaPayrollInput(employee,period,[],20,false));
 employee.californiaOvertimeInput=buildCaliforniaPayrollInput(employee,period,[],20,true);
 const before=JSON.stringify(employee);const result=resolveCaliforniaPayroll(employee,period);assert.equal(JSON.stringify(employee),before);
 assert.equal(result?.status,'ready');if(result?.status!=='ready')throw Error('expected ready');
-assert.equal(result.totalAmount,1040);assert.match(renderCaliforniaSummary(result,false),/每周加班/);
+assert.equal(result.totalAmount,1040);assert.match(renderCaliforniaSummary(result,false),/OT · 1.5×/);
 applyCaliforniaPayroll(employee,period);assert.equal(employee.segments[5].ot,8);assert.equal(employee.segments[5].reg,0);assert.equal(employee.segments[5].otRate,30);
 const snapshot=structuredClone(result);employee.confirmed=true;employee.californiaOvertimeSnapshot=snapshot;employee.californiaOvertimeInput.days[0].regularRate=500;
 assert.deepEqual(resolveCaliforniaPayroll(employee,period),snapshot);const confirmed=JSON.stringify(employee.segments);applyCaliforniaPayroll(employee,period);assert.equal(JSON.stringify(employee.segments),confirmed);

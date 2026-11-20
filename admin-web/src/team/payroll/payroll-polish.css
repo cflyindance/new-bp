@@ -639,6 +639,7 @@
 :host .payroll-scenario-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; margin-bottom:16px; background:#f0f6ff; border-radius:8px; font-size:12px; }
 :host .payroll-scenario-bar button, :host .payroll-attendance-toggle button { border:1px solid transparent; background:transparent; color:#51667f; border-radius:6px; padding:7px 11px; cursor:pointer; }
 :host .payroll-scenario-bar button.is-active, :host .payroll-attendance-toggle button.is-active { background:white; border-color:#b8d6ff; color:#1677ff; }
+:host .payroll-scenario-bar select{width:auto;max-width:100%;min-width:180px;padding:7px 10px;border:1px solid var(--border,#dbe3ed);border-radius:6px;background:var(--surface,#fff);color:var(--text,#1f1f1f);font:inherit}
 :host .payroll-attendance-toggle { display:flex; justify-content:flex-end; gap:4px; margin:12px 0; }
 :host #payroll-period-menu { min-width:340px; }
 :host .payroll-filter-popover,

@@ -2,7 +2,7 @@ import type {CaOvertimeResult,CaPaySlice} from './payroll-ca-overtime';
 type Ready=Extract<CaOvertimeResult,{status:'ready'}>;
 const fixed=(n:number)=>n.toFixed(2);
 const escape=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export const calculationBasisSlices=(rows:CaPaySlice[])=>rows.filter(s=>s.kind==='weekly'||s.kind==='continuous'||s.kind==='seventh-day'||s.kind!=='regular'&&s.evidence.includes('最高倍率'));
+export const calculationBasisSlices=(rows:CaPaySlice[])=>rows.filter(s=>s.kind!=='regular');
 
 export function renderCalculationBasis(rows:CaPaySlice[],rule?:Ready['continuousRule']):string {
   const relevant=calculationBasisSlices(rows);
@@ -13,7 +13,7 @@ export function renderCalculationBasis(rows:CaPaySlice[],rule?:Ready['continuous
     group.minutes+=s.minutes;group.amount+=s.amount;groups.set(key,group);
   }
   return [...groups.values()].map(({sample:s,minutes,amount})=>{
-    const title=s.kind==='weekly'?'每周加班':s.kind==='continuous'?`连勤加班${rule?` · ${rule.dayNumber}天`:''}`:s.kind==='seventh-day'?'法定第7天加班':s.kind==='daily-double'?'OT2':'OT';
+    const title=s.kind==='weekly'?'每周加班':s.kind==='continuous'?`连勤加班${rule?` · ${rule.dayNumber}天`:''}`:s.kind==='seventh-day'?'法定第7天加班':s.kind==='daily-double'?'每日加班 · 第二档':'每日加班 · 第一档';
     const condition=s.kind==='weekly'?'周普通工时超过40小时':s.kind==='continuous'&&rule?(s.continuousTier===1?`连勤累计超过${rule.hoursBeforeOvertime}至${rule.secondaryHoursBeforeOvertime}小时`:`连勤累计超过${rule.secondaryHoursBeforeOvertime}小时`):s.kind==='seventh-day'?`同一工作周连续第7天 · ${s.multiplier===1.5?'前8小时':'超过8小时'}`:s.evidence;
     return `<section class="payroll-ca-basis-group"><strong>${escape(title)}</strong><p>${escape(condition)}</p><div class="payroll-ca-basis-result"><span>${fixed(minutes/60)} h × $${fixed(s.regularRate*s.multiplier)}/h</span><strong>$${fixed(amount)}</strong></div></section>`;
   }).join('')+(relevant.some(s=>s.evidence.includes('最高倍率'))?'<p class="payroll-ca-basis-note">同一工时命中多条规则时，按最高时薪计薪，不重复计入。</p>':'');

@@ -87,6 +87,7 @@ export function buildBatchExportInput(
     ? scoped
     : scoped.filter((employee) => selectedIds.includes(employee.id));
   if (selected.length === 0) throw new BatchExportValidationError("Select at least one employee");
+  if (selected.some(employee=>employee.ratePresentationDemo)) throw new BatchExportValidationError("此场景为预置展示结果，不支持导出。");
   if (selected.length > 10) throw new BatchExportValidationError("一次最多选择 10 名员工");
   if (options.scope === "selected" && new Set(selectedIds).size !== selected.length) throw new BatchExportValidationError("员工范围已变化，请重新选择");
   const records = selected.map((employee) => classifyBatchEmployee(employee, period));

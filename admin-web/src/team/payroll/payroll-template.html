@@ -14,6 +14,14 @@
     <button type="button" data-payroll-scenario="switch">双周 → 半月</button>
     <button type="button" data-payroll-scenario="transition">4 天过渡期</button>
     <span id="payroll-demo-indicator" role="status"></span>
+    <label for="payroll-rate-scenario">加班倍率场景</label>
+    <select id="payroll-rate-scenario" aria-label="加班倍率场景">
+      <option value="">默认示例</option>
+      <option value="multi-different">多规则 · 不同倍率</option>
+      <option value="two-different">两规则 · 不同倍率</option>
+      <option value="two-same">两规则 · 相同倍率</option>
+      <option value="multi-same">多规则 · 相同倍率</option>
+    </select>
   </div>
   <div class="payroll-native-status no-print" data-payroll-status hidden></div>
 <div id="payroll-mode-banner" class="payroll-mode-banner no-print" role="status">
