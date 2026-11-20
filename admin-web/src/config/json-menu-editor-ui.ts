@@ -953,8 +953,9 @@ export function bindJsonMenuEditor(mount: () => void): void {
         const isPaid = input.value === "true";
         input.closest("[data-jme-paid-menu-field]")?.querySelector("#jme-paid-menu-hint")?.toggleAttribute("hidden", !isPaid);
         input.closest("[data-jme-paid-menu-field]")?.querySelector("[data-jme-merchant-visibility]")?.toggleAttribute("hidden", isPaid);
-        if (isPaid) input.setAttribute("aria-describedby", "jme-paid-menu-hint");
-        else input.removeAttribute("aria-describedby");
+        const choice = input.closest("[data-jme-paid-menu-choice]");
+        if (isPaid) choice?.setAttribute("aria-describedby", "jme-paid-menu-hint");
+        else choice?.removeAttribute("aria-describedby");
       }
       return;
     }

@@ -111,6 +111,12 @@ export function getMenuNodeArrayAtParentPath(nodes: MenuNode[], parentPath: Menu
   return parent.children;
 }
 
+export type MerchantOpeningScope = boolean | "closed";
+
+export function resolveMerchantOpeningScope(node: MenuNode, inherited: MerchantOpeningScope = false): MerchantOpeningScope {
+  return node.merchantOpeningClosed === true ? "closed" : node.visibleToAllMerchants ?? inherited;
+}
+
 export function hasOwnMenuChildren(node: MenuNode): boolean {
   return Object.prototype.hasOwnProperty.call(node, "children");
 }

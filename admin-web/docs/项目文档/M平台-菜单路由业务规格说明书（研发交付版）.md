@@ -1,13 +1,14 @@
 # M 平台菜单路由业务规格说明书（研发交付版）
 
-> V2.2 · 2026-11-20，MENU-SCOPE-CLOSED-20261120-01，起始 main@904d6e69。
-> 产品：[v2.3](./M平台-菜单路由可视化配置设计方案.md)；个人：[V2.2](./M平台-菜单路由需求文档（个人规范版）.md)。变更与验证：[交付记录](assets/local-page-registration/README.md)。
+> V2.3 · 2026-11-20，MENU-SCOPE-UI-20261120-01，起始 main@9232ebf3。
+> 产品：[v2.4](./M平台-菜单路由可视化配置设计方案.md)；个人：[V2.3](./M平台-菜单路由需求文档（个人规范版）.md)。变更与验证：[交付记录](assets/local-page-registration/README.md)。
 
 
 ## 版本记录
 
 | 版本 | 日期 | 变更 |
 | --- | --- | --- |
+| V2.3 | 2026-11-20 | MENU-SCOPE-UI-20261120-01，调整商户开放布局，显示继承结果，移除右侧操作记录入口。 |
 | V2.2 | 2026-11-20 | MENU-SCOPE-CLOSED-20261120-01，移除状态权限页签，新增所有商户不开放。 |
 | V2.1 | 2026-11-20 | MENU-SCOPE-COPY-20261120-01，简化商户开放选项及收费提示。 |
 | V2.0 | 2026-11-20 | MENU-SCOPE-INHERIT-20261120-01，新增「商户开放」页签，非收费菜单支持开放范围继承和覆盖。 |
@@ -27,9 +28,9 @@
 
 ## 收费菜单与商户可见配置
 
-![选择是时的收费提示](assets/merchant-opening-copy/paid-hint.png)
+![选择是时的收费提示](assets/merchant-opening-layout/paid-hint.png)
 
-图：商户开放 → 页面菜单选择收费，基于 main@6bdc2683 的功能分支。
+图：商户开放 → 页面菜单选择收费，基于 main@9232ebf3 的功能分支。
 
 | 字段／操作 | 逻辑说明 |
 | --- | --- |
@@ -37,7 +38,7 @@
 
 ### 父级菜单的收费设置
 
-![父级菜单收费设置](assets/merchant-opening-copy/paid-parent.png)
+![父级菜单收费设置](assets/merchant-opening-layout/paid-parent.png)
 
 图：商户开放 → 父级菜单选择收费，本地 Demo。
 
@@ -45,34 +46,36 @@
 
 ### 商户开放页签
 
-![父级商户开放范围](assets/merchant-opening-copy/parent-scope.png)
+![父级商户开放范围](assets/merchant-opening-layout/parent-scope.png)
 
-图：父级菜单 → 商户开放，非收费时可配置开放范围，功能分支基于 main@6bdc2683。
+图：父级菜单 → 商户开放，非收费时可配置开放范围，功能分支基于 main@9232ebf3。
 
-![子级继承父级](assets/merchant-opening-copy/child-inherit.png)
+![子级继承父级](assets/merchant-opening-layout/child-inherit.png)
 
 图：子级菜单 → 商户开放，未单独配置的子级默认继承，本地 Demo。
 
+「是否收费菜单」使用并排的「否／是」单选按钮。非收费时，开放范围使用一个带分隔线的单选组，整行可选，选中行显示浅蓝底。「继承父级」的结果优先同行展示，空间不足时换行。
+
 | 字段／操作 | 逻辑说明 |
 | --- | --- |
-| 继承父级 | 有父级时可选，未单独配置的子级默认选中。发布后沿菜单树使用最近一层的有效设置，父级调整后随之更新。 |
+| 继承父级 | 有父级时可选，未单独配置的子级默认选中。选项显示「当前继承」及父级有效设置，包括按收费菜单处理。发布后父级调整随之生效。 |
 | 由品牌配置 | 顶级菜单默认使用。选中后，本节点由品牌配置，并成为下级继承的默认值。 |
 | 默认向所有商户开放 | 品牌无需单独开通，有权限的账号可见。平台预设和菜单状态仍适用。 |
 | 子级覆盖 | 子级可以单独选择由品牌配置、默认开放或所有商户不开放。该选择优先于父级，并可继续向下继承。切回「继承父级」会移除单独配置。 |
 | 所有商户不开放 | 发布后，所有商户均无法查看对应菜单或通过商户后台路由打开。未覆盖的下级继承，显式配置的下级仍按自己的范围生效。 |
 | 切换为收费 | 隐藏商户开放范围。草稿切回非收费时保留此前选择，以收费状态保存时清除该设置。任一祖先收费时，收费规则优先。 |
 
-![子级覆盖父级设置](assets/merchant-opening-copy/child-override.png)
+![子级覆盖父级设置](assets/merchant-opening-layout/child-override.png)
 
 图：子级选择「由品牌配置」作为独立设置，本地 Demo。
 
 ### 所有商户不开放
 
-![父级选择所有商户不开放](assets/merchant-opening-closed/parent-closed.png)
+![父级选择所有商户不开放](assets/merchant-opening-layout/parent-closed.png)
 
-图：非收费父级菜单选择「所有商户不开放」，功能分支基于本地 main@904d6e69。
+图：非收费父级菜单选择「所有商户不开放」，功能分支基于 main@9232ebf3。
 
-![子级选择所有商户不开放](assets/merchant-opening-closed/child-closed.png)
+![子级选择所有商户不开放](assets/merchant-opening-layout/child-closed.png)
 
 图：子级独立选择「所有商户不开放」，本地 Demo。
 
@@ -83,7 +86,7 @@ merchantOpeningClosed 为可选布尔值，true 表示显式不开放。已有 v
 
 ### 纯分组父级
 
-父级提示为「下级默认继承此设置，也可单独调整。」纯分组额外提示「有可见的下级菜单时，此分组才显示。」
+父级提示为「下级默认继承，可单独调整。」纯分组额外提示「有可见下级时，此分组才显示。」
 
 
 ### 品牌编辑菜单权限
@@ -99,9 +102,11 @@ merchantOpeningClosed 为可选布尔值，true 表示显式不开放。已有 v
 
 ## 菜单管理工作区
 
-![菜单管理工作区](assets/menu-management-layout/current.png)
+![菜单管理工作区](assets/merchant-opening-layout/workspace.png)
 
-图：菜单配置 → 菜单管理默认态，基于 main@8e5eb06f 的功能分支，本地 Demo。
+图：菜单配置 → 菜单管理，基于 main@9232ebf3 的功能分支，本地 Demo。
+
+操作记录从左侧「操作记录」进入。右侧编辑区标题下已移除「查看操作记录」链接。
 
 菜单管理视图使用透明外层容器。选中菜单后，右侧编辑区沿用菜单文档的 `updatedBy.timestamp` 显示「上次发布」。验收检查外层无底板、编辑界面无重复标题、两个 JSON 入口在「导航结构」标题右侧且可达、发布时间仅显示一次。
 
