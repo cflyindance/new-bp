@@ -9,6 +9,18 @@ export type Parameter='interval'|'idle'|'transition';
 export const REGION_EXAMPLE_MAX_BYTES=512*1024;
 export const REGION_EXAMPLE_TYPES=['image/png','image/jpeg','image/webp'];
 export interface TerminalBinding { minimumVersion:string; mediaKinds:MediaKind[] }
+export function saveTerminalBindings(state:DisplayPlatform,id:string,bindings:DisplayRegion['bindings'],allowed:boolean):DisplayPlatform {
+  if(!allowed)fail('暂无广告位管理权限');
+  const next=clone(state),region=next.regions.find(item=>item.id===id);
+  if(!region)return fail('广告位不存在');
+  for(const [terminal,binding] of Object.entries(bindings)){
+    if(!(DISPLAY_TERMINALS as readonly string[]).includes(terminal)||region.productLine&&region.productLine!==terminal)fail('终端不适用于当前广告位');
+    if(!/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(binding.minimumVersion))fail(terminal+' 最低版本格式无效，例如 5.0.1');
+    if(!binding.mediaKinds.length||binding.mediaKinds.some(kind=>!region.mediaKinds.includes(kind)))fail(terminal+' 支持的素材类型超出广告位规范');
+  }
+  region.bindings=clone(bindings);
+  return next;
+}
 export interface DisplayRegion {productLine?:string;terminalVerificationRequests?:Record<string,number>;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;exampleImage?:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
 export interface DisplayPlatform {schema:1;revision:number;regions:DisplayRegion[]}
 export interface DisplayAsset {id:string;name:string;kind:MediaKind;url:string;variant:string}
