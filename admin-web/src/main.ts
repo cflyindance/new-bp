@@ -12455,7 +12455,8 @@ function mountInitializedPage(): void {
     const key = JSON.stringify([scope.perspective, scope.groupId, [...scope.brandIds].sort(), [...scope.storeIds].sort()]);
     const access = currentBrandAccess(pageKey(PROMOTIONS_PATH));
     bindPromotionPage(document, key, access === undefined || access === "edit",
-      currentServiceAccess("/members/card/coupon-mgmt").some(right => right.usable));
+      currentServiceAccess("/members/card/coupon-mgmt").some(right => right.usable),
+      getAuthenticatedEmail()?.trim().toLowerCase() === DEMO_LOGIN_ACCOUNT && !isViewSwitchRestricted());
   }
   mountNavigationSubmenuSheet(app);
   bindNavigationSubmenuSheets(app.firstElementChild as HTMLElement);
