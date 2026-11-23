@@ -20,3 +20,8 @@ T18,商户角色编辑,确认保存与保存结果,16-save-confirm.png;18-saved.
 T19,商户角色编辑,并发保存失败,25-setting-ceiling.png;26-save-conflict.png,三份文档同编号章节,已核对
 T20,商户角色编辑,窄窗口与键盘操作,19-narrow.png;20-mobile-width.png,三份文档同编号章节,已核对
 T21,商户角色编辑,返回与取消编辑,01-default.png;27-restored.png,三份文档同编号章节,原生确认层未截图
+T22,商户角色编辑,一级菜单复选框／全选,28-category-checkbox.png;29-category-all.png,三份文档同编号章节,已核对
+T23,商户角色编辑,子树勾选与半选,30-category-partial.png,三份文档同编号章节,已核对
+T24,商户角色编辑,跨分类、搜索及筛选保留勾选,31-cross-category.png;32-search-selection.png,三份文档同编号章节,已核对
+T25,商户角色编辑,跨分类批量确认、取消与结果,33-cross-category-confirm.png;34-cross-category-cancel.png;35-cross-category-result.png,三份文档同编号章节,已核对
+T26,商户角色编辑,窄窗口一级菜单,37-category-narrow.png,三份文档同编号章节,已核对
