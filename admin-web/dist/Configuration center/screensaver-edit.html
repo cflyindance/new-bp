@@ -11,8 +11,12 @@
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
+  <link rel="stylesheet" href="assets/kiosk-ad-activities.css">
+  <script src="assets/kiosk-ad-activity-runtime.js"></script>
+  <script src="assets/kiosk-ad-activity-editor.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -357,15 +361,15 @@
           if (typeof img === 'object' && img.type === 'video' && img.mediaRef && idb && idb.supported()) {
             return idb.get(img.mediaRef).then(function(blob) {
               if (!blob) {
-                return { url: '', dataUrl: null, type: 'video', mediaRef: img.mediaRef };
+                return Object.assign({},img,{ url: '', dataUrl: null, type: 'video', mediaRef: img.mediaRef });
               }
               var url = URL.createObjectURL(blob);
-              return { url: url, dataUrl: null, type: 'video', mediaRef: img.mediaRef };
+              return Object.assign({},img,{ url: url, dataUrl: null, type: 'video', mediaRef: img.mediaRef });
             });
           }
           var dataUrl = typeof img === 'string' ? img : (img.dataUrl || '');
           var t = (typeof img === 'object' && img.type) ? img.type : 'image';
-          return Promise.resolve({ url: dataUrl, dataUrl: dataUrl, type: t || 'image' });
+          return Promise.resolve(Object.assign({},typeof img==='object'?img:{},{ url: dataUrl, dataUrl: dataUrl, type: t || 'image' }));
         }));
       }
 
@@ -454,6 +458,7 @@
             '</div>';
         }
         container.innerHTML = html;
+        KioskAdActivityEditor.decorate(container, list, adPositionEditor);
         container.querySelectorAll('.upload-slot').forEach(function(el) {
           el.addEventListener('click', function() {
             currentUploadRole = role;
@@ -982,9 +987,15 @@
         }
 
         function runPersistEditedThemeAndRedirect() {
-          adPositionEditor.serialize(processMedia).then(function(result) {
+          var actionButton=document.getElementById('editNextStepBtn');
+          if(actionButton.dataset.adSaving==='1')return;
+          actionButton.dataset.adSaving='1';actionButton.disabled=true;
+          adPositionEditor.serialize(processMedia).then(async function(result) {
             var portraitImages=result.portrait,landscapeImages=result.landscape;
             try {
+              var checkedContext=KioskAdActivities.getContext();
+              await KioskAdActivities.validateThemeActions({adSlot:result.slot,adSlotAssets:result.bySpec,interactionScope:result.interactionScope},checkedContext);
+              if(KioskAdActivities.hasActions({adSlot:result.slot,adSlotAssets:result.bySpec})&&(KioskAdActivities.getContext().scope!==checkedContext.scope||!KioskAdActivities.getContext().canWrite))throw Error('品牌或权限已变化，请重新打开广告');
               var list = getThemes();
               var idx = list.findIndex(function(t) { return t.id === id; });
               if (idx < 0) throw Error('广告已被删除，请返回列表刷新');
@@ -993,6 +1004,7 @@
               list[idx] = JSON.parse(JSON.stringify(original));
               if (idx >= 0) {
                 list[idx].adSlot=result.slot;
+                list[idx].interactionScope=result.interactionScope;
                 list[idx].adSlotAssets=result.bySpec;
                 list[idx].distributeChannels=[result.slot.productLine];
                 list[idx].name = name;
@@ -1023,7 +1035,7 @@
           }).catch(function(err) {
             console.error('图片处理失败:', err);
             Toast.error(err.message || '素材处理失败，请重试');
-          });
+          }).finally(function(){actionButton.dataset.adSaving='0';actionButton.disabled=false;});
         }
 
         runPersistEditedThemeAndRedirect();

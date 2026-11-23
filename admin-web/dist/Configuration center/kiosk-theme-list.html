@@ -7,8 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
+  <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-validation.js"></script>
@@ -1304,7 +1306,7 @@
           });
         });
         container.querySelectorAll('.publish-btn').forEach(function(btn) {
-          btn.addEventListener('click', function() {
+          btn.addEventListener('click', async function() {
             var id = this.getAttribute('data-theme-id');
             if (!id) return;
             hideAllDropdownMenus();
@@ -1318,7 +1320,19 @@
             var themes = getThemes();
             var th = themes.find(function(x) { return x.id === id; });
             if (!th) return;
-            if(th.adSlot){try{KioskAdSlotValidation.validateTheme(th);}catch(error){Toast.validate(error.message);return;}}
+            if(th.adSlot){
+              if(btn.dataset.activityBusy==='1')return;
+              btn.dataset.activityBusy='1';btn.disabled=true;
+              try{
+                KioskAdSlotValidation.validateTheme(th);
+                var beforeActivityCheck=JSON.stringify(th),activityContext=KioskAdActivities.getContext();
+                await KioskAdActivities.validateThemeActions(th,activityContext,'publish');
+                if(KioskAdActivities.hasActions(th)&&KioskAdActivities.getContext().scope!==activityContext.scope)throw Error('品牌上下文已变化，请刷新列表');
+                themes=getThemes();th=themes.find(function(item){return item.id===id;});
+                if(!th||JSON.stringify(th)!==beforeActivityCheck)throw Error('广告已被修改，请刷新后重新上架');
+              }catch(error){Toast.validate(error.message);return;}
+              finally{btn.dataset.activityBusy='0';btn.disabled=false;}
+            }
             var block = findShelfTimeConflictsForPublish(th, themes);
             if (block.kind === 'no_range') {
               openPublishBlockModal(block.message);

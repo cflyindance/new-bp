@@ -1,3 +1,5 @@
+import {currentAdActivityContext} from '../marketing-display/ad-activity-provider';
+
 const MARKETING_SCREENSAVER_FLOW_ENTRY_FILES = new Set([
   "screensaver-create.html",
   "screensaver-edit.html",
@@ -38,6 +40,8 @@ function syncMarketingScreensaverFullscreen(frame: HTMLIFrameElement): void {
   let currentUrl = "";
   try {
     currentUrl = frame.contentWindow?.location.href ?? frame.src;
+    const activityApi=(frame.contentWindow as (Window & {KioskAdActivities?:{setContextResolver:(resolve:typeof currentAdActivityContext)=>void}})|null)?.KioskAdActivities;
+    if(activityApi)activityApi.setContextResolver(currentAdActivityContext);
   } catch {
     // If the iframe ever becomes cross-origin, preserve the current flow state.
     return;

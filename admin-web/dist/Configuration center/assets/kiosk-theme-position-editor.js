@@ -14,17 +14,18 @@
     var opened=theme?JSON.parse(JSON.stringify(theme)):null, compatibilityRevision=0, compatibilityTimer;
     function latest(){return JSON.parse(localStorage.getItem('kiosk_themes')||'[]').find(function(t){return theme&&t.id===theme.id;});}
     function editable(){var current=existing?latest():null;return !existing||!!current&&policy.canEditTarget(current);}
-    function assertSave(){if(existing)policy.assertSave(latest(),opened,selected||{});}
+    function assertSave(){if(existing){var current=latest();if(current&&current.interactionScope&&current.interactionScope!==KioskAdActivities.getContext().scope)throw Error('广告活动属于其他品牌，请切换正确品牌或复制后重新配置');policy.assertSave(current,opened,selected||{});}}
     var picking=!selected&&editable();
     var section=document.createElement('section');section.className='mx-auto w-full max-w-4xl rounded-2xl border border-[#f0f0f0] bg-white p-4 sm:p-8 shadow-sm';
     section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div class="grid gap-4 sm:grid-cols-2"><div class="min-w-0"><label id="adSlotSearchLabel" class="mb-3 block"><input id="adSlotSearch" type="search" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm" aria-label="搜索展示位置" placeholder="搜索位置名称或场景"></label><div id="adSlotGrid" class="grid content-start gap-2" role="radiogroup" aria-label="展示位置"></div></div><details id="adSlotPreview" class="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3"><summary class="cursor-pointer text-sm font-medium sm:hidden">查看位置示例</summary><div id="adSlotPreviewContent" aria-live="polite"></div></details></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
     var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
+    var activityNote=document.createElement('p');activityNote.className='mb-4 text-sm text-gray-500';activityNote.dataset.adActivityContextNote='';activityNote.textContent='可在素材下方配置点击行为；请从有编辑权限的品牌广告入口进入。';summary.after(activityNote);
     var notice=document.createElement('div');notice.className='mb-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-600';summary.after(notice);
     var validationNotice=document.createElement('p');validationNotice.className='mb-4 text-sm text-red-500';validationNotice.setAttribute('role','alert');notice.after(validationNotice);
     function scheduleCompatibility(){clearTimeout(compatibilityTimer);var revision=++compatibilityRevision;compatibilityTimer=setTimeout(function(){checkCompatibility(revision);},80);}
-    async function checkCompatibility(revision){flush();var errors=[];for(var target of selected?selected.specs:[]){var items=bank[target.id]||[],types=Array.from(new Set(items.map(function(v){return v.type||'image';})));if(types.length>1)errors.push(target.name+'不能混用图片与视频，请删除或替换素材');if(items.length>(types[0]==='video'?target.maxVideos:target.maxImages))errors.push(target.name+'素材数量超过上限，请删除多余素材');for(var item of items){try{var meta=await metadata(item);if(allowedKinds(target).indexOf(meta.kind)<0)throw Error('不支持此素材类型');var warnings=api.validateMedia(target,meta);errors=errors.concat(warnings.map(function(w){return target.name+'：'+w;}));}catch(e){errors.push(target.name+'：'+e.message+'，请删除或替换该素材');}}}if(revision===compatibilityRevision)validationNotice.textContent=errors.join('；');}
+    async function checkCompatibility(revision){flush();var errors=[];if(selected){var supported=KioskAdActivities.capabilities(selected,KioskAdActivities.getContext());try{if(Object.values(bank).some(function(list){return list.some(function(item){return !supported.includes(KioskAdActivities.normalizeAction(item.clickAction).type);});}))errors.push('该渠道或位置不支持当前点击行为，请设置为不跳转或更换位置');}catch(actionError){errors.push(actionError.message);}}for(var target of selected?selected.specs:[]){var items=bank[target.id]||[],types=Array.from(new Set(items.map(function(v){return v.type||'image';})));if(types.length>1)errors.push(target.name+'不能混用图片与视频，请删除或替换素材');if(items.length>(types[0]==='video'?target.maxVideos:target.maxImages))errors.push(target.name+'素材数量超过上限，请删除多余素材');for(var item of items){try{var meta=await metadata(item);if(allowedKinds(target).indexOf(meta.kind)<0)throw Error('不支持此素材类型');var warnings=api.validateMedia(target,meta);errors=errors.concat(warnings.map(function(w){return target.name+'：'+w;}));}catch(e){errors.push(target.name+'：'+e.message+'，请删除或替换该素材');}}}if(revision===compatibilityRevision)validationNotice.textContent=errors.join('；');}
     var materialNotice=document.createElement('div');materialNotice.className='mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm';notice.after(materialNotice);materialNotice.hidden=true;
     var cancel=document.createElement('button');cancel.type='button';cancel.textContent='取消修改';cancel.id='cancelTargetChange';cancel.className='mr-4 rounded-xl border px-5 py-3 text-sm';next.before(cancel);
     function cloneBank(value){var out={};Object.keys(value).forEach(function(k){out[k]=Array.isArray(value[k])?value[k].slice():value[k];});return out;}
@@ -105,7 +106,7 @@
       var restored=Array.from(section.querySelectorAll('input[type="radio"]')).find(function(radio){return radio.name===input.name&&radio.value===input.value;});
       if(restored)restored.focus();
     });
-    next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length){var carried=cache.__legacy[role]||[],targetItems=bank[spec(role).id]||[];carried.forEach(function(item){if(!targetItems.some(function(v){return v===item||(v.mediaRef&&v.mediaRef===item.mediaRef)||(v.url&&v.url===item.url);}))targetItems.push(item);});bank[spec(role).id]=targetItems;}else orphaned=orphaned.concat(cache.__legacy[role]||[]);});delete cache.__legacy;}picking=false;staged=null;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();scheduleCompatibility();});
+    next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length){var carried=cache.__legacy[role]||[],targetItems=bank[spec(role).id]||[];carried.forEach(function(item){if(!targetItems.some(function(v){return v===item||(v.assetId&&item.assetId?v.assetId===item.assetId:(v.mediaRef&&v.mediaRef===item.mediaRef)||(v.url&&v.url===item.url));}))targetItems.push(item);});bank[spec(role).id]=targetItems;}else orphaned=orphaned.concat(cache.__legacy[role]||[]);});delete cache.__legacy;}picking=false;staged=null;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();scheduleCompatibility();});
     window.addEventListener('storage',function(event){if(event.key==='kiosk_themes'){if(!editable())cancelChange();refresh();}if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
     refresh();
     async function loadItems(items){var list=await hooks.load(items);if(config.copy){for(var item of list){if(item.type==='video'&&item.mediaRef){var blob=await KioskThemeMediaIdb.get(item.mediaRef);if(!blob)throw Error('源视频已失效，无法复制');item.file=blob;delete item.mediaRef;}}}return list;}
@@ -128,12 +129,15 @@
           var item=items[j],meta=await metadata(item);warnings=warnings.concat(api.validateMedia(s,meta));
           // Preserve uploaded pixels; the former thumbnail compression is unsuitable for strict dimensions.
           var source=item;if(item.file&&kind==='image'){var url=await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=reject;reader.readAsDataURL(item.file);});source={url:url,dataUrl:url,type:'image'};}
-          var stored=await process(source,roleFor(s)==='portrait');stored.adSpecId=s.id;stored.metadata=meta;stored.fit=s.fit;bySpec[s.id].push(stored);(roleFor(s)==='portrait'?portrait:landscape).push(stored);
+          var stored=await process(source,roleFor(s)==='portrait');stored.assetId=item.assetId||crypto.randomUUID();stored.clickAction=KioskAdActivities.normalizeAction(item.clickAction);stored.adSpecId=s.id;stored.metadata=meta;stored.fit=s.fit;bySpec[s.id].push(stored);(roleFor(s)==='portrait'?portrait:landscape).push(stored);
         }
       }
       if(!count)throw Error('请至少配置一套规格的广告素材');
+      var activityContext=KioskAdActivities.getContext(),interactionScope=activityContext.scope;
+      await KioskAdActivities.validateThemeActions({adSlot:selected,adSlotAssets:bySpec,interactionScope:interactionScope},activityContext);
+      if(KioskAdActivities.getContext().scope!==interactionScope)throw Error('品牌上下文已变化，请重新打开广告');
       if(warnings.length&& !(await confirmChange('以下素材与推荐尺寸不同：\n'+warnings.join('\n')+'\n是否保留当前素材并继续保存？')))throw Error('已取消保存，请检查素材尺寸');
-      return {bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected))};
+      return {bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected)),interactionScope:interactionScope};
     }
     return {
       defaultKind:function(role){return allowedKinds(spec(role))[0]||'image';},
@@ -144,13 +148,13 @@
       hasMedia:function(){flush();return Object.keys(bank).some(function(k){return bank[k]&&bank[k].length;});},
       attachMedia:function(value){hooks=value;renderMedia();},
       hydrate:async function(th){
-        if(config.copy&&th&&th.adSlotAssets){var copied={};for(var key of Object.keys(th.adSlotAssets))copied[key]=await loadItems(th.adSlotAssets[key]);var live=slots.find(function(s){return s.id===th.adSlot.id;});cache[th.adSlot.id+'@'+(live?live.specVersion:th.adSlot.version)]=copied;cache.__legacy={portrait:await loadItems(th.portraitImages||[]),landscape:await loadItems(th.landscapeImages||[])};}
+        if(config.copy&&th&&th.adSlotAssets){var copied={};for(var key of Object.keys(th.adSlotAssets))copied[key]=await loadItems(th.adSlotAssets[key]);var live=slots.find(function(s){return s.id===th.adSlot.id;});cache[th.adSlot.id+'@'+(live?live.specVersion:th.adSlot.version)]=copied;cache.__legacy={portrait:[],landscape:[]};th.adSlot.specs.forEach(function(sourceSpec){cache.__legacy[roleFor(sourceSpec)]=cache.__legacy[roleFor(sourceSpec)].concat(copied[sourceSpec.id]||[]);});}
         else if(selected&&th&&th.adSlotAssets){for(var id of Object.keys(th.adSlotAssets))bank[id]=await loadItems(th.adSlotAssets[id]);}
         else if(th&&selected){for(var role of ['portrait','landscape'])if(specs(role).length)bank[spec(role).id]=await loadItems(th[role+'Images']||[]);}
         else if(th){cache.__legacy={portrait:await loadItems(th.portraitImages||[]),landscape:await loadItems(th.landscapeImages||[])};}
         if(selected)['portrait','landscape'].forEach(function(role){hooks.set(role,bank[spec(role).id]||[]);});renderMedia();
       },
-      refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
+      canEditActivity:function(){return !existing||!theme.interactionScope||theme.interactionScope===KioskAdActivities.getContext().scope;},allMedia:function(){flush();return selected?selected.specs.flatMap(function(s){return bank[s.id]||[];}):[];},refreshMedia:renderMedia,refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
       back:function(){if(staged)return cancelChange();if(existing||config.formId==='editForm'||picking)return false;flush();picking=true;refresh();return true;}
     };
   }

@@ -10,6 +10,7 @@
   <script src="assets/kiosk-ad-slot-context.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-ad-slot-validation.js"></script>
   <script src="assets/toast.js"></script>
@@ -478,7 +479,7 @@
         return { start: startMs, end: endMs };
       }
 
-      function executeSaveDraftFromEffectiveTime() {
+      async function executeSaveDraftFromEffectiveTime() {
           if (!KioskAdSlotValidation.checkCurrent()) return;
           var selectedPositions = KioskThemePositions.read();
           if (selectedPositions.length !== 1) {
@@ -528,6 +529,12 @@
               endDate: endDateInput ? endDateInput.value : '',
               endTime: endTimeInput ? endTimeInput.value : ''
             };
+              try {
+                var checkedContext=KioskAdActivities.getContext();
+                await KioskAdActivities.validateThemeActions(theme,checkedContext,'publish');
+                if(KioskAdActivities.hasActions(theme)&&KioskAdActivities.getContext().scope!==checkedContext.scope)throw Error('品牌上下文已变化，请重新打开广告');
+                if(localStorage.getItem('kiosk_themes')!==raw)throw Error('广告已在其他窗口修改，请返回重新编辑');
+              } catch(activityError) { Toast.validate(activityError.message); return; }
               localStorage.setItem('kiosk_themes', JSON.stringify(themes));
               KioskThemePositions.clear();
               try { localStorage.removeItem('selected_stores_for_distribute'); } catch (e) {}
