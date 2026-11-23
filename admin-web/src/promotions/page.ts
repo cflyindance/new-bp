@@ -87,9 +87,9 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
 
   function render() {
     page!.innerHTML = `<div class="promotion-toolbar">
-      <input type="search" aria-label="搜索活动名称" placeholder="搜索活动名称" data-promo-search value="${escape(query)}">
-      <div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
-      </div><div class="promotion-filters"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label>
+      <div class="promotion-query"><input type="search" aria-label="搜索活动名称" placeholder="搜索活动名称" data-promo-search value="${escape(query)}"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label></div>
+      <div class="promotion-actions">${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
+      </div><div class="promotion-filters">
       <label>开启促销类型 <select data-promo-active ${editable ? "" : "disabled"}>${options([["", "全部关闭"], ...types.filter(([type]) => draft.activeType === type || draft.campaigns.some(row => row.type === type))], draft.activeType)}</select></label></div>
       <div data-promo-results></div>
       <footer><span role="status">${escape(message || (dirty() ? "有未保存的变更" : ""))}</span></footer>`;
