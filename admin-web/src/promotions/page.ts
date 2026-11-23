@@ -91,7 +91,6 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       <div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
       </div><div class="promotion-filters"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label>
       <label>开启促销类型 <select data-promo-active ${editable ? "" : "disabled"}>${options([["", "全部关闭"], ...types.filter(([type]) => draft.activeType === type || draft.campaigns.some(row => row.type === type))], draft.activeType)}</select></label></div>
-      <p class="promotion-note">活动配置仅保存在本浏览器。状态按浏览器时间预览，设备生效以终端规则为准。</p>
       <div data-promo-results></div>
       <footer><span role="status">${escape(message || (dirty() ? "有未保存的变更" : ""))}</span></footer>`;
     updateRows();

@@ -11639,7 +11639,9 @@ function renderMain(): string {
     ? "flex w-full min-h-0 min-w-0 flex-1 flex-col"
     : wideContentLayout
         ? "mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]"
-        : `mx-auto max-w-6xl space-y-6`;
+        : path === PROMOTIONS_PATH
+          ? "w-full min-w-0 space-y-6"
+          : "mx-auto max-w-6xl space-y-6";
 
   const tabsSection = showModuleTabs
     ? wideContentLayout
