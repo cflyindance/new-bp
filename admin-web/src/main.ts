@@ -1630,6 +1630,10 @@ import {
   tf,
 } from "./i18n";
 import { bindUiLocaleControl, renderUiLocaleControl } from "./shell/ui-locale-control";
+import { bindPromotionPage, PROMOTIONS_PATH, renderPromotionPage } from "./promotions/page";
+import { currentBrandAccess } from "./config/brand-access-store";
+import { pageKey } from "./permissions/center-catalog";
+import { currentServiceAccess } from "./config/service-entitlement-runtime";
 
 function escapeHtml(s: string): string {
   return s
@@ -11635,7 +11639,9 @@ function renderMain(): string {
     ? "flex w-full min-h-0 min-w-0 flex-1 flex-col"
     : wideContentLayout
         ? "mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]"
-        : `mx-auto max-w-6xl space-y-6`;
+        : path === PROMOTIONS_PATH
+          ? "w-full min-w-0 space-y-6"
+          : "mx-auto max-w-6xl space-y-6";
 
   const tabsSection = showModuleTabs
     ? wideContentLayout
@@ -11692,7 +11698,7 @@ function renderMain(): string {
       </header>`;
 
   const commercialGate=renderServiceGate(path);
-  const merchantTabPanelBody = commercialGate ?? (isMerchantServiceCenterPath(path) ? renderMerchantServiceCenter(path) : null) ?? (() => {
+  const merchantTabPanelBody = commercialGate ?? (path === PROMOTIONS_PATH ? renderPromotionPage() : null) ?? (isMerchantServiceCenterPath(path) ? renderMerchantServiceCenter(path) : null) ?? (() => {
     if (hubSearchCtx) {
       const index = buildHubSearchIndex(hubSearchCtx.hubId);
       const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
@@ -12444,6 +12450,14 @@ function mountInitializedPage(): void {
 
   installServiceEntitlementRuntime(mount);
   bindServiceGate(mount);
+  if (document.querySelector("[data-promotion-page]")) {
+    const scope = resolveEffectiveScope();
+    const key = JSON.stringify([scope.perspective, scope.groupId, [...scope.brandIds].sort(), [...scope.storeIds].sort()]);
+    const access = currentBrandAccess(pageKey(PROMOTIONS_PATH));
+    bindPromotionPage(document, key, access === undefined || access === "edit",
+      currentServiceAccess("/members/card/coupon-mgmt").some(right => right.usable),
+      getAuthenticatedEmail()?.trim().toLowerCase() === DEMO_LOGIN_ACCOUNT && !isViewSwitchRestricted());
+  }
   mountNavigationSubmenuSheet(app);
   bindNavigationSubmenuSheets(app.firstElementChild as HTMLElement);
 
