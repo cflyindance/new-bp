@@ -1,0 +1,118 @@
+.serviceTypePanelOuter___yyycy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  overflow-y: auto;
+}
+
+.serviceTypePanelInner___Wjywj {
+  padding-top: 19rem;
+}
+
+.serviceTypeMethod___3bdgp {
+  margin-bottom: 12rem;
+  font-weight: 700;
+  font-size: 4rem;
+  color: #000;
+  text-align: center;
+}
+
+.serviceTwoBox___ivwxT {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0 auto;
+  justify-content: center;
+}
+
+.serviceType___2Mqyy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 42rem;
+  height: 51rem;
+  text-align: center;
+  border-radius: 2.4rem;
+  font-size: 4rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: 0.1rem 0.2rem 2rem 0 rgba(0, 0, 0, 0.05);
+}
+.serviceType___2Mqyy i {
+  margin: 0 auto;
+  width: 20rem;
+  height: 20rem;
+  display: block;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+.serviceType___2Mqyy .title___FeLjk {
+  text-align: center;
+  margin-top: 8rem;
+  display: block;
+}
+
+.serviceType1___pRbUZ i {
+  background-image: url("./pick-up-CzPARrhC.png");
+}
+
+.serviceType2___I2POa {
+  margin-left: 8rem;
+}
+.serviceType2___I2POa i {
+  background-image: url("./table-service-B86-77Ys.png");
+}
+
+.errorModal___Z9JnY {
+  position: fixed;
+  z-index: 100;
+}
+
+.noserviceType___7BPyR {
+  color: #fff;
+  font-size: 4rem;
+  text-align: center;
+}
+
+.itemBox___XGKme {
+  text-align: center;
+  color: #333;
+}
+.itemBox___XGKme .itemName___npb5j {
+  font-size: 3.6rem;
+  font-weight: bold;
+  margin: 4rem;
+}
+.itemBox___XGKme .subItemName___FT2qZ {
+  font-size: 3rem;
+}
+
+@media screen and (orientation: landscape) {
+  .serviceTwoBox___ivwxT {
+    width: 100%;
+    padding: 0 4rem;
+    flex-wrap: nowrap;
+    box-sizing: border-box;
+  }
+  .serviceTwoBox___ivwxT .serviceType___2Mqyy {
+    min-width: 0;
+    margin-left: 0;
+    flex: 0 1 42rem;
+  }
+  .serviceTwoBox___ivwxT .serviceType___2Mqyy:not(:first-child) {
+    margin-left: 4rem;
+  }
+}
+@media screen and (orientation: portrait) {
+  .serviceTypePanelInner___Wjywj {
+    padding-top: 28rem;
+  }
+  .serviceTypeMethod___3bdgp {
+    margin-bottom: 37rem;
+  }
+}

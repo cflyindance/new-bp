@@ -1,0 +1,148 @@
+@charset "UTF-8";
+.callerWrapper___zZUHF {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  overflow: hidden;
+}
+.callerWrapper___zZUHF .title___5BywU {
+  margin: 28rem 0 5rem;
+  font-size: 4rem;
+  font-weight: 700;
+  color: #000;
+  text-align: center;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .content___2PM7v,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .content___2PM7v {
+  width: 90rem;
+  text-align: center;
+  font-size: 3rem;
+  color: #999;
+  margin-bottom: 3.2rem;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0 {
+  width: 60rem;
+  height: 13rem;
+  color: var(--text-color-black);
+  font-weight: bold;
+  line-height: 13rem;
+  border-radius: 20rem;
+  background: var(--background-grey);
+  text-align: center;
+  outline: none;
+  border: none;
+  font-size: 6rem;
+  box-shadow: 0.1rem 0.2rem 1rem rgba(0, 0, 0, 0.1) inset;
+  margin: 8rem auto;
+  /* 针对 WebKit/Blink 浏览器 (Chrome, Safari, Edge) */
+  /* 针对 Firefox */
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0.showPhone___u13E0::-webkit-inner-spin-button, .callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0.showPhone___u13E0::-webkit-outer-spin-button,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0.showPhone___u13E0::-webkit-inner-spin-button,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0.showPhone___u13E0::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0.showPhone___u13E0,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0.showPhone___u13E0 {
+  -moz-appearance: textfield;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0::-webkit-input-placeholder, .callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0::-webkit-input-placeholder {
+  color: rgba(0, 0, 0, 0.4);
+  font-family: "Inter";
+  font-size: 4rem;
+  font-weight: 400;
+}
+.callerWrapper___zZUHF .contentWrapper___YCjPa .showPhone___u13E0::placeholder,
+.callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+  font-family: "Inter";
+  font-size: 4rem;
+  font-weight: 400;
+}
+.callerWrapper___zZUHF .confirmBtn___ag7sH {
+  color: var(--text-color-black);
+  font-size: 3rem;
+  width: 60rem;
+  height: 10rem;
+  line-height: 10rem;
+  text-align: center;
+  border-radius: 10rem;
+  font-weight: bold;
+  margin: 5rem auto 0;
+  background-color: var(--primary-selected-color);
+}
+.callerWrapper___zZUHF .confirmBtn___ag7sH.disableConfirm___FJI2d {
+  background: var(--primary-color-disabled);
+  color: rgba(0, 0, 0, 0.3019607843);
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 12rem);
+  padding: 0 4rem;
+  box-sizing: border-box;
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .formWrapper___Q1eAC {
+  flex: 1 1 90rem;
+  min-width: 0;
+  max-width: 90rem;
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .title___5BywU {
+  margin-top: 0;
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .contentWrapper___YCjPa .content___2PM7v {
+  width: 100%;
+  overflow-wrap: break-word;
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .inputWrapper___S8PwJ .showPhone___u13E0,
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .confirmBtn___ag7sH {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.callerWrapper___zZUHF .horizontalWithImage___NV-Np .numberPlateImage___mJjac {
+  width: 70rem;
+  max-width: 40%;
+  height: 70rem;
+  margin-left: 5rem;
+  min-width: 0;
+  object-fit: contain;
+}
+.callerWrapper___zZUHF .verticalWithImage___e3XNf .title___5BywU {
+  margin-top: 18rem;
+}
+.callerWrapper___zZUHF .verticalWithImage___e3XNf .inputWrapper___S8PwJ .showPhone___u13E0 {
+  margin: 8rem auto;
+}
+.callerWrapper___zZUHF .verticalWithImage___e3XNf .numberPlateImage___mJjac {
+  display: block;
+  width: 70rem;
+  height: 45rem;
+  margin: 5rem auto 0;
+  object-fit: contain;
+}
+
+@media screen and (orientation: portrait) {
+  .callerWrapper___zZUHF .title___5BywU {
+    margin: 36rem 0 5rem;
+  }
+  .callerWrapper___zZUHF .inputWrapper___S8PwJ .showPhone___u13E0 {
+    margin: 23rem auto 48rem;
+  }
+  .callerWrapper___zZUHF .verticalWithImage___e3XNf .title___5BywU {
+    margin-top: 18rem;
+  }
+  .callerWrapper___zZUHF .verticalWithImage___e3XNf .inputWrapper___S8PwJ .showPhone___u13E0 {
+    margin: 8rem auto;
+  }
+}

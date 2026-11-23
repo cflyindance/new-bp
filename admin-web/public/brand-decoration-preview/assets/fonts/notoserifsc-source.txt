@@ -1,0 +1,2 @@
+https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifsc/NotoSerifSC[wght].ttf
+25125512

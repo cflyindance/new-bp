@@ -1,0 +1,240 @@
+@charset "UTF-8";
+.afterPayContainer___X5PnM {
+  padding-top: 16rem;
+  height: 100vh;
+  overflow: hidden;
+  text-align: center;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+.afterPayContainer___X5PnM.afterAllPayContainer___8haUU {
+  padding-top: 10rem;
+}
+
+.title___9qbN5 {
+  font-size: 3.8rem;
+  color: var(--text-color-black);
+  font-weight: bold;
+  text-align: center;
+}
+
+.panelSubTitle___mDBbs {
+  font-size: 2.2rem;
+  margin-top: 4rem;
+}
+
+.content___vwTKL {
+  margin: 2rem auto 0;
+  box-sizing: border-box;
+}
+.content___vwTKL .tipItems___bliho {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  width: 96rem;
+  margin-left: auto;
+  margin-right: auto;
+  justify-content: center;
+}
+.content___vwTKL .tipItems___bliho .basicTip___tfEEW {
+  width: 30rem;
+  margin: 1rem;
+  grid-column: span 1;
+}
+.content___vwTKL .tipItems___bliho .middleTip___yUwR- {
+  width: 62rem;
+  grid-column: span 2;
+}
+.content___vwTKL .tipItems___bliho .largeTip___bcmaE {
+  width: 94rem;
+  grid-column: span 3;
+}
+@supports (display: grid) {
+  .content___vwTKL .tipItems___bliho {
+    display: grid;
+    width: auto;
+    grid-template-columns: repeat(3, -webkit-max-content);
+    grid-template-columns: repeat(3, max-content);
+    grid-gap: 2rem;
+    gap: 2rem;
+    justify-items: center;
+  }
+  .content___vwTKL .tipItems___bliho .basicTip___tfEEW {
+    margin: 0;
+  }
+}
+
+.btnContainer___fgLqu {
+  margin: 15rem auto 0;
+  box-sizing: border-box;
+}
+.btnContainer___fgLqu .configTip___Ivf6Y {
+  display: flex;
+  flex-wrap: wrap;
+  width: 96rem;
+  margin: 0 auto;
+  justify-content: center;
+}
+.btnContainer___fgLqu .configTip___Ivf6Y .basicTip___tfEEW {
+  width: 30rem;
+  margin: 1rem;
+  grid-column: span 1;
+}
+.btnContainer___fgLqu .configTip___Ivf6Y .middleTip___yUwR- {
+  width: 62rem;
+  grid-column: span 2;
+}
+.btnContainer___fgLqu .configTip___Ivf6Y .largeTip___bcmaE {
+  width: 94rem;
+  grid-column: span 3;
+}
+@supports (display: grid) {
+  .btnContainer___fgLqu .configTip___Ivf6Y {
+    display: grid;
+    width: auto;
+    grid-template-columns: repeat(3, -webkit-max-content);
+    grid-template-columns: repeat(3, max-content);
+    grid-gap: 2rem;
+    gap: 2rem;
+    justify-items: center;
+  }
+  .btnContainer___fgLqu .configTip___Ivf6Y .basicTip___tfEEW {
+    margin: 0;
+  }
+}
+
+.editBtn___QlYxq {
+  width: 67rem;
+  height: 12rem;
+  line-height: 12rem;
+  margin: 8rem auto 0;
+  color: var(--text-color-black);
+  font-size: 4rem;
+  border-radius: 10rem;
+  font-weight: bold;
+}
+
+.actived___h-hw6 {
+  background: var(--primary-color);
+}
+
+.noActived___RzhvM {
+  background: var(--primary-color-disabled);
+  color: rgba(0, 0, 0, 0.3019607843);
+}
+
+.containerBox___VS5t3 {
+  width: 75rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+
+.itemBox___RnP9C {
+  width: 55rem;
+  text-align: center;
+  color: #000;
+}
+.itemBox___RnP9C .itemName___3BDlg {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0 0 5rem;
+}
+.itemBox___RnP9C .inputCustomTipBox___Q4l2k {
+  position: relative;
+}
+.itemBox___RnP9C .inputCustomTipBox___Q4l2k .unit___r6Hwq {
+  position: absolute;
+  font-size: 6rem;
+  font-weight: bold;
+  left: 6rem;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+          transform: translateY(-50%);
+}
+.itemBox___RnP9C .inputCustomTipBox___Q4l2k .customInput___ZI0By {
+  font-weight: bold;
+  height: 13rem;
+  line-height: 13rem;
+  border-radius: 20rem;
+  background: var(--background-grey);
+  text-align: center;
+  outline: none;
+  border: none;
+  width: 100%;
+  font-size: 6rem;
+  padding-left: 13rem;
+  box-sizing: border-box;
+  text-indent: -13rem;
+  /* input上下键 针对 WebKit/Blink 浏览器 (Chrome, Safari, Edge) */
+  /* 针对 Firefox */
+}
+.itemBox___RnP9C .inputCustomTipBox___Q4l2k .customInput___ZI0By.customInput___ZI0By::-webkit-inner-spin-button, .itemBox___RnP9C .inputCustomTipBox___Q4l2k .customInput___ZI0By.customInput___ZI0By::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.itemBox___RnP9C .inputCustomTipBox___Q4l2k .customInput___ZI0By.customInput___ZI0By {
+  -moz-appearance: textfield;
+}
+
+.btnBox___oJ8Tn {
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem;
+  flex-direction: column;
+}
+.btnBox___oJ8Tn span {
+  display: inline-block;
+  width: 55rem;
+  height: 10rem;
+  font-size: 3.2rem;
+  text-align: center;
+  line-height: 10rem;
+  margin: 0 1.4rem;
+  color: var(--text-color-black);
+  border-radius: 8rem;
+}
+.btnBox___oJ8Tn span:first-child {
+  background-color: var(--background-grey);
+}
+.btnBox___oJ8Tn span:last-child {
+  background-color: var(--primary-selected-color);
+  margin-top: 2rem;
+}
+
+@media screen and (orientation: portrait) {
+  .afterPayContainer___X5PnM {
+    padding-top: 29rem;
+  }
+  .content___vwTKL .tipItems___bliho {
+    width: 64rem;
+  }
+  @supports (display: grid) {
+    .content___vwTKL .tipItems___bliho {
+      width: auto;
+      grid-template-columns: repeat(2, -webkit-max-content);
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+  .btnContainer___fgLqu {
+    margin: 26rem auto 0;
+  }
+  .btnContainer___fgLqu .configTip___Ivf6Y {
+    width: 64rem;
+  }
+  @supports (display: grid) {
+    .btnContainer___fgLqu .configTip___Ivf6Y {
+      width: auto;
+      grid-template-columns: repeat(2, -webkit-max-content);
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+  .editBtn___QlYxq {
+    width: 62rem;
+    margin: 19rem auto 0;
+  }
+}

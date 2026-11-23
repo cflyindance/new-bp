@@ -1,0 +1,168 @@
+@charset "UTF-8";.orderTypePanel___PkYes {
+  margin: 0 auto;
+  z-index: 90;
+  background: #f0f0f0;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 {
+  padding-top: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeTitle___RrElR {
+  font-size: 4rem;
+  font-weight: 700;
+  color: #000;
+  text-align: center;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 {
+  display: flex;
+  flex-flow: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8rem;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu- {
+  height: 51.6rem;
+  width: 42.6rem;
+  padding: 6.4rem;
+  margin: 0 4.8rem;
+  box-shadow: 0.1rem 0.2rem 2rem 0 rgba(0, 0, 0, 0.0509803922);
+  border-radius: 2.4rem;
+  box-sizing: border-box;
+  text-align: center;
+  background: #fff;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu- .text___2pQ-- {
+  text-align: center;
+  font-size: 4rem;
+  font-weight: 600;
+  color: var(--text-color-black);
+  margin-top: 4rem;
+}
+.orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu- .bgImg___Cb5yN {
+  width: 30rem;
+  height: 30rem;
+}
+
+@media screen and (orientation: landscape) {
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 {
+    width: 100%;
+    padding: 0 4rem;
+    flex-wrap: nowrap;
+    box-sizing: border-box;
+  }
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu- {
+    min-width: 0;
+    margin: 0;
+    flex: 0 1 42.6rem;
+  }
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu-:not(:first-child) {
+    margin-left: 4rem;
+  }
+}
+@media screen and (orientation: portrait) {
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 {
+    flex-flow: column;
+    align-items: center;
+    margin-top: 4rem;
+  }
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 .card___06Eu- {
+    height: 50rem;
+    padding: 5.6rem 6.4rem;
+  }
+  .orderTypePanel___PkYes .orderTypeContent___fp1z2 .orderTypeBtnList___JrfF7 > div:not(:first-child) {
+    margin: 2rem 0 0;
+  }
+}
+.containerBox___hKx09 {
+  width: 79rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+  padding: 8rem 7.5rem;
+  min-height: 87rem;
+  box-sizing: border-box;
+  justify-content: space-between;
+  color: #000;
+}
+
+.closeIcon___rctUq {
+  position: absolute;
+  right: 3rem;
+  top: 3rem;
+  width: 4rem;
+}
+
+.title___5gBxG {
+  font-size: 4rem;
+  font-weight: 700;
+  margin: 4rem 0;
+  text-align: center;
+}
+
+.itemBox___ujYk9 {
+  width: 100%;
+}
+.itemBox___ujYk9 .dayPicker___JByvk,
+.itemBox___ujYk9 .timePicker___ytjqF {
+  width: 100%;
+  height: 9rem !important;
+  font-size: 3.2rem !important;
+  margin-bottom: 3.2rem;
+}
+.itemBox___ujYk9 .dayPicker___JByvk .pickerOption___JJR7C,
+.itemBox___ujYk9 .timePicker___ytjqF .pickerOption___JJR7C {
+  padding: 2.4rem !important;
+  font-size: 3.2rem !important;
+}
+.itemBox___ujYk9 {
+  /* 去除 Select 组件的聚焦样式 */
+  /* 去除移动设备上的点击高亮效果 */
+}
+.itemBox___ujYk9 .ant-select-selector {
+  font-size: 3.2rem !important;
+  padding: 2.4rem !important;
+  border-radius: 2.4rem !important;
+}
+.itemBox___ujYk9 .ant-select-selector .ant-select-selection-item {
+  color: #000 !important;
+  font-weight: 600 !important;
+}
+.itemBox___ujYk9 .ant-select:focus {
+  outline: none; /* 去除默认的聚焦轮廓 */
+  box-shadow: none; /* 去除默认的阴影效果 */
+}
+.itemBox___ujYk9 .ant-select {
+  -webkit-tap-highlight-color: transparent; /* 去除 iOS 上的高亮效果 */
+}
+
+.btnBox___0kC4F {
+  display: flex;
+  margin-top: 4rem;
+  width: 64rem;
+}
+.btnBox___0kC4F .btn___llASZ {
+  color: #000;
+  font-size: 4rem;
+  width: 100%;
+  background-color: var(--background-grey);
+  box-shadow: none;
+  font-weight: 600;
+  height: 12rem;
+  line-height: 12rem;
+  border-radius: 10rem;
+  text-align: center;
+}
+.btnBox___0kC4F .btnConfirm___1tLDT {
+  background-color: var(--primary-selected-color);
+  margin-left: 2.4rem;
+}

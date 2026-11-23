@@ -1,0 +1,188 @@
+@charset "UTF-8";
+.panelContainer___dH-0O {
+  padding-top: 16rem;
+  height: 100vh;
+  text-align: center;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.panelTitle___4z5or {
+  font-size: 3.8rem;
+  color: var(--text-color-black);
+  font-weight: bold;
+  text-align: center;
+}
+
+.panelSubTitle___9Lu1x {
+  font-size: 2.6rem;
+  margin-top: 4rem;
+}
+
+.btnContainer___DUq-u {
+  margin: 15rem auto 0;
+  box-sizing: border-box;
+}
+.btnContainer___DUq-u .configTip___9ymgk {
+  display: flex;
+  flex-wrap: wrap;
+  width: 96rem;
+  margin: 0 auto;
+  justify-content: center;
+}
+.btnContainer___DUq-u .configTip___9ymgk .basicTip___PrLOZ {
+  width: 30rem;
+  margin: 1rem;
+  grid-column: span 1;
+}
+.btnContainer___DUq-u .configTip___9ymgk .middleTip___GlWme {
+  width: 62rem;
+  grid-column: span 2;
+}
+.btnContainer___DUq-u .configTip___9ymgk .largeTip___cpKNn {
+  width: 94rem;
+  grid-column: span 3;
+}
+@supports (display: grid) {
+  .btnContainer___DUq-u .configTip___9ymgk {
+    display: grid;
+    width: auto;
+    grid-template-columns: repeat(3, -webkit-max-content);
+    grid-template-columns: repeat(3, max-content);
+    grid-gap: 2rem;
+    gap: 2rem;
+    justify-items: center;
+  }
+  .btnContainer___DUq-u .configTip___9ymgk .basicTip___PrLOZ {
+    margin: 0;
+  }
+}
+
+.confirmBtnContainer___i5mLL {
+  width: 67rem;
+  height: 12rem;
+  line-height: 12rem;
+  margin: 8rem auto 0;
+  color: var(--text-color-black);
+  font-size: 4rem;
+  border-radius: 10rem;
+  font-weight: bold;
+}
+
+.actived___K1Khf {
+  background-color: var(--primary-selected-color);
+}
+
+.noActived___DAJDi {
+  background-color: var(--background-grey);
+}
+
+.containerBox___POGSG {
+  width: 75rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+
+.itemBox___CAyEs {
+  width: 55rem;
+  text-align: center;
+  color: #000;
+}
+.itemBox___CAyEs .itemName___ajr0h {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0 0 5rem;
+}
+.itemBox___CAyEs .inputCustomTipBox___vLhes {
+  position: relative;
+}
+.itemBox___CAyEs .inputCustomTipBox___vLhes .unit___tvLbS {
+  position: absolute;
+  font-size: 6rem;
+  font-weight: bold;
+  left: 6rem;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+          transform: translateY(-50%);
+}
+.itemBox___CAyEs .inputCustomTipBox___vLhes .customInput___COAIH {
+  font-weight: bold;
+  height: 13rem;
+  line-height: 13rem;
+  border-radius: 20rem;
+  background: var(--background-grey);
+  text-align: center;
+  outline: none;
+  border: none;
+  width: 100%;
+  font-size: 6rem;
+  padding-left: 13rem;
+  box-sizing: border-box;
+  text-indent: -13rem;
+  /* 针对 WebKit/Blink 浏览器 (Chrome, Safari, Edge) */
+  /* 针对 Firefox */
+}
+.itemBox___CAyEs .inputCustomTipBox___vLhes .customInput___COAIH.customInput___COAIH::-webkit-inner-spin-button, .itemBox___CAyEs .inputCustomTipBox___vLhes .customInput___COAIH.customInput___COAIH::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.itemBox___CAyEs .inputCustomTipBox___vLhes .customInput___COAIH.customInput___COAIH {
+  -moz-appearance: textfield;
+}
+
+.btnBox___OW14C {
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem;
+  flex-direction: column;
+}
+.btnBox___OW14C span {
+  display: inline-block;
+  width: 55rem;
+  height: 10rem;
+  font-size: 3.2rem;
+  text-align: center;
+  line-height: 10rem;
+  margin: 0 1.4rem;
+  color: var(--text-color-black);
+  border-radius: 8rem;
+  font-weight: bold;
+}
+.btnBox___OW14C span:first-child {
+  background-color: var(--background-grey);
+}
+.btnBox___OW14C span:last-child {
+  background-color: var(--primary-selected-color);
+  margin-top: 2rem;
+}
+
+@media screen and (orientation: portrait) {
+  .panelContainer___dH-0O {
+    padding-top: 29rem;
+  }
+  .btnContainer___DUq-u {
+    margin: 26rem auto 0;
+  }
+  .btnContainer___DUq-u .configTip___9ymgk {
+    width: 64rem;
+  }
+  @supports (display: grid) {
+    .btnContainer___DUq-u .configTip___9ymgk {
+      width: auto;
+      grid-template-columns: repeat(2, -webkit-max-content);
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+  .numPadContainer___uY9mI .numBox___L-cQ8 {
+    margin-top: 24rem;
+  }
+  .confirmBtnContainer___i5mLL {
+    width: 62rem;
+    margin: 19rem auto 0;
+  }
+}

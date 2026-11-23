@@ -1,0 +1,24 @@
+.loadingBox___fZocT {
+  width: 60rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+.loadingBox___fZocT .itemBox___HpL4u {
+  text-align: center;
+  color: #333;
+}
+.loadingBox___fZocT .itemBox___HpL4u .itemName___OoVY- {
+  font-size: 3.6rem;
+  font-weight: bold;
+  margin: 4rem;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.loadingBox___fZocT .itemBox___HpL4u .subItemName___Fd-ap {
+  font-size: 3rem;
+}

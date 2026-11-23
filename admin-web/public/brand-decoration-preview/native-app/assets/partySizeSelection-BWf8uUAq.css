@@ -1,0 +1,71 @@
+.partySizePage___vNRTf {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.partySizePageBox___LaF7Y {
+  padding-top: 12rem;
+  margin: 0 auto;
+}
+
+.partySizeTitle___L1vQH {
+  margin-bottom: 6rem;
+  font-weight: 700;
+  font-size: 4rem;
+  color: #000;
+  text-align: center;
+}
+
+.actionRow___I9Swv {
+  display: flex;
+  flex-direction: column;
+  width: 67rem;
+  margin: 0 auto;
+}
+
+.never___ElcYN {
+  width: 100%;
+  color: rgba(0, 0, 0, 0.8509803922);
+  font-size: 4rem;
+  height: 10rem;
+  text-align: center;
+  line-height: 10rem;
+  border-radius: 10rem;
+  background-color: var(--background-grey);
+  font-weight: bold;
+  margin-bottom: 2rem;
+}
+
+.btnConfirm___buD-5 {
+  width: 100%;
+  color: rgba(0, 0, 0, 0.8509803922);
+  font-size: 4rem;
+  height: 10rem;
+  text-align: center;
+  line-height: 10rem;
+  border-radius: 10rem;
+  background-color: var(--primary-selected-color);
+  font-weight: bold;
+}
+.btnConfirm___buD-5.btnNoConfirm___1Nxw- {
+  background: var(--primary-color-disabled);
+  color: rgba(0, 0, 0, 0.3019607843);
+}
+
+@media screen and (orientation: landscape) {
+  .partySizePageBox___LaF7Y {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media screen and (orientation: portrait) {
+  .partySizePageBox___LaF7Y {
+    padding-top: 19rem;
+  }
+  .numPadWrap___jkqCr {
+    margin: 5rem 0 8rem;
+  }
+}

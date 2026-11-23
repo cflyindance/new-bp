@@ -1,0 +1,108 @@
+.keysWrapper___8GcXD {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0 auto;
+  justify-content: center;
+  width: 66rem;
+  box-sizing: border-box;
+}
+
+.btnWrapper___Nxk5Q {
+  width: 20rem;
+  height: 13rem;
+  box-sizing: border-box;
+  margin: 0 0 6rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--background-grey);
+  border-radius: 8rem;
+}
+.btnWrapper___Nxk5Q .btnNum___LEO8G {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: var(--text-color-black);
+  font-size: 4.8rem;
+  font-weight: 700;
+}
+.btnWrapper___Nxk5Q .times___hojeb {
+  width: 5.9rem;
+  height: 3.4rem;
+}
+
+.btnWrapper___Nxk5Q:active {
+  background-color: var(--primary-color);
+}
+
+.btnWrapper___Nxk5Q.btnSelected___ws4a7 {
+  background-color: var(--primary-color);
+}
+
+.btnWrapper___Nxk5Q:nth-child(3n-1) {
+  margin: 0 3rem 6rem;
+}
+
+.btnWrapper___Nxk5Q.zeroBtn___TrMVL {
+  width: 43rem;
+}
+
+.btnWrapper___Nxk5Q.delBtn___TCs1u {
+  margin: 0 0 6rem 3rem;
+}
+
+.keysWrapper___8GcXD.numPadWide {
+  width: 80rem;
+  margin: 3rem auto;
+}
+.keysWrapper___8GcXD.numPadWide .btnWrapper___Nxk5Q {
+  width: 24rem;
+  height: 11rem;
+  margin-bottom: 2rem;
+  border-radius: 6rem;
+  background: #f6f6f6;
+  border: 0;
+}
+.keysWrapper___8GcXD.numPadWide .btnWrapper___Nxk5Q .btnNum___LEO8G {
+  font-size: 4.5rem;
+}
+.keysWrapper___8GcXD.numPadWide .btnWrapper___Nxk5Q:nth-child(3n-1) {
+  margin-left: 3rem;
+  margin-right: 3rem;
+}
+.keysWrapper___8GcXD.numPadWide .btnWrapper___Nxk5Q.zeroBtn___TrMVL {
+  width: 51rem;
+}
+.keysWrapper___8GcXD.numPadWide .btnWrapper___Nxk5Q.delBtn___TCs1u {
+  margin-left: 3rem;
+  margin-right: 0;
+}
+
+@media (orientation: landscape) {
+  .keysWrapper___8GcXD.numPadLandscape {
+    width: 80rem;
+    margin: 3rem auto;
+  }
+  .keysWrapper___8GcXD.numPadLandscape .btnWrapper___Nxk5Q {
+    width: 25rem;
+    height: 10rem;
+    margin-bottom: 2rem;
+    border-radius: 6rem;
+  }
+  .keysWrapper___8GcXD.numPadLandscape .btnWrapper___Nxk5Q .btnNum___LEO8G {
+    font-size: 4.5rem;
+  }
+  .keysWrapper___8GcXD.numPadLandscape .btnWrapper___Nxk5Q:nth-child(3n-1) {
+    margin-left: 2.5rem;
+    margin-right: 2.5rem;
+  }
+  .keysWrapper___8GcXD.numPadLandscape .btnWrapper___Nxk5Q.zeroBtn___TrMVL {
+    width: 52.5rem;
+  }
+  .keysWrapper___8GcXD.numPadLandscape .btnWrapper___Nxk5Q.delBtn___TCs1u {
+    margin-left: 2.5rem;
+    margin-right: 0;
+  }
+}

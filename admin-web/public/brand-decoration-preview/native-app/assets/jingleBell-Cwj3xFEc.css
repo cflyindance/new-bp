@@ -1,0 +1,29 @@
+.policy___aSL5F {
+  font-size: 2.4rem;
+  text-align: center;
+  color: #3d3d3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.policy___aSL5F .checkbox___k7ZHc {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-transform: scale(2);
+          transform: scale(2);
+  padding: 1rem;
+}
+.policy___aSL5F .checkbox___k7ZHc .ant-checkbox:not(.ant-checkbox-checked) .ant-checkbox-inner {
+  border: 0.1rem solid var(--text-color-black) !important;
+}
+.policy___aSL5F .checkbox___k7ZHc .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--primary-selected-color) !important;
+  border-color: var(--primary-selected-color) !important;
+}
+.policy___aSL5F .policyText___lND1s {
+  margin-left: 1.5rem;
+  text-align: left;
+}
+.policy___aSL5F .policyText___lND1s .likeLink___vgBIO {
+  color: var(--primary-color);
+  padding: 0 1rem;
+}

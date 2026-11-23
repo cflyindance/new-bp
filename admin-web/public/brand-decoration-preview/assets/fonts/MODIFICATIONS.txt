@@ -1,0 +1,1 @@
+Derived from Google Fonts Noto Serif SC / Noto Sans SC. V6 retains the demo text, GB2312 common characters and basic Latin/punctuation; hinting removed and family renamed KioskSerifPreview / KioskSansPreview. Original copyright and OFL licenses retained. Characters outside this set use system fallback.

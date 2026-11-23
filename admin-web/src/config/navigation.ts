@@ -130,6 +130,16 @@ export const PRODUCT_CENTER_DEEP_NAV: NavItem[] = [
 
 export const NAV_MODULES: NavModule[] = [
   {
+    id: "brand-decoration", title: "品牌装修", titleEn: "Brand decoration", icon: "brandMgmt",
+    path: "/brand-decoration", subNavPlacement: "sheet", defaultChildPath: "/brand-decoration/pages",
+    children: [
+      {id:"decoration-pages",title:"页面装修",titleEn:"Page decoration",path:"/brand-decoration/pages"},
+      {id:"decoration-assets",title:"品牌素材",titleEn:"Brand assets",path:"/brand-decoration/assets"},
+      {id:"decoration-releases",title:"发布记录",titleEn:"Release history",path:"/brand-decoration/releases"},
+    ],
+  },
+
+  {
     id: "brand-mgmt",
     title: "品牌管理",
     titleEn: "Brand management",

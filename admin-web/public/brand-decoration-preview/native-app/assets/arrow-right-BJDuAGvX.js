@@ -1,0 +1,4 @@
+//#region source-snapshot/src/assets/images/arrow-right.png
+var arrow_right_default = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAiBAMAAACthOSOAAAAIVBMVEUAAABmZmZnZ2dmZmZmZmZoaGhmZmZlZWVmZmZoaGhmZmYY28rNAAAACnRSTlMAgD7p7B7UnGsgTYS1SAAAAD5JREFUGNNjYAhlgAGOVQIwJsuqhTAm2yq4MJMVQlh5QIQLYMJeqxahMBEKENoQhtFaEBFQiODDDFSGSBgDADjFMD2IrCmkAAAAAElFTkSuQmCC";
+//#endregion
+export { arrow_right_default as t };
