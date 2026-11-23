@@ -632,14 +632,14 @@
       function isPreviewVideoMedia(item) {
         if (!item) return false;
         if (typeof item === 'object' && item.type === 'video') return true;
-        var u = typeof item === 'string' ? item : (item.dataUrl || '');
+        var u = typeof item === 'string' ? item : (item.dataUrl || item.src || item.url || '');
         return typeof u === 'string' && u.indexOf('data:video') === 0;
       }
 
       function previewMediaSrc(item) {
         if (!item) return '';
         if (typeof item === 'object' && item._displaySrc) return item._displaySrc;
-        return typeof item === 'string' ? item : (item.dataUrl || '');
+        return typeof item === 'string' ? item : (item.dataUrl || item.src || item.url || '');
       }
 
       function channelChipLabel(name) {
@@ -1236,7 +1236,7 @@
           var defaultAd=KioskDefaultAds.isDefault(t);
           var effectStr = getThemeEffectDisplayText(t);
           var shelfStatus = getListShelfStatus(t);
-          var purposeBadge='<span class="mr-2 inline-flex rounded-lg bg-gray-100 px-2 py-px text-xs leading-5">'+(defaultAd?'默认展示':'活动投放')+'</span>';
+          var purposeBadge='<span class="ad-purpose-tag '+(defaultAd?'ad-purpose-tag--default':'ad-purpose-tag--campaign')+'">'+(defaultAd?'默认展示':'活动投放')+'</span>';
           var shelfStatusBadge = '<span class="inline-flex items-center rounded-lg px-2 py-px text-xs font-normal leading-5 ' + shelfStatus.tagClass + '">' + escapeHtml(shelfStatus.text) + '</span>';
           var storeCount = t.distributedStores && t.distributedStores.length ? t.distributedStores.length : 0;
           var storeCol = storeCount
