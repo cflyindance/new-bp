@@ -33,6 +33,20 @@ function artwork(item:typeof cases[number],width:number,height:number,context=fa
 
 export function ensureDisplayDemo(includeAds=false):void {
   if(getAuthenticatedEmail()?.trim().toLowerCase()!==DEMO_LOGIN_ACCOUNT)return;
+  const legacyMarker=marker+'single-terminal';
+  if(!localStorage.getItem(legacyMarker)){
+    const platform=readDisplayPlatform();
+    const legacy=platform.regions.find(region=>region.builtin&&region.id==='idle-screensaver'&&!region.productLine);
+    if(legacy){
+      const productLine='Kiosk',binding=legacy.bindings[productLine];
+      legacy.productLine=productLine;
+      legacy.bindings=binding?{[productLine]:binding}:{};
+      legacy.specs??=[newSpec(),newSpec('landscape',1920,1080)];
+      legacy.specVersion??=1;
+      saveDisplayPlatform(platform,platform.revision);
+    }
+    localStorage.setItem(legacyMarker,'1');
+  }
   if(!localStorage.getItem(marker+'regions')){
     const platform=readDisplayPlatform(),next=structuredClone(platform);
     for(const item of cases){
