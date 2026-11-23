@@ -11,6 +11,8 @@
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-default-ads.js"></script>
+  <script src="assets/kiosk-default-ad-ui.js"></script>
   <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
@@ -728,6 +730,7 @@
           adPositionEditor.serialize(processMedia).then(async function(result) {
             theme.portraitImages = result.portrait;
             theme.landscapeImages = result.landscape;
+            theme.adPurpose = result.adPurpose;
             theme.adSlotAssets = result.bySpec;
             theme.adSlot = result.slot;
             theme.interactionScope = result.interactionScope;

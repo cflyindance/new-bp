@@ -10,6 +10,8 @@
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-default-ads.js"></script>
+  <script src="assets/kiosk-default-ad-ui.js"></script>
   <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
@@ -128,10 +130,11 @@
               </a>
             </div>
             <div class="flex w-full flex-wrap items-center gap-6">
+              <select id="filterAdPurpose" class="ui-select h-12 min-w-[140px] rounded-full border-0 bg-black/[0.04] pl-5 pr-10" aria-label="广告用途"><option value="">全部用途</option><option value="campaign">活动投放</option><option value="default">默认展示</option></select>
               <div class="relative h-12 min-w-[140px] max-w-[220px] shrink-0 rounded-full bg-black/[0.04]">
                 <select id="filterShelfStatus" class="ui-select w-full hidden" aria-label="按活动状态筛选">
                   <option value="" selected>全部</option>
-                  <option value="待上架">待上架</option>
+                  <option value="启用中">启用中</option><option value="已停用">已停用</option><option value="待上架">待上架</option>
                   <option value="已上架">已上架</option>
                   <option value="已下架">已下架</option>
                 </select>
@@ -142,6 +145,8 @@
                 <div id="filterShelfStatusMenu" class="ui-select-menu dropdown-menu theme-list-dropdown-menu theme-list-status-filter-menu ui-action-dropdown absolute left-0 top-[calc(100%+8px)] z-30 hidden bg-white" role="listbox" aria-label="活动状态选项">
                   <button type="button" class="ui-menu-item" role="option" data-value="" aria-selected="true">全部</button>
                   <button type="button" class="ui-menu-item" role="option" data-value="待上架" aria-selected="false">待上架</button>
+                  <button type="button" class="ui-menu-item" role="option" data-value="启用中" aria-selected="false">启用中</button>
+                  <button type="button" class="ui-menu-item" role="option" data-value="已停用" aria-selected="false">已停用</button>
                   <button type="button" class="ui-menu-item" role="option" data-value="已上架" aria-selected="false">已上架</button>
                   <button type="button" class="ui-menu-item" role="option" data-value="已下架" aria-selected="false">已下架</button>
                 </div>
@@ -460,6 +465,13 @@
         var all = getThemes();
         var doomed = all.find(function(t) { return t.id === id; });
         var refs = doomed && window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported() ? collectVideoMediaRefs(doomed) : [];
+        if(doomed&&KioskDefaultAds.isDefault(doomed)){
+          var context=KioskAdActivities.getContext();
+          if(!context.canWrite||context.scope!==doomed.interactionScope||doomed.publishStatus==='published'){KioskDefaultAdUI.message('仅可删除当前品牌已停用的默认广告');return;}
+          saveThemes(all.filter(function(t){return t.id!==id;}));closeDeleteConfirmModal();render();
+          if(refs.length)refs.forEach(function(ref){KioskThemeMediaIdb.del(ref).catch(function(){});});
+          return;
+        }
         function applyDelete() {
           cancelAllChannelDisplayOpTimersForTheme(id);
           var list = all.filter(function(t) { return t.id !== id; });
@@ -792,6 +804,7 @@
       }
 
       function getThemeEffectStatus(theme) {
+        if(theme&&KioskDefaultAds.isDefault(theme))return {text:theme.publishStatus==='published'?'启用中':'已停用',color:'bg-gray-100 text-gray-600'};
         var range = parseStoredThemeEffectRange(theme);
         if (range) return computeEffectStatusByRange(range.start, range.end, Date.now());
         return theme ? computeEffectStatus(theme.effectTime) : null;
@@ -817,6 +830,7 @@
       }
 
       function formatThemeEffectRangeForStore(theme, store) {
+        if(theme&&KioskDefaultAds.isDefault(theme))return '长期有效';
         var range = parseStoredThemeEffectRange(theme);
         if (!range) return theme && theme.effectTime ? String(theme.effectTime) : '--';
         var tz = getStoreTimezone(store);
@@ -828,6 +842,7 @@
       }
 
       function getThemeEffectDisplayText(theme) {
+        if(KioskDefaultAds.isDefault(theme))return '长期有效';
         if (!theme) return '--';
         if (theme.effectTime && theme.effectTime !== '--') return String(theme.effectTime);
         return formatThemeEffectRangeForStore(theme, { timezone: DEFAULT_STORE_TIMEZONE });
@@ -842,6 +857,7 @@
 
       /** 上架状态：草稿为待上架；已上架且已失效为已下架；已上架否则为已上架（色板对齐 Figma Tag） */
       function getListShelfStatus(theme) {
+        if(KioskDefaultAds.isDefault(theme))return {text:theme.publishStatus==='published'?'启用中':'已停用',tagClass:theme.publishStatus==='published'?'bg-green-100 text-green-700':'bg-gray-200 text-gray-600'};
         if (!theme) return { text: '—', tagClass: 'theme-list-tag-default' };
         if (theme.publishStatus === 'draft') {
           return { text: '待上架', tagClass: 'theme-list-tag-orange' };
@@ -889,6 +905,7 @@
       }
 
       function getStoreEffectFilterOptionsByTheme(theme) {
+        if(theme&&KioskDefaultAds.isDefault(theme))return ['',theme.publishStatus==='published'?'启用中':'已停用'];
         var shelf = getListShelfStatus(theme);
         if (shelf.text === '待上架') {
           return ['', '待生效'];
@@ -924,6 +941,7 @@
 
       /** 门店详情：渠道操作始终可用（点击后立即生效，无中间态） */
       function isStoreDetailChannelUiOperable(theme, store) {
+        if(theme&&KioskDefaultAds.isDefault(theme))return false;
         return true;
       }
 
@@ -985,7 +1003,7 @@
         var seen = {};
         for (var i = 0; i < allThemes.length; i++) {
           var other = allThemes[i];
-          if (!other || other.id === candidate.id) continue;
+          if (!other || KioskDefaultAds.isDefault(other) || other.id === candidate.id) continue;
           if (!KioskAdSlots.samePosition(candidate,other)) continue;
           if (!isListShelfPublishedForOverlap(other)) continue;
           var otherRange = parseStoredThemeEffectRange(other);
@@ -1118,8 +1136,12 @@
         return out.join('\n').trim();
       }
 
+      var defaultRenderRevision=0;
+      window.addEventListener('ad-activity-context',function(){render();});
+      document.getElementById('filterAdPurpose').addEventListener('change',function(){currentPage=1;render();});
       function render() {
-        var list = getThemes();
+        var revision=++defaultRenderRevision,scope=KioskAdActivities.getContext().scope;
+        var list = getThemes().filter(function(t){return !KioskDefaultAds.isDefault(t)||!!scope&&t.interactionScope===scope;});
         var emptyState = document.getElementById('emptyState');
         var listState = document.getElementById('listState');
         var container = document.getElementById('themeListContainer');
@@ -1171,6 +1193,7 @@
         var filterEndDate = document.getElementById('filterEndDate').value;
 
         list = list.filter(function(t) {
+          if (document.getElementById('filterAdPurpose').value && (t.adPurpose||'campaign')!==document.getElementById('filterAdPurpose').value)return false;
           if (filterName && (!t.name || t.name.toLowerCase().indexOf(filterName) < 0)) return false;
 
           var shelfSt = getListShelfStatus(t);
@@ -1196,6 +1219,7 @@
         lastFilteredTotal = list.length;
 
         function finalizeListRender() {
+        if(revision!==defaultRenderRevision)return;
         var totalCount = list.length;
         var totalPages = Math.ceil(totalCount / pageSize) || 1;
         if (currentPage > totalPages) currentPage = totalPages;
@@ -1209,8 +1233,10 @@
         }
 
         var html = pagedList.map(function(t) {
+          var defaultAd=KioskDefaultAds.isDefault(t);
           var effectStr = getThemeEffectDisplayText(t);
           var shelfStatus = getListShelfStatus(t);
+          var purposeBadge='<span class="mr-2 inline-flex rounded-lg bg-gray-100 px-2 py-px text-xs leading-5">'+(defaultAd?'默认展示':'活动投放')+'</span>';
           var shelfStatusBadge = '<span class="inline-flex items-center rounded-lg px-2 py-px text-xs font-normal leading-5 ' + shelfStatus.tagClass + '">' + escapeHtml(shelfStatus.text) + '</span>';
           var storeCount = t.distributedStores && t.distributedStores.length ? t.distributedStores.length : 0;
           var storeCol = storeCount
@@ -1227,7 +1253,9 @@
           var dropdownParts = [];
           var copyHref=(window.appendMenusifuEmbeddedParam||function(u){return u;})('screensaver-create.html?copyFrom='+encodeURIComponent(t.id));
           dropdownParts.push('<a class="ui-menu-item" href="'+copyHref+'">'+MENU_ICN.edit+'<span>复制广告</span></a>');
-          if (!isPublished) {
+          if(!defaultAd){var defaultHref=(window.appendMenusifuEmbeddedParam||function(u){return u;})('screensaver-create.html?copyFrom='+encodeURIComponent(t.id)+'&asDefault=1');dropdownParts.push('<a class="ui-menu-item" href="'+defaultHref+'">'+MENU_ICN.edit+'<span>复制为默认广告</span></a>');}
+          if(defaultAd){dropdownParts.push(menuBtn(isPublished?'unpublish-btn':'enable-default-btn',isPublished?MENU_ICN.cloudDn:MENU_ICN.cloudUp,isPublished?'停用':'启用','data-theme-id="'+escapeHtml(t.id)+'"'));dropdownParts.push(editRow);dropdownParts.push(split);if(!isPublished)dropdownParts.push(menuBtnDanger('delete-btn','删除'));}
+          else if (!isPublished) {
             dropdownParts.push(menuBtn('publish-btn', MENU_ICN.cloudUp, '\u4e0a\u67b6', 'data-theme-id="' + escapeHtml(t.id) + '"'));
             dropdownParts.push(editRow);
             dropdownParts.push(split);
@@ -1265,7 +1293,7 @@
           return '<div class="theme-list-card screensaver-card relative flex flex-wrap items-center gap-4 px-4 py-4 sm:flex-nowrap sm:gap-8 sm:px-8 sm:py-6" data-id="' + escapeHtml(t.id) + '">' +
             renderThumbStage(t) +
             '<div class="flex min-h-[136px] min-w-0 basis-full flex-1 flex-col gap-3 sm:basis-auto">' +
-              '<h3 class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">' + escapeHtml(t.name) + '</h3>' +
+              '<h3 class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">' + escapeHtml(t.name) + ' '+purposeBadge+'</h3>' +
               metaRow +
               buildChannelTagsHtml(t) +
             '</div>' +
@@ -1305,6 +1333,7 @@
             openDeleteConfirmModal();
           });
         });
+        container.querySelectorAll('.enable-default-btn').forEach(function(btn){btn.onclick=function(){var id=btn.getAttribute('data-theme-id');window.location.href=(window.appendMenusifuEmbeddedParam||function(u){return u;})('store-select.html?themeId='+encodeURIComponent(id)+'&from=edit');};});
         container.querySelectorAll('.publish-btn').forEach(function(btn) {
           btn.addEventListener('click', async function() {
             var id = this.getAttribute('data-theme-id');
@@ -1356,6 +1385,7 @@
             var themes = getThemes();
             var th = themes.find(function(x) { return x.id === id; });
             if (!th) return;
+            if(KioskDefaultAds.isDefault(th)){var context=KioskAdActivities.getContext();if(!context.canWrite||context.scope!==th.interactionScope){KioskDefaultAdUI.message('当前品牌或账号无权停用该广告');return;}}
             KioskAdTargetPolicy.preserveHistory(th, th);
             th.publishStatus = 'draft';
             saveThemes(themes);
@@ -2031,6 +2061,7 @@
       }
 
       function renderOneChannelCell(store, theme, cs, operable) {
+        if(KioskDefaultAds.isDefault(theme))return '<div class="rounded-lg bg-gray-50 p-3 text-sm">'+escapeHtml(cs.channel)+' · '+(theme.publishStatus==='published'?'启用中':'已停用')+'</div>';
         var midAttr = escapeHtml(String(store.mid || ''));
         var chLabel = cs.channel != null && cs.channel !== '' ? String(cs.channel) : '\u2014';
         var chNameAttr = escapeHtml(chLabel);
@@ -2418,7 +2449,8 @@
       });
 
       document.getElementById('filterResetBtn').addEventListener('click', function() {
-        document.getElementById('filterName').value = '';
+        document.getElementById('filterAdPurpose').value = '';
+          document.getElementById('filterName').value = '';
         document.getElementById('filterShelfStatus').value = '';
         document.getElementById('filterStartDate').value = '';
         document.getElementById('filterEndDate').value = '';

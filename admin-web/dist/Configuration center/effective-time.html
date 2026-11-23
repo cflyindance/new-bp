@@ -10,6 +10,8 @@
   <script src="assets/kiosk-ad-slot-context.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-default-ads.js"></script>
+  <script src="assets/kiosk-default-ad-ui.js"></script>
   <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-ad-slot-validation.js"></script>
@@ -319,7 +321,7 @@
           var other = themes[i];
           if (!other || other.id === candidate.id) continue;
           if (!KioskAdSlots.samePosition(candidate,other)) continue;
-          if (other.publishStatus !== 'published') continue;
+          if (other.publishStatus !== 'published' || KioskDefaultAds.isDefault(other)) continue;
           var eff = computeEffectStatus(other.effectTime);
           if (!eff || eff.text !== '已生效') continue;
           var otherRange = parseStoredThemeEffectRange(other);
@@ -493,6 +495,7 @@
             var themes = raw ? JSON.parse(raw) : [];
             var theme = themes.filter(function(t) { return t.id === themeId; })[0];
             if (theme) {
+              if(KioskDefaultAds.isDefault(theme)){Toast.validate('默认广告无需设置生效时间，请返回选择门店');return;}
               KioskAdTargetPolicy.preserveHistory(theme, theme);
               theme.distributeTime = '--';
               theme.publishStatus = 'draft';

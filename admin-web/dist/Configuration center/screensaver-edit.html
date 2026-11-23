@@ -11,6 +11,8 @@
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-display-positions.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-default-ads.js"></script>
+  <script src="assets/kiosk-default-ad-ui.js"></script>
   <script src="assets/kiosk-ad-activities.js"></script>
   <script src="assets/kiosk-ad-target-policy.js"></script>
   <script src="assets/kiosk-theme-position-editor.js"></script>
@@ -1003,6 +1005,7 @@
               var original = list[idx];
               list[idx] = JSON.parse(JSON.stringify(original));
               if (idx >= 0) {
+                list[idx].adPurpose=result.adPurpose;
                 list[idx].adSlot=result.slot;
                 list[idx].interactionScope=result.interactionScope;
                 list[idx].adSlotAssets=result.bySpec;
@@ -1010,7 +1013,7 @@
                 list[idx].name = name;
                 list[idx].distributePositions = [adPositionEditor.value()];
                 if (list[idx].lastDistributePrefs) list[idx].lastDistributePrefs = Object.assign({}, list[idx].lastDistributePrefs, {positions:[adPositionEditor.value()],channels:[result.slot.productLine]});
-                list[idx].publishStatus = saveAsDraft ? 'draft' : 'published';
+                list[idx].publishStatus = saveAsDraft ? 'draft' : result.adPurpose==='default' ? original.publishStatus : 'published';
                 list[idx].idleTimeoutSec = idleTimeoutSec;
                 list[idx].transitionEffect = transitionEffect;
                 list[idx].carouselIntervalSec = carouselIntervalSec;

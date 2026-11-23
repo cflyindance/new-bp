@@ -8,7 +8,10 @@
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/embedded-mode.js"></script>
   <script src="assets/kiosk-ad-slot-catalog.js"></script>
+  <script src="assets/kiosk-default-ads.js"></script>
+  <script src="assets/kiosk-default-ad-ui.js"></script>
   <script src="assets/kiosk-ad-slot-context.js"></script>
+  <script src="assets/kiosk-ad-activities.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -267,8 +270,10 @@
     })();
 
     updateSelected();
+    var defaultTheme=JSON.parse(localStorage.getItem('kiosk_themes')||'[]').find(function(t){return t.id===(new URLSearchParams(location.search).get('themeId')||localStorage.getItem('current_theme_id_for_distribute'));});
+    if(defaultTheme&&KioskDefaultAds.isDefault(defaultTheme)){document.getElementById('nextBtn').textContent='保存并启用';document.getElementById('nextBtnActive').textContent='保存并启用';document.querySelector('.step-progress-inner').style.width='100%';var hint=Array.from(document.querySelectorAll('p')).find(function(p){return p.textContent.indexOf('至少选择一家门店后可进入下一步')>=0;});if(hint)hint.textContent='至少选择一家门店后可保存并启用';}
 
-    document.getElementById('nextBtnActive').addEventListener('click', function(e) {
+    document.getElementById('nextBtnActive').addEventListener('click', async function(e) {
       e.preventDefault();
       var checked = document.querySelectorAll('.store-checkbox:checked');
       var stores = [].map.call(checked, function(cb) {
@@ -279,6 +284,12 @@
       } catch (err) {}
       var params = new URLSearchParams(location.search);
       var fromQ = params.get('from') || '';
+      var tid=params.get('themeId')||localStorage.getItem('current_theme_id_for_distribute');
+      var current=JSON.parse(localStorage.getItem('kiosk_themes')||'[]').find(function(t){return t.id===tid;});
+      if(current&&KioskDefaultAds.isDefault(current)){
+        var button=this;if(button.dataset.busy==='1')return;button.dataset.busy='1';
+        try{if(await KioskDefaultAdUI.enable(tid,stores))window.location.href=window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');}catch(error){await KioskDefaultAdUI.message(error.message);}finally{button.dataset.busy='';}return;
+      }
       var chUrl = 'effective-time.html' + (fromQ ? ('?from=' + encodeURIComponent(fromQ)) : '');
       window.location.href = window.appendMenusifuEmbeddedParam(chUrl);
     });

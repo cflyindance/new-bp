@@ -15,9 +15,13 @@
     function latest(){return JSON.parse(localStorage.getItem('kiosk_themes')||'[]').find(function(t){return theme&&t.id===theme.id;});}
     function editable(){var current=existing?latest():null;return !existing||!!current&&policy.canEditTarget(current);}
     function assertSave(){if(existing){var current=latest();if(current&&current.interactionScope&&current.interactionScope!==KioskAdActivities.getContext().scope)throw Error('广告活动属于其他品牌，请切换正确品牌或复制后重新配置');policy.assertSave(current,opened,selected||{});}}
+    var purpose=existing?(theme.adPurpose||'campaign'):(new URLSearchParams(location.search).get('asDefault')==='1'?'default':theme&&config.copy&&theme.adPurpose||'campaign');
     var picking=!selected&&editable();
     var section=document.createElement('section');section.className='mx-auto w-full max-w-4xl rounded-2xl border border-[#f0f0f0] bg-white p-4 sm:p-8 shadow-sm';
     section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div class="grid gap-4 sm:grid-cols-2"><div class="min-w-0"><label id="adSlotSearchLabel" class="mb-3 block"><input id="adSlotSearch" type="search" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm" aria-label="搜索展示位置" placeholder="搜索位置名称或场景"></label><div id="adSlotGrid" class="grid content-start gap-2" role="radiogroup" aria-label="展示位置"></div></div><details id="adSlotPreview" class="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3"><summary class="cursor-pointer text-sm font-medium sm:hidden">查看位置示例</summary><div id="adSlotPreviewContent" aria-live="polite"></div></details></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
+    var purposeBox=document.createElement('fieldset');purposeBox.className='mb-8';purposeBox.innerHTML='<legend class="mb-4 text-base font-medium">广告用途</legend><div class="grid grid-cols-2 gap-3">'+radio('adPurpose','campaign','活动投放',purpose==='campaign')+radio('adPurpose','default','默认展示',purpose==='default')+'</div>';purposeBox.hidden=existing;section.prepend(purposeBox);
+    purposeBox.addEventListener('change',async function(e){if(e.target.name!=='adPurpose')return;var nextPurpose=e.target.value;flush();if(nextPurpose==='default'&&allBankItems().some(function(item){return item.clickAction&&item.clickAction.type!=='none';})&&!await confirmChange('默认广告不支持跳转。切换后将清除当前副本中的点击行为，是否继续？')){purposeBox.querySelectorAll('input').forEach(function(r){r.checked=r.value===purpose;});return;}purpose=nextPurpose;purposeBox.querySelectorAll('label').forEach(function(label){var checked=label.querySelector('input').value===purpose;label.classList.toggle('border-primary',checked);label.classList.toggle('bg-[#e6f4ff]',checked);label.classList.toggle('border-[#d9d9d9]',!checked);});if(purpose==='default')allBankItems().forEach(function(item){item.clickAction={type:'none'};});renderMedia();});
+    function allBankItems(){return Object.values(bank).concat(Object.values(cache).filter(function(v){return v&&typeof v==='object';}).flatMap(function(v){return Object.values(v);})).flat().filter(function(v){return v&&typeof v==='object'&&('type' in v||'assetId' in v);});}
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
     var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
@@ -89,7 +93,7 @@
       document.getElementById('adChannelGrid').innerHTML=api.CHANNELS.map(function(c){return radio('adChannel',c,c,c===channel);}).join('');
       var options=api.available(slots,channel);renderSlotPicker(options);renderSlotPreview(options);
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
-      summary.querySelector('span').textContent=selected?'投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
+      summary.querySelector('span').textContent=selected?(purpose==='default'?'默认展示':'活动投放')+'　投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
       summary.querySelector('button').hidden=!existing||!editable();
       notice.hidden=!existing||editable();
       if(!notice.hidden){notice.textContent=latest()&&policy.history(latest())==='published'?'已投放广告的渠道与位置不可修改。':'历史投放状态无法确认，渠道与位置不可修改。';var link=document.createElement('a');link.textContent='复制广告';link.className='ml-3 text-primary';link.href=(window.appendMenusifuEmbeddedParam||function(v){return v;})('screensaver-create.html?copyFrom='+encodeURIComponent(theme.id));notice.append(link);}
@@ -108,7 +112,7 @@
     next.addEventListener('click',function(){if(next.disabled)return;if(cache.__legacy){['portrait','landscape'].forEach(function(role){if(specs(role).length){var carried=cache.__legacy[role]||[],targetItems=bank[spec(role).id]||[];carried.forEach(function(item){if(!targetItems.some(function(v){return v===item||(v.assetId&&item.assetId?v.assetId===item.assetId:(v.mediaRef&&v.mediaRef===item.mediaRef)||(v.url&&v.url===item.url));}))targetItems.push(item);});bank[spec(role).id]=targetItems;}else orphaned=orphaned.concat(cache.__legacy[role]||[]);});delete cache.__legacy;}picking=false;staged=null;refresh();['portrait','landscape'].forEach(function(role){if(hooks)hooks.set(role,bank[spec(role).id]||[]);});renderMedia();scheduleCompatibility();});
     window.addEventListener('storage',function(event){if(event.key==='kiosk_themes'){if(!editable())cancelChange();refresh();}if(event.key===api.PLATFORM_KEY){try{slots=api.readCatalog(localStorage);catalogError='广告位配置已更新，保存前将重新校验';}catch(e){catalogError=e.message;}refresh();}});
     refresh();
-    async function loadItems(items){var list=await hooks.load(items);if(config.copy){for(var item of list){if(item.type==='video'&&item.mediaRef){var blob=await KioskThemeMediaIdb.get(item.mediaRef);if(!blob)throw Error('源视频已失效，无法复制');item.file=blob;delete item.mediaRef;}}}return list;}
+    async function loadItems(items){var list=await hooks.load(items);if(config.copy&&purpose==='default')list.forEach(function(item){item.clickAction={type:'none'};});if(config.copy){for(var item of list){if(item.type==='video'&&item.mediaRef){var blob=await KioskThemeMediaIdb.get(item.mediaRef);if(!blob)throw Error('源视频已失效，无法复制');item.file=blob;delete item.mediaRef;}}}return list;}
     async function metadata(item){
       var source=item.url||item.dataUrl;var blob=item.file;
       if(!blob){if(!source&&item.mediaRef&&root.KioskThemeMediaIdb)blob=await KioskThemeMediaIdb.get(item.mediaRef);else{var response=await fetch(source);if(!response.ok)throw Error('无法读取素材，请重新上传');blob=await response.blob();}}
@@ -132,11 +136,13 @@
         }
       }
       if(!count)throw Error('请至少配置一套规格的广告素材');
+      if(purpose==='default')KioskDefaultAds.validateDefault({adPurpose:purpose,adSlot:selected,interactionScope:KioskAdActivities.getContext().scope,adSlotAssets:bySpec});
       var activityContext=KioskAdActivities.getContext(),interactionScope=activityContext.scope;
+      if(purpose==='default'&&(!interactionScope||!activityContext.canWrite))throw Error('当前品牌或账号无权保存默认广告');
       await KioskAdActivities.validateThemeActions({adSlot:selected,adSlotAssets:bySpec,interactionScope:interactionScope},activityContext);
       if(KioskAdActivities.getContext().scope!==interactionScope)throw Error('品牌上下文已变化，请重新打开广告');
       if(warnings.length&& !(await confirmChange('以下素材与推荐尺寸不同：\n'+warnings.join('\n')+'\n是否保留当前素材并继续保存？')))throw Error('已取消保存，请检查素材尺寸');
-      return {bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected)),interactionScope:interactionScope};
+      return {adPurpose:purpose,bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected)),interactionScope:interactionScope};
     }
     root.addEventListener('ad-activity-context',function(){if(hooks&&selected)scheduleCompatibility();});
     return {
@@ -154,7 +160,7 @@
         else if(th){cache.__legacy={portrait:await loadItems(th.portraitImages||[]),landscape:await loadItems(th.landscapeImages||[])};}
         if(selected)['portrait','landscape'].forEach(function(role){hooks.set(role,bank[spec(role).id]||[]);});renderMedia();
       },
-      canEditActivity:function(){return !existing||!theme.interactionScope||theme.interactionScope===KioskAdActivities.getContext().scope;},allMedia:function(){flush();return selected?selected.specs.flatMap(function(s){return bank[s.id]||[];}):[];},refreshMedia:renderMedia,refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
+      purpose:function(){return purpose;},canEditActivity:function(){return purpose!=='default'&&(!existing||!theme.interactionScope||theme.interactionScope===KioskAdActivities.getContext().scope);},allMedia:function(){flush();return selected?selected.specs.flatMap(function(s){return bank[s.id]||[];}):[];},refreshMedia:renderMedia,refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
       back:function(){if(staged)return cancelChange();if(existing||config.formId==='editForm'||picking)return false;flush();picking=true;refresh();return true;}
     };
   }

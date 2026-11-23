@@ -10,6 +10,7 @@
       var item=items[Number(card.dataset.index)];if(!item)return;if(!item.assetId)item.assetId=crypto.randomUUID();
       var existing=card.querySelector('.ad-asset-actions');if(existing)existing.remove();
       var bar=document.createElement('div');bar.className='ad-asset-actions';
+      if(editor.purpose&&editor.purpose()==='default'){bar.textContent='不跳转';card.append(bar);return;}
       var configure=document.createElement('button');configure.type='button';configure.textContent=api.actionLabel(item.clickAction)+' · 设置';configure.title=configure.textContent;configure.setAttribute('aria-label','配置素材 '+(Number(card.dataset.index)+1)+' 的点击行为');
       var preview=document.createElement('button');preview.type='button';preview.textContent='查看跳转信息';preview.setAttribute('aria-label','查看素材 '+(Number(card.dataset.index)+1)+' 的跳转信息');
       configure.disabled=!api.getContext().canWrite||!editor.canEditActivity();configure.__adEditor=editor;configure.title=configure.disabled?'请从有编辑权限的品牌广告入口进入':configure.title;
