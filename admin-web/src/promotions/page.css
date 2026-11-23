@@ -1,12 +1,12 @@
 .promotion-page { --promotion-accent: #1677ff; background: var(--color-card); color: var(--color-card-foreground); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; min-width: 0; }
-.promotion-toolbar, .promotion-filters, .promotion-page footer, .promotion-dialog > header, .promotion-dialog > header > div { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.promotion-toolbar, .promotion-page footer, .promotion-dialog > header, .promotion-dialog > header > div { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .promotion-query, .promotion-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .promotion-query { flex: 1 1 28rem; min-width: 0; }
 .promotion-toolbar, .promotion-page footer, .promotion-dialog > header { justify-content: space-between; }
 .promotion-query input { flex: 1 1 14rem; min-width: 0; max-width: 360px; }
-.promotion-filters { margin-block: 16px; }
-.promotion-query label, .promotion-filters label { display: flex; align-items: center; gap: 8px; }
-.promotion-toolbar button, .promotion-toolbar input, .promotion-toolbar select, .promotion-filters select, .promotion-page footer button, .promotion-table button, .promotion-dialog > header button, .promotion-body form button, .promotion-body form select, .promotion-body form input:not([type=checkbox]):not([type=radio]) { min-height: 48px; border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; background: var(--color-card); color: var(--color-card-foreground); font: inherit; }
+.promotion-toolbar { margin-bottom: 16px; }
+.promotion-query label { display: flex; align-items: center; gap: 8px; }
+.promotion-toolbar button, .promotion-toolbar input, .promotion-toolbar select, .promotion-page footer button, .promotion-table button, .promotion-dialog > header button, .promotion-body form button, .promotion-body form select, .promotion-body form input:not([type=checkbox]):not([type=radio]) { min-height: 48px; border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; background: var(--color-card); color: var(--color-card-foreground); font: inherit; }
 .promotion-page button { cursor: pointer; }
 .promotion-page button:disabled, .promotion-page input:disabled, .promotion-page select:disabled { opacity: .55; cursor: default; }
 .promotion-page button.promotion-primary { background: var(--promotion-accent); color: var(--color-primary-foreground); border-color: var(--promotion-accent); }
@@ -52,11 +52,11 @@
 .promotion-body form legend { margin-bottom: 8px; font-weight: 600; }
 .promotion-body form small { display: block; color: var(--color-muted-foreground); font-size: 12px; line-height: 1.5; }
 .promotion-span { grid-column: 1 / -1; }
-.promotion-body form .promotion-choice { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card); cursor: pointer; }
+.promotion-body .promotion-choice { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card); cursor: pointer; }
 .promotion-choice input { flex: none; margin-top: 3px; accent-color: var(--promotion-accent); }
 .promotion-choice strong { font-size: 14px; font-weight: 600; }
-.promotion-body form .promotion-choice:has(:checked) { border-color: var(--promotion-accent); background: color-mix(in srgb, var(--promotion-accent) 7%, var(--color-card)); }
-.promotion-body form .promotion-choice:has(:disabled) { cursor: default; }
+.promotion-body .promotion-choice:has(:checked) { border-color: var(--promotion-accent); background: color-mix(in srgb, var(--promotion-accent) 7%, var(--color-card)); }
+.promotion-body .promotion-choice:has(:disabled) { cursor: default; }
 .promotion-body form .promotion-rule { border: 1px solid var(--color-border); border-radius: 10px; padding: 12px; }
 .promotion-rule legend { padding-inline: 4px; }
 .promotion-options > div { margin-top: 8px; }
@@ -69,3 +69,12 @@
   .promotion-page, .promotion-body { padding: 16px; }
   .promotion-body form fieldset, .promotion-options > div, .promotion-code { grid-template-columns: minmax(0, 1fr); }
 }
+.promotion-activation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.promotion-activation-pending { color: var(--color-muted-foreground); font-size: 12px; }
+.promotion-dialog-activation { width: min(500px, calc(100vw - 32px)); }
+.promotion-body .promotion-activation-options { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.promotion-activation-options legend { margin-bottom: 12px; }
+.promotion-activation-options small { color: var(--color-muted-foreground); font-size: 12px; }
+.promotion-activation-count { margin-inline-start: auto; }
+.promotion-body .promotion-activation-impact:not(:empty) { margin: 12px 0 0; padding: 12px; border-radius: 8px; background: var(--color-muted); color: var(--color-card-foreground); }
+.promotion-activation-impact:empty { display: none; }
