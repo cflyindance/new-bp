@@ -12440,9 +12440,22 @@ function mountInitializedPage(): void {
   /** 全量重绘会替换 #nav-tree：合并 DOM 读值与 session 记忆，避免二次 mount 时读到的 scrollTop 为 0 */
   const prevNavScrollTop = document.getElementById("nav-tree")?.scrollTop ?? 0;
   const targetNavScroll = Math.max(prevNavScrollTop, readSidebarNavScrollMemory());
-  const prevMainScrollTop = document.querySelector<HTMLElement>("#app main")?.scrollTop ?? 0;
+  const currentPath = readAppHashPath();
+  const standaloneDecoration = /^\/brand-decoration\/pages\/edit\/[^/?]+$/.test(currentPath.split("?")[0]);
+  const previousMain = app.querySelector<HTMLElement>("main");
+  const prevMainScrollTop = previousMain?.hasAttribute("data-decoration-workbench") === standaloneDecoration
+    ? previousMain.scrollTop
+    : 0;
+  const decorationGate = standaloneDecoration ? renderServiceGate(currentPath) : null;
 
-  app.innerHTML = `
+  app.innerHTML = standaloneDecoration ? `
+    <div class="flex h-dvh min-h-0 w-full flex-col overflow-hidden">
+      ${renderImpersonationBanner()}
+      <main data-decoration-workbench class="min-h-0 min-w-0 flex-1 overflow-auto bg-background">
+        ${decorationGate ?? (renderServiceTrialNotice(currentPath) + renderBrandDecorationPage(currentPath))}
+      </main>
+    </div>
+  ` : `
     <div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden">
       ${renderImpersonationBanner()}
       <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
