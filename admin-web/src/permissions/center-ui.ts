@@ -1,3 +1,6 @@
+import {listStaffLoginAccounts} from './staff-account-store';
+import {openCenterAccount} from './center-account-opening';
+import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {isRoleOnlyMigrationAudit} from './center-audit-visibility';
 import {auditEmployeeName} from './center-audit-employee';
@@ -48,6 +51,7 @@ export function bindCenterPage(): void {
   const isDetail=!!roleId||!!employeeId;
   const role=()=>draft.roles.find(r=>r.id===roleId);
   const employee=()=>draft.employees.find(e=>e.id===employeeId);
+  const accountStatus=(e:Employee)=>{const a=listStaffLoginAccounts().find(a=>a.employeeId===e.id);return a?.invitation?invitationStatus(a):statusLabels[e.status];};
   const actor=()=>getUserSessionContext()?.employeeName??'本地管理员';
   const memberCount=(id:string)=>state.employees.filter(e=>e.bindings.some(b=>b.roleId===id)).length;
   const btn=(label:string,action:string,cls='')=>`<button type="button" class="${cls}" data-do="${action}">${label}</button>`;
@@ -84,7 +88,7 @@ export function bindCenterPage(): void {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
     const tabs=`<div class="pc-tabs">${[['permissions','门店与权限'],['account','登录与安全'],['logs','变更记录']].map(([v,l])=>`<button data-tab="${v}" class="${tab===v?'active':''}">${l}</button>`).join('')}</div>`;
     if(tab==='logs')return tabs+`<div class="pc-card">${logs(e.id)}</div>`;
-    if(tab==='account')return tabs+`<section class="pc-card"><h2>登录与安全</h2><p>登录邮箱：${esc(e.email)||'—'}</p><p>账号状态：<span class="pc-tag">${statusLabels[e.status]}</span></p><div class="pc-actions">${e.status==='pending'||e.status==='revoked'?btn('重新发送邀请','resend'):''}${e.status==='pending'?btn('撤销邀请','revoke','danger'):''}${e.status==='enabled'||e.status==='disabled'?btn(e.status==='enabled'?'停用账号':'启用账号','toggle-account'):''}</div></section>`;
+    if(tab==='account')return tabs+`<section class="pc-card"><h2>登录与安全</h2><p>登录邮箱：${esc(e.email)||'—'}</p><p>账号状态：<span class="pc-tag">${accountStatus(e)}</span></p><div class="pc-actions">${e.status==='pending'||e.status==='revoked'?btn('重发演示邀请','resend'):''}${e.status==='pending'?btn('撤销邀请','revoke','danger'):''}${e.status==='pending'?btn('演示接受邀请','accept-invite'):''}${e.status==='enabled'||e.status==='disabled'?btn(e.status==='enabled'?'停用账号':'启用账号','toggle-account'):''}</div></section>`;
     return tabs+renderStaffRoles(e,draft.roles,stores);
   }
   function render():void {
@@ -95,7 +99,7 @@ export function bindCenterPage(): void {
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
-      else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('邀请员工','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||'—'}</td><td><span class="pc-tag">${statusLabels[e.status]}</span></td><td>${e.migrationReview?'待复核':e.bindings.map(b=>esc(state.roles.find(r=>r.id===b.roleId)?.name??'失效角色')).join('、')||'未授权'}</td><td>${link('管理详情',`/permissions/staff/${encodeURIComponent(e.id)}`)}</td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
+      else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||'—'}</td><td><span class="pc-tag">${accountStatus(e)}</span></td><td>${e.migrationReview?'待复核':e.bindings.map(b=>esc(state.roles.find(r=>r.id===b.roleId)?.name??'失效角色')).join('、')||'未授权'}</td><td>${link('管理详情',`/permissions/staff/${encodeURIComponent(e.id)}`)}</td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、授权员工、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
@@ -128,10 +132,12 @@ export function bindCenterPage(): void {
     },'保存');
   }
   function invite():void {
-    modal('邀请员工',`<label>员工姓名<input name="name" required maxlength="30" autocomplete="name"></label><label>员工邮箱<input name="email" required type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></label>`,d=>{
+    const dialog=modal('新增员工账号',accountOpeningFields()+`<label>员工姓名<input name="name" required maxlength="30" autocomplete="name"></label><label>登录邮箱<input name="email" required type="email" maxlength="254" autocomplete="email" placeholder="name@menusifu.cn"></label>`+accountPasswordFields(),d=>{
       const name=field(d,'name').trim(),email=field(d,'email').trim().toLowerCase();validateInvite(state,name,email);
-      const id=crypto.randomUUID(),next=structuredClone(state);next.employees.push({id,name,email,status:'pending',bindings:[],overrides:{}});commit(next,id,'发起邀请（本地模拟，未发送邮件）');return true;
-    },'记录邀请');
+      state=openCenterAccount(state,crypto.randomUUID(),{name,email,password:field(d,'password'),confirmPassword:field(d,'confirmPassword'),method:d.querySelector<HTMLInputElement>('[name=openingMethod]:checked')?.value==='invite'?'invite':'password'},actor());
+      draft=structuredClone(state);render();return true;
+    },'创建邀请');
+    bindAccountOpening(dialog);
   }
   function assign():void {
     if(!employee())return;
@@ -241,10 +247,18 @@ export function bindCenterPage(): void {
           const confirmation=modal('确认保存更改',`<p>${roleId?`影响 ${memberCount(id)} 位已绑定员工。`:'仅更新当前员工的草稿，包含已编辑的各门店。'}</p><button type="button" data-view-pending-change>查看变更前后值</button>`,()=>{commit(draft,id,action);return true;},'确认保存');
           confirmation.querySelector('[data-view-pending-change]')!.addEventListener('click',()=>changeDetail(pendingChange,true));break;
         }
-        case 'resend':case 'revoke':case 'toggle-account':{
-          const e=employee();if(!e)return;const action=b.dataset.do;
-          const nextStatus=action==='resend'?'pending':action==='revoke'?'revoked':e.status==='enabled'?'disabled':'enabled';
-          modal(action==='resend'?'重新记录邀请':action==='revoke'?'撤销邀请':'变更账号状态','<p>仅修改本地工作台状态，不调用真实账号服务。角色及门店范围保留；保存员工详情后记录此变更。</p>',()=>{e.status=nextStatus;mark();render();return true;},'加入草稿');break;
+        case 'accept-invite':case 'resend':case 'revoke':{
+          const e=employee();if(!e)return; if(dirty)throw Error('请先保存或取消当前员工的授权草稿');
+          const accepting=b.dataset.do==='accept-invite';
+          modal(accepting?'演示接受邀请':b.dataset.do==='resend'?'重发演示邀请':'撤销邀请',accepting?`<label>登录密码<input name="password" type="password" required minlength="6" autocomplete="new-password"></label><label>确认密码<input name="confirmPassword" type="password" required minlength="6" autocomplete="new-password"></label>`:'<p>仅更新本地演示邀请，不发送真实邮件。</p>',d=>{
+            state=openCenterAccount(state,e.id,{name:e.name,email:e.email,password:accepting?field(d,'password'):'',confirmPassword:accepting?field(d,'confirmPassword'):'',method:'invite'},actor(),accepting?'accept':b.dataset.do==='resend'?'resend':'revoke');draft=structuredClone(state);render();return true;
+          },accepting?'设置密码并启用':'确认');break;
+        }
+        case 'toggle-account':{
+          const e=employee();if(!e)return;if(dirty)throw Error('请先保存或取消当前员工的授权草稿');
+          modal(e.status==='enabled'?'停用账号':'启用账号','<p>角色及门店范围保留，确认后立即更新本地账号状态。</p>',()=>{
+            state=openCenterAccount(state,e.id,{name:e.name,email:e.email,password:'',confirmPassword:'',method:'password'},actor(),'toggle');draft=structuredClone(state);render();return true;
+          });break;
         }
       }
     }catch(e){error((e as Error).message);}

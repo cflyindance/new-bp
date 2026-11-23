@@ -1,0 +1,29 @@
+async (page) => {
+ await page.evaluate(async()=>{(await import('/src/auth/login.ts')).setAuthenticated('demo.menusifu.cn');(await import('/src/config/platform-preset-onboarding.ts')).markPlatformPresetOnboardingComplete('demo.menusifu.cn');(await import('/src/shell/app-shell-mode.ts')).enterMPlatformShell();});
+ await page.goto('http://127.0.0.1:5487/#/m-platform/permissions/staff');
+ await page.getByRole('button',{name:'新增员工账号',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});
+ const run=Date.now().toString(36);
+ const dir='docs/验证记录/images/employee-account-opening-20261123/';
+ const shot=async name=>page.screenshot({path:dir+name+'.png',fullPage:true});
+ const assert=(ok,msg)=>{if(!ok)throw Error(msg);};
+ const d=()=>page.locator('dialog').last();
+ await shot('m-01-invite');
+ await d().getByRole('radio',{name:'设置密码',exact:true}).check();await shot('m-02-password');
+ await d().locator('[name=employeeId]').fill(`onboarding-m-invite-${run}`);await d().locator('[name=employeeName]').fill('开通验收M');await d().locator('[name=email]').fill(`onboarding-m-${run}@menusifu.cn`);
+ await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('Mismatch123');await d().locator('[type=submit]').click();await shot('m-03-mismatch');assert((await d().innerText()).includes('不一致'),'M mismatch not rejected');
+ await d().getByRole('radio',{name:'邮箱邀请',exact:true}).check();await d().locator('[type=submit]').click();
+ await page.getByRole('row').filter({hasText:`onboarding-m-${run}@menusifu.cn`}).waitFor();await shot('m-04-pending');
+ const pending=await page.evaluate(async(run)=>{const a=(await import('/src/permissions/enterprise-staff-account-store.ts')).getStaffLoginAccountByEmail(`onboarding-m-${run}@menusifu.cn`);return {enabled:a.enabled,password:a.password};},run);assert(!pending.enabled&&pending.password==='','M invite enabled or persisted hidden password');
+ await page.getByRole('row').filter({hasText:`onboarding-m-${run}@menusifu.cn`}).getByRole('button',{name:'演示接受邀请'}).click();await shot('m-05-accept');await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('DemoPassword123');await d().locator('[type=submit]').click();await shot('m-06-enabled');
+ const mlogin=await page.evaluate(async(run)=>(await import('/src/auth/login.ts')).validateLoginCredentials(`onboarding-m-${run}@menusifu.cn`,'DemoPassword123'),run);assert(mlogin===null,'M accepted login failed');
+ await page.getByRole('button',{name:'新增员工账号',exact:true}).click();await d().getByRole('radio',{name:'设置密码',exact:true}).check();await d().locator('[name=employeeId]').fill(`onboarding-m-password-${run}`);await d().locator('[name=employeeName]').fill('密码验收M');await d().locator('[name=email]').fill(`onboarding-m-password-${run}@menusifu.cn`);await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('DemoPassword123');await d().locator('[type=submit]').click();await shot('m-07-direct-password');
+ await page.evaluate(async()=>{(await import('/src/shell/app-shell-mode.ts')).exitMPlatformShell();});await page.goto('http://127.0.0.1:5487/#/permissions/staff');
+ await page.getByRole('button',{name:'新增员工账号',exact:true}).waitFor();await shot('b-01-list');await page.getByRole('button',{name:'新增员工账号',exact:true}).click();await shot('b-02-invite');
+ await d().getByRole('radio',{name:'设置密码',exact:true}).check();await shot('b-03-password');await d().locator('[name=name]').fill('开通验收B');await d().locator('[name=email]').fill(`onboarding-b-${run}@menusifu.cn`);await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('Mismatch123');await d().locator('[type=submit]').click();await shot('b-04-mismatch');assert((await d().innerText()).includes('不一致'),'B mismatch not rejected');await d().getByRole('radio',{name:'邮箱邀请',exact:true}).check();await d().locator('[type=submit]').click();await shot('b-05-pending');
+ const row=page.getByRole('row').filter({hasText:`onboarding-b-${run}@menusifu.cn`});await row.getByRole('link',{name:'管理详情'}).click();await page.getByRole('button',{name:'登录与安全',exact:true}).click();await shot('b-06-security');await page.getByRole('button',{name:'演示接受邀请'}).click();await shot('b-07-accept');await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('DemoPassword123');await d().locator('[type=submit]').click();await shot('b-08-enabled');
+ const blogin=await page.evaluate(async(run)=>(await import('/src/auth/login.ts')).validateLoginCredentials(`onboarding-b-${run}@menusifu.cn`,'DemoPassword123'),run);assert(blogin===null,'B accepted login failed');
+ await page.goto('http://127.0.0.1:5487/#/permissions/staff');await page.getByRole('button',{name:'新增员工账号',exact:true}).click();await d().getByRole('radio',{name:'设置密码',exact:true}).check();await d().locator('[name=name]').fill('密码验收B');await d().locator('[name=email]').fill(`onboarding-b-password-${run}@menusifu.cn`);await d().locator('[name=password]').fill('DemoPassword123');await d().locator('[name=confirmPassword]').fill('DemoPassword123');await d().locator('[type=submit]').click();await shot('b-09-direct-password');
+ const result=await page.evaluate(async()=>{const m=await import('/src/permissions/m-platform-store.ts'),b=await import('/src/permissions/center-store.ts');return {audit:JSON.stringify([m.readMState().logs,b.readCenterState().logs]),bindings:b.readCenterState().employees.filter(e=>e.email.startsWith('onboarding-b')).map(e=>e.bindings.length)};});assert(!result.audit.includes('DemoPassword123'),'password leaked into audit');assert(result.bindings.every(n=>n===0),'implicit B grants');
+ console.log('PASS M/B invitation, method switch, mismatch, direct-password opening, invitation acceptance, real login checks, no implicit B grants, credential-free audit.');
+}

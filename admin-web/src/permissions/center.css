@@ -164,3 +164,16 @@
 .pc .pc-authorized-stores .pc-scope-list{display:grid;gap:0}
 .pc .pc-authorized-stores .pc-store-name{padding:12px 0;border-bottom:1px solid var(--pc-line);overflow-wrap:anywhere}
 .pc button.pc-scope-more{color:var(--pc-blue);border:0;background:transparent;padding:4px 0}
+
+/* Shared employee-account opening dialog. */
+.pc-dialog.pc-account-opening { width:min(640px,calc(100vw - 32px)); max-height:90dvh; overflow:hidden; }
+.pc-account-opening > form.pc { display:flex; flex-direction:column; max-height:calc(90dvh - 48px); }
+.pc-account-opening .pc-heading { display:flex; align-items:center; gap:12px; flex:none; }
+.pc-account-opening .pc-heading h2 { flex:1; margin:0; }
+.pc-account-opening .pc-form { overflow:auto; min-height:0; }
+.pc-account-opening [data-account-method] { display:flex; flex-wrap:wrap; gap:16px; border:0; padding:0; margin:0 0 16px; }
+.pc-account-opening [data-account-method] legend { margin-bottom:12px; }
+.pc-account-opening [data-account-method] label { display:flex; align-items:center; gap:8px; margin:0; }
+.pc-account-opening [data-account-method] input[type=radio] { width:16px; height:16px; flex:none; margin:0; }
+.pc-account-opening [data-account-passwords] { border:0; padding:0; margin:0; display:grid; gap:16px; min-width:0; }
+.pc-account-opening [data-account-passwords][hidden] { display:none; }
