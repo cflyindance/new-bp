@@ -1,0 +1,73 @@
+.containerBox___aP8PI {
+  width: 80rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+
+.title___lPNr0 {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 3rem;
+}
+
+.icon___2Q2Tj {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 2.5rem;
+  right: 2.5rem;
+  width: 6rem;
+  height: 6rem;
+  background-color: #eee;
+  border-radius: 50%;
+}
+
+.itemBox___YM8XR {
+  text-align: center;
+  color: #333;
+}
+.itemBox___YM8XR .itemName___ajevw {
+  font-size: 3.6rem;
+  font-weight: bold;
+  margin: 3rem 0;
+}
+.itemBox___YM8XR .subItemName___2MJr3 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.btnBox___7dou7 {
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem;
+  flex-direction: column;
+}
+.btnBox___7dou7 span {
+  display: inline-block;
+  width: 38rem;
+  height: 8rem;
+  font-size: 3rem;
+  text-align: center;
+  line-height: 8rem;
+  margin: 0 1.4rem;
+  color: var(--text-color-black);
+  border-radius: 4rem;
+  font-weight: bold;
+}
+.btnBox___7dou7 .cash___HW1s3 {
+  background-color: var(--background-grey);
+}
+.btnBox___7dou7 .continueOrder___T4Kdj {
+  background-color: var(--primary-selected-color);
+  margin-top: 2rem;
+}
+.btnBox___7dou7 .orderNoCash___-Kz6x {
+  width: 40rem;
+}

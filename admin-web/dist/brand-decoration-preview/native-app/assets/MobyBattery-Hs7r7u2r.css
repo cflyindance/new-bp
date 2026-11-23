@@ -1,0 +1,75 @@
+.LangSwitchContainer___-gH7u {
+  border: 0.2rem solid rgba(0, 0, 0, 0.1);
+  border-radius: 5.6rem;
+  color: var(--text-color-black);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  font-size: 2.4rem;
+  width: 11.7rem;
+  font-weight: bold;
+  height: 5rem;
+  margin-left: 2rem;
+  padding: 0.8rem;
+}
+.LangSwitchContainer___-gH7u .LangSwitchItem___aXq1b {
+  flex: 1 1;
+  text-align: center;
+  border-radius: 1.7rem;
+  line-height: 140%;
+}
+.LangSwitchContainer___-gH7u .LangSwitchItemActive___DsbIK {
+  background-color: var(--primary-color);
+  flex: 1.3 1;
+}#kioskNetworkStatus___4wvmr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+  margin-left: 2rem;
+}
+
+.speed___PwPtG {
+  margin-left: 0.8rem;
+  color: var(--primary-color);
+  font-size: 2.4rem;
+}
+
+.netImg___c-m8V {
+  width: 4.4rem;
+}
+
+.localTime___fiZPt {
+  width: 10.5rem;
+  margin-left: 1.2rem;
+  color: #000;
+  font-size: 2rem;
+  -webkit-font-feature-settings: "tnum";
+          font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}#kioskMobyStatus___Yu7Mw {
+  margin-left: 2rem;
+}
+
+.linkImg___lMn2x {
+  width: 4.4rem;
+}#kioskMobyBattery___qfcPP {
+  margin-left: 2rem;
+  display: flex;
+  align-items: center;
+}
+
+.linkImg___gRXRM {
+  width: 2rem;
+}
+
+.batteryTxt___cj3cf {
+  font-size: 2.4rem;
+  color: rgba(0, 0, 0, 0.6980392157);
+  font-weight: 600;
+  margin-left: 0.8rem;
+}

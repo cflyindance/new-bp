@@ -1,0 +1,459 @@
+@charset "UTF-8";
+.itemCard___w7w8x {
+  position: relative;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  height: 100%;
+  border: none;
+}
+
+.soldOut___LiPGX {
+  position: absolute;
+  display: flex;
+  color: #fff;
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 4.4rem;
+  font-weight: 700;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 1rem;
+  z-index: 2;
+}
+
+.itemCardInner___dkZoW {
+  width: 100%;
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.standardItemCard___H-FN2 .itemCardInner___dkZoW {
+  flex-wrap: nowrap;
+}
+.standardItemCard___H-FN2 .itemImage___3Cged,
+.standardItemCard___H-FN2 .itemPrice___SLg7A {
+  flex-shrink: 0;
+}
+.standardItemCard___H-FN2 .itemPrice___SLg7A {
+  min-height: 7rem;
+}
+
+.preSel___6p7Qd {
+  border-radius: 30rem;
+  font-size: 2rem;
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  padding: 1rem;
+  background-color: #c42c2d;
+  color: #fff;
+}
+
+.measuredItemCard___GOrfr .itemCardInner___dkZoW > * {
+  flex-shrink: 0;
+}
+.measuredItemCard___GOrfr .itemPrice___SLg7A {
+  min-height: 8rem;
+  padding-top: 1rem;
+}
+
+.itemImage___3Cged {
+  width: 100%;
+  height: 22rem;
+  background-color: transparent;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+.itemImage___3Cged img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+.itemImage___3Cged .stockNum___YuZHd {
+  position: absolute;
+  bottom: 0.8rem;
+  right: 0.8rem;
+}
+
+.itemName___VVByi {
+  font-weight: 700;
+  text-align: left;
+  width: 100%;
+  word-break: break-word;
+  font-size: 2.8rem;
+  color: var(--text-color-black);
+  max-height: 9rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  /* autoprefixer: off */
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  padding: 1rem 1.5rem 0;
+}
+
+.itemProperty___qiwEt {
+  padding: 0 1rem;
+}
+
+.cardTags___srg4J {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.itemPrice___SLg7A {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 2.8rem;
+  color: var(--text-color-black);
+  margin-top: auto;
+  align-items: center;
+  padding: 0 1.5rem 1.6rem;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q {
+  display: flex;
+  align-items: center;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q i {
+  font-style: normal;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q .min___iTqjz {
+  margin-left: 0.2rem;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q img {
+  height: 3rem;
+  vertical-align: middle;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q span {
+  color: #333;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q .specialItemOriginPrice___ZiWvp {
+  font-weight: 400;
+  font-size: 1.8rem;
+  text-decoration: line-through;
+  color: rgba(0, 0, 0, 0.5);
+}
+.itemPrice___SLg7A .leftPrice___DC-3q .specialItemPrice___FRDwM {
+  font-weight: 500;
+  font-size: 2.1rem;
+  margin-left: 1rem;
+}
+.itemPrice___SLg7A .leftPrice___DC-3q .specialItemPrice___FRDwM span {
+  color: var(--promotion-theme-color);
+}
+
+.priceText___RNgui {
+  margin-right: 0.8rem;
+}
+
+.stockNum___YuZHd {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5019607843);
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+
+.discount___sPI1D {
+  font-size: 2.8rem;
+  color: black;
+  font-weight: bold;
+  margin-right: 1.5rem;
+  letter-spacing: 0.5px;
+  line-height: 5rem;
+}
+
+.strikethroughPrice___8URV0 {
+  margin-left: 1.5rem;
+  text-decoration: line-through;
+  color: gray;
+  font-size: 2rem;
+}
+.strikethroughPrice___8URV0 i {
+  font-style: normal;
+}
+.strikethroughPrice___8URV0 .min___iTqjz {
+  margin-left: 0.2rem;
+}
+
+.comboCard___fkonQ {
+  box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.2);
+  background: none;
+}
+.comboCard___fkonQ .itemCardInner___dkZoW {
+  flex-wrap: nowrap;
+}
+.comboCard___fkonQ .itemCardInner___dkZoW > * {
+  flex-shrink: 0;
+}
+.comboCard___fkonQ .itemPrice___SLg7A.reserveCounterSpace___Lc69- {
+  min-height: calc(5.6rem + 2px);
+  padding-bottom: 0.5rem;
+}
+.comboCard___fkonQ.noOperationRow___mDE0u .itemCardInner___dkZoW {
+  padding-bottom: 1rem;
+  justify-content: flex-start;
+}
+.comboCard___fkonQ .itemPrice___SLg7A {
+  padding: 0 1rem 0.5rem;
+  margin-top: 1rem;
+  font-weight: 500;
+}
+.comboCard___fkonQ .itemName___VVByi {
+  padding: 0.5rem 1rem 0;
+}
+
+.singleMaxChosen___EdpcR {
+  box-shadow: 0 0 0 0.4rem rgba(0, 0, 0, 0.7);
+}
+
+.checkIcon___lz4ZD {
+  color: rgba(0, 0, 0, 0.7);
+  font-weight: normal;
+}
+
+.bannerProCard___e0jPp {
+  border-radius: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.bannerProCard___e0jPp.singleMaxChosen___EdpcR.simpleItemCard___mzGPh {
+  box-shadow: 0 0 0 0.6rem rgba(0, 0, 0, 0.7);
+}
+.bannerProCard___e0jPp.singleMaxChosen___EdpcR.simpleItemCard___mzGPh::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150%;
+  height: 100%;
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.1) 75%, transparent);
+  -webkit-transform: translateX(-100%);
+          transform: translateX(-100%);
+}
+
+@-webkit-keyframes slideIn___C38qG {
+  0% {
+    -webkit-transform: translateX(-100%);
+            transform: translateX(-100%);
+  }
+  99% {
+    -webkit-transform: translateX(-10%);
+            transform: translateX(-10%);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: translateX(-10%);
+            transform: translateX(-10%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn___C38qG {
+  0% {
+    -webkit-transform: translateX(-100%);
+            transform: translateX(-100%);
+  }
+  99% {
+    -webkit-transform: translateX(-10%);
+            transform: translateX(-10%);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: translateX(-10%);
+            transform: translateX(-10%);
+    opacity: 0;
+  }
+}
+.simpleItemCard___mzGPh .itemCardInner___dkZoW {
+  justify-content: center;
+}
+.simpleItemCard___mzGPh .itemName___VVByi {
+  padding: 0;
+  overflow: hidden;
+  word-break: break-word;
+  /* autoprefixer: off */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 2.4rem;
+  display: inline-block;
+  padding: 0.5rem 1rem 0;
+}
+.simpleItemCard___mzGPh .itemPrice___SLg7A {
+  font-size: 2.4rem;
+  padding: 0 1rem 1rem;
+}
+.simpleItemCard___mzGPh .bannerProName___tOiyx,
+.simpleItemCard___mzGPh .itemDetails___JOD4q {
+  display: flex;
+  align-items: center;
+  padding: 1rem 2.7rem;
+  color: rgba(0, 0, 0, 0.7);
+  position: relative;
+  height: 10rem;
+  max-height: none;
+  box-sizing: border-box;
+}
+.simpleItemCard___mzGPh .bannerProName___tOiyx.wrappedItem___P9LQA,
+.simpleItemCard___mzGPh .itemDetails___JOD4q.wrappedItem___P9LQA {
+  height: 14rem;
+}
+.simpleItemCard___mzGPh .bannerProName___tOiyx > .checkIcon___lz4ZD,
+.simpleItemCard___mzGPh .itemDetails___JOD4q > .checkIcon___lz4ZD {
+  flex-shrink: 0;
+  margin-right: 2.8rem;
+}
+.simpleItemCard___mzGPh .bannerProName___tOiyx > :last-child:not(.bannerProItem___ZZIiy):not(.bannerProDetailsPrice___dUGGu),
+.simpleItemCard___mzGPh .itemDetails___JOD4q > :last-child:not(.bannerProItem___ZZIiy):not(.bannerProDetailsPrice___dUGGu) {
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+.simpleItemCard___mzGPh .itemDetails___JOD4q {
+  justify-content: space-between;
+}
+.simpleItemCard___mzGPh .itemDetails___JOD4q.wrappedItem___P9LQA {
+  height: 14rem;
+}
+.simpleItemCard___mzGPh .itemDetails___JOD4q .itemName___VVByi {
+  padding: 0;
+  white-space: normal;
+  max-height: 2.8em;
+  text-align: center;
+}
+.simpleItemCard___mzGPh .itemDetails___JOD4q .itemPrice___SLg7A {
+  padding: 0;
+  justify-content: center;
+  margin: 0;
+}
+.simpleItemCard___mzGPh .bannerProItem___ZZIiy,
+.simpleItemCard___mzGPh .bannerProDetailsPrice___dUGGu {
+  flex: 1 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.simpleItemCard___mzGPh .bannerProItem___ZZIiy > *,
+.simpleItemCard___mzGPh .bannerProDetailsPrice___dUGGu > * {
+  transition: -webkit-transform 0.8s ease;
+  transition: transform 0.8s ease;
+  transition: transform 0.8s ease, -webkit-transform 0.8s ease;
+}
+.simpleItemCard___mzGPh .bannerProItem___ZZIiy .itemName___VVByi,
+.simpleItemCard___mzGPh .bannerProDetailsPrice___dUGGu .itemName___VVByi {
+  text-align: center;
+  padding: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.3;
+  max-height: 2.6em;
+}
+.simpleItemCard___mzGPh .bannerProNameChecked___K-A49.bannerProName___tOiyx.wrappedItem___P9LQA,
+.simpleItemCard___mzGPh .itemDetailsChecked___8kZgT.bannerProName___tOiyx.wrappedItem___P9LQA {
+  height: 14rem;
+}
+.simpleItemCard___mzGPh .bannerProNameChecked___K-A49 .bannerProItem___ZZIiy,
+.simpleItemCard___mzGPh .bannerProNameChecked___K-A49 .bannerProDetailsPrice___dUGGu,
+.simpleItemCard___mzGPh .itemDetailsChecked___8kZgT .bannerProItem___ZZIiy,
+.simpleItemCard___mzGPh .itemDetailsChecked___8kZgT .bannerProDetailsPrice___dUGGu {
+  align-items: flex-start;
+}
+.simpleItemCard___mzGPh .bannerProNameChecked___K-A49 .itemName___VVByi,
+.simpleItemCard___mzGPh .itemDetailsChecked___8kZgT .itemName___VVByi {
+  padding: 0;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+  max-height: 2.6em;
+  word-break: break-word;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+}
+.simpleItemCard___mzGPh .bannerProNameChecked___K-A49 .itemPrice___SLg7A,
+.simpleItemCard___mzGPh .itemDetailsChecked___8kZgT .itemPrice___SLg7A {
+  justify-content: flex-start;
+}
+.simpleItemCard___mzGPh .bannerProPrice___x3h99 {
+  font-size: 2.4rem;
+  font-weight: 500;
+}
+.simpleItemCard___mzGPh .bannerProPrice___x3h99 .priceText___RNgui {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .bannerProName___tOiyx,
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .itemDetails___JOD4q {
+  height: auto;
+  min-height: calc(10rem + 0px);
+  min-height: calc(10rem + var(--simple-combo-tags-height, 0px));
+}
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .bannerProName___tOiyx.wrappedItem___P9LQA,
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .itemDetails___JOD4q.wrappedItem___P9LQA {
+  height: auto;
+  min-height: calc(14rem + 0px);
+  min-height: calc(14rem + var(--simple-combo-tags-height, 0px));
+}
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .simpleComboTags___fmQmZ {
+  align-self: stretch;
+  padding-top: 1rem;
+}
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .simpleComboTags___fmQmZ > div {
+  justify-content: center;
+  max-height: none;
+  overflow: visible;
+}
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .bannerProNameChecked___K-A49 .simpleComboTags___fmQmZ > div,
+.simpleItemCard___mzGPh.simpleComboWithTags___zDOBN .itemDetailsChecked___8kZgT .simpleComboTags___fmQmZ > div {
+  justify-content: flex-start;
+}
+
+/* 波纹层：外观在外层 .itemCard，避免 MUI .MuiButtonBase-root 与单类 module 抢优先级导致样式丢失 */
+.itemCardRippleHost___dF-Hm.MuiButtonBase-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-sizing: border-box;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: inherit;
+  color: inherit;
+  cursor: inherit;
+}
+
+.itemCardRippleHostInteractive___PAzzW.MuiButtonBase-root {
+  cursor: pointer;
+}

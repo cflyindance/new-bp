@@ -1,0 +1,41 @@
+.tipBtn___d5iv1 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 16rem;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  font-size: 3.8rem;
+  color: rgba(0, 0, 0, 0.8);
+  border-radius: 10rem;
+  background-color: var(--background-grey);
+  box-sizing: border-box;
+}
+.tipBtn___d5iv1 .tipBtnText___Eql6S {
+  font-weight: bold;
+}
+
+.tipBtnSelected___i0Z6k {
+  border: 0.6rem solid var(--primary-color);
+  padding-left: 4rem;
+}
+.tipBtnSelected___i0Z6k.customTip___jl86h {
+  justify-content: space-around;
+}
+.tipBtnSelected___i0Z6k .tipBtnTxtBox___XTxOf {
+  -webkit-transform: translateX(-1rem);
+          transform: translateX(-1rem);
+}
+
+.tipBtnTxtBox___XTxOf {
+  transition: -webkit-transform 0.3s ease;
+  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, -webkit-transform 0.3s ease;
+}
+
+@media screen and (orientation: portrait) {
+  .tipBtn___d5iv1 {
+    margin: 0 0 3rem 0;
+  }
+}

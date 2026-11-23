@@ -1,0 +1,140 @@
+.itemPromotionCenter___Ha2iZ {
+  width: 75rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+  padding: 8rem;
+  max-height: 85%;
+  box-sizing: border-box;
+}
+
+.itemPromotionCenter___Ha2iZ .closeIcon___cMMbg {
+  position: absolute;
+  top: 4.4rem;
+  right: 4.4rem;
+  color: #000;
+  font-size: 4.3rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_header___4T-yN {
+  text-align: center;
+  font-weight: 700;
+  font-size: 4rem;
+  margin-bottom: 4.8rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf {
+  width: 100%;
+  margin-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: 50vh;
+  overflow: auto;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS {
+  width: 100%;
+  border: 0.2rem solid rgba(0, 0, 0, 0.1);
+  border-radius: 1.6rem;
+  background-color: #fff;
+  padding: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.4rem;
+  color: var(--promotion-theme-color);
+  box-sizing: border-box;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS.item_promotion_selected___Zd-aF {
+  background: var(--promotion-theme-color);
+  border: 1px solid var(--promotion-theme-color);
+  color: #fff;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS.item_promotion_selected___Zd-aF .goAddItem___GafvU {
+  background: #fff;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS.item_promotion_disabled___4hj08 {
+  opacity: 0.6;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS.item_promotion_valid___qUIlO {
+  height: 12rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .item_promotion_info___nrNTJ {
+  width: calc(100% - 15rem);
+  display: flex;
+  align-items: flex-start;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .item_promotion_info___nrNTJ .item_promotion_tag___781Hn {
+  width: 2.8rem;
+  height: 2.9rem;
+  margin-right: 1rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .item_promotion_info___nrNTJ .item_promotion_title___Bkim6 .item_promotion_name___AzTwy {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  white-space: normal;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 2.2rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .item_promotion_info___nrNTJ .item_promotion_title___Bkim6 .item_promotion_invalidReason___dYyqX {
+  margin-top: 2.4rem;
+  color: var(--text-color-black);
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .goAddItem___GafvU {
+  font-size: 1.6rem;
+  background: var(--primary-selected-color);
+  color: var(--text-color-black);
+  padding: 0.9rem 1.6rem;
+  border-radius: 5rem;
+  font-weight: 600;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .discountNumber___WAyvL {
+  font-size: 3rem;
+  font-weight: 700;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_type___Dz2-0 {
+  font-weight: 700;
+  font-size: 2.4rem;
+  margin: 0 0 2.4rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_type___Dz2-0.item_promotion_type_invalid___nnIyE {
+  margin: 2.4rem 0;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_footer___6Nrd- {
+  display: flex;
+  justify-content: center;
+  margin-top: 4.8rem;
+  flex-direction: column;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_footer___6Nrd- div {
+  width: 55rem;
+  height: 10.8rem;
+  font-size: 3rem;
+  text-align: center;
+  line-height: 10.8rem;
+  color: var(--text-color-black);
+  border-radius: 8rem;
+  font-weight: 600;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_footer___6Nrd- div:first-child {
+  background-color: var(--background-grey);
+  margin-bottom: 2rem;
+}
+.itemPromotionCenter___Ha2iZ .item_promotion_footer___6Nrd- div:last-child {
+  background-color: var(--primary-selected-color);
+}
+
+@media (orientation: portrait) {
+  .itemPromotionCenter___Ha2iZ {
+    max-height: 65%;
+    padding: 10rem;
+  }
+}

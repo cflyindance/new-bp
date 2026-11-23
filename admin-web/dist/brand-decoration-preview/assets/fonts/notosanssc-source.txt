@@ -1,0 +1,2 @@
+https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC[wght].ttf
+17772300

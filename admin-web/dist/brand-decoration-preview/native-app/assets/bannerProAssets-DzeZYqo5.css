@@ -1,0 +1,103 @@
+.brandList___ZzGCt {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.cancel___ztOP5 {
+  color: var(--text-color-black);
+  font-size: 3rem;
+  width: 40rem;
+  height: 10rem;
+  line-height: 10rem;
+  text-align: center;
+  border-radius: 10rem;
+  font-weight: bold;
+  margin: 2rem auto;
+  background-color: var(--background-grey);
+}.mainWrapper___vTWYR {
+  overflow-y: auto;
+  height: 85%;
+  padding: 5rem 10rem 0;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW {
+  width: 100%;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 5rem;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .imageWrapper___pyWeh {
+  position: relative;
+  text-align: center;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .imageWrapper___pyWeh .brandImage___-hMFO {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .imageWrapper___pyWeh .noDishIds___EXTgx {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 3rem;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  word-break: break-word;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .imageWrapper___pyWeh .noDishIds___EXTgx span {
+  flex: 1 1;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .brandName___w8vuN {
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  font-size: 3.5rem;
+  font-weight: bold;
+  word-break: break-word;
+  padding-top: 1rem;
+  line-height: 1.2;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .brandName___w8vuN div {
+  margin-bottom: 0.2rem;
+}
+.mainWrapper___vTWYR .mainRow___DCMWW .brandItem___Cxbln .brandName___w8vuN div:last-child {
+  margin-bottom: 0;
+}
+.mainWrapper___vTWYR .noBrand___oyFFO {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mainWrapper___vTWYR .noBrand___oyFFO .showNoBrand___qgwdY {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mainWrapper___vTWYR .noBrand___oyFFO .showNoBrand___qgwdY .noBrandImg___58YVT {
+  height: 8rem;
+  margin-bottom: 3.5rem;
+  width: 8rem;
+}
+.mainWrapper___vTWYR .noBrand___oyFFO .showNoBrand___qgwdY .noBrandText___3WrPS {
+  color: #96272f;
+  font-size: 3.5rem;
+}
+
+@media screen and (orientation: portrait) {
+  .mainWrapper___vTWYR {
+    height: 90%;
+  }
+}

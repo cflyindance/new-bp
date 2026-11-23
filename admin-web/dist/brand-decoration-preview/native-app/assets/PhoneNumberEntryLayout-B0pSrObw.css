@@ -1,0 +1,105 @@
+.numPad___2XtXh {
+  width: 100%;
+  position: relative;
+}
+
+.numPadSpacing___78czR {
+  margin: 5rem 0;
+}
+
+.inputWithCountryCode___2OikB {
+  position: relative;
+}
+
+.countryCode___gXgcn {
+  position: absolute;
+  color: #111;
+  line-height: 1;
+  padding-right: 3rem;
+  border-right: 0.4rem solid rgba(0, 0, 0, 0.1);
+  top: 50%;
+  left: 5rem;
+  font-size: 6rem;
+  -webkit-transform: translateY(-50%);
+          transform: translateY(-50%);
+  z-index: 1;
+}
+
+.showPhone___HQ8g5 {
+  height: 13rem;
+  line-height: 13rem;
+  border-radius: 20rem;
+  background: var(--background-grey);
+  text-align: center;
+  outline: none;
+  border: none;
+  width: 100%;
+  font-size: 6rem;
+  box-shadow: 0.1rem 0.2rem 1rem rgba(0, 0, 0, 0.1) inset;
+  box-sizing: border-box;
+  padding-left: 6rem;
+}
+
+.showPhone___HQ8g5::-webkit-input-placeholder {
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 6rem;
+}
+
+.showPhone___HQ8g5::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 6rem;
+}
+
+.displayPhone___WG6lp {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 1 !important;
+  color: rgba(0, 0, 0, 0.85);
+}.entryLayout___SZCMR {
+  width: 76rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.titleWrapper___lkqWv {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -6rem 10rem;
+  color: #000;
+  font-weight: 700;
+  text-align: center;
+}
+
+.titleIcon___eR1RI {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+  margin-right: 4rem;
+}
+
+.title___3sx3O {
+  font-size: 4rem;
+  line-height: 1.2;
+}
+
+.fieldWrapper___HLaqP {
+  position: relative;
+}
+
+.afterField___cy1Ji {
+  margin-top: 4rem;
+}
+
+.policyWrapper___aXVAO {
+  display: flex;
+  justify-content: center;
+  margin: 6rem auto 5rem;
+}
+
+.actions___Q-3jO {
+  display: flex;
+  justify-content: space-between;
+}

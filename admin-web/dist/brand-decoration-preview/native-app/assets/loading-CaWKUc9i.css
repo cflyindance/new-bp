@@ -1,0 +1,32 @@
+.loadingBox___eyE9- {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.8);
+  top: 0;
+  left: 0;
+}
+.loadingBox___eyE9- .itemBox___u7r03 {
+  text-align: center;
+  color: #fff;
+  position: absolute;
+  top: 58%;
+}
+.loadingBox___eyE9- .itemBox___u7r03 .itemName___rc1In {
+  font-size: 3.6rem;
+  font-weight: bold;
+  margin: 4rem;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+@media screen and (orientation: portrait) {
+  .loadingBox___eyE9- {
+    flex-direction: column;
+  }
+}

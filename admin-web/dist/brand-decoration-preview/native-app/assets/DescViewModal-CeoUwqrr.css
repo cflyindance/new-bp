@@ -1,0 +1,30 @@
+.descModalWrapper___3oKI4 {
+  width: 80rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+.descModalWrapper___3oKI4 .header___v9RRQ {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 2rem;
+}
+.descModalWrapper___3oKI4 .header___v9RRQ .text___ugQKP {
+  font-weight: 700;
+  color: #000;
+  font-size: 4rem;
+  word-break: break-word;
+}
+.descModalWrapper___3oKI4 .content___93eEu {
+  font-size: 3.4rem;
+  word-break: break-word;
+  min-height: 30rem;
+  max-height: 150rem;
+  overflow-y: scroll;
+  line-height: 1.5;
+}

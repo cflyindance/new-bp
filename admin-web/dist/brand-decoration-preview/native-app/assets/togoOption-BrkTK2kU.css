@@ -1,0 +1,103 @@
+.togoPanel___FJ572 {
+  margin: auto;
+  height: 100%;
+  padding-top: 29rem;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  justify-content: space-between;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelTitle___tSkY6 {
+  text-align: center;
+  font-size: 4rem;
+  color: #000;
+  font-weight: 700;
+  margin-bottom: 8rem;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v {
+  margin: 0 auto;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v .togoItem___N0wr6 {
+  position: relative;
+  margin-bottom: 3rem;
+  display: flex;
+  align-items: center;
+  min-width: 55rem;
+  height: 12rem;
+  line-height: 12rem;
+  font-size: 4rem;
+  font-weight: 600;
+  border-radius: 10rem;
+  border: 0.2rem solid rgba(0, 0, 0, 0.1);
+  padding: 2.5rem 4rem 2.5rem 3rem;
+  box-sizing: border-box;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v .togoItem___N0wr6 .checkIcon___Z-zmd {
+  position: absolute;
+  left: 3rem;
+  top: -0.5rem;
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v .togoItem___N0wr6 .name___-WAWB {
+  width: 100%;
+  white-space: nowrap;
+  text-align: center;
+  transition: -webkit-transform 0.3s ease;
+  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, -webkit-transform 0.3s ease;
+  -webkit-transform: translateX(0);
+          transform: translateX(0);
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v .togoItem___N0wr6.togoItemActived___Z7y9M {
+  border: 0.6rem solid var(--primary-selected-color);
+}
+.togoPanel___FJ572 .togoPanelInner___GgWp5 .togoPanelBox___PHT6v .togoItem___N0wr6.togoItemActived___Z7y9M .name___-WAWB {
+  width: calc(100% - 7rem);
+  -webkit-transform: translateX(7rem);
+          transform: translateX(7rem);
+  text-align: right;
+}
+
+.btnBox___bs0YI {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8rem;
+  flex-direction: column;
+}
+.btnBox___bs0YI div {
+  margin: 0 auto;
+  width: 55rem;
+  height: 10rem;
+  line-height: 10rem;
+  border-radius: 10rem;
+  color: var(--text-color-black);
+  font-size: 4rem;
+  text-align: center;
+  font-weight: bold;
+}
+.btnBox___bs0YI .actived___WUiaU {
+  background-color: var(--primary-selected-color);
+}
+.btnBox___bs0YI .noActived___4D8mZ {
+  background: var(--primary-color-disabled);
+  color: rgba(0, 0, 0, 0.3019607843);
+}
+.btnBox___bs0YI .never___vAk1R {
+  margin-bottom: 4rem;
+  background-color: var(--background-grey);
+}
+
+@media screen and (orientation: portrait) {
+  .togoPanel___FJ572 {
+    padding-top: 41rem;
+  }
+  .togoPanel___FJ572 .togoPanelInner___GgWp5 {
+    height: 65rem;
+  }
+  .btnBox___bs0YI {
+    margin-top: 30rem;
+  }
+}

@@ -1,0 +1,120 @@
+.loginWrapper___3nmXz {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  overflow: hidden;
+}
+.loginWrapper___3nmXz .loginModal___rW-C5 {
+  padding: 28rem 0;
+  width: 76rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.loginWrapper___3nmXz .loginModal___rW-C5 .never___a10Py,
+.loginWrapper___3nmXz .loginModal___rW-C5 .confirmBtn___bbIGb {
+  color: var(--text-color-black);
+  font-size: 3rem;
+  width: 40rem;
+  height: 10rem;
+  line-height: 10rem;
+  text-align: center;
+  border-radius: 10rem;
+  flex: 1 1;
+  font-weight: bold;
+}
+.loginWrapper___3nmXz .loginModal___rW-C5 .never___a10Py {
+  margin-right: 2.5rem;
+  background-color: var(--background-grey);
+}
+.loginWrapper___3nmXz .loginModal___rW-C5 .confirmBtn___bbIGb {
+  background-color: var(--primary-selected-color);
+}
+.loginWrapper___3nmXz .loginModal___rW-C5 .disableConfirm___mpzlL {
+  background: var(--primary-color-disabled);
+  color: rgba(0, 0, 0, 0.3019607843);
+}
+
+.authCodeWrapper___EbWhz {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  overflow: hidden;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG {
+  padding: 19rem 0;
+  width: 80rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .numPadSpacing___XWiqK {
+  margin: 5rem 0;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .authCode___22RTC {
+  font-size: 3.8rem;
+  margin: 0 -6rem 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .authCode___22RTC .jingleBell___yJn7S {
+  width: 5rem;
+  margin-right: 4rem;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .sendTo___jUTBN {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+  text-align: center;
+  color: #3d3d3d;
+  margin-bottom: 4rem;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .sendTo___jUTBN .sendToPhone___TEhid {
+  padding: 0 1rem;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .authCodeInputBox___rcQZF {
+  position: relative;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .authCodeInputBox___rcQZF .displayAuthCode___8vo5b {
+  width: 100%;
+  margin: 0 auto 10rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+}
+.authCodeWrapper___EbWhz .authCodeBox___ytanG .authCodeInputBox___rcQZF .displayAuthCode___8vo5b .displayAuthCodeText___tZYRv {
+  margin-left: 1rem;
+  width: 11rem;
+  height: 13rem;
+  line-height: 13rem;
+  text-align: center;
+  background: var(--background-grey);
+  font-size: 6rem;
+  color: #000;
+  border-radius: 20rem;
+  box-shadow: 0.1rem 0.2rem 1rem rgba(0, 0, 0, 0.1) inset;
+  border: none;
+  outline: none;
+}
+.authCodeWrapper___EbWhz .confirmBtn___bbIGb {
+  margin: 5rem 0;
+  height: 10rem;
+  line-height: 10rem;
+  border-radius: 5rem;
+  background-color: var(--primary-selected-color);
+  color: var(--text-color-black);
+  font-size: 3rem;
+  text-align: center;
+  font-weight: bold;
+}
+.authCodeWrapper___EbWhz .confirmBtn___bbIGb.disableConfirm___mpzlL {
+  color: rgba(0, 0, 0, 0.5019607843);
+  background: var(--background-grey);
+}
