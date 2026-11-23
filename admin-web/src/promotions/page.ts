@@ -6,6 +6,7 @@ import {
   selectedBrandMenuDishesByLine,
 } from "../config/brand-menu-structure-picker-ui";
 import { promotionTypes, scheduleStatus, validateCampaign, type Campaign, type PromotionConfiguration, type PromotionType } from "./domain";
+import { createPromotionDemo } from "./demo";
 import "./page.css";
 
 export const PROMOTIONS_PATH = "/promotions/campaigns";
@@ -39,25 +40,30 @@ function summary(campaign: Campaign): string {
   return `满 $${f.threshold} 减 ${discount}${f.firstOrder === "yes" ? " · 仅首单" : ""}${f.useCode === "yes" ? " · 促销码" : ""}`;
 }
 
-export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boolean, crmEnabled: boolean): void {
+export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boolean, crmEnabled: boolean, demoAccount: boolean): void {
   const page = mount.querySelector<HTMLElement>("[data-promotion-page]");
   if (!page) return;
-  const key = "merchant-promotion-config:v1:" + scope;
+  const merchantKey = "merchant-promotion-config:v1:" + scope;
+  const key = demoAccount ? "merchant-promotion-demo:v1:" + scope : merchantKey;
   let saved: PromotionConfiguration = { activeType: "", campaigns: [] };
+  let storedValue: string | null = null;
   let readFailed = false;
   try {
-    const value = localStorage.getItem(key);
-    if (value) {
+    storedValue = localStorage.getItem(key);
+    const value = storedValue ?? (demoAccount ? localStorage.getItem(merchantKey) : null);
+    if (value !== null) {
       const parsed = JSON.parse(value) as PromotionConfiguration;
       if (!Array.isArray(parsed.campaigns)) throw Error();
       saved = parsed;
+    } else if (demoAccount) {
+      saved = createPromotionDemo();
     }
   } catch {
     readFailed = true;
   }
   const editable = canEdit && !readFailed;
   let draft = structuredClone(saved);
-  let tab: PromotionType | "" = draft.activeType || draft.campaigns[0]?.type || "";
+  let tab: PromotionType | "" = demoAccount ? "" : draft.activeType || draft.campaigns[0]?.type || "";
   let query = "";
   let currentPage = 1;
   let message = readFailed ? "读取活动配置失败，请重新加载。" : "";
@@ -302,12 +308,12 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       case "save":
         if (!editable || !dirty()) break;
         try {
-          const current = localStorage.getItem(key);
-          const observed = current ? JSON.parse(current) : { activeType: "", campaigns: [] };
-          if (JSON.stringify(observed) !== JSON.stringify(saved)) {
+          if (localStorage.getItem(key) !== storedValue) {
             message = "此范围的配置已在其他页面更新。当前草稿仍保留，无法覆盖较新的配置。";
           } else {
-            localStorage.setItem(key, JSON.stringify(draft));
+            const next = JSON.stringify(draft);
+            localStorage.setItem(key, next);
+            storedValue = next;
             saved = structuredClone(draft);
             message = "活动配置已保存到本浏览器。";
           }
