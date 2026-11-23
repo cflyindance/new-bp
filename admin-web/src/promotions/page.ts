@@ -25,7 +25,6 @@ const defaults = (type: PromotionType) => ({
 const escape = (s: string = "") => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const options = (values: string[][], active: string) => values.map(([value, label]) =>
   `<option value="${value}" ${value === active ? "selected" : ""}>${label}</option>`).join("");
-const typeOptions = [["", "请选择活动类型"], ...types];
 
 export function renderPromotionPage(): string {
   return '<section class="promotion-page" data-promotion-page></section>';
@@ -124,48 +123,65 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     const node = dialog(original ? editable ? "编辑活动" : "查看活动" : "新增活动", "", editable ? "确认" : undefined);
     const body = node.querySelector<HTMLElement>(".promotion-body")!;
     const input = (name: string, label: string, kind = "text", attributes = "") =>
-      `<label>${label}<input name="${name}" type="${kind}" value="${escape(fields[name])}" ${attributes}></label>`;
+      `<label>${label}<input name="${name}" type="${kind}" value="${escape(fields[name])}" ${attributes} ${editable ? "" : "disabled"}></label>`;
     const select = (name: string, label: string, values: string[][], disabled = false) =>
-      `<label>${label}<select name="${name}" ${disabled ? "disabled" : ""}>${options(values, fields[name] ?? "")}</select></label>`;
+      `<label>${label}<select name="${name}" ${disabled || !editable ? "disabled" : ""}>${options(values, fields[name] ?? "")}</select></label>`;
     const product = (name: "purchase" | "reward", label: string) => {
       const value = name === "purchase" ? purchase : reward;
-      return `<label>${label}<button type="button" name="${name}" data-product="${name}">${value ? `已选 ${selectedBrandMenuDishesByLine(value).length} 件` : "选择商品"}</button></label>`;
+      return `<label class="promotion-span promotion-product">${label}<button type="button" name="${name}" data-product="${name}">${value ? `已选 ${selectedBrandMenuDishesByLine(value).length} 件` : "选择商品"}</button></label>`;
     };
 
     function paint() {
       const items = type === "gift" || type === "quantity" || (type === "exchange" && fields.condition === "items");
-      const discount = type === "quantity" ? "减免比例（% off）" : fields.discountKind === "percent" ? "减免比例（% off）" : "减免金额（USD）";
+      const hasReward = type === "gift" || type === "exchange";
+      const discount = type === "quantity" || fields.discountKind === "percent" ? "减免比例（% off）" : "减免金额（USD）";
       const yesNo = [["no", "否"], ["yes", "是"]];
+      const choice = (name: string, value: string, label: string, selected: string, description = "") =>
+        `<label class="promotion-choice"><input type="radio" name="${name}" value="${value}" ${editable ? "" : "disabled"} ${value === selected ? "checked" : ""}>
+          <span><strong>${label}</strong>${description ? `<small>${description}</small>` : ""}</span></label>`;
       body.innerHTML = `<form novalidate>
-        <section><h3>活动信息</h3><fieldset ${editable ? "" : "disabled"}>
-        <label>活动类型<select name="type" ${original ? "disabled" : ""}>${options(typeOptions, type)}</select></label>
-        ${input("name", "活动名称")}${input("zh", "中文活动标签", "text", 'maxlength="50"')}${input("en", "英文活动标签", "text", 'maxlength="50"')}
+        <fieldset class="promotion-types" ${original || !editable ? "disabled" : ""}>
+          <legend>活动类型</legend>
+          ${(original ? types.filter(([value]) => value === type) : types).map(([value, label]) =>
+            choice("type", value, label, type, definitions[value])).join("")}
+        </fieldset>
+        <section><h3>基本信息</h3><fieldset ${editable ? "" : "disabled"}>
+          <div class="promotion-span">${input("name", "活动名称")}</div>
+          ${input("zh", "中文活动标签", "text", 'maxlength="50"')}${input("en", "英文活动标签", "text", 'maxlength="50"')}
         </fieldset></section>
-        <section><h3>活动时间</h3><fieldset ${editable ? "" : "disabled"}>
-        ${input("startDate", "开始日期", "date")}${input("endDate", "结束日期", "date")}
-        ${input("startTime", "开始时间", "time")}${input("endTime", "结束时间", "time")}
-        <div class="promotion-days"><span>每周生效日</span><div>${[1,2,3,4,5,6,0].map(day => `<label><input type="checkbox" name="day" value="${day}" ${fields.days?.split(",").includes(String(day)) ? "checked" : ""}>周${"日一二三四五六"[day]}</label>`).join("")}</div></div>
-        </fieldset><p>日期、星期、时段至少设置一项。设置多项时须同时满足。</p></section>
-        ${type ? `<section><h3>活动规则</h3><fieldset ${editable ? "" : "disabled"}>
-        ${type === "exchange" ? select("condition", "条件类型", [["amount", "订单金额"], ["items", "商品数量"]]) : ""}
-        ${items ? select("mode", "购买方式", purchaseModes) + input("quantity", type === "quantity" ? "购买件数 M" : "购买件数", "number", 'min="1" step="1"') + product("purchase", "购买商品")
-          : input("threshold", "订单满足金额（USD）", "number", `min="0" step="${type === "order" ? 1 : 0.01}"`)}
-        ${type === "gift" || type === "exchange" ? `<label>${type === "gift" ? "赠送" : "换购"}方式<input value="手动选择" disabled></label>
-          ${select("rewardMode", type === "gift" ? "赠品组合" : "换购商品组合", [["any", "任意商品"], ["same", "相同商品"]])}
-          ${input("limit", type === "gift" ? "赠送件数上限" : "换购件数上限", "number", 'min="1" step="1"')}${product("reward", type === "gift" ? "赠送商品" : "换购商品")}` : ""}
-        ${type === "quantity" ? select("frequency", "优惠计算方式", [["each", "每满 M 件优惠一件"], ["once", "满 M 件只优惠一件"]]) : ""}
-        ${type === "order" || type === "exchange" ? select("discountKind", type === "exchange" ? "单件优惠类型" : "折扣类型", type === "order" ? [["", "请选择优惠类型"], ...discountKinds] : discountKinds) : ""}
-        ${type !== "gift" && (type === "quantity" || fields.discountKind) ? input("discount", discount, "number", 'min="0.01" step="0.01"') : ""}
-        ${type === "order" ? select("firstOrder", "仅首单生效", yesNo, !crmEnabled) +
-          (!crmEnabled ? "<p>当前范围未确认已启用会员服务。</p>" : "") + select("useCode", "使用促销码", yesNo, !!original) +
-          (fields.useCode === "yes" ? input("codeName", "促销码名称", "text", 'maxlength="255"') + input("code", "促销码", "text", original ? "disabled" : 'maxlength="15"') : "") : ""}
-        </fieldset></section>` : ""}
+        ${type ? `<section><h3>活动规则</h3>
+          <fieldset class="promotion-rule"><legend>达标条件</legend>
+            ${type === "exchange" ? `<div class="promotion-span promotion-options" role="group" aria-label="条件类型">
+              <span>条件类型</span><div>${choice("condition", "amount", "订单金额", fields.condition)}${choice("condition", "items", "商品数量", fields.condition)}</div>
+            </div>` : ""}
+            ${items ? select("mode", "购买方式", purchaseModes) + input("quantity", type === "quantity" ? "购买件数 M" : "购买件数", "number", 'min="1" step="1"') + product("purchase", type === "quantity" ? "参与商品" : "购买商品")
+              : input("threshold", "订单满足金额（USD）", "number", `min="0" step="${type === "order" ? 1 : 0.01}"`)}
+            ${type === "order" ? `<div>${select("firstOrder", "仅首单生效", yesNo, !crmEnabled)}
+              ${crmEnabled ? "" : "<small>当前范围未确认已启用会员服务。</small>"}</div>` : ""}
+          </fieldset>
+          <fieldset class="promotion-rule"><legend>优惠内容</legend>
+            ${hasReward ? `<small class="promotion-span">${type === "gift" ? "达标后由顾客手动领取赠品。" : "达标后由顾客手动选择换购商品。"}</small>
+              ${select("rewardMode", type === "gift" ? "赠品组合" : "换购商品组合", [["any", "任意商品"], ["same", "相同商品"]])}
+              ${input("limit", type === "gift" ? "赠送件数上限" : "换购件数上限", "number", 'min="1" step="1"')}
+              ${product("reward", type === "gift" ? "赠送商品" : "换购商品")}` : ""}
+            ${type === "order" || type === "exchange" ? select("discountKind", type === "exchange" ? "单件优惠类型" : "折扣类型", type === "order" ? [["", "请选择优惠类型"], ...discountKinds] : discountKinds) : ""}
+            ${type !== "gift" && (type === "quantity" || fields.discountKind) ? input("discount", discount, "number", 'min="0.01" step="0.01"') : ""}
+            ${type === "quantity" ? `<div class="promotion-span promotion-options" role="group" aria-label="优惠计算方式">
+              <span>优惠计算方式</span><div>${choice("frequency", "each", "每满 M 件优惠一件", fields.frequency)}${choice("frequency", "once", "满 M 件只优惠一件", fields.frequency)}</div>
+            </div>` : ""}
+          </fieldset>
+          ${type === "order" ? `<fieldset class="promotion-rule"><legend>促销码</legend>
+            ${select("useCode", "使用促销码", yesNo, !!original)}
+            ${fields.useCode === "yes" ? `<div class="promotion-span promotion-code">${input("codeName", "促销码名称", "text", 'maxlength="255"')}${input("code", "促销码", "text", original ? "disabled" : 'maxlength="15"')}</div>` : ""}
+          </fieldset>` : ""}
+        </section>` : ""}
+        <section><h3>生效时间</h3><fieldset ${editable ? "" : "disabled"}>
+          <small class="promotion-span">日期、星期、时段至少设置一项。设置多项时须同时满足。</small>
+          ${input("startDate", "开始日期", "date")}${input("endDate", "结束日期", "date")}
+          ${input("startTime", "开始时间", "time")}${input("endTime", "结束时间", "time")}
+          <div class="promotion-days"><span>适用星期</span><div>${[1,2,3,4,5,6,0].map(day => `<label><input type="checkbox" name="day" value="${day}" ${fields.days?.split(",").includes(String(day)) ? "checked" : ""}>周${"日一二三四五六"[day]}</label>`).join("")}</div></div>
+        </fieldset></section>
         <p class="promotion-error" role="alert" data-error></p></form>`;
-      if (!editable) body.querySelectorAll<HTMLButtonElement>("[data-product]").forEach(control => {
-        const label = control.parentElement!;
-        control.disabled = false;
-        body.querySelector("form")!.append(label);
-      });
     }
 
     function pick(which: "purchase" | "reward") {
@@ -206,7 +222,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       } else if (field.name && field.name !== "type") fields[field.name] = field.value;
     });
     body.addEventListener("change", event => {
-      const field = event.target as HTMLSelectElement;
+      const field = event.target as HTMLInputElement | HTMLSelectElement;
       if (field.name === "type") {
         type = field.value as PromotionType | "";
         const common = Object.fromEntries(["name", "zh", "en", "startDate", "endDate", "startTime", "endTime", "days"].map(k => [k, fields[k] ?? ""]));
@@ -218,7 +234,8 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       }
       if (["type", "condition", "discountKind", "useCode"].includes(field.name)) {
         paint();
-        body.querySelector<HTMLElement>(`[name="${field.name}"]`)?.focus();
+        const selector = field.type === "radio" ? `[name="${field.name}"]:checked` : `[name="${field.name}"]`;
+        body.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
       }
     });
     body.addEventListener("click", event => {
@@ -234,7 +251,8 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
         const error = body.querySelector<HTMLElement>("[data-error]")!;
         error.textContent = issue[1];
         const field = body.querySelector<HTMLElement>(`[name="${issue[0]}"]`);
-        field?.closest("label")?.append(error);
+        const container = issue[0] === "type" ? field?.closest("fieldset") : field?.closest("label");
+        container?.append(error);
         body.querySelector<HTMLElement>(`[name="${issue[0]}"]`)?.focus();
         return;
       }
