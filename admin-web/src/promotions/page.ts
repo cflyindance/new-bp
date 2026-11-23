@@ -93,7 +93,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     const pages = Math.max(1, Math.ceil(results.length / 10));
     currentPage = Math.min(currentPage, pages);
     page!.querySelector("[data-promo-results]")!.innerHTML = `
-      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>促销类型</th><th>活动时间</th><th>规则摘要</th><th>状态</th><th>活动类型</th><th>操作</th></tr></thead>
+      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>促销类型</th><th>活动时间</th><th>规则摘要</th><th>活动类型</th><th>状态</th><th>操作</th></tr></thead>
       <tbody>${results.slice((currentPage - 1) * 10, currentPage * 10).map(({ row, status }) => {
         const f = row.fields;
         const date = f.startDate ? `${f.startDate} 至 ${f.endDate}` : "";
@@ -101,8 +101,9 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
         const time = f.startTime ? `${f.startTime}–${f.endTime}` : "";
         const attrs = `data-id="${escape(row.id)}"`;
         return `<tr><td>${escape(f.name)}</td><td>${promotionTypes[row.type]}</td><td>${[date, days, time].filter(Boolean).map(escape).join("<br>")}</td>
-          <td>${escape(summary(row))}</td><td>${status}</td>
+          <td>${escape(summary(row))}</td>
           <td>${button(row.enabled ? "已开启" : "已关闭", "toggle", `${attrs} role="switch" aria-checked="${row.enabled}" ${editable ? "" : "disabled"}`)}</td>
+          <td>${status ?? "—"}</td>
           <td>${button(editable ? "编辑" : "查看", "edit", attrs)} ${editable ? button("删除", "delete", attrs) : ""}</td></tr>`;
       }).join("") || `<tr><td colspan="7" class="promotion-empty">${readFailed ? "无法读取活动" : saved.campaigns.length ? "没有符合条件的活动" : "暂无活动"}</td></tr>`}</tbody></table></div>
       <footer>共 ${results.length} 条 <div>${button("上一页", "prev", currentPage === 1 ? "disabled" : "")} ${currentPage} / ${pages} ${button("下一页", "next", currentPage === pages ? "disabled" : "")}</div></footer>`;

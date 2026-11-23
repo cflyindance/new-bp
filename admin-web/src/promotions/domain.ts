@@ -66,17 +66,35 @@ export function validateCampaign(campaign: Campaign, configuration: PromotionCon
   }
 }
 
-export const promotionStatuses = ["未启用", "未开始", "时段内", "时段外", "已结束"] as const;
+export const promotionStatuses = ["进行中", "已结束", "待开始"] as const;
 export type PromotionStatus = (typeof promotionStatuses)[number];
 
-export function scheduleStatus(campaign: Campaign, activeType: PromotionConfiguration["activeType"], now = new Date()): PromotionStatus {
-  if (!campaign.enabled || campaign.type !== activeType) return "未启用";
-  const date = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-");
+function dateKey(date: Date): string {
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(n => String(n).padStart(2, "0")).join("-");
+}
+
+export function scheduleStatus(campaign: Campaign, activeType: PromotionConfiguration["activeType"], now = new Date()): PromotionStatus | null {
+  if (!campaign.enabled || campaign.type !== activeType) return null;
+
+  const { startDate, endDate, startTime, endTime, days } = campaign.fields;
+  const today = dateKey(now);
+  if (endDate && today > endDate) return "已结束";
+
   const time = [now.getHours(), now.getMinutes()].map(n => String(n).padStart(2, "0")).join(":");
-  const f = campaign.fields;
-  if (f.endDate && date > f.endDate) return "已结束";
-  if (f.startDate && date < f.startDate) return "未开始";
-  if (f.days && !f.days.split(",").includes(String(now.getDay()))) return "时段外";
-  if (f.startTime && (time < f.startTime || time >= f.endTime)) return "时段外";
-  return "时段内";
+  const weekdays = days ? new Set(days.split(",")) : null;
+  if ((!startDate || today >= startDate) && (!weekdays || weekdays.has(String(now.getDay()))) &&
+      (!startTime || (time >= startTime && time < endTime))) {
+    return "进行中";
+  }
+
+  const candidate = startDate && today < startDate
+    ? new Date(startDate + "T00:00:00")
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate() + (endTime && time >= endTime ? 1 : 0));
+  // A weekly schedule repeats within seven calendar days.
+  for (let offset = 0; offset < 7; offset++) {
+    if (endDate && dateKey(candidate) > endDate) break;
+    if (!weekdays || weekdays.has(String(candidate.getDay()))) return "待开始";
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return "已结束";
 }
