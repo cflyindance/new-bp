@@ -62,22 +62,33 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     readFailed = true;
   }
   const editable = canEdit && !readFailed;
-  let draft = structuredClone(saved);
-  let tab: PromotionType | "" = demoAccount ? "" : draft.activeType || draft.campaigns[0]?.type || "";
+  let tab: PromotionType | "" = demoAccount ? "" : saved.activeType || saved.campaigns[0]?.type || "";
   let query = "";
   let statusFilter: PromotionStatus | "" = "";
   let currentPage = 1;
   let message = readFailed ? "读取活动配置失败，请重新加载。" : "";
-  const dirty = () => JSON.stringify(draft) !== JSON.stringify(saved);
   const button = (label: string, action: string, extra = "") =>
     `<button type="button" data-promo-action="${action}" ${extra}>${label}</button>`;
+
+  function persist(next: PromotionConfiguration): string | undefined {
+    try {
+      if (localStorage.getItem(key) !== storedValue) return "配置已在其他页面更新，请重新加载后再试。";
+      const value = JSON.stringify(next);
+      localStorage.setItem(key, value);
+      storedValue = value;
+      saved = next;
+      message = "活动配置已保存到本浏览器。";
+    } catch {
+      return "保存失败，活动配置未更改。请重试。";
+    }
+  }
 
   function updateRows() {
     const now = new Date();
     const keyword = query.trim().toLowerCase();
-    const results = draft.campaigns
+    const results = saved.campaigns
       .filter(row => (!tab || tab === row.type) && row.fields.name.toLowerCase().includes(keyword))
-      .map(row => ({ row, status: scheduleStatus(row, draft.activeType, now) }))
+      .map(row => ({ row, status: scheduleStatus(row, saved.activeType, now) }))
       .filter(({ status }) => !statusFilter || status === statusFilter);
     const pages = Math.max(1, Math.ceil(results.length / 10));
     currentPage = Math.min(currentPage, pages);
@@ -93,7 +104,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
           <td>${escape(summary(row))}</td><td>${status}</td>
           <td>${button(row.enabled ? "已开启" : "已关闭", "toggle", `${attrs} role="switch" aria-checked="${row.enabled}" ${editable ? "" : "disabled"}`)}</td>
           <td>${button(editable ? "编辑" : "查看", "edit", attrs)} ${editable ? button("删除", "delete", attrs) : ""}</td></tr>`;
-      }).join("") || `<tr><td colspan="7" class="promotion-empty">${readFailed ? "无法读取活动" : draft.campaigns.length ? "没有符合条件的活动" : "暂无活动"}</td></tr>`}</tbody></table></div>
+      }).join("") || `<tr><td colspan="7" class="promotion-empty">${readFailed ? "无法读取活动" : saved.campaigns.length ? "没有符合条件的活动" : "暂无活动"}</td></tr>`}</tbody></table></div>
       <footer>共 ${results.length} 条 <div>${button("上一页", "prev", currentPage === 1 ? "disabled" : "")} ${currentPage} / ${pages} ${button("下一页", "next", currentPage === pages ? "disabled" : "")}</div></footer>`;
   }
 
@@ -103,9 +114,9 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
         <label>活动状态 <select data-promo-status>${options([["", "全部状态"], ...promotionStatuses.map(status => [status, status])], statusFilter)}</select></label>
       </div>
       <div class="promotion-actions"><div class="promotion-activation">
-        <span>启用类型：<strong>${draft.activeType ? promotionTypes[draft.activeType] : "全部关闭"}</strong>${draft.activeType !== saved.activeType ? ' <small class="promotion-activation-pending">待保存</small>' : ""}</span>
+        <span>启用类型：<strong>${saved.activeType ? promotionTypes[saved.activeType] : "全部关闭"}</strong></span>
         ${editable ? button("更改", "activation", 'aria-label="更改启用类型" aria-haspopup="dialog"') : ""}
-      </div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} <div class="promotion-create-actions">${button('<span aria-hidden="true">ⓘ</span> 活动规则说明', "definitions", 'class="promotion-rule-help" aria-haspopup="dialog"')} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div></div>
+      </div><div class="promotion-create-actions">${button('<span aria-hidden="true">ⓘ</span> 活动规则说明', "definitions", 'class="promotion-rule-help" aria-haspopup="dialog"')} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div></div>
       </div>
       <div data-promo-results></div>
       ${message ? `<footer><span role="status">${escape(message)}</span></footer>` : ""}`;
@@ -126,14 +137,14 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   }
 
   function openActivationDialog() {
-    let selection = draft.activeType;
+    let selection = saved.activeType;
     const choices: [PromotionType | "", string][] = [...types, ["", "全部关闭"]];
     const node = dialog("更改启用类型", `
       <fieldset class="promotion-activation-options">
         <legend>同一范围只可启用一种促销类型</legend>
         ${choices.map(([type, label]) => {
-          const rows = draft.campaigns.filter(row => row.type === type);
-          const unavailable = type && !rows.length && type !== draft.activeType;
+          const rows = saved.campaigns.filter(row => row.type === type);
+          const unavailable = type && !rows.length && type !== saved.activeType;
           const count = rows.filter(row => row.enabled).length;
           return `<label class="promotion-choice">
             <input type="radio" name="activation-type" value="${type}" ${type === selection ? "checked" : ""} ${unavailable ? "disabled" : ""}>
@@ -142,22 +153,24 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
           </label>`;
         }).join("")}
       </fieldset>
-      <p class="promotion-activation-impact" aria-live="polite" data-activation-impact></p>`, "确认");
+      <p class="promotion-activation-impact" aria-live="polite" data-activation-impact></p><p class="promotion-error" role="alert" data-persist-error></p>`, "确认");
     node.classList.add("promotion-dialog-activation");
 
     const confirm = node.querySelector<HTMLButtonElement>("[data-confirm]")!;
     const impact = node.querySelector<HTMLElement>("[data-activation-impact]")!;
+    const error = node.querySelector<HTMLElement>("[data-persist-error]")!;
     function updateImpact() {
-      confirm.disabled = selection === draft.activeType;
+      error.textContent = "";
+      confirm.disabled = selection === saved.activeType;
       if (selection === saved.activeType) {
-        impact.textContent = selection === draft.activeType ? "" : "确认后将撤销待保存的启用类型变更。";
+        impact.textContent = "";
         return;
       }
 
       const stop = saved.activeType ? `${promotionTypes[saved.activeType]}将停止参与促销。` : "";
       const start = selection ? `${promotionTypes[selection]}中已开启且符合时段的活动可参与促销。`
         : "所有促销类型将关闭，已配置的活动和单条活动开关会保留。";
-      impact.textContent = `保存后，${stop}${start}`;
+      impact.textContent = `确认后，${stop}${start}`;
     }
 
     updateImpact();
@@ -170,17 +183,29 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     });
     confirm.addEventListener("click", () => {
       if (confirm.disabled) return;
-      draft.activeType = selection;
-      message = "";
+      const failure = persist({ ...saved, activeType: selection });
+      if (failure) {
+        error.textContent = failure;
+        return;
+      }
       node.close();
       render();
       page!.querySelector<HTMLButtonElement>('[data-promo-action="activation"]')?.focus();
     });
   }
 
-  function confirmAction(row: Campaign, verb: string, callback: () => void) {
-    const node = dialog(`${verb}活动`, `<p>确定${verb}「${escape(row.fields.name)}」？${row.fields.useCode === "yes" ? "保存后，该活动对应的促销码将停用。" : "保存后更新活动列表。"}</p>`, verb);
-    node.querySelector("[data-confirm]")!.addEventListener("click", () => { node.close(); callback(); });
+  function confirmAction(row: Campaign, verb: string, next: PromotionConfiguration) {
+    const node = dialog(`${verb}活动`, `<p>确定${verb}「${escape(row.fields.name)}」？${row.fields.useCode === "yes" ? "确认后，该活动对应的促销码将停用。" : ""}</p>
+      <p class="promotion-error" role="alert" data-persist-error></p>`, verb);
+    node.querySelector("[data-confirm]")!.addEventListener("click", () => {
+      const failure = persist(next);
+      if (failure) {
+        node.querySelector("[data-persist-error]")!.textContent = failure;
+        return;
+      }
+      node.close();
+      render();
+    });
   }
 
   function openEditor(original?: Campaign) {
@@ -255,7 +280,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     function pick(which: "purchase" | "reward") {
       const existing = (which === "purchase" ? purchase : reward) ?? emptyBrandMenuStructureByLine();
       const excluded = type === "quantity" && fields.startDate && fields.endDate
-        ? draft.campaigns.filter(other => other.id !== original?.id && other.type === "quantity" &&
+        ? saved.campaigns.filter(other => other.id !== original?.id && other.type === "quantity" &&
           other.fields.startDate && other.fields.endDate &&
           other.fields.startDate <= fields.endDate && other.fields.endDate >= fields.startDate)
           .flatMap(other => other.purchase ? selectedBrandMenuDishesByLine(other.purchase).map(dish => dish.dishId) : [])
@@ -314,7 +339,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     node.querySelector("[data-confirm]")?.addEventListener("click", () => {
       const record = type ? { id: original?.id ?? crypto.randomUUID(), enabled: original?.enabled ?? true, type,
         fields: Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.trim()])), purchase, reward } : null;
-      const issue = record ? validateCampaign(record, draft) : ["type", "请选择活动类型。"];
+      const issue = record ? validateCampaign(record, saved) : ["type", "请选择活动类型。"];
       if (issue) {
         const error = body.querySelector<HTMLElement>("[data-error]")!;
         error.textContent = issue[1];
@@ -325,10 +350,18 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
         return;
       }
       if (!record) return;
-      draft.campaigns = original ? draft.campaigns.map(row => row.id === record.id ? record : row) : [...draft.campaigns, record];
+      const campaigns = original ? saved.campaigns.map(row => row.id === record.id ? record : row) : [...saved.campaigns, record];
+      const failure = persist({ ...saved, campaigns });
+      if (failure) {
+        const error = body.querySelector<HTMLElement>("[data-error]")!;
+        error.textContent = failure;
+        body.querySelector("form")!.prepend(error);
+        error.scrollIntoView({ block: "nearest" });
+        return;
+      }
       tab = record.type;
       currentPage = 1;
-      query = message = "";
+      query = "";
       node.close();
       render();
     });
@@ -347,7 +380,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   page.addEventListener("click", event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-promo-action]");
     if (!control || control.disabled) return;
-    const row = draft.campaigns.find(item => item.id === control.dataset.id);
+    const row = saved.campaigns.find(item => item.id === control.dataset.id);
     switch (control.dataset.promoAction) {
       case "activation": if (editable) openActivationDialog(); break;
       case "definitions": dialog("活动规则说明", `<dl>${types.map(([type, label]) => `<dt>${label}</dt><dd>${definitions[type]}</dd>`).join("")}</dl><p>同一范围只可启用一种活动类型。活动行开启、时段及终端的会员和云促销互斥检查共同决定是否可用。</p>`); break;
@@ -359,33 +392,18 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       case "delete": {
         if (!editable || !row) break;
         const deleting = control.dataset.promoAction === "delete";
-        const apply = () => {
-          if (deleting) draft.campaigns = draft.campaigns.filter(item => item.id !== row.id);
-          else row.enabled = !row.enabled;
-          message = "";
+        const campaigns = deleting ? saved.campaigns.filter(item => item.id !== row.id)
+          : saved.campaigns.map(item => item.id === row.id ? { ...item, enabled: !item.enabled } : item);
+        const next = { ...saved, campaigns };
+        if (deleting || (row.enabled && row.fields.useCode === "yes")) {
+          confirmAction(row, deleting ? "删除" : "关闭", next);
+        } else {
+          const failure = persist(next);
+          if (failure) message = failure;
           render();
-        };
-        if (deleting || (row.enabled && row.fields.useCode === "yes")) confirmAction(row, deleting ? "删除" : "关闭", apply);
-        else apply();
+        }
         break;
       }
-      case "save":
-        if (!editable || !dirty()) break;
-        try {
-          if (localStorage.getItem(key) !== storedValue) {
-            message = "此范围的配置已在其他页面更新。当前草稿仍保留，无法覆盖较新的配置。";
-          } else {
-            const next = JSON.stringify(draft);
-            localStorage.setItem(key, next);
-            storedValue = next;
-            saved = structuredClone(draft);
-            message = "活动配置已保存到本浏览器。";
-          }
-        } catch {
-          message = "保存失败，草稿已保留。请重试。";
-        }
-        render();
-        break;
     }
   });
 }

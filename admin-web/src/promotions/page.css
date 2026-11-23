@@ -77,7 +77,6 @@
   .promotion-body form fieldset, .promotion-options > div, .promotion-code { grid-template-columns: minmax(0, 1fr); }
 }
 .promotion-activation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.promotion-activation-pending { color: var(--color-muted-foreground); font-size: 12px; }
 .promotion-dialog-activation { width: min(500px, calc(100vw - 32px)); }
 .promotion-body .promotion-activation-options { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .promotion-activation-options legend { margin-bottom: 12px; }
