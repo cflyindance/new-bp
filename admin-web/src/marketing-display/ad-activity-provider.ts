@@ -9,8 +9,8 @@ import {getUserSessionContext} from '../auth/session-permissions';
 import {buildPermissionResourceIndex} from '../config/permission-registry';
 
 /** Business integrations register one provider; ad positions never implement promotion calculations. */
-let integration:{provider:ActivityProvider;externalOrigins:string[];supportedActions?:ActivityContext['supportedActions']}|undefined;
-export function registerAdActivityProvider(provider:ActivityProvider,externalOrigins:string[]=[],supportedActions?:ActivityContext['supportedActions']):void {integration={provider,externalOrigins:[...externalOrigins],supportedActions};}
+let integration:{provider:ActivityProvider;externalOrigins:string[];supportedActions?:ActivityContext['supportedActions'];externalModes?:ActivityContext['externalModes']}|undefined;
+export function registerAdActivityProvider(provider:ActivityProvider,externalOrigins:string[]=[],supportedActions?:ActivityContext['supportedActions'],externalModes?:ActivityContext['externalModes']):void {integration={provider,externalOrigins:[...externalOrigins],supportedActions,externalModes};}
 export function currentAdActivityContext():ActivityContext {
   const scope=displayScope(CONTENTS_PATH);
   const resource=[...buildPermissionResourceIndex().byKey.values()].find(node=>node.path==='/marketing/screensaver');
@@ -24,5 +24,5 @@ export function currentAdActivityContext():ActivityContext {
   const couponAccess=currentBrandAccess('page:/members/card/coupon-mgmt');
   const canReadType=(t:string)=>t==='promotion'?promotionAccess!=='hidden':t==='coupon'?couponAccess!=='hidden':true;
   const provider:ActivityProvider=integration?.provider??{...nativeProvider,list:async(s,t)=>!canReadType(t)?[]:nativeProvider.list(s,t),get:async(s,t,id)=>!canReadType(t)?null:nativeProvider.get(s,t,id)};
-  return {scope:scope.scope,canWrite,storeIds:scope.storeIds,provider,externalOrigins:integration?.externalOrigins??(demo?['https://activities.example.test']:[]),supportedActions:integration?.supportedActions??(demo?registeredDemoActions:undefined),configurationNote:demo?'演示模式：复用促销中心活动；积分、优惠券与外链为演示信息，不执行真实领取或兑换。':'促销活动来自当前数据范围的促销中心；积分、优惠券与外部来源须由平台接入。',externalExample:demo?{title:'品牌会员日（演示）',url:'https://activities.example.test/member-day'}:undefined};
+  return {scope:scope.scope,canWrite,storeIds:scope.storeIds,provider,externalOrigins:integration?.externalOrigins??(demo?['https://activities.example.test']:[]),supportedActions:integration?.supportedActions??(demo?registeredDemoActions:undefined),externalModes:integration?.externalModes??(demo?(slot)=>slot.productLine==='eMenu'&&registeredDemoActions(slot).includes('external')?['iframe','newTab']:['iframe']:undefined),configurationNote:demo?'演示模式：复用促销中心活动；积分、优惠券与外链为演示信息，不执行真实领取或兑换。':'促销活动来自当前数据范围的促销中心；积分、优惠券与外部来源须由平台接入。',externalExample:demo?{title:'品牌会员日（演示）',url:'https://activities.example.test/member-day'}:undefined};
 }

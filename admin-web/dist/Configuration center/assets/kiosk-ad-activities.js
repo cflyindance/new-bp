@@ -28,6 +28,7 @@ var KioskAdActivities = (() => {
     activityState: () => activityState,
     canConfigureActions: () => canConfigureActions,
     capabilities: () => capabilities,
+    externalOpenModes: () => externalOpenModes,
     filterActivities: () => filterActivities,
     getActivity: () => getActivity,
     getContext: () => getContext,
@@ -63,6 +64,13 @@ var KioskAdActivities = (() => {
     }
     return slot && CAPABILITIES[slot.productLine]?.includes(slot.code) ? ["none", "activity", "external"] : ["none"];
   }
+  function externalOpenModes(slot, context2) {
+    try {
+      return context2.externalModes?.(slot)?.includes("newTab") ? ["iframe", "newTab"] : ["iframe"];
+    } catch {
+      return ["iframe"];
+    }
+  }
   function normalizeAction(raw) {
     if (raw === void 0 || raw === null) return { type: "none" };
     if (typeof raw !== "object") throw Error("\u70B9\u51FB\u884C\u4E3A\u683C\u5F0F\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u914D\u7F6E");
@@ -71,7 +79,8 @@ var KioskAdActivities = (() => {
     const scope = typeof a.scope === "string" ? a.scope.trim() : "";
     if (!scope) throw Error("\u8BF7\u9009\u62E9\u660E\u786E\u54C1\u724C\u540E\u914D\u7F6E\u6D3B\u52A8");
     if (a.type === "activity" && ["promotion", "points", "coupon"].includes(String(a.activityType)) && typeof a.activityId === "string" && a.activityId.trim()) return { type: "activity", scope, activityType: a.activityType, activityId: a.activityId.trim() };
-    if (a.type === "external" && typeof a.title === "string" && a.title.trim() && a.title.trim().length <= 80 && typeof a.url === "string") return { type: "external", scope, title: a.title.trim(), url: a.url.trim() };
+    if (a.type === "external" && a.openMode !== void 0 && !["iframe", "newTab"].includes(String(a.openMode))) throw Error("\u5916\u90E8\u6D3B\u52A8\u6253\u5F00\u65B9\u5F0F\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9");
+    if (a.type === "external" && typeof a.title === "string" && a.title.trim() && a.title.trim().length <= 80 && typeof a.url === "string") return { type: "external", scope, title: a.title.trim(), url: a.url.trim(), openMode: a.openMode === "newTab" ? "newTab" : "iframe" };
     throw Error("\u8BF7\u5B8C\u6574\u586B\u5199\u70B9\u51FB\u884C\u4E3A\u4E0E\u6D3B\u52A8\u4FE1\u606F");
   }
   function safeExternalUrl(value, origins) {
@@ -138,9 +147,9 @@ var KioskAdActivities = (() => {
     }
     return rows;
   }
-  function filterActivities(rows, query, promotionType = "") {
+  function filterActivities(rows, query, promotionType = "", status = "") {
     const normalized = query.trim().toLocaleLowerCase();
-    return rows.filter((row) => (!promotionType || row.type === "promotion" && row.promotionType === promotionType) && row.name.toLocaleLowerCase().includes(normalized));
+    return rows.filter((row) => (!promotionType || row.type === "promotion" && row.promotionType === promotionType) && row.name.toLocaleLowerCase().includes(normalized) && (!status || activityState(row) === status));
   }
   function activityState(record, now = Date.now()) {
     if (record.status !== "published") return record.status === "disabled" ? "\u5DF2\u505C\u7528" : "\u672A\u53D1\u5E03";
@@ -152,7 +161,10 @@ var KioskAdActivities = (() => {
     if (action.type === "none") return action;
     if (!capabilities(slot, context2).includes(action.type)) throw Error("\u8BE5\u6E20\u9053\u6216\u4F4D\u7F6E\u6682\u4E0D\u652F\u6301\u6B64\u70B9\u51FB\u884C\u4E3A\uFF0C\u8BF7\u6539\u4E3A\u4E0D\u8DF3\u8F6C");
     if (!context2.scope || action.scope !== context2.scope) throw Error("\u6D3B\u52A8\u6240\u5C5E\u54C1\u724C\u4E0E\u5F53\u524D\u54C1\u724C\u4E0D\u4E00\u81F4\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9");
-    if (action.type === "external") return { ...action, url: safeExternalUrl(action.url, context2.externalOrigins) };
+    if (action.type === "external") {
+      if (!externalOpenModes(slot, context2).includes(action.openMode ?? "iframe")) throw Error("\u8BE5\u6E20\u9053\u6216\u4F4D\u7F6E\u4E0D\u652F\u6301\u6B64\u6253\u5F00\u65B9\u5F0F\uFF0C\u8BF7\u9009\u62E9\u7EDF\u4E00H5\u5BB9\u5668");
+      return { ...action, url: safeExternalUrl(action.url, context2.externalOrigins) };
+    }
     const record = await getActivity(context2, action.activityType, action.activityId), now = options.now ?? Date.now(), state = activityState(record, now);
     if (record.status !== "published" || state === "\u5DF2\u7ED3\u675F" || options.runtime && state !== "\u8FDB\u884C\u4E2D") throw Error("\u6D3B\u52A8" + state + "\uFF0C\u8BF7\u66F4\u6362\u6D3B\u52A8");
     if (options.storeIds?.some((id) => record.storeIds.length && !record.storeIds.includes(id))) throw Error("\u6240\u9009\u95E8\u5E97\u4E0D\u5728\u6D3B\u52A8\u9002\u7528\u8303\u56F4\u5185\uFF0C\u8BF7\u8C03\u6574\u95E8\u5E97\u6216\u6D3B\u52A8");

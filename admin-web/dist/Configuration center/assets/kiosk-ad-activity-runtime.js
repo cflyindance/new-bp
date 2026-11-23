@@ -6,6 +6,11 @@
     var api=KioskAdActivities,context=api.getContext(),action=api.normalizeAction(options.action),valid=true;
     try{action=await api.validateAction(action,options.slot,context,{runtime:!options.preview,storeIds:options.storeId?[options.storeId]:[]});}catch(error){valid=false;}
     if(action.type==='none')throw Error('此素材未配置跳转');
+    if(valid&&options.preview===false&&action.type==='external'&&action.openMode==='newTab'){
+      var link=document.createElement('a');link.href=api.safeExternalUrl(action.url,context.externalOrigins);link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';document.body.append(link);link.click();link.remove();
+      api.recordEvent(localStorage,context,Object.assign({},options.source||{},{type:'click',channel:options.slot.productLine,positionCode:options.slot.code,storeId:options.storeId||''}),false);
+      return 'external-tab';
+    }
     var token=crypto.randomUUID(),dialog=document.createElement('dialog'),previous=document.activeElement;
     var session={action:action,slot:options.slot,source:options.source||{adId:'',assetId:'',slotId:options.slot.id},storeId:options.storeId||'',preview:options.preview!==false,scope:context.scope};
     sessions.set(token,session);dialog.className='ad-activity-container';dialog.setAttribute('aria-label',session.preview?'活动预览':'活动详情');

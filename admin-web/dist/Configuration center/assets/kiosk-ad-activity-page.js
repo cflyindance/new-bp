@@ -16,7 +16,7 @@
       document.getElementById('mode').textContent=session.preview?'预览模式，不执行领券、兑换或订单优惠。':'';
       if(session.action.type==='external'){
         title.textContent=session.action.title;body.textContent='';
-        if(session.preview){state.textContent='外部活动链接已校验';body.textContent=session.action.url+'\n后台预览不加载第三方页面，避免触发外部活动操作。';return;}
+        if(session.preview){state.textContent='外部活动链接已校验';body.textContent=session.action.url+'\n打开方式：'+(session.action.openMode==='newTab'?'浏览器新标签页':'统一H5容器（iframe）')+'\n后台预览不加载第三方页面，避免触发外部活动操作。';return;}
         state.textContent='正在加载外部活动…';frame.hidden=false;retry.hidden=false;
         frame.onload=function(){clearTimeout(timer);state.textContent='外部活动';};frame.onerror=function(){clearTimeout(timer);state.textContent='';error.textContent='外部活动加载失败，请重试或返回。';};
         frame.src=api.safeExternalUrl(session.action.url,context.externalOrigins);timer=setTimeout(function(){error.textContent='外部活动加载超时；若页面拒绝嵌入，请联系活动提供方。';retry.hidden=false;},10000);

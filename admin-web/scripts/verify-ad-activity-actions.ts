@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
-import {filterActivities,canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
+import {externalOpenModes,filterActivities,canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
 import {createKioskPromotionActivityProvider} from '../src/marketing-display/kiosk-promotion-activity-adapter.ts';
 
 const data=new Map<string,string>(),storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}},now=Date.now();
@@ -71,3 +71,24 @@ console.log('PASS promotion subtype filters combine with search, missing types r
 const couponRecord:ActivityRecord={...activity,id:'coupon-new',type:'coupon',name:'新客满减券'};
 persist([couponRecord]);
 assert.equal((await validateAction({type:'activity',scope:'brand-a',activityType:'coupon',activityId:'coupon-new'},slot,context)).type,'activity');
+
+const stateRows:ActivityRecord[]=[{...activity,id:'active',endAt:Date.now()+86400000},{...activity,id:'disabled',status:'disabled'},{...activity,id:'future',startAt:Date.now()+3600000,endAt:Date.now()+86400000},{...activity,id:'ended',endAt:Date.now()-1},{...activity,id:'draft',status:'draft'}];
+for(const [status,id] of [['进行中','active'],['已停用','disabled'],['未开始','future'],['已结束','ended'],['未发布','draft']])assert.deepEqual(filterActivities(stateRows,'','',status).map(r=>r.id),[id]);
+assert.equal(filterActivities(stateRows,'不存在','','已停用').length,0);
+console.log('PASS status filters combine with activity type and search across enabled, future, ended, disabled and draft');
+
+const externalBase={type:'external' as const,scope:'brand-a',title:'外部活动',url:'https://partner.example/promo'};
+assert.equal((normalizeAction(externalBase) as {openMode:string}).openMode,'iframe');
+assert.throws(()=>normalizeAction({...externalBase,openMode:'sameWindow'}),/打开方式/);
+await assert.rejects(()=>validateAction({...externalBase,openMode:'newTab'},slot,context),/打开方式/);
+const webContext:ActivityContext={...context,externalModes:()=>['iframe','newTab']};
+assert.equal((await validateAction({...externalBase,openMode:'newTab'},slot,webContext) as {openMode:string}).openMode,'newTab');
+assert.deepEqual(externalOpenModes(slot,{...webContext,externalModes:()=>{throw Error('bad integration');}}),['iframe']);
+let clickedLink:any=null;
+const runtimeWindow:any={};
+const runtimeApi={getContext:()=>webContext,normalizeAction,validateAction,safeExternalUrl,recordEvent};
+const fakeDoc:any={currentScript:{src:'https://admin.example/Configuration%20center/assets/kiosk-ad-activity-runtime.js'},body:{append(){}},createElement:(tag:string)=>{assert.equal(tag,'a');const link:any={click(){clickedLink={href:this.href,target:this.target,rel:this.rel,referrerPolicy:this.referrerPolicy};},remove(){}};return link;}};
+new Script(readFileSync('dist/Configuration center/assets/kiosk-ad-activity-runtime.js','utf8')).runInNewContext({window:runtimeWindow,document:fakeDoc,URL,KioskAdActivities:runtimeApi,localStorage:storage});
+assert.equal(await runtimeWindow.KioskAdActivityRuntime.open({action:{...externalBase,openMode:'newTab'},slot,preview:false,source:{adId:'a',assetId:'b',slotId:slot.id}}),'external-tab');
+assert.equal(clickedLink.href,'https://partner.example/promo');assert.equal(clickedLink.target,'_blank');assert.equal(clickedLink.rel,'noopener noreferrer');
+console.log('PASS external opening policy: legacy iframe, trusted new-tab capability, invalid modes, safe link and click-only telemetry');

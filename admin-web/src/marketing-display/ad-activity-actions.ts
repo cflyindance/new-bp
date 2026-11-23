@@ -1,7 +1,8 @@
 /** Shared browser contract. Business modules own activity eligibility and participation. */
 export type ActivityType = 'promotion' | 'points' | 'coupon';
 export type PromotionActivityType = 'buyGifts' | 'buyDiscount' | 'orderDiscount' | 'exchangePurchase';
-export type ClickAction = {type:'none'} | {type:'activity';activityType:ActivityType;activityId:string;scope:string} | {type:'external';title:string;url:string;scope:string};
+export type ExternalOpenMode = 'iframe' | 'newTab';
+export type ClickAction = {type:'none'} | {type:'activity';activityType:ActivityType;activityId:string;scope:string} | {type:'external';title:string;url:string;scope:string;openMode?:ExternalOpenMode};
 export interface ActivityRecord {id:string;scope:string;type:ActivityType;promotionType?:PromotionActivityType;name:string;status:'published'|'disabled'|'draft';startAt?:number;endAt?:number;storeIds:string[];description?:string;requiresBusinessCheck?:boolean}
 export interface ActivityProvider {
   list(scope:string,type:ActivityType):Promise<ActivityRecord[]>;
@@ -9,7 +10,7 @@ export interface ActivityProvider {
   check?(record:ActivityRecord,options:{runtime?:boolean;storeIds?:string[];startAt?:number;endAt?:number;now?:number}):Promise<{available:boolean;reason?:string}>;
   participate?(activity:ActivityRecord,context:{scope:string;storeId:string;source:{adId:string;slotId:string;assetId:string}}):Promise<{outcome:'opened'|'completed'|'cancelled'}>;
 }
-export interface ActivityContext {scope:string;canWrite:boolean;storeIds:string[];externalOrigins:string[];provider:ActivityProvider;supportedActions?:(slot:ActionSlot)=>Array<ClickAction['type']>;configurationNote?:string;externalExample?:{title:string;url:string}}
+export interface ActivityContext {scope:string;canWrite:boolean;storeIds:string[];externalOrigins:string[];provider:ActivityProvider;supportedActions?:(slot:ActionSlot)=>Array<ClickAction['type']>;externalModes?:(slot:ActionSlot)=>ExternalOpenMode[];configurationNote?:string;externalExample?:{title:string;url:string}}
 export interface ActionSlot {id:string;productLine:string;code:string}
 export const CATALOG_PREFIX='menusifu:ad-activity-catalog:v1:';
 export const EVENT_PREFIX='menusifu:ad-activity-events:v1:';
@@ -25,6 +26,9 @@ export function capabilities(slot:ActionSlot|undefined,context?:ActivityContext)
   if(slot&&context?.supportedActions){try{const supported=context.supportedActions(slot);return Array.isArray(supported)?['none',...supported.filter((value,index,all)=>value!=='none'&&['activity','external'].includes(value)&&all.indexOf(value)===index)]:['none'];}catch{return ['none'];}}
   return slot&&CAPABILITIES[slot.productLine]?.includes(slot.code)?['none','activity','external']:['none'];
 }
+export function externalOpenModes(slot:ActionSlot,context:ActivityContext):ExternalOpenMode[] {
+  try{return context.externalModes?.(slot)?.includes('newTab')?['iframe','newTab']:['iframe'];}catch{return ['iframe'];}
+}
 export function normalizeAction(raw:unknown):ClickAction {
   if(raw===undefined||raw===null)return {type:'none'};
   if(typeof raw!=='object')throw Error('点击行为格式无效，请重新配置');
@@ -33,7 +37,8 @@ export function normalizeAction(raw:unknown):ClickAction {
   const scope=typeof a.scope==='string'?a.scope.trim():'';
   if(!scope)throw Error('请选择明确品牌后配置活动');
   if(a.type==='activity'&&['promotion','points','coupon'].includes(String(a.activityType))&&typeof a.activityId==='string'&&a.activityId.trim())return {type:'activity',scope,activityType:a.activityType as ActivityType,activityId:a.activityId.trim()};
-  if(a.type==='external'&&typeof a.title==='string'&&a.title.trim()&&a.title.trim().length<=80&&typeof a.url==='string')return {type:'external',scope,title:a.title.trim(),url:a.url.trim()};
+  if(a.type==='external'&&a.openMode!==undefined&&!['iframe','newTab'].includes(String(a.openMode)))throw Error('外部活动打开方式无效，请重新选择');
+  if(a.type==='external'&&typeof a.title==='string'&&a.title.trim()&&a.title.trim().length<=80&&typeof a.url==='string')return {type:'external',scope,title:a.title.trim(),url:a.url.trim(),openMode:a.openMode==='newTab'?'newTab':'iframe'};
   throw Error('请完整填写点击行为与活动信息');
 }
 export function safeExternalUrl(value:string,origins:string[]):string {
@@ -67,9 +72,9 @@ export async function listActivities(context:ActivityContext,type:ActivityType):
   for(const row of rows){assertRecord(row,context.scope,type);if(ids.has(row.id))throw Error('活动目录存在重复标识');ids.add(row.id);}
   return rows;
 }
-export function filterActivities(rows:ActivityRecord[],query:string,promotionType:string=''):ActivityRecord[] {
+export function filterActivities(rows:ActivityRecord[],query:string,promotionType:string='',status:string=''):ActivityRecord[] {
   const normalized=query.trim().toLocaleLowerCase();
-  return rows.filter(row=>(!promotionType||row.type==='promotion'&&row.promotionType===promotionType)&&row.name.toLocaleLowerCase().includes(normalized));
+  return rows.filter(row=>(!promotionType||row.type==='promotion'&&row.promotionType===promotionType)&&row.name.toLocaleLowerCase().includes(normalized)&&(!status||activityState(row)===status));
 }
 export function activityState(record:ActivityRecord,now=Date.now()):string {
   if(record.status!=='published')return record.status==='disabled'?'已停用':'未发布';
@@ -80,7 +85,7 @@ export async function validateAction(raw:unknown,slot:ActionSlot,context:Activit
   const action=normalizeAction(raw);if(action.type==='none')return action;
   if(!capabilities(slot,context).includes(action.type))throw Error('该渠道或位置暂不支持此点击行为，请改为不跳转');
   if(!context.scope||action.scope!==context.scope)throw Error('活动所属品牌与当前品牌不一致，请重新选择');
-  if(action.type==='external')return {...action,url:safeExternalUrl(action.url,context.externalOrigins)};
+  if(action.type==='external'){if(!externalOpenModes(slot,context).includes(action.openMode??'iframe'))throw Error('该渠道或位置不支持此打开方式，请选择统一H5容器');return {...action,url:safeExternalUrl(action.url,context.externalOrigins)};}
   const record=await getActivity(context,action.activityType,action.activityId),now=options.now??Date.now(),state=activityState(record,now);
   if(record.status!=='published'||state==='已结束'||options.runtime&&state!=='进行中')throw Error('活动'+state+'，请更换活动');
   if(options.storeIds?.some(id=>record.storeIds.length&&!record.storeIds.includes(id)))throw Error('所选门店不在活动适用范围内，请调整门店或活动');
