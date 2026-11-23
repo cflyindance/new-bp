@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const dir=await mkdtemp(join(process.env.BRAND_DECORATION_TEST_TEMP||tmpdir(),'brand-decoration-'));
 try{
-  await Promise.all(['domain','store'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
+  await Promise.all(['domain','store','schedule'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
   const D=await import(pathToFileURL(join(dir,'domain.mjs'))),S=await import(pathToFileURL(join(dir,'store.mjs')));
   const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
   let data=S.readData('brand-a/store-a','甲品牌',storage);
@@ -28,5 +28,22 @@ try{
   assert.throws(()=>S.writeData('brand-a/store-a',data,1,{...storage,setItem:()=>{throw Error('quota')}}),/存储空间/);
   assert.equal(storage.getItem(S.storageKey('brand-a/store-a')),before,'failed write leaves previous data');
   values.set(S.storageKey('broken'),'{');assert.throws(()=>S.readData('broken','',storage),/损坏/);
+  const A=await import(pathToFileURL(join(dir,'schedule.mjs')));
+  const activity={id:'winter',channel:'kiosk',name:'冬季',releaseId:release.id,starts:100,ends:200,pageIds:['home']};
+  A.saveActivity(data,activity);
+  data.schedule.defaults.kiosk=second.id;
+  assert.equal(A.resolveSchedule(data,'kiosk',99).active,undefined);
+  assert.equal(A.resolveSchedule(data,'kiosk',100).activeRelease.id, release.id);
+  assert.equal(A.resolveSchedule(data,'kiosk',200).fallback.id, second.id);
+  assert.equal(A.resolveSchedule(data,'emenu',100).active,undefined);
+  assert.throws(()=>A.saveActivity(data,{...activity,id:'conflict',starts:199,ends:201}),/重叠/);
+  A.saveActivity(data,{...activity,id:'next',starts:200,ends:300});
+  assert.equal(A.resolveSchedule(data,'kiosk',200).active.id,'next');
+  activity.endedAt=150;
+  assert.equal(A.resolveSchedule(data,'kiosk',150).active,undefined);
+  assert.equal(A.parseLocal('2026-12-01T10:00','Asia/Shanghai'),Date.parse('2026-12-01T02:00Z'));
+  assert.throws(()=>A.parseLocal('2026-11-01T01:30','America/New_York'),/重复/);
+  assert.throws(()=>A.parseLocal('2026-03-08T02:30','America/New_York'),/不存在/);
+  console.log('PASS: activity boundaries, overlap, fallback, channel isolation and time zones.');
   console.log('PASS: seed stability; 24 pages; persistence; brand/store/channel isolation; revision conflicts; immutable snapshots; independent versions; duplicate publish; validation; storage failure; corrupt data.');
 }finally{await rm(dir,{recursive:true,force:true});}

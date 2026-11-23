@@ -1,3 +1,4 @@
+import { getEnterpriseMerchantSnapshotForAuthorization } from '../config/enterprise-merchant-store';
 import { currentBrandPrincipal, isBrandPathAllowed } from '../auth/brand-access-runtime';
 import { getAuthenticatedEmail, DEMO_LOGIN_ACCOUNT } from '../auth/login';
 import { getScopedFilterOptions, readScopeFilters } from '../auth/session-scope';
@@ -14,5 +15,9 @@ export function decorationScope() {
     const access = currentBrandAccess('action:/brand-decoration/pages:manage-page');
     const demo = (getAuthenticatedEmail() ?? '').toLowerCase() === DEMO_LOGIN_ACCOUNT.toLowerCase();
     const canWrite = !!key && isBrandPathAllowed('/brand-decoration/pages') && (access === 'edit' || access === undefined && (demo || !!grant?.enabled && grant.display !== false && grant.l4EditMode === 'editable'));
-    return { key, brandName, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
+    const metadata = getEnterpriseMerchantSnapshotForAuthorization();
+    const linkedMerchant = store && metadata.stores.find(item => item.storeId === store.value)?.linkedMerchantId;
+    const timezone = metadata.merchants.find(item => item.merchantId === linkedMerchant)?.timezone
+        || metadata.merchants.find(item => item.merchantId === brand)?.timezone;
+    return { key, timezone, brandName, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
 }

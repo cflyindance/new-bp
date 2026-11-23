@@ -1,3 +1,4 @@
+import type { DecorationSchedule } from './schedule';
 export type Channel = 'kiosk' | 'emenu';
 export type Theme = 'jade' | 'noir' | 'terra';
 export const THEMES: Record<Theme, {
@@ -39,6 +40,7 @@ export interface Release {
     snapshot: Scheme;
 }
 export interface DecorationData {
+    schedule?: DecorationSchedule;
     schema: 1;
     revision: number;
     schemes: Scheme[];

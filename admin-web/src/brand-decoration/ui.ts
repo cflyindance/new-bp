@@ -1,3 +1,4 @@
+import { effectiveEnd, emptySchedule, formatLocal, parseLocal, resolveSchedule, saveActivity, type DecorationActivity } from './schedule';
 import './style.css';
 import '../config/deployment-change-preview.css';
 import { renderStandalonePageHeader } from '../ui/standalone-page-header';
@@ -67,6 +68,115 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     const heading = (title: string, note: string, actions = '') => `<header class="bd-heading"><div><h1>${title}</h1><p>${note}</p></div><div class="bd-actions">${actions}</div></header>`;
     const tip = () => `<div class="bd-scope"><span>当前范围：<b>${esc(scope.name)}</b></span>${scope.canWrite ? '' : '<span class="bd-tag">只读</span>'}</div><div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>`;
     const channelTabs = () => `<div class="bd-tabs" role="tablist" aria-label="点餐渠道">${(['kiosk', 'emenu'] as Channel[]).map(c => `<button role="tab" aria-selected="${channel === c}" data-bd-action="channel" data-value="${c}">${label(c)}</button>`).join('')}</div>`;
+    let previewAt: number | undefined;
+    let showSchedule = false;
+    const zone = scope.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const releaseName = (id?: string) => {
+        const release = data.releases.find(item => item.id === id);
+        return release ? release.snapshot.name + ' · V' + release.version : '项目原生样式';
+    };
+    const versionOptions = (selected?: string) => data.releases.filter(item => item.snapshot.channel === channel)
+        .map(item => `<option value="${esc(item.id)}" ${selected === item.id ? 'selected' : ''}>${esc(releaseName(item.id))}</option>`).join('');
+    const scheduleState = () => resolveSchedule(data, channel, previewAt ?? Date.now());
+    function selectedPreview() {
+        const { active, activeRelease, fallback } = scheduleState();
+        if (active?.pageIds.includes(page) && activeRelease) return activeRelease.snapshot;
+        return fallback?.snapshot ?? data.schemes.find(item => item.channel === channel && item.id === 'initial-' + channel
+            && Object.values(item.styles).every(style => style.mode === 'default')) ?? newScheme(channel, '项目原生样式', scope.brandName);
+    }
+    function renderSchedule() {
+        const { active, upcoming, fallback } = scheduleState();
+        const activities = (data.schedule?.activities ?? []).filter(item => item.channel === channel)
+            .sort((left, right) => left.starts - right.starts);
+        const now = Date.now();
+        return `<section class="bd-card bd-schedule"><h2>默认装修与活动排期</h2>
+            <div class="bd-toolbar"><label>默认装修<select data-bd-default ${writable()}><option value="">项目原生样式</option>${versionOptions(fallback?.id)}</select></label>
+            <button data-bd-action="default-save" ${writable()}>保存默认装修</button>
+            <button class="bd-primary" data-bd-action="activity-edit" ${writable()}>新建活动</button></div>
+            <p>时区 <strong>${esc(zone)}</strong>${scope.timezone ? '' : '（浏览器时区）'}</p>
+            <div class="bd-toolbar"><label>预览时间<input type="datetime-local" data-bd-time value="${previewAt === undefined ? '' : formatLocal(previewAt, zone)}"></label>
+            <button data-bd-action="schedule-preview">预览</button><button data-bd-action="schedule-now">返回当前时间</button>
+            <label>预览页面<select data-bd-field="schedule-page">${pages(channel).map(([id, name]) => `<option value="${id}" ${page === id ? 'selected' : ''}>${name}</option>`).join('')}</select></label></div>
+            <p>${previewAt === undefined ? '当前展示' : '指定时间展示'} <strong>${active ? esc(active.name + ' · ' + releaseName(active.releaseId)) : esc(releaseName(fallback?.id))}</strong></p>
+            <p>下一场活动 ${upcoming ? esc(upcoming.name + ' · ' + formatLocal(upcoming.starts, zone).replace('T', ' ')) : '暂无'}</p>
+            <p>活动结束后恢复 ${esc(releaseName(fallback?.id))}</p>
+            <div class="bd-table-wrap"><table><thead><tr><th>活动名称</th><th>方案版本</th><th>开始时间</th><th>结束时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>${activities.map(item => {
+                const status = effectiveEnd(item) <= now ? '已结束' : item.starts > now ? '待开始' : '进行中';
+                return `<tr><td>${esc(item.name)}</td><td>${esc(releaseName(item.releaseId))}</td><td>${formatLocal(item.starts, zone).replace('T', ' ')}</td><td>${formatLocal(effectiveEnd(item), zone).replace('T', ' ')}</td><td>${status}</td><td>${status === '已结束' ? '—' : `<button class="bd-link" data-bd-action="activity-edit" data-id="${esc(item.id)}" ${writable()}>${status === '待开始' ? '编辑' : '替换版本'}</button>${status === '进行中' ? `<button class="bd-link" data-bd-action="activity-end" data-id="${esc(item.id)}" ${writable()}>提前结束</button>` : ''}`}</td></tr>`;
+            }).join('') || '<tr><td colspan="6" class="bd-empty">暂无活动排期</td></tr>'}</tbody></table></div>
+            <div class="bd-preview-stage"><iframe title="排期效果预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
+    }
+    function editActivity(existing?: DecorationActivity) {
+        const running = !!existing && existing.starts <= Date.now();
+        const title = running ? '替换活动版本' : existing ? '编辑活动' : '新建活动';
+        openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-activity-title">
+            <button class="bd-modal-backdrop" data-bd-modal-close tabindex="-1" aria-label="关闭"></button>
+            <section class="bd-modal-panel"><header><button data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-activity-title">${title}</h2><button class="bd-primary" type="submit" form="bd-activity-form">保存排期</button></header>
+            <form id="bd-activity-form" class="bd-activity-form">
+            <label>活动名称<input name="name" required maxlength="40" value="${esc(existing?.name ?? '')}" ${running ? 'readonly' : ''}></label>
+            <label>已发布版本<select name="version" required><option value="">请选择</option>${versionOptions(existing?.releaseId)}</select></label>
+            <label>开始时间（${esc(zone)}）<input name="starts" type="datetime-local" required value="${existing ? formatLocal(existing.starts, zone) : ''}" ${running ? 'readonly' : ''}></label>
+            <label>结束时间（${esc(zone)}）<input name="ends" type="datetime-local" required value="${existing ? formatLocal(existing.ends, zone) : ''}" ${running ? 'readonly' : ''}></label>
+            <fieldset><legend>应用活动版本的页面</legend><p>未选页面沿用默认装修。已选页面使用活动版本中配置的样式。</p>
+            <div class="bd-page-checks">${pages(channel).map(([id, name]) => `<label><input type="checkbox" name="pageId" value="${id}" ${(!existing || existing.pageIds.includes(id)) ? 'checked' : ''} ${running ? 'disabled' : ''}>${name}</label>`).join('')}</div></fieldset>
+            <p data-bd-form-error role="alert"></p></form></section></div>`, () => {
+            const form = modal!.querySelector<HTMLFormElement>('form')!;
+            const fields = new FormData(form);
+            const saved = mutate(next => {
+                const now = Date.now();
+                if (existing && (effectiveEnd(existing) <= now || (!running && existing.starts <= now))) {
+                    throw Error('活动状态已变化，请重新打开');
+                }
+                const starts = running ? existing!.starts : parseLocal(String(fields.get('starts')), zone);
+                if (!running && starts < now) throw Error('开始时间须晚于当前时间');
+                saveActivity(next, {
+                    id: existing?.id ?? crypto.randomUUID(), channel,
+                    name: String(fields.get('name')).trim(), releaseId: String(fields.get('version')),
+                    starts, ends: running ? existing!.ends : parseLocal(String(fields.get('ends')), zone),
+                    pageIds: running ? existing!.pageIds : fields.getAll('pageId').map(String),
+                });
+            });
+            if (saved) { closeModal(); message = '活动排期已保存'; draw(); }
+            else modal!.querySelector('[data-bd-form-error]')!.textContent = message;
+        });
+    }
+    function scheduleAction(action: string, el: HTMLElement): boolean {
+        if (action === 'schedule-toggle') { showSchedule = !showSchedule; draw(); return true; }
+        if (action === 'schedule-preview' || action === 'schedule-now') {
+            try {
+                previewAt = action === 'schedule-now' ? undefined : parseLocal(root.querySelector<HTMLInputElement>('[data-bd-time]')!.value, zone);
+                draw();
+            } catch (error) { notice((error as Error).message, true); }
+            return true;
+        }
+        if (action === 'default-save') {
+            const id = root.querySelector<HTMLSelectElement>('[data-bd-default]')!.value;
+            if (mutate(next => {
+                if (id && !next.releases.some(item => item.id === id && item.snapshot.channel === channel)) throw Error('请选择当前渠道的已发布版本');
+                const config = next.schedule ??= emptySchedule();
+                if (id) config.defaults[channel] = id;
+                else delete config.defaults[channel];
+            })) { message = '默认装修已保存'; draw(); }
+            return true;
+        }
+        if (action !== 'activity-edit' && action !== 'activity-end') return false;
+        const existing = data.schedule?.activities.find(item => item.id === el.dataset.id && item.channel === channel);
+        if (action === 'activity-edit') editActivity(existing);
+        if (action === 'activity-end' && existing) {
+            confirm('提前结束活动', [{ label: '展示方案', before: existing.name, after: releaseName(data.schedule?.defaults[channel]) }],
+                '结束活动', () => {
+                    if (mutate(next => {
+                        const now = Date.now();
+                        if (existing.starts > now || effectiveEnd(existing) <= now) throw Error('该活动当前未生效');
+                        next.schedule!.activities.find(item => item.id === existing.id)!.endedAt = now;
+                    })) { closeModal(); message = '活动已结束'; draw(); }
+                    else modal?.querySelector('[data-bd-modal-confirm]')?.insertAdjacentText('afterend', message);
+                }, '确认后恢复当前默认装修。');
+        }
+        return true;
+    }
+
     function draw() {
         const currentPath = route();
         if (editorId) {
@@ -81,8 +191,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             root.innerHTML = heading('发布记录', '查看各渠道的演示版本及当时的配置快照。') + tip() + channelTabs() + `<div class="bd-table-wrap"><table><thead><tr><th>版本</th><th>装修方案</th><th>发布范围</th><th>发布时间</th><th>操作人</th><th>结果</th><th>操作</th></tr></thead><tbody>${data.releases.filter(r => r.snapshot.channel === channel).map(r => `<tr><td>V${r.version}</td><td>${esc(r.snapshot.name)}</td><td>${esc(r.scopeName)}</td><td>${date(r.createdAt)}</td><td>${esc(r.actor)}</td><td><span class="bd-tag">演示版本已生成</span></td><td><button class="bd-link" data-bd-action="record" data-id="${r.id}">查看快照</button></td></tr>`).join('') || '<tr><td colspan="7" class="bd-empty">暂无发布记录。请先进入页面装修，发布一个演示版本。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${data.releases.filter(r => r.snapshot.channel === channel).length} 条记录</div>`;
             return;
         }
+        if (showSchedule) {
+            lastActive = scheduleState().active?.id ?? '';
+            root.innerHTML = heading('页面装修', '', '<button data-bd-action="schedule-toggle">返回方案列表</button>') + tip() + channelTabs() + renderSchedule();
+            return;
+        }
         const schemes = data.schemes.filter(s => s.channel === channel && s.name.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || (status === 'published' ? data.releases.some(r => r.snapshot.id === s.id) : !data.releases.some(r => r.snapshot.id === s.id))));
-        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button class="bd-primary" data-bd-action="create" ${writable()}>＋ 新建方案</button>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
+        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">默认装修与活动排期</button><button class="bd-primary" data-bd-action="create" ${writable()}>＋ 新建方案</button>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
     function drawEditor() {
         const s = scheme();
@@ -135,7 +250,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         after: string;
     }>, action: string, callback: () => void, subtitle = '确认后仅更新本机演示配置，不向设备下发。') => openModal(renderChangePreviewDialog({ mode: 'confirm', dialogId: 'bd-confirm', title, subtitle, changes: rows, confirmLabel: action, closeAttr: 'data-bd-modal-close', backdropAttr: 'data-bd-modal-close', confirmAttr: 'data-bd-modal-confirm', zClass: 'z-[10060]' }), callback);
     function act(action: string, el: HTMLElement) {
+        if (scheduleAction(action, el)) return;
         if (action === 'channel') {
+            previewAt = undefined;
+            page = 'home';
             channel = el.dataset.value as Channel;
             search = '';
             status = 'all';
@@ -228,7 +346,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     const click = (event: Event) => { const button = (event.target as HTMLElement).closest<HTMLElement>('[data-bd-action]'); if (button && !button.hasAttribute('disabled'))
         act(button.dataset.bdAction!, button); };
     const change = (event: Event) => { const input = event.target as HTMLInputElement; const field = input.dataset.bdField; if (!field)
-        return; if (field === 'page') {
+        return; if (field === 'page' || field === 'schedule-page') {
         page = input.value;
         draw();
         return;
@@ -257,14 +375,22 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     else
         input.value = field === 'mode' ? s.styles[page].mode : String(s[field as 'name' | 'brandName' | 'primary'] ?? ''); };
     const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'bd-ready')
-        return; const s = scheme(); if (s)
+        return; const s = showSchedule ? selectedPreview() : scheme(); if (s)
         frame.contentWindow?.postMessage({ type: 'bd-render', scheme: s, page, orientation }, location.origin); };
     const storage = (event: StorageEvent) => { if (event.key?.startsWith('menusifu:brand-decoration:v1:'))
         notice('其他窗口的装修数据已变化，请刷新后继续编辑', true); };
+    let lastActive = '';
+    const scheduleClock = window.setInterval(() => {
+        if (!showSchedule || previewAt !== undefined || modal) return;
+        const activeId = scheduleState().active?.id ?? '';
+        if (activeId === lastActive) return;
+        lastActive = activeId;
+        draw();
+    }, 1000);
     root.addEventListener('click', click);
     root.addEventListener('change', change);
     window.addEventListener('message', frameMessage);
     window.addEventListener('storage', storage);
-    dispose = () => { closeModal(); root.removeEventListener('click', click); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
+    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('click', click); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
     draw();
 }
