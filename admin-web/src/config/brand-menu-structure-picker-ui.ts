@@ -775,7 +775,7 @@ export function renderBrandMenuStructurePickerHtml(
       data-active-category="${escapeHtml(activeC)}"
     >
       <input type="hidden" ${hiddenAttr} value="${hiddenValue}" />
-      ${searchable ? `<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3"><label class="min-w-0 flex-1"><span class="sr-only">搜索当前产线商品</span><input type="search" class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm" placeholder="搜索商品" aria-label="搜索当前产线商品" data-brand-menu-search value="${escapeHtml(query)}"></label><span class="text-xs text-muted-foreground" aria-live="polite">已选 ${countBrandMenuStructureDishesByLine(byLine)} 个商品（跨产线分别计数）</span></div>` : ""}
+      ${searchable ? `<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3"><label class="min-w-0 flex-1"><span class="sr-only">搜索当前产线商品</span><input type="search" class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm" placeholder="搜索商品" aria-label="搜索当前产线商品" data-brand-menu-search value="${escapeHtml(query)}"></label><span class="text-xs text-muted-foreground" aria-live="polite">已选 ${enableLines ? countBrandMenuStructureDishesByLine(byLine) : selectionToKeys(selection).filter(key => key.startsWith("d:")).length} 个商品${enableLines ? "（跨产线分别计数）" : ""}</span></div>` : ""}
       <div class="${gridClass}">
         ${
           enableLines
@@ -899,6 +899,8 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
           {
             readOnly,
             treeLineId: treeLineId ?? undefined,
+            searchable: picker.dataset.searchable === "1",
+            query: picker.dataset.query,
             excludedDishIdsByLine: readPickerExclusions(picker),
           },
         );
@@ -922,7 +924,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     picker.dataset.query = input.value;
     const line = picker.dataset.activeLine as BrandMenuLineId;
     rerender(
-      readBrandMenuStructureByLineFromPicker(picker),
+      pickerUsesLines(picker) ? readBrandMenuStructureByLineFromPicker(picker) : readBrandMenuStructureKeysFromPicker(picker),
       picker.dataset.activeGroup ?? "",
       picker.dataset.activeCategory ?? "",
       line,

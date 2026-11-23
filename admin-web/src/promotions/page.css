@@ -1,0 +1,42 @@
+.promotion-page { --promotion-accent: #1677ff; background: var(--color-card); color: var(--color-card-foreground); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; min-width: 0; }
+.promotion-toolbar, .promotion-filters, .promotion-page footer, .promotion-dialog > header, .promotion-dialog > header > div { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.promotion-toolbar, .promotion-page footer, .promotion-dialog > header { justify-content: space-between; }
+.promotion-toolbar input { width: min(360px, 100%); }
+.promotion-filters { margin-top: 16px; }
+.promotion-filters label { display: flex; align-items: center; gap: 8px; }
+.promotion-toolbar button, .promotion-toolbar input, .promotion-filters select, .promotion-page footer button, .promotion-table button, .promotion-dialog > header button, .promotion-body form button, .promotion-body form select, .promotion-body form input:not([type=checkbox]) { min-height: 48px; border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; background: var(--color-card); color: var(--color-card-foreground); font: inherit; }
+.promotion-page button { cursor: pointer; }
+.promotion-page button:disabled, .promotion-page input:disabled, .promotion-page select:disabled { opacity: .55; cursor: default; }
+.promotion-page button.promotion-primary { background: var(--promotion-accent); color: var(--color-primary-foreground); border-color: var(--promotion-accent); }
+.promotion-note, .promotion-body p:not(.promotion-error) { color: var(--color-muted-foreground); margin: 12px 0; }
+.promotion-table { overflow: auto; border: 1px solid var(--color-border); border-radius: 8px; }
+.promotion-table table { width: 100%; border-collapse: collapse; min-width: 760px; }
+.promotion-table th, .promotion-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
+.promotion-table th { height: 48px; background: var(--color-muted); font-weight: 600; }
+.promotion-table td { height: 64px; }
+.promotion-table tr:last-child td { border-bottom: 0; }
+.promotion-table th:last-child, .promotion-table td:last-child { text-align: right; }
+.promotion-table td.promotion-empty { text-align: center; color: var(--color-muted-foreground); }
+.promotion-table button { min-height: 32px; }
+.promotion-table button[aria-checked=true], .promotion-table button[data-promo-action=edit] { color: var(--promotion-accent); }
+.promotion-page footer { margin-top: 16px; }
+.promotion-page [data-promo-results] footer button { min-height: 32px; padding-block: 4px; }
+.promotion-dialog { position: fixed; inset: 0; margin: auto; color: var(--color-card-foreground); background: var(--color-muted); padding: 16px; width: min(760px, calc(100vw - 32px)); max-height: 90vh; border-radius: 16px; border: 1px solid var(--color-border); overflow: hidden; }
+.promotion-dialog[open] { display: flex; flex-direction: column; }
+.promotion-dialog::backdrop { background: rgb(0 0 0 / .45); }
+.promotion-dialog-wide { width: min(1200px, calc(100vw - 48px)); }
+.promotion-dialog > header { margin-bottom: 16px; }
+.promotion-dialog h2 { font-size: 20px; font-weight: 600; }
+.promotion-dialog > header [data-close] { width: 48px; font-size: 24px; }
+.promotion-body { overflow: auto; padding: 24px; background: var(--color-card); border-radius: 12px; }
+.promotion-body form { display: grid; gap: 20px; }
+.promotion-body form section { display: grid; gap: 12px; }
+.promotion-body h3, .promotion-body dt { font-weight: 600; }
+.promotion-body dd { margin-bottom: 12px; }
+.promotion-body fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(215px, 100%), 1fr)); gap: 16px; padding: 0; border: 0; }
+.promotion-body form label { display: grid; align-content: start; gap: 8px; }
+.promotion-days { grid-column: 1 / -1; }
+.promotion-days > div { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.promotion-days > div label { display: flex; align-items: center; }
+.promotion-error { color: var(--color-destructive); }
+.promotion-page :focus-visible { outline: 2px solid var(--promotion-accent); outline-offset: 2px; }
