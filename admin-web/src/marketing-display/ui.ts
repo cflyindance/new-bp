@@ -165,16 +165,16 @@ class DisplayController {
     const disabled=canManageDisplayRegions()?'':'disabled';
     const terminals=DISPLAY_TERMINALS.filter(terminal=>!region.productLine||region.productLine===terminal);
     this.openDialog('终端接入 · '+region.name,`<div class="display-code-box"><code>${e(region.code)}</code>${btn('复制编码','copy-code',{id,link:true})}</div><form id="display-bindings-form">${terminals.map(terminal=>{
-      const binding=region.bindings[terminal],version=binding?.minimumVersion==='0.0.0'?'':binding?.minimumVersion??'';
-      return `<div class="display-binding-row"><div><strong>${terminal}</strong><p class="display-muted">${binding?'已接入':'未接入'}</p></div><div><label class="display-check"><input type="checkbox" name="terminal" value="${terminal}" ${binding?'checked':''} ${disabled}>登记接入</label><label class="display-field">最低支持版本（选填）${input('version-'+terminal,terminal+'最低支持版本',version,'placeholder="留空表示无最低版本限制" '+disabled)}</label></div></div>`;
+      const binding=region.bindings[terminal];
+      return `<div class="display-binding-row"><div><strong>${terminal}</strong><p class="display-muted">${binding?'已接入':'未接入'}</p></div><div><label class="display-check"><input type="checkbox" name="binding-terminal" value="${terminal}" ${binding?'checked':''} ${disabled}>登记接入</label></div></div>`;
     }).join('')}</form>`,btn('关闭','close')+this.writeButton('保存接入信息','save-bindings',id,true));
   }
   private persistBindings(id:string):void {
     const data=new FormData(this.form()),region=this.region(id);if(!region)throw Error('广告位不存在');
     const bindings:DisplayRegion['bindings']={};
-    for(const terminal of data.getAll('terminal').map(String)){
+    for(const terminal of data.getAll('binding-terminal').map(String)){
       if(region.productLine&&region.productLine!==terminal)throw Error('终端不适用于当前广告位');
-      bindings[terminal]={minimumVersion:String(data.get('version-'+terminal)??'').trim()||'0.0.0',mediaKinds:region.bindings[terminal]?.mediaKinds??region.mediaKinds};
+      bindings[terminal]={minimumVersion:region.bindings[terminal]?.minimumVersion??'0.0.0',mediaKinds:region.bindings[terminal]?.mediaKinds??region.mediaKinds};
     }
     const next=saveTerminalBindings(this.platform,id,bindings,canManageDisplayRegions());
     this.platform=saveDisplayPlatform(next,this.platform.revision);this.saved('终端接入信息已保存');
