@@ -31,7 +31,7 @@ export function payrollAuthorizationRows(key:string):AuthorizationRow[]|undefine
     {contentKey:content('payroll-detail'),additionalContentKeys:[content('employee-info')],title:'薪资管理',editKeys:edits.map(action),editTitle:'编辑薪资',help:'不可见：隐藏薪资内容和操作；可见不可编辑：仅查看；可编辑：允许更新考勤、修改与保存薪资。编辑员工单独授权。ADP ID、SSN和薪资金额统一随薪资内容展示。'},
     {contentKey:content('export-results'),title:'导出操作',editKeys:exports.map(action),editTitle:'导出或发送薪资',mode:'visibility',help:'可见：允许当前及批量PDF、CSV、ADP导出、打印和发送邮箱。无需薪资可编辑，但须薪资内容可见。'},
     {contentKey:content('switch-employee'),title:'切换员工',editKeys:[action('switch-employee')],editTitle:'切换员工',mode:'visibility',help:'仅控制切换入口，不扩大员工数据范围；薪资内容不可见时不生效。'},
-    {contentKey:content('edit-employee-entry'),title:'编辑员工',editKeys:[action('edit-employee')],editTitle:'编辑员工',mode:'visibility',help:'不可见：隐藏编辑入口且不能编辑员工；可见：允许编辑员工资料。独立于薪资编辑权限，但薪资内容不可见时不生效。'},
+    {contentKey:content('edit-employee-entry'),title:'编辑员工',editKeys:[action('edit-employee')],editTitle:'编辑员工',mode:'visibility',help:'不可见：隐藏编辑入口且不能编辑员工；可见：独立授予编辑员工入口；修改员工资料还需薪资页面可编辑且相关内容可见。页面只读时保留配置但不允许修改。'},
   ];
   if(key===`${page}/schedule-settings`)return [{contentKey:content('object-manage-pay-schedule'),title:'发薪周期管理',editKeys:[action('manage-pay-schedule')],editTitle:'编辑发薪周期',help:'可编辑包含新增、修改、删除发薪周期规则；不授予薪资报表权限。'}];
   if(key===`${page}/declaration-settings`)return [{contentKey:content('object-manage-declaration'),title:'员工声明管理',editKeys:declarations.map(action),editTitle:'编辑员工声明',help:'可编辑包含新增、修改、保存、发布、创建新版本、删除草稿、停用及分配员工。'}];

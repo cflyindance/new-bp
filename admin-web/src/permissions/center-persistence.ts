@@ -4,7 +4,14 @@ export function validateCenterState(state:CenterState,resources:Map<string,Resou
   if(state.navigationVersion!==undefined&&state.navigationVersion!==1)throw Error('导航权限数据版本无效');
   const unique=(ids:string[])=>new Set(ids).size===ids.length;
   if(!unique(state.roles.map(r=>r.id))||!unique(state.employees.map(e=>e.id)))throw Error('角色或员工编号重复');
-  for(const role of state.roles)validateRole(state,role);
+  for(const role of state.roles){
+    validateRole(state,role);
+    if(role.defaultedGrants!==undefined&&(!Array.isArray(role.defaultedGrants)||role.defaultedGrants.some(k=>typeof k!=='string')||!unique(role.defaultedGrants)))throw Error('默认权限来源无效');
+    if(role.readonlyChildren!==undefined){
+      if(!role.readonlyChildren||typeof role.readonlyChildren!=='object'||Array.isArray(role.readonlyChildren))throw Error('新增子项默认策略无效');
+      for(const [parent,keys] of Object.entries(role.readonlyChildren))if(!parent||!Array.isArray(keys)||keys.some(k=>typeof k!=='string')||!unique(keys))throw Error('新增子项默认目录快照无效');
+    }
+  }
   const emails=state.employees.map(e=>e.email.trim().toLowerCase()).filter(Boolean);
   if(!unique(emails))throw Error('员工邮箱重复');
   const validGrant=(key:string,value:string)=>{

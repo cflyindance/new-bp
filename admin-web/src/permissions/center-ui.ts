@@ -1,3 +1,5 @@
+import {renderRoleTree,visibleRoleTree} from './center-role-tree';
+import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
 import {openCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
@@ -50,6 +52,11 @@ export function bindCenterPage(): void {
   const employeeId=path.startsWith('/permissions/staff/')?decodeURIComponent(path.slice('/permissions/staff/'.length)):'';
   const isDetail=!!roleId||!!employeeId;
   const role=()=>draft.roles.find(r=>r.id===roleId);
+  const roleTree=createRoleTreeState();
+  const treeNodes=roleId&&!roleView?buildRoleTree(catalog):[];
+  for(const n of flattenRoleTree(treeNodes))if(n.kind==='page'&&n.children.length)roleTree.collapsed.add(n.id);
+  const treeNode=(id:string)=>flattenRoleTree(treeNodes).find(n=>n.id===id);
+  const originalRole=()=>state.roles.find(r=>r.id===roleId)!;
   const employee=()=>draft.employees.find(e=>e.id===employeeId);
   const accountStatus=(e:Employee)=>{const a=listStaffLoginAccounts().find(a=>a.employeeId===e.id);return a?.invitation?invitationStatus(a):statusLabels[e.status];};
   const actor=()=>getUserSessionContext()?.employeeName??'本地管理员';
@@ -60,6 +67,7 @@ export function bindCenterPage(): void {
   const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
+    if(!preview&&roleId&&!roleView&&role())return renderRoleTree(catalog,role()!,originalRole(),roleTree);
     if(employeeId||roleView){
       const view=effectiveMenuView(catalog,value,selectedPage);
       if(view.page!==selectedPage)selectedGroup='';
@@ -95,7 +103,7 @@ export function bindCenterPage(): void {
     const scroll=new Map([...root!.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));
     const expanded=new Map([...root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]')].map(el=>[el.dataset.menuNode!,el.open]));
     if(isDetail){
-      root!.innerHTML=`<section class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??employee()?.name??'记录不存在'),backHtml:btn('← 返回','back'),subtitleHtml:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':'员工管理'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(roleView?'':btn('取消','cancel')+btn('保存更改','save','primary'))})}<div class="pc-content">${roleId?(role()?`<div class="pc-toolbar"><h3>${roleView?'当前角色生效权限':'功能权限'}</h3></div>${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`}</section>`;
+      root!.innerHTML=`<section class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??employee()?.name??'记录不存在'),backHtml:btn('← 返回','back'),subtitleHtml:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':'员工管理'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(roleView?'':btn('取消','cancel')+btn('保存更改','save','primary'))})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`}</section>`;
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
@@ -103,6 +111,14 @@ export function bindCenterPage(): void {
       else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、授权员工、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
+    }
+    if(roleId&&!roleView&&role()){
+      const shown=visibleRoleTree(catalog,role()!,originalRole(),roleTree).nodes;
+      for(const input of root!.querySelectorAll<HTMLInputElement>('[data-role-tree-select-all],[data-role-tree-select],[data-role-tree-category-select]')){
+        const id=input.dataset.roleTreeCategorySelect??input.dataset.roleTreeSelect;
+        const n=id?treeNode(id):undefined;
+        input.indeterminate=roleSelectionState(n?[n]:shown,roleTree.selected).indeterminate;
+      }
     }
     for(const el of root!.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=scroll.get(el.dataset.scroll!)??0;
     for(const el of root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]'))if(expanded.has(el.dataset.menuNode!))el.open=expanded.get(el.dataset.menuNode!)!;
@@ -127,7 +143,7 @@ export function bindCenterPage(): void {
     const original=state.roles.find(r=>r.id===id);
     modal(copy?'复制角色':original?'编辑角色':'新建角色',`<label>角色名称<input name="name" required maxlength="30" value="${esc(original?(copy?original.name+' 副本':original.name):'')}"></label><label>描述<textarea name="description" maxlength="160">${esc(original?.description??'')}</textarea></label>`,d=>{
       const source=original;
-      const row:Role={id:original&&!copy?original.id:crypto.randomUUID(),name:field(d,'name').trim(),description:field(d,'description'),system:original&&!copy?original.system:false,grants:structuredClone(source?.grants??{})};
+      const row:Role={...(source?structuredClone(source):{}),id:original&&!copy?original.id:crypto.randomUUID(),name:field(d,'name').trim(),description:field(d,'description'),system:original&&!copy?original.system:false,grants:structuredClone(source?.grants??{}),...(source?.readonlyChildren?{readonlyChildren:structuredClone(source.readonlyChildren)}:{}),...(source?.defaultedGrants?{defaultedGrants:[...source.defaultedGrants]}:{})};
       validateRole(state,row);const next=structuredClone(state);next.roles=next.roles.filter(r=>r.id!==row.id).concat(row);commit(next,row.id,original&&!copy?'编辑角色':copy?'复制角色':'新增角色');return true;
     },'保存');
   }
@@ -214,6 +230,19 @@ export function bindCenterPage(): void {
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
       if(b.dataset.logId){logDetail(b.dataset.logId);return;}
+      if(roleId&&!roleView&&role()){
+        if(b.dataset.roleTreeCategory){roleTree.category=b.dataset.roleTreeCategory;roleTree.search='';render();root.querySelector<HTMLElement>('[data-role-tree-category="'+CSS.escape(b.dataset.roleTreeCategory)+'"]')?.focus({preventScroll:true});return;}
+        if(b.dataset.roleTreeToggle){const id=b.dataset.roleTreeToggle;roleTree.collapsed.has(id)?roleTree.collapsed.delete(id):roleTree.collapsed.add(id);render();root.querySelector<HTMLElement>('[data-role-tree-toggle="'+CSS.escape(id)+'"]')?.focus({preventScroll:true});return;}
+        if(b.dataset.roleTreeExpand){for(const n of flattenRoleTree(treeNodes))b.dataset.roleTreeExpand==='all'?roleTree.collapsed.delete(n.id):roleTree.collapsed.add(n.id);render();root.querySelector<HTMLElement>('[data-role-tree-expand="'+b.dataset.roleTreeExpand+'"]')?.focus({preventScroll:true});return;}
+        if(b.hasAttribute('data-role-tree-batch')){
+          const nodes=roleSelectionTargets(treeNodes).filter(n=>roleTree.selected.has(n.id));
+          const mode=(root.querySelector<HTMLSelectElement>('[data-role-tree-batch-mode]')?.value??'read') as Access;
+          const targets=nodes.filter(n=>mode!=='edit'||['page','setting','object'].includes(n.kind));
+          if(!targets.length)throw Error('勾选项不支持所选权限状态');
+          const label=mode==='hidden'?'不可见':mode==='read'?'可见不可编辑（目录、内容设为可见）':'可编辑';
+          modal('批量设置权限',`<p>将已勾选的 ${targets.length} 项设为${label}。独立操作保持原配置。</p><ul>${targets.map(n=>`<li>${esc(roleTreePath(treeNodes,n.id))}</li>`).join('')}</ul>`,()=>{if(applyTreeBatch(catalog,role()!,targets,mode))mark();roleTree.selected.clear();render();return true;},'确认应用');return;
+        }
+      }
       if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
       if(employeeId&&(b.dataset.authorization||b.dataset.categoryGrant||b.dataset.grant||b.dataset.submenuMode))return;
       if(b.dataset.submenuMode){ev.preventDefault();if(!role())return;const v=b.dataset.value;if(v!=='hidden'&&v!=='read'&&v!=='edit')throw Error('子导航状态无效');if(applySubmenuMode(catalog,role()!,page,b.dataset.submenuMode,v)){mark();render();}return;}
@@ -264,11 +293,21 @@ export function bindCenterPage(): void {
     }catch(e){error((e as Error).message);}
   });
   root.addEventListener('input',ev=>{
-    const target=ev.target as HTMLInputElement;if(!target.matches('[data-query],[data-menu-search]'))return;
+    const target=ev.target as HTMLInputElement;
+    if(target.hasAttribute('data-role-tree-search')){roleTree.search=target.value;const pos=target.selectionStart;render();const next=root.querySelector<HTMLInputElement>('[data-role-tree-search]');next?.focus();next?.setSelectionRange(pos,pos);return;}
+    if(!target.matches('[data-query],[data-menu-search]'))return;
     const isMenu=target.hasAttribute('data-menu-search');if(isMenu)menuSearch=target.value;else query=target.value;
     const position=target.selectionStart;render();const input=root.querySelector<HTMLInputElement>(isMenu?'[data-menu-search]':'[data-query]');input?.focus();input?.setSelectionRange(position,position);
   });
-  root.addEventListener('change',ev=>{const target=ev.target as HTMLSelectElement;if(target.hasAttribute('data-store')){storeId=target.value;render();}if(target.hasAttribute('data-status')){filter=target.value;render();}});
+  root.addEventListener('change',ev=>{const target=ev.target as HTMLSelectElement;
+    if(roleId&&!roleView&&role())try{
+      if(target.hasAttribute('data-role-tree-grant')){const n=treeNode(target.dataset.roleTreeGrant!);if(n&&applyTreeChoice(catalog,role()!,n,target.value as Access))mark();render();root.querySelector<HTMLElement>('[data-role-tree-grant="'+CSS.escape(n?.id??'')+'"]')?.focus({preventScroll:true});return;}
+      if(target.hasAttribute('data-role-tree-filter')){const checked=(target as unknown as HTMLInputElement).checked;if(target.dataset.roleTreeFilter==='granted')roleTree.onlyGranted=checked;else roleTree.onlyChanged=checked;render();root.querySelector<HTMLElement>('[data-role-tree-filter="'+target.dataset.roleTreeFilter+'"]')?.focus({preventScroll:true});return;}
+      if(target.hasAttribute('data-role-tree-category-select')){const n=treeNode(target.dataset.roleTreeCategorySelect!);if(n)toggleRoleSelection(treeNodes,[n],roleTree.selected,(target as unknown as HTMLInputElement).checked);render();root.querySelector<HTMLElement>('[data-role-tree-category-select="'+CSS.escape(n?.id??'')+'"]')?.focus({preventScroll:true});return;}
+      if(target.hasAttribute('data-role-tree-select')){const id=target.dataset.roleTreeSelect!;const n=treeNode(id);if(n)toggleRoleSelection(treeNodes,[n],roleTree.selected,(target as unknown as HTMLInputElement).checked);render();root.querySelector<HTMLElement>('[data-role-tree-select="'+CSS.escape(id)+'"]')?.focus({preventScroll:true});return;}
+      if(target.hasAttribute('data-role-tree-select-all')){const checked=(target as unknown as HTMLInputElement).checked;toggleRoleSelection(treeNodes,visibleRoleTree(catalog,role()!,originalRole(),roleTree).nodes,roleTree.selected,checked);render();root.querySelector<HTMLElement>('[data-role-tree-select-all]')?.focus({preventScroll:true});return;}
+    }catch(e){render();error((e as Error).message);return;}
+    if(target.hasAttribute('data-store')){storeId=target.value;render();}if(target.hasAttribute('data-status')){filter=target.value;render();}});
   render();
   if(path==='/permissions/roles/new')roleDialog();
 }

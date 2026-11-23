@@ -1,3 +1,4 @@
+import {readonlyChildDefault} from './center-child-defaults';
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
 export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "content" | "field" | "action" | "setting"; parent?: string; path?: string; viewId?: string; seq?: number; help?: string; previewValue?: string; requires?: string[]; legacyGateKey?:string; compatibilityOnly?:boolean; relatedGrantKeys?:string[]; followParentVisibility?:boolean }
@@ -11,7 +12,8 @@ export function configuredAccess(resource:Resource,resources:Map<string,Resource
   return parent?configuredAccess(parent,resources,own,seen):resource.defaultAccess;
 }
 function capAccess(resource:Resource,value:Access,read:(key:string)=>Access):Access {
-  for(const key of resource.ceilingKeys??[]){const cap=read(key);if(rank[cap]<rank[value])value=cap;}
+  for(const key of resource.ceilingKeys??[]){const cap=read(key);if(cap==='read'&&resource.readonlyAllowed)continue;if(rank[cap]<rank[value])value=cap;}
+  if(value==='edit'&&resource.editRequires?.some(k=>read(k)!=='edit'))value='read';
   return resource.type==='action'&&value!=='edit'?'hidden':value;
 }
 function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:string)=>Access|undefined):boolean {
@@ -25,6 +27,8 @@ function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:s
 export interface Store { id: string; title: string; brand: string; region: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
+export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants?:string[]}
+export interface Resource {readonlyAllowed?:boolean; editRequires?:string[]}
 export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }
 export interface Audit { source?:'demo'; id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
@@ -40,6 +44,9 @@ function pageGrantFallback(resource:Resource,own:(key:string)=>Access|undefined)
   const gate=resource.type==='page'&&resource.settingPageGate?own(resource.settingPageGate):undefined;
   return gate==='read'||gate==='edit'?'read':undefined;
 }
+function treePageCeiling(resource:Resource,role:Role):boolean {
+  return !!resource.aggregateRelatedGrants&&!!role.readonlyChildren?.[resource.key.replace(/^setting-page:/,'')];
+}
 export function scopeMatches(scope: Scope, store: Store): boolean {
   return scope.ids.includes(scope.mode === "stores" ? store.id : scope.mode === "brands" ? store.brand : store.region);
 }
@@ -50,9 +57,10 @@ export function roleAccess(role: Role, key: string, resources: Map<string, Resou
   if(resource.legacyGateKey&&roleAccess(role,resource.legacyGateKey,resources,new Set(seen))==='hidden')return 'hidden';
   if (resource.parent && roleAccess(role, resource.parent, resources, new Set(seen)) === "hidden") return "hidden";
   if (resource.requires?.some(k=>roleAccess(role,k,resources,new Set(seen))==='hidden'))return 'hidden';
-  if(resource.pageContentKeys&&!coreVisible(resource,resources,k=>role.grants[k]))return 'hidden';
+  const own=(k:string)=>role.grants[k]??(resources.has(k)?readonlyChildDefault(role,resources.get(k)!,resources):undefined);
+  if(resource.pageContentKeys&&!coreVisible(resource,resources,own))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
-  const values=[validAccess(resource,configuredAccess(resource,resources,k=>role.grants[k])??pageGrantFallback(resource,k=>role.grants[k])),...(resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
+  const values=[validAccess(resource,configuredAccess(resource,resources,own)??pageGrantFallback(resource,own)),...(treePageCeiling(resource,role)?[]:resource.relatedGrantKeys??[]).map(k=>roleAccess(role,k,resources,new Set(seen)))];
   return capAccess(resource,values.reduce((a,b)=>rank[a]<rank[b]?a:b),k=>roleAccess(role,k,resources,new Set(seen)));
 }
 export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
@@ -70,7 +78,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
     if(k.startsWith('setting-parent-choice:'))return undefined;
     let value:Access|undefined;for(const binding of employee.bindings)if(scopeMatches(binding.scope,store)){
       const role=state.roles.find(r=>r.id===binding.roleId);if(!role)continue;
-      const explicit=target.parentChoiceKey&&role.grants[target.parentChoiceKey]==='read'?undefined:role.grants[k];
+      const explicit=target.parentChoiceKey&&role.grants[target.parentChoiceKey]==='read'?undefined:role.grants[k]??readonlyChildDefault(role,target,resources);
       const parent=target.inheritFrom?resources.get(target.inheritFrom):undefined;
       const v=explicit??(parent?configuredAccess(parent,resources,raw):target.defaultAccess);if(v!==undefined&&(value===undefined||rank[v]>rank[value]))value=v;
     }return value;
@@ -78,7 +86,8 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if(resource.pageContentKeys&&!coreVisible(resource,resources,raw))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
   const override = employee.overrides[storeId]?.[key];
-  const finish=(value:Access):Access=>capAccess(resource,(resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
+  const treeCeiling=employee.bindings.some(binding=>scopeMatches(binding.scope,store)&&state.roles.some(r=>r.id===binding.roleId&&treePageCeiling(resource,r)));
+  const finish=(value:Access):Access=>capAccess(resource,(treeCeiling?[]:resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
   if(resource.inheritFrom&&resource.parentChoiceKey&&employee.overrides[storeId]?.[resource.parentChoiceKey]==='read')return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   if (override !== undefined) return finish(validAccess(resource,override));
   // Supplemental ceilings are neutral until explicitly configured, including legacy standalone personal grants.
@@ -92,7 +101,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
     const role = state.roles.find(r => r.id === binding.roleId);
     // Union applicable roles first. Ancestor gates use the same effective union above.
     const inherited=resource.inheritFrom?resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)):resource.defaultAccess??(role?pageGrantFallback(resource,k=>role.grants[k]):undefined);
-    const grant = validAccess(resource,role?(resource.parentChoiceKey&&role.grants[resource.parentChoiceKey]==='read'?undefined:role.grants[key])??inherited:undefined);
+    const grant = validAccess(resource,role?(resource.parentChoiceKey&&role.grants[resource.parentChoiceKey]==='read'?undefined:role.grants[key]??readonlyChildDefault(role,resource,resources))??inherited:undefined);
     if (rank[grant] > rank[value]) value = grant;
   }
   return finish(value);
