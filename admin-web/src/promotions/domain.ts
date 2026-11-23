@@ -66,7 +66,10 @@ export function validateCampaign(campaign: Campaign, configuration: PromotionCon
   }
 }
 
-export function scheduleStatus(campaign: Campaign, activeType: PromotionConfiguration["activeType"], now = new Date()): string {
+export const promotionStatuses = ["未启用", "未开始", "时段内", "时段外", "已结束"] as const;
+export type PromotionStatus = (typeof promotionStatuses)[number];
+
+export function scheduleStatus(campaign: Campaign, activeType: PromotionConfiguration["activeType"], now = new Date()): PromotionStatus {
   if (!campaign.enabled || campaign.type !== activeType) return "未启用";
   const date = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-");
   const time = [now.getHours(), now.getMinutes()].map(n => String(n).padStart(2, "0")).join(":");

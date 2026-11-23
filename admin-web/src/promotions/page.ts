@@ -5,7 +5,7 @@ import {
   renderBrandMenuStructurePickerHtml,
   selectedBrandMenuDishesByLine,
 } from "../config/brand-menu-structure-picker-ui";
-import { promotionTypes, scheduleStatus, validateCampaign, type Campaign, type PromotionConfiguration, type PromotionType } from "./domain";
+import { promotionStatuses, promotionTypes, scheduleStatus, validateCampaign, type Campaign, type PromotionConfiguration, type PromotionStatus, type PromotionType } from "./domain";
 import { createPromotionDemo } from "./demo";
 import "./page.css";
 
@@ -65,6 +65,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   let draft = structuredClone(saved);
   let tab: PromotionType | "" = demoAccount ? "" : draft.activeType || draft.campaigns[0]?.type || "";
   let query = "";
+  let statusFilter: PromotionStatus | "" = "";
   let currentPage = 1;
   let message = readFailed ? "读取活动配置失败，请重新加载。" : "";
   const dirty = () => JSON.stringify(draft) !== JSON.stringify(saved);
@@ -72,19 +73,24 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     `<button type="button" data-promo-action="${action}" ${extra}>${label}</button>`;
 
   function updateRows() {
-    const results = draft.campaigns.filter(row => (!tab || tab === row.type) && row.fields.name.toLowerCase().includes(query.trim().toLowerCase()));
+    const now = new Date();
+    const keyword = query.trim().toLowerCase();
+    const results = draft.campaigns
+      .filter(row => (!tab || tab === row.type) && row.fields.name.toLowerCase().includes(keyword))
+      .map(row => ({ row, status: scheduleStatus(row, draft.activeType, now) }))
+      .filter(({ status }) => !statusFilter || status === statusFilter);
     const pages = Math.max(1, Math.ceil(results.length / 10));
     currentPage = Math.min(currentPage, pages);
     page!.querySelector("[data-promo-results]")!.innerHTML = `
-      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>活动类型</th><th>活动时间</th><th>规则摘要</th><th>状态</th><th>活动开关</th><th>操作</th></tr></thead>
-      <tbody>${results.slice((currentPage - 1) * 10, currentPage * 10).map(row => {
+      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>促销类型</th><th>活动时间</th><th>规则摘要</th><th>状态</th><th>活动类型</th><th>操作</th></tr></thead>
+      <tbody>${results.slice((currentPage - 1) * 10, currentPage * 10).map(({ row, status }) => {
         const f = row.fields;
         const date = f.startDate ? `${f.startDate} 至 ${f.endDate}` : "";
         const days = f.days ? "周" + f.days.split(",").map(day => "日一二三四五六"[Number(day)]).join("、") : "";
         const time = f.startTime ? `${f.startTime}–${f.endTime}` : "";
         const attrs = `data-id="${escape(row.id)}"`;
         return `<tr><td>${escape(f.name)}</td><td>${promotionTypes[row.type]}</td><td>${[date, days, time].filter(Boolean).map(escape).join("<br>")}</td>
-          <td>${escape(summary(row))}</td><td>${scheduleStatus(row, draft.activeType)}</td>
+          <td>${escape(summary(row))}</td><td>${status}</td>
           <td>${button(row.enabled ? "已开启" : "已关闭", "toggle", `${attrs} role="switch" aria-checked="${row.enabled}" ${editable ? "" : "disabled"}`)}</td>
           <td>${button(editable ? "编辑" : "查看", "edit", attrs)} ${editable ? button("删除", "delete", attrs) : ""}</td></tr>`;
       }).join("") || `<tr><td colspan="7" class="promotion-empty">${readFailed ? "无法读取活动" : draft.campaigns.length ? "没有符合条件的活动" : "暂无活动"}</td></tr>`}</tbody></table></div>
@@ -93,11 +99,13 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
 
   function render() {
     page!.innerHTML = `<div class="promotion-toolbar">
-      <div class="promotion-query"><input type="search" aria-label="搜索活动名称" placeholder="搜索活动名称" data-promo-search value="${escape(query)}"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label></div>
+      <div class="promotion-query"><input type="search" aria-label="搜索活动名称" placeholder="搜索活动名称" data-promo-search value="${escape(query)}"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label>
+        <label>活动状态 <select data-promo-status>${options([["", "全部状态"], ...promotionStatuses.map(status => [status, status])], statusFilter)}</select></label>
+      </div>
       <div class="promotion-actions"><div class="promotion-activation">
         <span>启用类型：<strong>${draft.activeType ? promotionTypes[draft.activeType] : "全部关闭"}</strong>${draft.activeType !== saved.activeType ? ' <small class="promotion-activation-pending">待保存</small>' : ""}</span>
         ${editable ? button("更改", "activation", 'aria-label="更改启用类型" aria-haspopup="dialog"') : ""}
-      </div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
+      </div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} <div class="promotion-create-actions">${button('<span aria-hidden="true">ⓘ</span> 活动规则说明', "definitions", 'class="promotion-rule-help" aria-haspopup="dialog"')} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div></div>
       </div>
       <div data-promo-results></div>
       ${message ? `<footer><span role="status">${escape(message)}</span></footer>` : ""}`;
@@ -334,6 +342,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   page.addEventListener("change", event => {
     const target = event.target as HTMLSelectElement;
     if (target.matches("[data-promo-filter]")) { tab = target.value as PromotionType | ""; currentPage = 1; updateRows(); }
+    if (target.matches("[data-promo-status]")) { statusFilter = target.value as PromotionStatus | ""; currentPage = 1; updateRows(); }
   });
   page.addEventListener("click", event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-promo-action]");
@@ -341,7 +350,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     const row = draft.campaigns.find(item => item.id === control.dataset.id);
     switch (control.dataset.promoAction) {
       case "activation": if (editable) openActivationDialog(); break;
-      case "definitions": dialog("活动定义", `<dl>${types.map(([type, label]) => `<dt>${label}</dt><dd>${definitions[type]}</dd>`).join("")}</dl><p>同一范围只可启用一种活动类型。活动行开启、时段及终端的会员和云促销互斥检查共同决定是否可用。</p>`); break;
+      case "definitions": dialog("活动规则说明", `<dl>${types.map(([type, label]) => `<dt>${label}</dt><dd>${definitions[type]}</dd>`).join("")}</dl><p>同一范围只可启用一种活动类型。活动行开启、时段及终端的会员和云促销互斥检查共同决定是否可用。</p>`); break;
       case "prev": currentPage--; updateRows(); break;
       case "next": currentPage++; updateRows(); break;
       case "add": if (editable) openEditor(); break;
