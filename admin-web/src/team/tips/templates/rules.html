@@ -44,6 +44,11 @@
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="rulesTitle">
           <div class="tipout-page-heading">          <div class="tipout-compact-toolbar tipout-rules-toolbar">
+            <div class="tipout-rule-search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+              <input id="ruleNameSearch" type="search" placeholder="搜索规则名称" aria-label="搜索规则名称" autocomplete="off" data-native-oninput="renderRulesTable()">
+              <button id="clearRuleNameSearch" type="button" aria-label="清空规则名称搜索" title="清空" data-native-onclick="clearRuleNameSearch()" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+            </div>
             <label class="filter-field-label" for="storeFilter">门店</label>
             <select class="form-control" id="storeFilter" data-native-onchange="renderRulesTable()">
               <option value="">全部门店</option>

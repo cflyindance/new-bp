@@ -33,8 +33,23 @@ function initStoreFilter() {
       }).length);
     }
 
+    function clearRuleNameSearch() {
+      var search = document.getElementById('ruleNameSearch');
+      if (!search) return;
+      search.value = '';
+      renderRulesTable();
+      search.focus();
+    }
+
     function renderRulesTable() {
       var rules = ruleData.getRules();
+      var search = document.getElementById('ruleNameSearch');
+      var keyword = String(search ? search.value : '').trim().toLocaleLowerCase();
+      var clearSearch = document.getElementById('clearRuleNameSearch');
+      if (clearSearch) clearSearch.hidden = !search || !search.value;
+      if (keyword) rules = rules.filter(function(rule) {
+        return String(rule.ruleName || '').toLocaleLowerCase().includes(keyword);
+      });
       var storeFilter = document.getElementById('storeFilter');
       var filterStore = storeFilter ? storeFilter.value : '';
       if (filterStore) {
@@ -49,7 +64,7 @@ function initStoreFilter() {
       var tableBody = document.getElementById('rulesTableBody');
       tableBody.innerHTML = '';
       if (rules.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">' + (filterStore || filterKind ? '暂无符合筛选条件的规则' : '暂无规则，请点击「新增规则」创建') + '</div></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">' + (keyword || filterStore || filterKind ? '暂无符合条件的规则' : '暂无规则，请点击「新增规则」创建') + '</div></td></tr>';
         return;
       }
       rules.forEach(function(rule) {
