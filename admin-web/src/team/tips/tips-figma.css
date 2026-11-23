@@ -271,3 +271,14 @@
 .tipout-page-rule-editor .condition-preview-item dd:focus-visible{outline:2px solid var(--primary);outline-offset:3px;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:800px){.tipout-page-rule-editor .condition-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px}}
 @media(max-width:480px){.tipout-page-rule-editor .condition-preview-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Rule name search shares the list filter scope. */
+.tipout-page-rules .tipout-rule-search{display:flex;align-items:center;gap:8px;width:360px;max-width:100%;min-height:48px;padding:0 12px;box-sizing:border-box;border:1px solid var(--border-color);border-radius:var(--radius-lg,12px);background:var(--card-bg);color:var(--text-tertiary)}
+.tipout-page-rules .tipout-rule-search:focus-within{border-color:var(--primary);outline:2px solid var(--primary-light,rgba(22,119,255,.12));outline-offset:1px}
+.tipout-page-rules .tipout-rule-search input{flex:1;min-width:0;width:100%;border:0;outline:0;background:transparent;color:var(--text-primary);font:inherit;height:44px;padding:0}
+.tipout-page-rules .tipout-rule-search input::-webkit-search-cancel-button{appearance:none}
+.tipout-page-rules .tipout-rule-search button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border:0;border-radius:var(--radius-md,8px);background:transparent;color:var(--text-secondary);cursor:pointer}
+.tipout-page-rules .tipout-rule-search button[hidden]{display:none}
+.tipout-page-rules .tipout-rule-search button:hover{background:var(--bg-secondary,var(--body-bg))}
+.tipout-page-rules .tipout-rule-search button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media(max-width:700px){.tipout-page-rules .tipout-rule-search{width:100%}}
