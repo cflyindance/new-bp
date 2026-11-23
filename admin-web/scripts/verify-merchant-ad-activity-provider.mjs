@@ -1,0 +1,33 @@
+import {build} from 'esbuild';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const dir=await mkdtemp(path.join(os.tmpdir(),'ad-merchant-provider-'));
+try {
+ const out=path.join(dir,'provider.mjs');
+ await build({entryPoints:['src/marketing-display/merchant-ad-activity-provider.ts'],bundle:true,platform:'node',format:'esm',outfile:out});
+ const {merchantAdActivityProvider,registeredDemoActions}=await import(pathToFileURL(out).href);
+ const data=new Map(),storage={getItem:key=>data.get(key)??null};
+ const provider=merchantAdActivityProvider({storage,scope:'brand-a',promotionScope:'scope-key',storeIds:['s1'],demo:true,now:()=>new Date('2026-11-23T12:00:00')});
+ const promos=await provider.list('brand-a','promotion');
+ assert(promos.every(x=>['buyGifts','buyDiscount','orderDiscount','exchangePurchase'].includes(x.promotionType)));assert(promos.length>1);assert(promos.some(x=>x.status==='published'));assert(promos.some(x=>x.status==='disabled'));
+ const coupons=await provider.list('brand-a','coupon');assert.equal(coupons.length,1);assert.equal((await provider.get('brand-a','coupon',coupons[0].id)).type,'coupon');assert.equal((await provider.check(coupons[0],{})).available,true);
+ const points=await provider.list('brand-a','points');assert.equal(points.length,1);assert.match(points[0].name,/演示/);assert.equal(provider.participate,undefined);
+ assert.deepEqual(registeredDemoActions({id:'display-demo-kiosk-cart',code:'demo.kiosk-cart',productLine:'Kiosk'}),['none','activity','external']);
+ assert.deepEqual(registeredDemoActions({id:'display-demo-kiosk-cart',code:'demo.kiosk-cart',productLine:'CDS'}),['none']);
+ assert.deepEqual(registeredDemoActions({id:'custom',code:'demo.kiosk-cart',productLine:'Kiosk'}),['none']);
+ assert.deepEqual(registeredDemoActions({id:'builtin',code:'home',productLine:'Kiosk'}),['none','activity','external']);
+ data.set('merchant-promotion-demo:v1:scope-key',JSON.stringify({activeType:'order',campaigns:[{id:'actual-original-id',type:'order',enabled:true,fields:{name:'真实保存记录',startDate:'2026-11-01',endDate:'2026-12-01',days:'1',startTime:'11:00',endTime:'14:00'}}]}));
+ const record=await provider.get('brand-a','promotion','actual-original-id');assert(record);
+ assert.equal((await provider.check(record,{runtime:true,now:new Date('2026-11-23T12:00:00').getTime()})).available,true);
+ assert.equal((await provider.check(record,{runtime:true,now:new Date('2026-11-23T15:00:00').getTime()})).available,false);
+ data.set('merchant-promotion-demo:v1:scope-key',JSON.stringify({activeType:'gift',campaigns:[{id:'actual-original-id',type:'order',enabled:true,fields:{name:'已切换类型'}}]}));
+ assert.equal((await provider.get('brand-a','promotion','actual-original-id')).status,'disabled');
+ await assert.rejects(()=>provider.list('brand-b','promotion'));
+ const real=merchantAdActivityProvider({storage,scope:'brand-a',promotionScope:'no-config',storeIds:['s1'],demo:false});
+ assert.deepEqual(await real.list('brand-a','promotion'),[]);assert.deepEqual(await real.list('brand-a','points'),[]);assert.deepEqual(await real.list('brand-a','coupon'),[]);
+ data.set('merchant-promotion-config:v1:no-config','{broken');await assert.rejects(()=>real.list('brand-a','promotion'));
+ console.log('PASS merchant activity provider: original IDs, fresh activation, schedule, demo isolation, exact slot registration, points and external boundaries');
+} finally {await rm(dir,{recursive:true,force:true});}

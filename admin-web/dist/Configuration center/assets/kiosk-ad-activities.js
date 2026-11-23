@@ -28,6 +28,7 @@ var KioskAdActivities = (() => {
     activityState: () => activityState,
     canConfigureActions: () => canConfigureActions,
     capabilities: () => capabilities,
+    filterActivities: () => filterActivities,
     getActivity: () => getActivity,
     getContext: () => getContext,
     hasActions: () => hasActions,
@@ -69,7 +70,7 @@ var KioskAdActivities = (() => {
     if (a.type === "none") return { type: "none" };
     const scope = typeof a.scope === "string" ? a.scope.trim() : "";
     if (!scope) throw Error("\u8BF7\u9009\u62E9\u660E\u786E\u54C1\u724C\u540E\u914D\u7F6E\u6D3B\u52A8");
-    if (a.type === "activity" && ["promotion", "points"].includes(String(a.activityType)) && typeof a.activityId === "string" && a.activityId.trim()) return { type: "activity", scope, activityType: a.activityType, activityId: a.activityId.trim() };
+    if (a.type === "activity" && ["promotion", "points", "coupon"].includes(String(a.activityType)) && typeof a.activityId === "string" && a.activityId.trim()) return { type: "activity", scope, activityType: a.activityType, activityId: a.activityId.trim() };
     if (a.type === "external" && typeof a.title === "string" && a.title.trim() && a.title.trim().length <= 80 && typeof a.url === "string") return { type: "external", scope, title: a.title.trim(), url: a.url.trim() };
     throw Error("\u8BF7\u5B8C\u6574\u586B\u5199\u70B9\u51FB\u884C\u4E3A\u4E0E\u6D3B\u52A8\u4FE1\u606F");
   }
@@ -137,6 +138,10 @@ var KioskAdActivities = (() => {
     }
     return rows;
   }
+  function filterActivities(rows, query, promotionType = "") {
+    const normalized = query.trim().toLocaleLowerCase();
+    return rows.filter((row) => (!promotionType || row.type === "promotion" && row.promotionType === promotionType) && row.name.toLocaleLowerCase().includes(normalized));
+  }
   function activityState(record, now = Date.now()) {
     if (record.status !== "published") return record.status === "disabled" ? "\u5DF2\u505C\u7528" : "\u672A\u53D1\u5E03";
     if (record.endAt !== void 0 && now >= record.endAt) return "\u5DF2\u7ED3\u675F";
@@ -162,7 +167,7 @@ var KioskAdActivities = (() => {
   function actionLabel(raw) {
     try {
       const a = normalizeAction(raw);
-      return a.type === "none" ? "\u4E0D\u8DF3\u8F6C" : a.type === "external" ? "\u5916\u90E8\u6D3B\u52A8 \xB7 " + a.title : a.activityType === "promotion" ? "\u4FC3\u9500\u6D3B\u52A8" : "\u79EF\u5206\u5151\u6362\u6D3B\u52A8";
+      return a.type === "none" ? "\u4E0D\u8DF3\u8F6C" : a.type === "external" ? "\u5916\u90E8\u6D3B\u52A8 \xB7 " + a.title : a.activityType === "promotion" ? "\u4FC3\u9500\u6D3B\u52A8" : a.activityType === "coupon" ? "\u4F18\u60E0\u5238\u6D3B\u52A8" : "\u79EF\u5206\u5151\u6362\u6D3B\u52A8";
     } catch {
       return "\u70B9\u51FB\u884C\u4E3A\u5F85\u5B8C\u5584";
     }

@@ -326,7 +326,7 @@
               return Object.assign({},img,{ url: url, dataUrl: null, type: 'video', mediaRef: img.mediaRef });
             });
           }
-          var dataUrl = typeof img === 'string' ? img : (img.dataUrl || '');
+          var dataUrl = typeof img === 'string' ? img : (img.dataUrl || img.src || '');
           var t = (typeof img === 'object' && img.type) ? img.type : 'image';
           return Promise.resolve(Object.assign({},typeof img==='object'?img:{},{ url: dataUrl, dataUrl: dataUrl, type: t || 'image' }));
         }));

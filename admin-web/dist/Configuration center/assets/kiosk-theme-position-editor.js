@@ -139,6 +139,7 @@
       if(warnings.length&& !(await confirmChange('以下素材与推荐尺寸不同：\n'+warnings.join('\n')+'\n是否保留当前素材并继续保存？')))throw Error('已取消保存，请检查素材尺寸');
       return {bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected)),interactionScope:interactionScope};
     }
+    root.addEventListener('ad-activity-context',function(){if(hooks&&selected)scheduleCompatibility();});
     return {
       defaultKind:function(role){return allowedKinds(spec(role))[0]||'image';},
       validateItem:async function(role,item){var meta=await metadata(item);if(allowedKinds(spec(role)).indexOf(meta.kind)<0)throw Error('该渠道不支持此素材类型');return api.validateMedia(spec(role),meta);},

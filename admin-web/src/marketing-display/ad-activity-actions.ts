@@ -1,14 +1,15 @@
 /** Shared browser contract. Business modules own activity eligibility and participation. */
-export type ActivityType = 'promotion' | 'points';
+export type ActivityType = 'promotion' | 'points' | 'coupon';
+export type PromotionActivityType = 'buyGifts' | 'buyDiscount' | 'orderDiscount' | 'exchangePurchase';
 export type ClickAction = {type:'none'} | {type:'activity';activityType:ActivityType;activityId:string;scope:string} | {type:'external';title:string;url:string;scope:string};
-export interface ActivityRecord {id:string;scope:string;type:ActivityType;name:string;status:'published'|'disabled'|'draft';startAt?:number;endAt?:number;storeIds:string[];description?:string;requiresBusinessCheck?:boolean}
+export interface ActivityRecord {id:string;scope:string;type:ActivityType;promotionType?:PromotionActivityType;name:string;status:'published'|'disabled'|'draft';startAt?:number;endAt?:number;storeIds:string[];description?:string;requiresBusinessCheck?:boolean}
 export interface ActivityProvider {
   list(scope:string,type:ActivityType):Promise<ActivityRecord[]>;
   get(scope:string,type:ActivityType,id:string):Promise<ActivityRecord|null>;
   check?(record:ActivityRecord,options:{runtime?:boolean;storeIds?:string[];startAt?:number;endAt?:number;now?:number}):Promise<{available:boolean;reason?:string}>;
   participate?(activity:ActivityRecord,context:{scope:string;storeId:string;source:{adId:string;slotId:string;assetId:string}}):Promise<{outcome:'opened'|'completed'|'cancelled'}>;
 }
-export interface ActivityContext {scope:string;canWrite:boolean;storeIds:string[];externalOrigins:string[];provider:ActivityProvider;supportedActions?:(slot:ActionSlot)=>Array<ClickAction['type']>}
+export interface ActivityContext {scope:string;canWrite:boolean;storeIds:string[];externalOrigins:string[];provider:ActivityProvider;supportedActions?:(slot:ActionSlot)=>Array<ClickAction['type']>;configurationNote?:string;externalExample?:{title:string;url:string}}
 export interface ActionSlot {id:string;productLine:string;code:string}
 export const CATALOG_PREFIX='menusifu:ad-activity-catalog:v1:';
 export const EVENT_PREFIX='menusifu:ad-activity-events:v1:';
@@ -31,7 +32,7 @@ export function normalizeAction(raw:unknown):ClickAction {
   if(a.type==='none')return {type:'none'};
   const scope=typeof a.scope==='string'?a.scope.trim():'';
   if(!scope)throw Error('请选择明确品牌后配置活动');
-  if(a.type==='activity'&&['promotion','points'].includes(String(a.activityType))&&typeof a.activityId==='string'&&a.activityId.trim())return {type:'activity',scope,activityType:a.activityType as ActivityType,activityId:a.activityId.trim()};
+  if(a.type==='activity'&&['promotion','points','coupon'].includes(String(a.activityType))&&typeof a.activityId==='string'&&a.activityId.trim())return {type:'activity',scope,activityType:a.activityType as ActivityType,activityId:a.activityId.trim()};
   if(a.type==='external'&&typeof a.title==='string'&&a.title.trim()&&a.title.trim().length<=80&&typeof a.url==='string')return {type:'external',scope,title:a.title.trim(),url:a.url.trim()};
   throw Error('请完整填写点击行为与活动信息');
 }
@@ -66,6 +67,10 @@ export async function listActivities(context:ActivityContext,type:ActivityType):
   for(const row of rows){assertRecord(row,context.scope,type);if(ids.has(row.id))throw Error('活动目录存在重复标识');ids.add(row.id);}
   return rows;
 }
+export function filterActivities(rows:ActivityRecord[],query:string,promotionType:string=''):ActivityRecord[] {
+  const normalized=query.trim().toLocaleLowerCase();
+  return rows.filter(row=>(!promotionType||row.type==='promotion'&&row.promotionType===promotionType)&&row.name.toLocaleLowerCase().includes(normalized));
+}
 export function activityState(record:ActivityRecord,now=Date.now()):string {
   if(record.status!=='published')return record.status==='disabled'?'已停用':'未发布';
   if(record.endAt!==undefined&&now>=record.endAt)return '已结束';
@@ -84,7 +89,7 @@ export async function validateAction(raw:unknown,slot:ActionSlot,context:Activit
   if(context.provider.check){const result=await context.provider.check(record,options);if(!result?.available)throw Error(result?.reason||'活动当前不可用于该广告');}
   return action;
 }
-export function actionLabel(raw:unknown):string {try{const a=normalizeAction(raw);return a.type==='none'?'不跳转':a.type==='external'?'外部活动 · '+a.title:a.activityType==='promotion'?'促销活动':'积分兑换活动';}catch{return '点击行为待完善';}}
+export function actionLabel(raw:unknown):string {try{const a=normalizeAction(raw);return a.type==='none'?'不跳转':a.type==='external'?'外部活动 · '+a.title:a.activityType==='promotion'?'促销活动':a.activityType==='coupon'?'优惠券活动':'积分兑换活动';}catch{return '点击行为待完善';}}
 export interface ActionTheme {id?:string;interactionScope?:string;adSlot:ActionSlot;adSlotAssets?:Record<string,Array<{clickAction?:unknown;assetId?:string}>>;lastDistributePrefs?:{stores?:Array<{mid:string}>;startDate?:string;startTime?:string;endDate?:string;endTime?:string}}
 export function hasActions(theme:ActionTheme):boolean {return Object.values(theme.adSlotAssets??{}).some(list=>list.some(a=>normalizeAction(a.clickAction).type!=='none'));}
 export async function validateThemeActions(theme:ActionTheme,context:ActivityContext,phase:'content'|'publish'='content'):Promise<void> {

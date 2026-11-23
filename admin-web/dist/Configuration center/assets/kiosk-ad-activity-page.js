@@ -13,7 +13,7 @@
       session=parent.KioskAdActivityRuntime.getSession(token);context=parent.KioskAdActivities.getContext();
       if(!session||session.scope!==context.scope)throw Error('品牌上下文已变化，请返回重新打开');
       api.setContext(context);await api.validateAction(session.action,session.slot,context,{runtime:!session.preview,storeIds:session.storeId?[session.storeId]:[]});
-      document.getElementById('mode').textContent=session.preview?'预览模式，不执行领取、兑换或订单优惠。':'';
+      document.getElementById('mode').textContent=session.preview?'预览模式，不执行领券、兑换或订单优惠。':'';
       if(session.action.type==='external'){
         title.textContent=session.action.title;body.textContent='';
         if(session.preview){state.textContent='外部活动链接已校验';body.textContent=session.action.url+'\n后台预览不加载第三方页面，避免触发外部活动操作。';return;}
@@ -22,7 +22,7 @@
         frame.src=api.safeExternalUrl(session.action.url,context.externalOrigins);timer=setTimeout(function(){error.textContent='外部活动加载超时；若页面拒绝嵌入，请联系活动提供方。';retry.hidden=false;},10000);
       }else{
         record=await api.getActivity(context,session.action.activityType,session.action.activityId);title.textContent=record.name;state.textContent=session.preview&&record.requiresBusinessCheck?'时间以原活动规则为准':api.activityState(record);body.textContent=record.description||'活动详情由原活动模块提供。';
-        participate.hidden=false;participate.textContent=session.action.activityType==='points'?'去积分兑换':'去参与活动';participate.disabled=session.preview||!context.provider.participate||api.activityState(record)!=='进行中';
+        participate.hidden=false;participate.textContent=session.action.activityType==='points'?'去积分兑换':session.action.activityType==='coupon'?'去领取优惠券':'去参与活动';participate.disabled=session.preview||!context.provider.participate||api.activityState(record)!=='进行中';
         if(!session.preview&&!context.provider.participate)error.textContent='活动参与入口暂未接入，请返回。';
       }
     }catch(e){title.textContent='活动当前不可用';state.textContent='';body.textContent='';error.textContent=e.message||'加载失败，请返回重试';retry.hidden=false;}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
-import {canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
+import {filterActivities,canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
 import {createKioskPromotionActivityProvider} from '../src/marketing-display/kiosk-promotion-activity-adapter.ts';
 
 const data=new Map<string,string>(),storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}},now=Date.now();
@@ -59,3 +59,15 @@ const base=new URL('../dist/Configuration center/',import.meta.url);
 for(const file of ['screensaver-create.html','screensaver-edit.html','kiosk-theme-list.html','effective-time.html','activity.html'])for(const script of readFileSync(new URL(file,base),'utf8').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new Script(script[1],{filename:file});
 for(const file of ['kiosk-ad-activity-editor.js','kiosk-ad-activity-runtime.js','kiosk-ad-activity-page.js'])new Script(readFileSync(new URL('assets/'+file,base),'utf8'),{filename:file});
 console.log('PASS ad activity actions: scope, permissions, capability, URL policy, lifetime, stores, schedule, fallback, read-only preview, telemetry, Kiosk identity and original-business delegation');
+
+const filterRows:ActivityRecord[]=[{...activity,id:'gift',name:'买赠招牌套餐',promotionType:'buyGifts'},{...activity,id:'order',name:'满减招牌套餐',promotionType:'orderDiscount'},{...activity,id:'unknown',name:'未分类活动'},{...activity,id:'coupon',type:'coupon',name:'新客优惠券'}];
+assert.deepEqual(filterActivities(filterRows,'招牌','buyGifts').map(r=>r.id),['gift']);
+assert.deepEqual(filterActivities(filterRows,'不存在','buyGifts'),[]);
+assert.equal(filterActivities(filterRows,'').length,4);
+assert.equal(filterActivities(filterRows,'','buyDiscount').length,0);
+assert.equal(normalizeAction({type:'activity',scope:'brand-a',activityType:'coupon',activityId:'coupon'}).type,'activity');
+console.log('PASS promotion subtype filters combine with search, missing types remain in all, coupon actions normalize');
+
+const couponRecord:ActivityRecord={...activity,id:'coupon-new',type:'coupon',name:'新客满减券'};
+persist([couponRecord]);
+assert.equal((await validateAction({type:'activity',scope:'brand-a',activityType:'coupon',activityId:'coupon-new'},slot,context)).type,'activity');
