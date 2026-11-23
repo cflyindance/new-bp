@@ -35,7 +35,7 @@ export function saveRegion(state:DisplayPlatform,input:RegionInput,allowed:boole
   input=updateContract(existing,input as DisplayRegion) as RegionInput;
   if(input.exampleImage!==undefined&&(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(input.exampleImage)||input.exampleImage.split(',')[1].length>4*Math.ceil(REGION_EXAMPLE_MAX_BYTES/3)))fail('区域示例图须为不超过 512 KB 的 PNG、JPEG 或 WebP 图片');
   const name=input.name.trim(),code=input.code.trim(),scene=input.scene.trim();
-  if(!name||name.length>30)fail('区域名称必填，最多 30 字');if(!scene||scene.length>20)fail('所属场景必填，最多 20 字');
+  if(!name||name.length>30)fail('广告位名称必填，最多 30 字');if(!scene||scene.length>20)fail('展示场景必填，最多 20 字');
   if(!/^[a-z][a-z0-9._-]{0,63}$/.test(code)||code.length>64)fail('区域编码使用小写字母、数字和 . _ - 分隔符，最多 64 字');
   if(existing&&existing.code!==code)fail('区域编码创建后不可修改');if(next.regions.some(r=>r.code===code&&r.productLine===input.productLine&&r.id!==existing?.id))fail('区域编码已存在');
   const ratio=parseRatios(input.ratio).join(' / ');if(!input.mediaKinds.length||input.mediaKinds.some(k=>!['image','video'].includes(k)))fail('至少选择一种有效素材类型');

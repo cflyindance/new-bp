@@ -20,7 +20,7 @@ export function buildMNavigationModules(authorized: MModule[]): MModule[] {
     const resource = modules[presetIndex].pages.find(p=>p.id==='presets')!;
     modules.splice(presetIndex,0,
       {id:'business-menu-template-nav',title:'业态与菜单模板',pages:[{...resource,title:'业态与菜单模板',path:'/m-platform/business-menu-templates'}]},
-      {id:'display-regions-nav',title:'展示区域管理',pages:[{...resource,title:'展示区域管理',path:'/m-platform/display-regions'}]});
+      {id:'display-regions-nav',title:'广告位管理',pages:[{...resource,title:'广告位管理',path:'/m-platform/display-regions'}]});
   }
   const rolePages = modules.find(m=>m.id==='permissions')?.pages.filter(p=>['roles','provider-roles'].includes(p.id)) ?? [];
   rolePages.sort((a,b)=>Number(b.id==='roles')-Number(a.id==='roles'));

@@ -47,7 +47,7 @@ export function renderMRolePermissionEditor(options: {
     presentation: { control, notice: (()=>{
       const key=mEditorGrantKey(catalog,selected);
       if(key==='m:page:routing')return '菜单配置与页面注册中心共用菜单与页面管理权限；修改会同步影响这些入口。';
-      if(key==='m:page:presets')return '业态与菜单模板、展示区域管理与平台预设共用平台预设权限；修改会同步影响这些入口。';
+      if(key==='m:page:presets')return '业态与菜单模板、广告位管理与平台预设共用平台预设权限；修改会同步影响这些入口。';
       if(catalog.grantKeys.has(selected)&&!key)return '此目录用于组织菜单，请在下级页面配置权限。';
       return undefined;
     })() } });

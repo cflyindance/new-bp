@@ -87,7 +87,7 @@ export function renderMPlatformSidebar(path: string): string {
 
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
   if (!mCanVisit(path)) return { title: "访问受限", module: "M 平台" };
-  if (isDisplayRegionPath(path)) return {title:'展示区域管理',module:'M 平台'};
+  if (isDisplayRegionPath(path)) return {title:'广告位管理',module:'M 平台'};
   if(isBusinessMenuTemplatePath(path))return {title:'业态与菜单模板',module:'M 平台'};
   return (
     findNavBlueprintPageTitle(path) ??

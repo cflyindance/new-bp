@@ -103,7 +103,7 @@ export function mPageForPath(path: string): typeof M_PAGES[number] | undefined {
   if(path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');return provider?{...provider,title:'变更记录'}:undefined;}
   // Independent navigation entry, reusing the existing preset permission resource.
   if(path==='/m-platform/business-menu-templates')return M_PAGES.find(p=>p.id==='presets');
-  if(path==='/m-platform/display-regions'){const presets=M_PAGES.find(p=>p.id==='presets');return presets?{...presets,title:'展示区域管理'}:undefined;}
+  if(path==='/m-platform/display-regions'){const presets=M_PAGES.find(p=>p.id==='presets');return presets?{...presets,title:'广告位管理'}:undefined;}
   if(path==='/m-platform/permissions/provider-roles'||path==='/m-platform/permissions/provider-roles/change-log'){const provider=M_PAGES.find(p=>p.id==='provider-roles');if(provider)return {...provider,title:path.endsWith('/change-log')?'变更记录':PERMISSION_ROLE_LABELS.merchantTitle};}
   const exact = M_PAGES.find(p => p.path === path);
   if (exact) return exact.id === 'roles' ? {...exact, title: PERMISSION_ROLE_LABELS.platformTitle} : exact;
