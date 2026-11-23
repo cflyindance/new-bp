@@ -40,5 +40,5 @@ export function assertSettingChoice(c:Catalog,resource:Resource,value:Access|'in
   if(value!=='hidden'&&pageGate&&effective(pageGate.replace(/^setting-page:/,''))==='hidden')throw Error('页面不可见，不能开启局部权限');
   const parent=resource.parent?c.resources.get(resource.parent):undefined;
   if(value!=='hidden'&&parent?.type==='page'&&FOH_PERMISSION_PAGES.includes(parent.path??'')&&effective(parent.key)==='hidden')throw Error('页面不可见，不能开启局部权限');
-  if(value==='edit'&&resource.ceilingKeys?.some(k=>effective(k)!=='edit'))throw Error('上级权限限制，不能配置可编辑');
+  if(value==='edit'&&resource.ceilingKeys?.some(k=>effective(k)==='hidden'||!resource.readonlyAllowed&&effective(k)!=='edit'))throw Error('上级权限限制，不能配置可编辑');
 }

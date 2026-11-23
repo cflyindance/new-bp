@@ -38,7 +38,7 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
     for(const key of new Set([...Object.keys(left),...Object.keys(right)]))scalar(group,prefix+resourceName(key),left[key],right[key],true);
   };
   for(const key of new Set([...Object.keys(a),...Object.keys(b)])){
-    if(key==='id'||key==='demoAuthorization')continue;
+    if(key==='id'||key==='demoAuthorization'||key==='defaultedGrants')continue;
     if(key==='bindings'){
       const left=Array.isArray(a.bindings)?a.bindings.map(object):[],right=Array.isArray(b.bindings)?b.bindings.map(object):[];
       for(const id of new Set([...left,...right].map(x=>x.id))){
@@ -55,6 +55,9 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
           add('角色授权',name+' → 授权范围',scopeItems(x),scopeItems(y));
         }
       }
+    }else if(key==='readonlyChildren'){
+      const left=object(a[key]),right=object(b[key]);
+      for(const parent of new Set([...Object.keys(left),...Object.keys(right)]))scalar('新增子项默认权限',resourceName(parent),left[parent]?'可见不可编辑；操作默认禁止':undefined,right[parent]?'可见不可编辑；操作默认禁止':undefined);
     }else if(key==='grants')grants(object(a[key]),object(b[key]),'功能权限');
     else if(key==='overrides'){
       const left=object(a[key]),right=object(b[key]);
