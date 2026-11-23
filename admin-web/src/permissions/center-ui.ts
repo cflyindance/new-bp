@@ -125,8 +125,8 @@ export function bindCenterPage(): void {
   function commit(next:CenterState,id:string,action:string):void {state=saveCenterState(next,state.version,id,action,actor());draft=structuredClone(state);dirty=false;leaveGuard=undefined;render();}
   function roleDialog(id='',copy=false):void {
     const original=state.roles.find(r=>r.id===id);
-    modal(copy?'复制角色':original?'编辑角色':'新建角色',`<label>角色名称<input name="name" required maxlength="30" value="${esc(original?(copy?original.name+' 副本':original.name):'')}"></label><label>描述<textarea name="description" maxlength="160">${esc(original?.description??'')}</textarea></label>${!original?`<label>初始功能权限<select name="source"><option value="">空白权限（默认拒绝）</option>${state.roles.map(r=>`<option value="${esc(r.id)}">复制 ${esc(r.name)}</option>`).join('')}</select></label>`:''}`,d=>{
-      const source=original??state.roles.find(r=>r.id===field(d,'source'));
+    modal(copy?'复制角色':original?'编辑角色':'新建角色',`<label>角色名称<input name="name" required maxlength="30" value="${esc(original?(copy?original.name+' 副本':original.name):'')}"></label><label>描述<textarea name="description" maxlength="160">${esc(original?.description??'')}</textarea></label>`,d=>{
+      const source=original;
       const row:Role={id:original&&!copy?original.id:crypto.randomUUID(),name:field(d,'name').trim(),description:field(d,'description'),system:original&&!copy?original.system:false,grants:structuredClone(source?.grants??{})};
       validateRole(state,row);const next=structuredClone(state);next.roles=next.roles.filter(r=>r.id!==row.id).concat(row);commit(next,row.id,original&&!copy?'编辑角色':copy?'复制角色':'新增角色');return true;
     },'保存');

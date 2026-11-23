@@ -1,6 +1,6 @@
 /** Shared creation controls. No credentials or permissions are persisted here. */
 export function accountOpeningFields(): string {
-  return `<fieldset data-account-method><legend>开通方式</legend><label><input type="radio" name="openingMethod" value="invite" checked>邮箱邀请</label><label><input type="radio" name="openingMethod" value="password">设置密码</label></fieldset><p class="pc-muted" data-invite-note>创建本地演示邀请，有效期 72 小时；不会发送真实邮件。</p>`;
+  return `<fieldset data-account-method><legend>开通方式</legend><label><input type="radio" name="openingMethod" value="invite" checked>邮箱邀请</label><label><input type="radio" name="openingMethod" value="password">设置密码</label></fieldset>`;
 }
 export function accountPasswordFields(): string {
   return `<fieldset data-account-passwords hidden disabled><label>登录密码<input name="password" type="password" minlength="6" required autocomplete="new-password"></label><label>确认密码<input name="confirmPassword" type="password" minlength="6" required autocomplete="new-password"></label></fieldset>`;
@@ -18,7 +18,6 @@ export function bindAccountOpening(dialog: HTMLDialogElement): void {
     const invite = dialog.querySelector<HTMLInputElement>('[name=openingMethod]:checked')?.value === 'invite';
     const panel = dialog.querySelector<HTMLFieldSetElement>('[data-account-passwords]')!;
     panel.disabled = invite; panel.hidden = invite;
-    const note = dialog.querySelector<HTMLElement>('[data-invite-note]'); if (note) note.hidden = !invite;
     dialog.querySelector<HTMLButtonElement>('[type=submit]')!.textContent = invite ? '创建邀请' : '开通账号';
   };
   dialog.querySelector('[data-account-method]')!.addEventListener('change', sync); sync();
