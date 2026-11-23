@@ -1,6 +1,6 @@
 import {newSpec} from '../src/marketing-display/ad-slot-catalog';
 import assert from 'node:assert/strict';
-import { createPlatformState, createMerchantState, duplicateContent, deleteContent, setPlacementTargetEnabled, saveRegion, setRegionEnabled, saveContent, savePlacement, publishPlacement, revokePlacement, resolveTerminalContent, importLegacyThemes, wallTimeToEpoch, restrictDisplayStores, type DisplayContext } from '../src/marketing-display/domain.ts';
+import { createPlatformState,requestTerminalVerification, createMerchantState, duplicateContent, deleteContent, setPlacementTargetEnabled, saveRegion, setRegionEnabled, saveContent, savePlacement, publishPlacement, revokePlacement, resolveTerminalContent, importLegacyThemes, wallTimeToEpoch, restrictDisplayStores, type DisplayContext } from '../src/marketing-display/domain.ts';
 import {readDisplayState,commitDisplayState} from '../src/marketing-display/persistence.ts';
 import {readFileSync} from 'node:fs';
 
@@ -97,3 +97,8 @@ let afterExpiry=savePlacement(merchant,platform,{...plan,id:'after-expiry',start
 const builtIn=createPlatformState();let builtInContent=saveContent(createMerchantState(ctx.scope),builtIn,{name:'屏保',regionId:'idle-screensaver',assets:[{id:'portrait',name:'test',kind:'image',url:'https://example.com/a.png',variant:'9:16'}],settings:{idle:60,interval:5,transition:'fade'}},ctx,at);assert.equal(builtInContent.contents[0].settings.transition,'fade');assert.throws(()=>saveContent(createMerchantState(ctx.scope),builtIn,{name:'超限',regionId:'idle-screensaver',assets:Array.from({length:6},(_,i)=>({id:String(i),name:'test',kind:'image' as const,url:'https://example.com/a.png',variant:'9:16'})),settings:{idle:60,interval:5}},ctx,at),/每种比例/);
 
 let draftOnly=saveContent(createMerchantState(ctx.scope),platform,{id:'draft-c',name:'draft',regionId:'home',assets:[{id:'a',name:'a',kind:'image',url:'https://example.com/a.png',variant:'default'}],settings:{interval:5}},ctx,at);draftOnly=savePlacement(draftOnly,platform,{...plan,id:'draft-p',contentId:'draft-c'},ctx,at);const deletedDraftContent=deleteContent(draftOnly,platform,'draft-c',ctx,at);assert.equal(deletedDraftContent.contents.length,0);assert.equal(deletedDraftContent.placements.length,0,'deleting an unused content removes its draft placements after explicit confirmation');
+const pendingPlatform=requestTerminalVerification(createPlatformState(),'idle-screensaver','Kiosk',true,1);
+const pendingRegion=pendingPlatform.regions.find(region=>region.id==='idle-screensaver')!;
+assert.equal(pendingRegion.terminalVerificationRequests?.Kiosk,1);
+assert.deepEqual(pendingRegion.bindings,{});
+assert.throws(()=>requestTerminalVerification(pendingPlatform,'idle-screensaver','Kiosk',true,2),/已提交核验/);

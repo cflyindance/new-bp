@@ -9,7 +9,7 @@ export type Parameter='interval'|'idle'|'transition';
 export const REGION_EXAMPLE_MAX_BYTES=512*1024;
 export const REGION_EXAMPLE_TYPES=['image/png','image/jpeg','image/webp'];
 export interface TerminalBinding { minimumVersion:string; mediaKinds:MediaKind[] }
-export interface DisplayRegion {productLine?:string;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;exampleImage?:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
+export interface DisplayRegion {productLine?:string;terminalVerificationRequests?:Record<string,number>;specs?:AdSpec[];specVersion?:number;specHistory?:SlotRevision[];id:string;name:string;code:string;scene:string;description:string;exampleImage?:string;ratio:string;mediaKinds:MediaKind[];maxItems:number;parameters:Parameter[];bindings:Record<string,TerminalBinding>;enabled:boolean;builtin:boolean;generation:number}
 export interface DisplayPlatform {schema:1;revision:number;regions:DisplayRegion[]}
 export interface DisplayAsset {id:string;name:string;kind:MediaKind;url:string;variant:string}
 export interface DisplayContent {id:string;name:string;regionId:string;assets:DisplayAsset[];settings:{interval?:number;idle?:number;transition?:string};version:number;updatedAt:number;legacyId?:string}
@@ -48,8 +48,19 @@ export function saveRegion(state:DisplayPlatform,input:RegionInput,allowed:boole
     if(!(DISPLAY_TERMINALS as readonly string[]).includes(terminal))fail('终端类型无效');if(!/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(binding.minimumVersion))fail(`${terminal} 最低版本格式无效，例如 5.0.1`);
     if(!binding.mediaKinds.length||binding.mediaKinds.some(k=>!input.mediaKinds.includes(k)))fail(`${terminal} 支持的素材类型超出区域规范`);
   }
-  const value:DisplayRegion={...clone(input),id:existing?.id??input.id??uid('region'),name,code,scene,ratio,enabled:existing?.enabled??true,builtin:existing?.builtin??false,generation:existing?.generation??0,mediaKinds:unique(input.mediaKinds) as MediaKind[],parameters:unique(input.parameters) as Parameter[]};
+  const value:DisplayRegion={...clone(input),terminalVerificationRequests:existing?.terminalVerificationRequests,id:existing?.id??input.id??uid('region'),name,code,scene,ratio,enabled:existing?.enabled??true,builtin:existing?.builtin??false,generation:existing?.generation??0,mediaKinds:unique(input.mediaKinds) as MediaKind[],parameters:unique(input.parameters) as Parameter[]};
   if(existing)next.regions[next.regions.indexOf(existing)]=value;else next.regions.push(value);return next;
+}
+export function requestTerminalVerification(state:DisplayPlatform,id:string,terminal:string,allowed:boolean,now:number):DisplayPlatform {
+  if(!allowed)fail('暂无广告位管理权限');
+  const next=clone(state),region=next.regions.find(item=>item.id===id);
+  if(!region) return fail('广告位不存在');
+  if(!(DISPLAY_TERMINALS as readonly string[]).includes(terminal)||(region.productLine&&region.productLine!==terminal))fail('终端不适用于当前广告位');
+  if(region.bindings[terminal])fail('终端已登记支持');
+  const requests=region.terminalVerificationRequests??={};
+  if(Object.hasOwn(requests,terminal))fail('该终端已提交核验');
+  requests[terminal]=now;
+  return next;
 }
 export function setRegionEnabled(state:DisplayPlatform,id:string,enabled:boolean,allowed:boolean):DisplayPlatform {if(!allowed)fail('暂无区域管理权限');const next=clone(state),region=next.regions.find(r=>r.id===id);if(!region)fail('区域不存在');if(region!.enabled&&!enabled)region!.generation++;region!.enabled=enabled;return next}
 export function isSafeMediaUrl(url:string,kind:MediaKind):boolean {return (kind==='video'&&/^display-media:[a-z0-9_-]+$/i.test(url))||/^https?:\/\//i.test(url)||/^\/(?!\/)/.test(url)||(kind==='image'?/^data:image\/(?:png|jpeg|webp|gif|svg\+xml)[;,]/i:/^data:video\/(?:mp4|webm)[;,]/i).test(url)}
