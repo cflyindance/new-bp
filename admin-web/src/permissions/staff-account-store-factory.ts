@@ -12,6 +12,8 @@ export interface StaffLoginAccount {
   /** 演示环境明文；生产须改为哈希校验 */
   password: string;
   enabled: boolean;
+  openedVia?: "email" | "password";
+  invitation?: { sentAt: string; expiresAt: string; revoked?: boolean };
   isSystem?: boolean;
   /** 组织层级：单店 / 连锁 / 企业级 */
   orgTier?: "store" | "chain" | "enterprise";
@@ -55,10 +57,11 @@ export interface StaffAccountStoreApi {
     loginEmail: string;
     password: string;
     enabled: boolean;
+    openingMethod?: "invite" | "password";
   }) => StaffLoginAccount;
   updateStaffLoginAccount: (
     id: string,
-    patch: Partial<Pick<StaffLoginAccount, "employeeName" | "loginEmail" | "password" | "enabled">>,
+    patch: Partial<Pick<StaffLoginAccount, "employeeName" | "loginEmail" | "password" | "enabled" | "invitation">>,
   ) => StaffLoginAccount | null;
   deleteStaffLoginAccount: (id: string) => boolean;
 }
@@ -199,7 +202,8 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       return row;
     },
     createStaffLoginAccount: (input) => {
-      const err = validateStaffAccountInput({ ...input, requirePassword: true });
+      const inviting = input.openingMethod === "invite";
+      const err = validateStaffAccountInput({ ...input, requirePassword: !inviting });
       if (err) throw new Error(err);
 
       const id = `acct-${input.employeeId}-${Date.now()}`;
@@ -208,8 +212,10 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
         employeeId: input.employeeId.trim(),
         employeeName: input.employeeName.trim(),
         loginEmail: normalizeEmail(input.loginEmail),
-        password: input.password,
-        enabled: input.enabled,
+        password: inviting ? "" : input.password,
+        enabled: inviting ? false : input.enabled,
+        openedVia: inviting ? "email" : "password",
+        ...(inviting ? { invitation: { sentAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() } } : {}),
         isSystem: false,
         updatedAt: new Date().toISOString(),
       };
@@ -222,6 +228,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       const existing = accounts.find((a) => a.id === id);
       if (!existing) return null;
 
+      if (existing.invitation && patch.enabled === true && (!patch.password || patch.invitation !== undefined || existing.invitation.revoked || Date.parse(existing.invitation.expiresAt) <= Date.now())) throw new Error("请先接受有效邀请并设置密码");
       const merged = {
         employeeId: existing.employeeId,
         employeeName: patch.employeeName ?? existing.employeeName,
@@ -232,7 +239,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
 
       const err = validateStaffAccountInput({
         ...merged,
-        requirePassword: false,
+        requirePassword: !!patch.password,
         excludeId: id,
       });
       if (err) throw new Error(err);
@@ -240,6 +247,8 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       const row: StaffLoginAccount = {
         ...existing,
         ...merged,
+        ...(patch.invitation ? { enabled: false, password: "" } : {}),
+        ...(Object.prototype.hasOwnProperty.call(patch, "invitation") ? { invitation: patch.invitation } : {}),
         loginEmail: normalizeEmail(merged.loginEmail),
         updatedAt: new Date().toISOString(),
       };

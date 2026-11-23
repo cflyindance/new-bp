@@ -1,3 +1,4 @@
+import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
 import {ROLE_LIST_CREATE_LABEL, ROLE_ACTION_LABELS, renderRoleActions, renderRoleListTable, renderRoleMemberCount, uniqueRoleEmployeeIds, openRoleMembersDialog} from './role-list-ui';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {bindEmployeeAccess} from './employee-access-ui';
@@ -105,7 +106,7 @@ export function bindMCenter(onMount: () => void): void {
       const providerVisible=currentMAccess(mPageKey('provider-roles'))!=='hidden';
       if(providerVisible)try{providerState=readProviderState();}catch{/* Keep the independent M dimension available. */}
       const rows = accounts.listStaffLoginAccounts().filter(a => `${a.employeeId} ${a.employeeName} ${a.loginEmail}`.toLowerCase().includes(query.toLowerCase()));
-      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${a.enabled ? '已启用' : '已停用'}</td><td><div class="employee-role-summary"><span>${PERMISSION_ROLE_LABELS.platformScope}：${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</span><span>商户访问：${!providerVisible?'无查看权限':providerState?mEsc(providerEmployeeSummary(providerState,a.employeeId)):'数据读取失败'}</span></div></td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/roles">配置角色与权限</a>${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
+      host.innerHTML = `<header class="pc-heading"><h1>员工与账号</h1>${button('新增员工账号', 'data-mp-do="new-account"', allowed('staff', 'account'), true)}</header>${message}<div class="pc-card"><label>搜索员工<input data-mp-staff-search value="${mEsc(query)}" placeholder="姓名、工号或邮箱"></label><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows.map(a => `<tr><td>${mEsc(a.employeeName)}<small> ${mEsc(a.employeeId)}</small></td><td>${mEsc(a.loginEmail)}</td><td>${invitationStatus(a)}</td><td><div class="employee-role-summary"><span>${PERMISSION_ROLE_LABELS.platformScope}：${(state.employees.find(e => e.id === a.employeeId)?.roleIds ?? []).map(id => mEsc(state.roles.find(r => r.id === id)?.name ?? '失效角色')).join('、') || '未分配'}</span><span>商户访问：${!providerVisible?'无查看权限':providerState?mEsc(providerEmployeeSummary(providerState,a.employeeId)):'数据读取失败'}</span></div></td><td><div class="pc-actions"><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}">查看权限</a><a class="pc-link" href="#${prefix}/staff/${encodeURIComponent(a.employeeId)}/roles">配置角色与权限</a>${button('编辑账号', `data-mp-account="${mEsc(a.id)}"`, allowed('staff', 'account'))}${a.invitation ? button('重发演示邀请', `data-mp-invite-resend="${mEsc(a.id)}"`, allowed('staff','account')) + button('撤销邀请', `data-mp-invite-revoke="${mEsc(a.id)}"`, allowed('staff','account')) + button('演示接受邀请', `data-mp-invite-accept="${mEsc(a.id)}"`, allowed('staff','account')) : button(a.enabled ? '停用' : '启用', `data-mp-toggle="${mEsc(a.id)}"`, allowed('staff', 'account'))}</div></td></tr>`).join('') || '<tr><td colspan="5" class="pc-empty">没有匹配员工</td></tr>'}</tbody></table></div>`;
     } else if (path.endsWith('/change-log')) {
       host.innerHTML = `<h1>${PERMISSION_ROLE_LABELS.platformScope}权限变更记录</h1>${message}<div class="pc-card">${logs()}</div>`;
     } else {
@@ -114,7 +115,7 @@ export function bindMCenter(onMount: () => void): void {
     }
     for (const [id, top] of positions) { const el = host.querySelector<HTMLElement>(`[data-scroll="${id}"]`); if (el) el.scrollTop = top; }
   }
-  function dialog(title: string, body: string, save: (form: HTMLFormElement) => void): void {
+  function dialog(title: string, body: string, save: (form: HTMLFormElement) => void): HTMLDialogElement {
     const modal = document.createElement('dialog'); modal.className = 'pc-dialog mp-permission-dialog';
     modal.innerHTML = `<form class="pc" novalidate><h2>${mEsc(title)}</h2><div class="pc-form">${body}</div><p class="pc-error" role="alert"></p><footer><button type="button" data-cancel>取消</button><button class="primary" type="submit">保存</button></footer></form>`;
     document.body.append(modal);
@@ -124,7 +125,7 @@ export function bindMCenter(onMount: () => void): void {
       event.preventDefault();
       try { save(event.currentTarget as HTMLFormElement); modal.close(); render(); }
       catch (e) { modal.querySelector('.pc-error')!.textContent = (e as Error).message; }
-    }); modal.showModal();
+    }); modal.showModal(); return modal;
   }
   const field = (label: string, name: string, value = '', type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" value="${mEsc(value)}" ${extra}></label>`;
   function editRole(id?: string, copy = false): void {
@@ -145,15 +146,18 @@ export function bindMCenter(onMount: () => void): void {
   function editAccount(id?: string): void {
     requireMAction('staff', 'account');
     const source = accounts.getStaffLoginAccountById(id ?? '');
-    dialog(source ? '编辑员工账号' : '新增员工账号', field('员工工号', 'employeeId', source?.employeeId, 'text', source ? 'readonly' : 'required') + field('员工姓名', 'employeeName', source?.employeeName, 'text', 'required maxlength="30"') + field('登录邮箱', 'email', source?.loginEmail, 'email', 'required') + field(source ? '新密码（留空保留原密码）' : '密码', 'password', '', 'password', 'autocomplete="new-password"') + field('确认密码', 'confirmPassword', '', 'password', 'autocomplete="new-password"'), form => {
+    const modal = dialog(source ? '编辑员工账号' : '新增员工账号', (!source ? accountOpeningFields() : '') + field('员工工号', 'employeeId', source?.employeeId, 'text', source ? 'readonly' : 'required') + field('员工姓名', 'employeeName', source?.employeeName, 'text', 'required maxlength="30"') + field('登录邮箱', 'email', source?.loginEmail, 'email', 'required') + (source ? field('新密码（留空保留原密码）', 'password', '', 'password', 'autocomplete="new-password"') + field('确认密码', 'confirmPassword', '', 'password', 'autocomplete="new-password"') : accountPasswordFields()), form => {
       requireMAction('staff', 'account');
       const data = new FormData(form), employeeId = String(data.get('employeeId') ?? '').trim(), employeeName = String(data.get('employeeName') ?? '').trim(), loginEmail = String(data.get('email') ?? '').trim(), password = String(data.get('password') ?? ''), confirmPassword = String(data.get('confirmPassword') ?? '');
-      const problem = accounts.validateStaffAccountInput({ employeeId, employeeName, loginEmail, password, confirmPassword, requirePassword: !source || !!password, excludeId: source?.id });
+      const openingMethod = data.get("openingMethod") === "invite" ? "invite" : "password";
+      if (source?.invitation) throw Error("待接受邀请的账号请使用重发、撤销或演示接受邀请操作");
+      const problem = accounts.validateStaffAccountInput({ employeeId, employeeName, loginEmail, password, confirmPassword, requirePassword: source ? !!password : openingMethod === "password", excludeId: source?.id });
       if (problem) throw Error(problem);
       if (employeeName.length > 30) throw Error('员工姓名最多 30 字');
-      saveMAccountChange(state, source, { employeeId, employeeName, loginEmail, password });
+      saveMAccountChange(state, source, { employeeId, employeeName, loginEmail, password: !source && openingMethod === "invite" ? "" : password, ...(!source ? {openingMethod} : {}) });
       state = readMState(); draft = structuredClone(state);
     });
+    if (!source) bindAccountOpening(modal);
   }
   host.addEventListener('click', event => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('button'); if (!target || target.hasAttribute('disabled')) return;
@@ -161,6 +165,27 @@ export function bindMCenter(onMount: () => void): void {
       if (target.dataset.page) { selected = target.dataset.page; render(); }
       if (target.dataset.grant && role() && !preview) {
         requireMAction('roles', 'edit'); applyMEditorGrant(role()!,target.dataset.grant,target.dataset.value,access); mark(); render();
+      }
+      const inviteId = target.dataset.mpInviteResend || target.dataset.mpInviteRevoke || target.dataset.mpInviteAccept;
+      if (inviteId) {
+        requireMAction('staff', 'account');
+        const source = accounts.getStaffLoginAccountById(inviteId);
+        if (!source?.invitation) throw Error('邀请不存在或已接受');
+        if (target.dataset.mpInviteAccept) {
+          dialog('演示接受邀请', field('登录密码','password','','password','required minlength="6" autocomplete="new-password"') + field('确认密码','confirmPassword','','password','required minlength="6" autocomplete="new-password"'), form => {
+            const latest = accounts.getStaffLoginAccountById(inviteId);
+            if (!latest?.invitation || latest.invitation.revoked || Date.parse(latest.invitation.expiresAt) <= Date.now()) throw Error('邀请已撤销、过期或已接受，请刷新后重试');
+            const fd = new FormData(form), password = String(fd.get('password') ?? '');
+            if (password.length < 6 || password !== fd.get('confirmPassword')) throw Error('密码至少 6 位，且两次输入须一致');
+            saveMAccountChange(readMState(), latest, {password, enabled:true, invitation:undefined}); state=readMState(); draft=structuredClone(state);
+          });
+        } else {
+          dialog(target.dataset.mpInviteRevoke ? '撤销邀请' : '重发演示邀请','<p>仅更新本地演示邀请，不发送真实邮件。</p>', () => {
+            const latest=accounts.getStaffLoginAccountById(inviteId); if(!latest?.invitation) throw Error('邀请已变化，请刷新');
+            saveMAccountChange(readMState(),latest,{invitation:target.dataset.mpInviteRevoke ? {...latest.invitation,revoked:true} : {sentAt:new Date().toISOString(),expiresAt:new Date(Date.now()+72*60*60*1000).toISOString()}}); state=readMState(); draft=structuredClone(state);
+          });
+        }
+        return;
       }
       if (target.dataset.mpEdit) editRole(target.dataset.mpEdit);
       if (target.dataset.mpCopy) editRole(target.dataset.mpCopy, true);
