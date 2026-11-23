@@ -1,3 +1,5 @@
+import { LEGACY_BRAND_ID_MAP } from '../permissions/m-platform-store-scope';
+import { brandStoresForPath } from '../auth/brand-access-runtime';
 import { getEnterpriseMerchantSnapshotForAuthorization } from '../config/enterprise-merchant-store';
 import { currentBrandPrincipal, isBrandPathAllowed } from '../auth/brand-access-runtime';
 import { getAuthenticatedEmail, DEMO_LOGIN_ACCOUNT } from '../auth/login';
@@ -19,5 +21,17 @@ export function decorationScope() {
     const linkedMerchant = store && metadata.stores.find(item => item.storeId === store.value)?.linkedMerchantId;
     const timezone = metadata.merchants.find(item => item.merchantId === linkedMerchant)?.timezone
         || metadata.merchants.find(item => item.merchantId === brand)?.timezone;
-    return { key, timezone, brandName, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
+    const brandStores = options.stores.filter(option => {
+        const item = metadata.stores.find(entry => entry.storeId === option.value);
+        const canonical = LEGACY_BRAND_ID_MAP[brand ?? ''] ?? brand;
+        return principal ? !!option.value : item && [item.merchantId, item.linkedMerchantId, item.brandId].some(id => (LEGACY_BRAND_ID_MAP[id] ?? id) === canonical);
+    });
+    const storeIds = brandStoresForPath(brandStores.map(option => option.value), '/brand-decoration/pages');
+    const stores = brandStores.filter(option => storeIds.includes(option.value)).map(option => {
+        const item = metadata.stores.find(entry => entry.storeId === option.value);
+        return { id: option.value, name: option.labelZh, timezone:
+            metadata.merchants.find(entry => entry.merchantId === item?.linkedMerchantId)?.timezone
+            || metadata.merchants.find(entry => entry.merchantId === brand)?.timezone || '' };
+    });
+    return { key, brand, stores, timezone, brandName, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
 }

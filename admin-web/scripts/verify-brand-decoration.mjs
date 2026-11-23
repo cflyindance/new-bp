@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const dir=await mkdtemp(join(process.env.BRAND_DECORATION_TEST_TEMP||tmpdir(),'brand-decoration-'));
 try{
-  await Promise.all(['domain','store','schedule'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
+  await Promise.all(['domain','store','schedule','plans'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
   const D=await import(pathToFileURL(join(dir,'domain.mjs'))),S=await import(pathToFileURL(join(dir,'store.mjs')));
   const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
   let data=S.readData('brand-a/store-a','甲品牌',storage);
@@ -44,6 +44,28 @@ try{
   assert.equal(A.parseLocal('2026-12-01T10:00','Asia/Shanghai'),Date.parse('2026-12-01T02:00Z'));
   assert.throws(()=>A.parseLocal('2026-11-01T01:30','America/New_York'),/重复/);
   assert.throws(()=>A.parseLocal('2026-03-08T02:30','America/New_York'),/不存在/);
+  const P=await import(pathToFileURL(join(dir,'plans.mjs')));
+  const stores=[{id:'a',name:'甲店',timezone:'Asia/Shanghai'},{id:'b',name:'乙店',timezone:'Asia/Shanghai'}];
+  const flow=S.readData('flow','甲品牌',storage);
+  const makePlan=(name,rules)=>({...D.newScheme('kiosk',name,'甲品牌'),rules});
+  const daily=makePlan('日常',{kind:'default',storeIds:['a','b'],timezone:'Asia/Shanghai',pageIds:['home']});
+  P.publishPlan(flow,daily,stores,'demo');
+  const start=Date.now()+3600000,end=start+3600000;
+  const winter=makePlan('冬季',{kind:'activity',activityName:'冬季活动',starts:start,ends:end,storeIds:['a'],timezone:'Asia/Shanghai',pageIds:['home']});
+  P.publishPlan(flow,winter,stores,'demo');
+  assert.equal(P.planPage(flow,'a','kiosk','home',start).snapshot.id,winter.id);
+  assert.equal(P.planPage(flow,'a','kiosk','menu',start).snapshot.id,daily.id);
+  assert.equal(P.planPage(flow,'b','kiosk','home',start).snapshot.id,daily.id);
+  assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,daily.id);
+  assert.throws(()=>P.checkPlanPublication(flow,makePlan('重叠',winter.rules),stores),/甲店.*冬季活动/);
+  assert.doesNotThrow(()=>P.checkPlanPublication(flow,makePlan('相邻',{...winter.rules,starts:end,ends:end+1000}),stores));
+  assert.throws(()=>P.validatePlanRules({...winter.rules,storeIds:['a','b']},'kiosk',[stores[0],{...stores[1],timezone:'America/New_York'}]),/同一时区/);
+  assert.throws(()=>P.validatePlanRules({...winter.rules,storeIds:['unknown']},'kiosk',stores),/有权/);
+  const newDaily=makePlan('新日常',{...daily.rules,storeIds:['a']});
+  P.publishPlan(flow,newDaily,stores,'demo');
+  assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id);
+  assert.equal(P.planPage(flow,'b','kiosk','home',end).snapshot.id,daily.id);
+  console.log('PASS: multi-store plans, partial pages, overlaps, timezone and latest fallback.');
   console.log('PASS: activity boundaries, overlap, fallback, channel isolation and time zones.');
   console.log('PASS: seed stability; 24 pages; persistence; brand/store/channel isolation; revision conflicts; immutable snapshots; independent versions; duplicate publish; validation; storage failure; corrupt data.');
 }finally{await rm(dir,{recursive:true,force:true});}

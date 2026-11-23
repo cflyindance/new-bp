@@ -1,3 +1,4 @@
+import type { PlanRules } from './plans';
 import type { DecorationSchedule } from './schedule';
 export type Channel = 'kiosk' | 'emenu';
 export type Theme = 'jade' | 'noir' | 'terra';
@@ -23,6 +24,7 @@ export interface Style {
     theme: Theme;
 }
 export interface Scheme {
+    rules?: PlanRules;
     id: string;
     name: string;
     channel: Channel;
@@ -32,6 +34,7 @@ export interface Scheme {
     styles: Record<string, Style>;
 }
 export interface Release {
+    rules?: PlanRules;
     id: string;
     version: number;
     createdAt: string;
