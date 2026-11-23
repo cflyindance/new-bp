@@ -783,3 +783,28 @@ body.embedded-marketing-page .main-content {
 
 /* Shared native ad-slot confirmation uses the existing dialog panel controls. */
 dialog.ad-slot-confirm::backdrop { background: rgba(0, 0, 0, .45); }
+
+/* Advertising purpose remains independent of publication status. */
+.ad-purpose-tag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border: 1px solid;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  vertical-align: middle;
+  letter-spacing: .02em;
+}
+.ad-purpose-tag--campaign {
+  color: var(--ad-purpose-campaign-fg, #0958d9);
+  background: var(--ad-purpose-campaign-bg, #e6f4ff);
+  border-color: var(--ad-purpose-campaign-border, #91caff);
+}
+.ad-purpose-tag--default {
+  color: var(--ad-purpose-default-fg, #531dab);
+  background: var(--ad-purpose-default-bg, #f9f0ff);
+  border-color: var(--ad-purpose-default-border, #d3adf7);
+}

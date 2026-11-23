@@ -1,4 +1,7 @@
 import {currentAdActivityContext} from '../marketing-display/ad-activity-provider';
+import {ensureDefaultAdDemo} from '../marketing-display/default-ad-demo';
+import {readCatalog} from '../marketing-display/ad-slot-catalog';
+import {getAuthenticatedEmail,DEMO_LOGIN_ACCOUNT} from '../auth/login';
 
 const MARKETING_SCREENSAVER_FLOW_ENTRY_FILES = new Set([
   "screensaver-create.html",
@@ -41,7 +44,13 @@ function syncMarketingScreensaverFullscreen(frame: HTMLIFrameElement): void {
   try {
     currentUrl = frame.contentWindow?.location.href ?? frame.src;
     const activityApi=(frame.contentWindow as (Window & {KioskAdActivities?:{setContextResolver:(resolve:typeof currentAdActivityContext)=>void}})|null)?.KioskAdActivities;
-    if(activityApi)activityApi.setContextResolver(currentAdActivityContext);
+    if(activityApi){
+      if(getPageFileName(currentUrl)==='kiosk-theme-list.html'){
+        const context=currentAdActivityContext();
+        try{ensureDefaultAdDemo(localStorage,readCatalog(localStorage),{demo:(getAuthenticatedEmail()??'').trim().toLowerCase()===DEMO_LOGIN_ACCOUNT.toLowerCase(),scope:context.scope,canWrite:context.canWrite,assetBase:new URL('ad-default-demo/',document.baseURI).href});}catch(error){console.warn('默认广告演示数据未初始化',error);}
+      }
+      activityApi.setContextResolver(currentAdActivityContext);
+    }
   } catch {
     // If the iframe ever becomes cross-origin, preserve the current flow state.
     return;
