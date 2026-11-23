@@ -1,0 +1,91 @@
+.cardPaymentFailurePage___SlshL {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.failureImg___3cRLS {
+  margin: 0 auto;
+  margin-top: 13rem;
+  width: 30rem;
+  display: block;
+}
+
+.ops___gr6Fv {
+  text-align: center;
+  font-size: 4rem;
+  color: #000;
+  font-weight: 700;
+  margin-top: 4rem;
+}
+
+.failureDescription___nCpLq {
+  font-weight: 500;
+  margin: 4rem auto;
+  text-align: center;
+  font-size: 3rem;
+  color: #000;
+}
+.failureDescription___nCpLq .breakLine___PVREX {
+  display: inline-block;
+  content: ",";
+}
+
+.btnBoxs___SCP-b {
+  margin: 0 auto;
+  width: 51%;
+  font-size: 4rem;
+  color: #000;
+  font-weight: 600;
+  text-align: center;
+}
+.btnBoxs___SCP-b .topBtn___1cvZz {
+  display: flex;
+  margin-bottom: 2.4rem;
+}
+.btnBoxs___SCP-b .topBtn___1cvZz.topBtnSingle___dZLQ8 {
+  justify-content: center;
+}
+.btnBoxs___SCP-b .topBtn___1cvZz .failureActionBtn___5p-2o {
+  flex: 1 1;
+  height: 12rem;
+  line-height: 12rem;
+  border-radius: 10rem;
+  background-color: #e8e8e8;
+}
+.btnBoxs___SCP-b .topBtn___1cvZz .tryAgainBtn___n5542 {
+  margin-left: 2.4rem;
+  flex: 1 1;
+  height: 12rem;
+  line-height: 12rem;
+  border-radius: 10rem;
+  background-color: var(--primary-selected-color);
+}
+.btnBoxs___SCP-b .bottomBtn___Ca5CN {
+  width: 100%;
+  height: 12rem;
+  line-height: 12rem;
+  border-radius: 10rem;
+  text-align: center;
+  background-color: var(--primary-selected-color);
+}
+
+@media screen and (orientation: portrait) {
+  .failureImg___3cRLS {
+    margin-top: 37rem;
+  }
+  .ops___gr6Fv {
+    margin-top: 19rem;
+  }
+  .failureDescription___nCpLq {
+    margin: 4rem auto 19rem;
+  }
+  .failureDescription___nCpLq .breakLine___PVREX {
+    display: block;
+  }
+  .btnBoxs___SCP-b {
+    width: 69%;
+  }
+}

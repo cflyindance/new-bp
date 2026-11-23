@@ -1,0 +1,57 @@
+.loadBox___dMrSe {
+  width: 54rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+.loadBox___dMrSe .orderBox___a5O3O {
+  color: #333;
+}
+.loadBox___dMrSe .orderBox___a5O3O .msg___wo3SU {
+  width: 50rem;
+  font-size: 3rem;
+  margin: 2rem 0;
+  text-align: center;
+  word-wrap: break-word;
+  font-weight: bold;
+}
+.loadBox___dMrSe .orderBottom___Re-6K {
+  margin-top: 6rem;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.loadBox___dMrSe .orderBottom___Re-6K > div {
+  width: 40rem;
+  text-align: center;
+  height: 8rem;
+  line-height: 8rem;
+  color: var(--text-color-black);
+  font-size: 3rem;
+  border-radius: 10rem;
+  font-weight: bold;
+}
+.loadBox___dMrSe .orderBottom___Re-6K > div:first-child {
+  background-color: var(--background-grey);
+  margin-bottom: 2rem;
+}
+.loadBox___dMrSe .orderBottom___Re-6K > div:last-child {
+  background-color: var(--primary-selected-color);
+}
+
+.itemBox___RQP40 {
+  text-align: center;
+  color: #333;
+}
+.itemBox___RQP40 .itemName___BtvnZ {
+  font-size: 3.6rem;
+  font-weight: bold;
+  margin: 3rem auto;
+}
+.itemBox___RQP40 .subItemName___1RL7O {
+  font-size: 3rem;
+}

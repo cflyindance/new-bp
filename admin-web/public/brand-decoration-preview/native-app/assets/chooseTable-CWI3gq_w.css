@@ -1,0 +1,155 @@
+.chooseTable___gd1S- {
+  width: 100vw;
+  background: #fff;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12rem 0 2rem;
+  box-sizing: border-box;
+  background-color: var(--background-grey);
+}
+.chooseTable___gd1S- .chooseTableContent___kiu2j {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  flex-direction: column;
+}
+.chooseTable___gd1S- .chooseTableTitle___Q8nVb {
+  width: 100%;
+  height: 6rem;
+  font-size: 4rem;
+  font-weight: 700;
+  color: #000;
+  text-align: center;
+  padding-bottom: 2rem;
+  box-sizing: border-box;
+}
+.chooseTable___gd1S- .tableBox___A3KCM {
+  width: 100%;
+  flex-grow: 1;
+  padding: 3rem 6rem 3rem 3rem;
+  box-sizing: border-box;
+  display: flex;
+  height: calc(100% - 16rem);
+}
+.chooseTable___gd1S- .tableBox___A3KCM.tableBoxVertical___qMczI {
+  padding: 3rem 3.8rem;
+}
+.chooseTable___gd1S- .tableBox___A3KCM .tableContent___LG51a {
+  width: 100%;
+  flex-grow: 1;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+}
+.chooseTable___gd1S- .tableBox___A3KCM .tableContent___LG51a.tableContentVertical___sEueG {
+  flex-direction: column;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 4.8rem 0 0;
+  border-right: 0.2rem solid rgba(0, 0, 0, 0.1019607843);
+  border-bottom: none;
+  margin: 0 4.8rem 0 0;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC.tableTabsVertical___Jw9WC {
+  overflow-y: hidden;
+  overflow-x: auto;
+  flex-direction: row;
+  height: auto;
+  padding: 0 0 4.8rem 0;
+  border-right: none;
+  border-bottom: 0.2rem solid rgba(0, 0, 0, 0.1019607843);
+  margin: 0 0 4.8rem 0;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC .tableTab___6TtV1 {
+  width: 15rem;
+  height: 29rem;
+  font-weight: 700;
+  font-size: 3rem;
+  margin: 0 0 2.4rem 0;
+  background: #fff;
+  border-radius: 0.8rem;
+  box-shadow: 0.1rem 0.2rem 0.5rem 0 rgba(0, 0, 0, 0.0509803922);
+  overflow: visible;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC .tableTab___6TtV1.tableTabVertical___HTv4J {
+  width: 32rem;
+  height: 12rem;
+  margin: 0 2.4rem 0 0;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC .tableTab___6TtV1:nth-last-of-type(1) {
+  margin: 0;
+}
+.chooseTable___gd1S- .tableTabs___uYSGC .tableTab___6TtV1.tableTabSelected___oiFhn {
+  background: var(--primary-selected-color);
+}
+.chooseTable___gd1S- .tableTabAreaName___QFUmC {
+  max-width: 100%;
+  flex-shrink: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  text-align: center;
+}
+.chooseTable___gd1S- .tableLayout___eT-VR {
+  overflow: hidden;
+  position: relative;
+  flex-grow: 1;
+}
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe {
+  position: absolute;
+  background-color: #fff;
+  box-shadow: 0.1rem 0.2rem 0.5rem 0 rgba(0, 0, 0, 0.0509803922);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  white-space: nowrap;
+}
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe .tableTitle___dwQuS {
+  color: #000;
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+}
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe.tableInUse___wwy7y {
+  background-color: #e8e8e8;
+}
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe.tableInUse___wwy7y .tableTitle___dwQuS {
+  color: rgba(0, 0, 0, 0.5019607843);
+}
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe.tableInUse___wwy7y .tableInUseTip___Bov-Z {
+  color: var(--primary-selected-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  margin: 1.2rem 0 0 0;
+}
+.chooseTable___gd1S- .footer___ohzDu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chooseTable___gd1S- .footer___ohzDu .skipBtn___eqrsV {
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 3rem;
+  width: 60rem;
+  height: 10rem;
+  line-height: 10rem;
+  text-align: center;
+  border-radius: 10rem;
+  font-weight: 700;
+  background-color: #fff;
+}

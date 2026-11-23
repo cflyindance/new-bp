@@ -1,0 +1,61 @@
+.logoBox___vs4kp {
+  display: flex;
+  position: relative;
+  width: 100vw;
+  justify-content: space-between;
+  align-items: center;
+  height: 8.8rem;
+  background: #fff;
+  padding: 0 4rem;
+  box-sizing: border-box;
+  box-shadow: 0.1rem 0.2rem 2.3rem rgba(0, 0, 0, 0.1);
+  z-index: 1;
+  position: fixed;
+}
+.logoBox___vs4kp .navigateLeft___KP-xI {
+  display: flex;
+  flex: 1 1;
+  align-items: center;
+  min-width: 0;
+  margin-right: 3rem;
+}
+.logoBox___vs4kp .navigateLeft___KP-xI .comboItemsTitle___La4YQ {
+  font-size: 3.2rem;
+  font-weight: 600;
+  margin-left: 5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.logoBox___vs4kp .backPrePage___ysViH {
+  flex-shrink: 0;
+  -webkit-transform: rotate(180deg);
+          transform: rotate(180deg);
+  width: 2rem;
+  padding-left: 2rem;
+}
+.logoBox___vs4kp .navigateRight___AR-PX {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+}
+.logoBox___vs4kp .langIcon___UqcZM {
+  display: flex;
+  align-items: center;
+  margin-right: 2rem;
+}
+.logoBox___vs4kp .langIcon___UqcZM div {
+  font-size: 2.4rem;
+}
+.logoBox___vs4kp .langIcon___UqcZM span {
+  margin-top: 1rem;
+  display: block;
+  width: 0;
+  height: 0;
+  border: 1rem solid #666;
+  border-top-color: #666;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}

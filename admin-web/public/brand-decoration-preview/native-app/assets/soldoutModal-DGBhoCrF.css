@@ -1,0 +1,87 @@
+.soldoutBox___3KSUF {
+  width: 64rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6rem 4rem;
+  border-radius: var(--border-radius-dialog);
+  background-color: #fff;
+}
+.soldoutBox___3KSUF .title___6lkdU {
+  margin: 3rem 0;
+  font-size: 3.6rem;
+}
+.soldoutBox___3KSUF .soldoutContent___Cj3Tn {
+  position: relative;
+  width: 100%;
+  max-height: 30rem;
+  font-size: 3.6rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.soldoutBox___3KSUF .soldoutContent___Cj3Tn .name___XPmS8 {
+  text-align: left;
+  font-size: 3rem;
+  margin-bottom: 2rem;
+}
+.soldoutBox___3KSUF .soldoutContent___Cj3Tn .name___XPmS8:last-child {
+  margin-bottom: 0;
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo {
+  margin: 3rem 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo .reorder___G9--C,
+.soldoutBox___3KSUF .soldoutBtn___pZAzo .continue___Qau9P {
+  flex: 1 1;
+  height: 8rem;
+  text-align: center;
+  line-height: 8rem;
+  font-size: 3rem;
+  border-radius: 10rem;
+  color: var(--text-color-black);
+  font-weight: bold;
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo .reorder___G9--C {
+  background-color: var(--background-grey);
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo .continue___Qau9P {
+  background-color: var(--primary-selected-color);
+  margin-top: 2rem;
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo + div[class*=requireCategoryTip] {
+  width: 100%;
+  padding-top: 2rem;
+  height: auto;
+  border-bottom: 0;
+}
+.soldoutBox___3KSUF .soldoutBtn___pZAzo + div[class*=requireCategoryTip] > div {
+  overflow: visible;
+  text-overflow: initial;
+  white-space: normal;
+}
+.soldoutBox___3KSUF .soldoutTip___lF4zu {
+  width: 100%;
+  text-align: center;
+  font-size: 2.6rem;
+  word-wrap: break-word;
+}.categoryTipBox___q2nAa {
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--primary-color);
+  font-size: 2.4rem;
+  color: #000;
+  height: 6.4rem;
+}
+.categoryTipBox___q2nAa .tipTitle___eyyp5 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

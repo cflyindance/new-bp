@@ -1,0 +1,111 @@
+export type Channel = 'kiosk' | 'emenu';
+export type Theme = 'jade' | 'noir' | 'terra';
+export const THEMES: Record<Theme, {
+    name: string;
+    color: string;
+    note: string;
+}> = {
+    jade: { name: '松石雅宴', color: '#254e40', note: '温润留白，适合中餐与轻食' },
+    noir: { name: '曜石金序', color: '#dbc18d', note: '深色与黄铜，适合精品餐饮' },
+    terra: { name: '赤陶食集', color: '#ad432e', note: '暖色与自然质感，适合咖啡烘焙' },
+};
+export const KIOSK_PAGES = [
+    ['screensaver', '屏保／待机页'], ['home', '首页'], ['orderType', '用餐方式页'], ['menu', '菜单页'], ['detail', '商品详情'], ['combo', '套餐选择'], ['review', '购物车／订单确认'], ['payment', '支付方式页'], ['finish', '完成页'], ['waitList', '等位登记'], ['tableService', '取餐／送餐方式'], ['phoneInput', '手机号输入'], ['reward', '会员奖励'], ['enterName', '姓名输入'], ['partySizeSelection', '用餐人数'], ['togoOption', '打包选项'], ['chooseTable', '选择桌台'], ['tippingPanel', '小费选择'], ['cardPayment', '刷卡支付过程'], ['afterCreditCardPay', '支付后处理'], ['signature', '签名'], ['login', '会员登录'], ['paymentMember', '支付后会员'], ['connectionError', '连接异常'],
+] as const;
+export const EMENU_PAGES = [['home', '首页'], ['menu', '菜单页'], ['detail', '商品详情'], ['review', '购物车'], ['payment', '支付方式页'], ['finish', '完成页'], ['login', '会员登录']] as const;
+export const pages = (channel: Channel): ReadonlyArray<readonly [
+    string,
+    string
+]> => channel === 'kiosk' ? KIOSK_PAGES : EMENU_PAGES;
+export interface Style {
+    mode: 'default' | 'custom';
+    theme: Theme;
+}
+export interface Scheme {
+    id: string;
+    name: string;
+    channel: Channel;
+    brandName: string;
+    primary: string;
+    updatedAt: string;
+    styles: Record<string, Style>;
+}
+export interface Release {
+    id: string;
+    version: number;
+    createdAt: string;
+    actor: string;
+    scopeName: string;
+    snapshot: Scheme;
+}
+export interface DecorationData {
+    schema: 1;
+    revision: number;
+    schemes: Scheme[];
+    releases: Release[];
+}
+export const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+export function newScheme(channel: Channel, name: string, brandName: string): Scheme {
+    return { id: crypto.randomUUID(), name, channel, brandName: brandName.slice(0, 20), primary: '#254e40', updatedAt: new Date().toISOString(), styles: Object.fromEntries(pages(channel).map(([id]) => [id, { mode: 'default', theme: 'jade' }])) };
+}
+export function validateScheme(s: Scheme): void {
+    if (!s || !['kiosk', 'emenu'].includes(s.channel) || typeof s.id !== 'string' || !s.id || typeof s.name !== 'string' || !s.name.trim() || s.name.length > 40 || typeof s.brandName !== 'string' || !s.brandName.trim() || s.brandName.length > 20 || !/^#[\da-f]{6}$/i.test(s.primary))
+        throw Error('方案名称需为 1–40 字，品牌名称需为 1–20 字，主色需为有效颜色');
+    if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
+        throw Error('页面配置不完整');
+    for (const [id] of pages(s.channel)) {
+        const style = s.styles[id];
+        if (!style || !['default', 'custom'].includes(style.mode) || !Object.hasOwn(THEMES, style.theme))
+            throw Error('页面样式无效');
+    }
+}
+export function validateData(data: DecorationData): void {
+    if (!data || data.schema !== 1 || !Number.isInteger(data.revision) || !Array.isArray(data.schemes) || !Array.isArray(data.releases))
+        throw Error('装修数据无法读取，请保留当前数据并联系管理员');
+    const ids = new Set<string>();
+    for (const scheme of data.schemes) {
+        validateScheme(scheme);
+        if (ids.has(scheme.id))
+            throw Error('方案编号重复');
+        ids.add(scheme.id);
+    }
+    for (const release of data.releases) {
+        if (!release || !Number.isInteger(release.version) || release.version < 1 || typeof release.id !== 'string' || typeof release.actor !== 'string' || typeof release.scopeName !== 'string' || typeof release.createdAt !== 'string' || !Number.isFinite(Date.parse(release.createdAt)))
+            throw Error('版本记录无效');
+        validateScheme(release.snapshot);
+    }
+}
+export function changes(before: Scheme | undefined, after: Scheme): Array<{
+    label: string;
+    before: string;
+    after: string;
+}> {
+    const output: Array<{
+        label: string;
+        before: string;
+        after: string;
+    }> = [];
+    for (const [key, label] of [['name', '方案名称'], ['brandName', '品牌名称'], ['primary', '品牌主色']] as const) {
+        if (before?.[key] !== after[key])
+            output.push({ label, before: before?.[key] ?? '未发布', after: after[key] });
+    }
+    const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : THEMES[s.theme].name) : '未发布';
+    for (const [id, label] of pages(after.channel)) {
+        const prev = before?.styles[id], next = after.styles[id];
+        if (text(prev) !== text(next))
+            output.push({ label, before: text(prev), after: text(next) });
+    }
+    return output;
+}
+export function publish(data: DecorationData, id: string, actor: string, scopeName: string): Release {
+    const scheme = data.schemes.find(s => s.id === id);
+    if (!scheme)
+        throw Error('方案不存在');
+    validateScheme(scheme);
+    const previous = data.releases.find(r => r.snapshot.channel === scheme.channel);
+    if (!changes(previous?.snapshot, scheme).length)
+        throw Error('与当前演示版本一致，无需重复发布');
+    const release = { id: crypto.randomUUID(), version: (previous?.version ?? 0) + 1, createdAt: new Date().toISOString(), actor, scopeName, snapshot: copy(scheme) };
+    data.releases.unshift(release);
+    return release;
+}

@@ -1,3 +1,4 @@
+import {isBrandDecorationPath,renderBrandDecorationPage,bindBrandDecorationPage} from "./brand-decoration/ui";
 import {renderServiceGate,renderServiceTrialNotice,bindServiceGate,canViewMerchantServiceCenter,renderMerchantServiceCenter} from './config/service-entitlement-ui';
 import {installServiceEntitlementRuntime} from './config/service-entitlement-runtime';
 import {isPaidMenuVisible} from './config/subscription-service-runtime';
@@ -11629,13 +11630,17 @@ function renderMain(): string {
     "flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch";
   const tertiaryMainClass = "min-w-0 min-h-0 flex-1 overflow-y-auto";
 
-  const mainTagClass = isFullBleedEmbeddedIframe
+  const mainTagClass = isBrandDecorationPath(path)
+    ? "min-h-0 flex-1 overflow-y-auto p-0 animate-fade-in"
+    : isFullBleedEmbeddedIframe
     ? "min-h-0 flex-1 flex flex-col overflow-hidden p-0 animate-fade-in"
     : wideContentLayout
       ? "min-h-0 flex-1 flex flex-col overflow-hidden p-4 md:p-6 animate-fade-in"
       : "min-h-0 flex-1 overflow-y-auto p-4 md:p-6 animate-fade-in";
 
-  const innerWrapperClass = isFullBleedEmbeddedIframe
+  const innerWrapperClass = isBrandDecorationPath(path)
+    ? "w-full min-w-0"
+    : isFullBleedEmbeddedIframe
     ? "flex w-full min-h-0 min-w-0 flex-1 flex-col"
     : wideContentLayout
         ? "mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]"
@@ -11698,7 +11703,7 @@ function renderMain(): string {
       </header>`;
 
   const commercialGate=renderServiceGate(path);
-  const merchantTabPanelBody = commercialGate ?? (path === PROMOTIONS_PATH ? renderPromotionPage() : null) ?? (isMerchantServiceCenterPath(path) ? renderMerchantServiceCenter(path) : null) ?? (() => {
+  const merchantTabPanelBody = commercialGate ?? (isBrandDecorationPath(path) ? renderBrandDecorationPage(path) : null) ?? (path === PROMOTIONS_PATH ? renderPromotionPage() : null) ?? (isMerchantServiceCenterPath(path) ? renderMerchantServiceCenter(path) : null) ?? (() => {
     if (hubSearchCtx) {
       const index = buildHubSearchIndex(hubSearchCtx.hubId);
       const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
@@ -12490,6 +12495,7 @@ function mountInitializedPage(): void {
 
   bindMarketingScreensaverFullscreenFlow(app);
   bindMarketingDisplayPage(app);
+  bindBrandDecorationPage(app);
   bindTipOutRulesFullscreenFlow(app);
 
   const applySidebarNavScroll = (): void => {
