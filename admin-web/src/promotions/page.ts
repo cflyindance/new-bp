@@ -93,7 +93,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     const pages = Math.max(1, Math.ceil(results.length / 10));
     currentPage = Math.min(currentPage, pages);
     page!.querySelector("[data-promo-results]")!.innerHTML = `
-      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>促销类型</th><th>活动时间</th><th>规则摘要</th><th>活动类型</th><th>活动状态</th><th>操作</th></tr></thead>
+      <div class="promotion-table"><table><thead><tr><th>活动名称</th><th>促销类型</th><th>活动时间</th><th>规则摘要</th><th>活动类型状态</th><th>活动状态</th><th>操作</th></tr></thead>
       <tbody>${results.slice((currentPage - 1) * 10, currentPage * 10).map(({ row, status }) => {
         const f = row.fields;
         const date = f.startDate ? `${f.startDate} 至 ${f.endDate}` : "";
