@@ -25,6 +25,7 @@ var KioskAdActivities = (() => {
     EVENT_PREFIX: () => EVENT_PREFIX,
     NONE: () => NONE,
     actionLabel: () => actionLabel,
+    activityRuleGroups: () => activityRuleGroups,
     activityState: () => activityState,
     canConfigureActions: () => canConfigureActions,
     capabilities: () => capabilities,
@@ -146,6 +147,27 @@ var KioskAdActivities = (() => {
       ids.add(row.id);
     }
     return rows;
+  }
+  function activityRuleGroups(record) {
+    const groups = [];
+    if (record.rules?.benefit) groups.push({ label: "\u4F18\u60E0\u5185\u5BB9", value: record.rules.benefit });
+    if (record.rules?.conditions) groups.push({ label: "\u53C2\u4E0E\u6761\u4EF6", value: record.rules.conditions });
+    if (!record.rules?.benefit && !record.rules?.conditions) groups.push({ label: "\u6D3B\u52A8\u8BF4\u660E", value: record.description || "\u6D3B\u52A8\u89C4\u5219\u6682\u672A\u63D0\u4F9B" });
+    let period = (record.startAt === void 0 ? "\u4E0D\u9650" : new Date(record.startAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })) + " \u81F3 " + (record.endAt === void 0 ? "\u4E0D\u9650" : new Date(record.endAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }));
+    if (record.startAt === void 0 && record.endAt === void 0) period = "\u957F\u671F\u6709\u6548";
+    const schedule = record.rules?.schedule;
+    if (schedule) {
+      const weekdays = schedule.weekdays;
+      if (!weekdays.length && !schedule.startTime && !schedule.endTime) period += " \xB7 \u6709\u6548\u671F\u5185\u5168\u5929";
+      else {
+        const names = ["\u65E5", "\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D"];
+        const valid = weekdays.every((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+        period += " \xB7 " + (weekdays.length ? valid ? "\u6BCF\u5468" + [...new Set(weekdays)].map((day) => names[day]).join("\u3001") : "\u661F\u671F\u4EE5\u539F\u6D3B\u52A8\u4E3A\u51C6" : "\u6BCF\u5929");
+        period += " \xB7 " + (schedule.startTime && schedule.endTime ? schedule.startTime + "\u2014" + schedule.endTime : !schedule.startTime && !schedule.endTime ? "\u5168\u5929" : "\u65F6\u6BB5\u4EE5\u539F\u6D3B\u52A8\u4E3A\u51C6");
+      }
+    }
+    groups.push({ label: "\u6709\u6548\u65F6\u95F4", value: period }, { label: "\u9002\u7528\u95E8\u5E97", value: record.storeIds.length ? record.storeIds.length + " \u5BB6" : "\u54C1\u724C\u5168\u90E8\u95E8\u5E97" });
+    return groups;
   }
   function filterActivities(rows, query, promotionType = "", status = "") {
     const normalized = query.trim().toLocaleLowerCase();

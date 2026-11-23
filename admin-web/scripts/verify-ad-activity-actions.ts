@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
-import {externalOpenModes,filterActivities,canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
+import {activityRuleGroups,externalOpenModes,filterActivities,canConfigureActions,normalizeAction,capabilities,safeExternalUrl,localCatalogProvider,CATALOG_PREFIX,EVENT_PREFIX,validateAction,validateThemeActions,resolveThemeAssets,recordEvent,listActivities,type ActivityContext,type ActivityRecord} from '../src/marketing-display/ad-activity-actions.ts';
 import {createKioskPromotionActivityProvider} from '../src/marketing-display/kiosk-promotion-activity-adapter.ts';
 
 const data=new Map<string,string>(),storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}},now=Date.now();
@@ -92,3 +92,11 @@ new Script(readFileSync('dist/Configuration center/assets/kiosk-ad-activity-runt
 assert.equal(await runtimeWindow.KioskAdActivityRuntime.open({action:{...externalBase,openMode:'newTab'},slot,preview:false,source:{adId:'a',assetId:'b',slotId:slot.id}}),'external-tab');
 assert.equal(clickedLink.href,'https://partner.example/promo');assert.equal(clickedLink.target,'_blank');assert.equal(clickedLink.rel,'noopener noreferrer');
 console.log('PASS external opening policy: legacy iframe, trusted new-tab capability, invalid modes, safe link and click-only telemetry');
+
+const grouped=activityRuleGroups({...activity,rules:{benefit:'满$25减15%',conditions:'仅限首次下单',schedule:{weekdays:[],startTime:'',endTime:''}}});
+assert.deepEqual(grouped.map(row=>row.label),['优惠内容','参与条件','有效时间','适用门店']);
+assert.match(grouped.find(row=>row.label==='有效时间')!.value,/有效期内全天/);
+assert.match(activityRuleGroups({...activity,rules:{schedule:{weekdays:[1,3],startTime:'11:00',endTime:'14:00'}}}).find(row=>row.label==='有效时间')!.value,/每周一、三.*11:00—14:00/);
+assert(!activityRuleGroups({...activity,description:'星期：不限\n时段：不限'}).find(row=>row.label==='有效时间')!.value.includes('全天'),'legacy prose must not imply structured all-day scope');
+assert.equal(activityRuleGroups(activity)[0].value,activity.description);
+console.log('PASS selected activity rule groups: structured limits, explicit all-day, recurring schedule and legacy fallback');

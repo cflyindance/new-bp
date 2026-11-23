@@ -3,7 +3,8 @@ export type ActivityType = 'promotion' | 'points' | 'coupon';
 export type PromotionActivityType = 'buyGifts' | 'buyDiscount' | 'orderDiscount' | 'exchangePurchase';
 export type ExternalOpenMode = 'iframe' | 'newTab';
 export type ClickAction = {type:'none'} | {type:'activity';activityType:ActivityType;activityId:string;scope:string} | {type:'external';title:string;url:string;scope:string;openMode?:ExternalOpenMode};
-export interface ActivityRecord {id:string;scope:string;type:ActivityType;promotionType?:PromotionActivityType;name:string;status:'published'|'disabled'|'draft';startAt?:number;endAt?:number;storeIds:string[];description?:string;requiresBusinessCheck?:boolean}
+export interface ActivityRules {benefit?:string;conditions?:string;schedule?:{weekdays:number[];startTime?:string;endTime?:string}}
+export interface ActivityRecord {id:string;scope:string;type:ActivityType;promotionType?:PromotionActivityType;name:string;status:'published'|'disabled'|'draft';startAt?:number;endAt?:number;storeIds:string[];description?:string;rules?:ActivityRules;requiresBusinessCheck?:boolean}
 export interface ActivityProvider {
   list(scope:string,type:ActivityType):Promise<ActivityRecord[]>;
   get(scope:string,type:ActivityType,id:string):Promise<ActivityRecord|null>;
@@ -71,6 +72,27 @@ export async function listActivities(context:ActivityContext,type:ActivityType):
   if(!Array.isArray(rows))throw Error('活动列表格式无效');
   for(const row of rows){assertRecord(row,context.scope,type);if(ids.has(row.id))throw Error('活动目录存在重复标识');ids.add(row.id);}
   return rows;
+}
+export function activityRuleGroups(record:ActivityRecord):Array<{label:string;value:string}> {
+  const groups:Array<{label:string;value:string}>=[];
+  if(record.rules?.benefit)groups.push({label:'优惠内容',value:record.rules.benefit});
+  if(record.rules?.conditions)groups.push({label:'参与条件',value:record.rules.conditions});
+  if(!record.rules?.benefit&&!record.rules?.conditions)groups.push({label:'活动说明',value:record.description||'活动规则暂未提供'});
+  let period=(record.startAt===undefined?'不限':new Date(record.startAt).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}))+' 至 '+(record.endAt===undefined?'不限':new Date(record.endAt).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}));
+  if(record.startAt===undefined&&record.endAt===undefined)period='长期有效';
+  const schedule=record.rules?.schedule;
+  if(schedule){
+    const weekdays=schedule.weekdays;
+    if(!weekdays.length&&!schedule.startTime&&!schedule.endTime)period+=' · 有效期内全天';
+    else {
+      const names=['日','一','二','三','四','五','六'];
+      const valid=weekdays.every(day=>Number.isInteger(day)&&day>=0&&day<=6);
+      period+=' · '+(weekdays.length?(valid?'每周'+[...new Set(weekdays)].map(day=>names[day]).join('、'):'星期以原活动为准'):'每天');
+      period+=' · '+(schedule.startTime&&schedule.endTime?schedule.startTime+'—'+schedule.endTime:!schedule.startTime&&!schedule.endTime?'全天':'时段以原活动为准');
+    }
+  }
+  groups.push({label:'有效时间',value:period},{label:'适用门店',value:record.storeIds.length?record.storeIds.length+' 家':'品牌全部门店'});
+  return groups;
 }
 export function filterActivities(rows:ActivityRecord[],query:string,promotionType:string='',status:string=''):ActivityRecord[] {
   const normalized=query.trim().toLocaleLowerCase();
