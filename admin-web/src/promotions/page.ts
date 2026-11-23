@@ -94,11 +94,13 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   function render() {
     page!.innerHTML = `<div class="promotion-toolbar">
       <div class="promotion-query"><input type="search" aria-label="搜索活动名称" placeholder="搜索活动名称" data-promo-search value="${escape(query)}"><label>活动类型 <select data-promo-filter>${options([["", "全部类型"], ...types], tab)}</select></label></div>
-      <div class="promotion-actions">${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
-      </div><div class="promotion-filters">
-      <label>开启促销类型 <select data-promo-active ${editable ? "" : "disabled"}>${options([["", "全部关闭"], ...types.filter(([type]) => draft.activeType === type || draft.campaigns.some(row => row.type === type))], draft.activeType)}</select></label></div>
+      <div class="promotion-actions"><div class="promotion-activation">
+        <span>启用类型：<strong>${draft.activeType ? promotionTypes[draft.activeType] : "全部关闭"}</strong>${draft.activeType !== saved.activeType ? ' <small class="promotion-activation-pending">待保存</small>' : ""}</span>
+        ${editable ? button("更改", "activation", 'aria-label="更改启用类型" aria-haspopup="dialog"') : ""}
+      </div>${editable ? button("保存", "save", `class="promotion-save" ${dirty() ? "" : "disabled"}`) : ""} ${button("活动定义", "definitions")} ${editable ? button("新增活动", "add", 'class="promotion-primary"') : ""}</div>
+      </div>
       <div data-promo-results></div>
-      <footer><span role="status">${escape(message || (dirty() ? "有未保存的变更" : ""))}</span></footer>`;
+      ${message ? `<footer><span role="status">${escape(message)}</span></footer>` : ""}`;
     updateRows();
   }
 
@@ -113,6 +115,59 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
     node.querySelector("[data-close]")!.addEventListener("click", () => node.close());
     node.showModal();
     return node;
+  }
+
+  function openActivationDialog() {
+    let selection = draft.activeType;
+    const choices: [PromotionType | "", string][] = [...types, ["", "全部关闭"]];
+    const node = dialog("更改启用类型", `
+      <fieldset class="promotion-activation-options">
+        <legend>同一范围只可启用一种促销类型</legend>
+        ${choices.map(([type, label]) => {
+          const rows = draft.campaigns.filter(row => row.type === type);
+          const unavailable = type && !rows.length && type !== draft.activeType;
+          const count = rows.filter(row => row.enabled).length;
+          return `<label class="promotion-choice">
+            <input type="radio" name="activation-type" value="${type}" ${type === selection ? "checked" : ""} ${unavailable ? "disabled" : ""}>
+            <span>${label}${type === saved.activeType ? ' <small>已保存</small>' : ""}</span>
+            ${type ? `<small class="promotion-activation-count">${rows.length ? `已开启 ${count} 条` : "暂无活动"}</small>` : ""}
+          </label>`;
+        }).join("")}
+      </fieldset>
+      <p class="promotion-activation-impact" aria-live="polite" data-activation-impact></p>`, "确认");
+    node.classList.add("promotion-dialog-activation");
+
+    const confirm = node.querySelector<HTMLButtonElement>("[data-confirm]")!;
+    const impact = node.querySelector<HTMLElement>("[data-activation-impact]")!;
+    function updateImpact() {
+      confirm.disabled = selection === draft.activeType;
+      if (selection === saved.activeType) {
+        impact.textContent = selection === draft.activeType ? "" : "确认后将撤销待保存的启用类型变更。";
+        return;
+      }
+
+      const stop = saved.activeType ? `${promotionTypes[saved.activeType]}将停止参与促销。` : "";
+      const start = selection ? `${promotionTypes[selection]}中已开启且符合时段的活动可参与促销。`
+        : "所有促销类型将关闭，已配置的活动和单条活动开关会保留。";
+      impact.textContent = `保存后，${stop}${start}`;
+    }
+
+    updateImpact();
+    node.querySelector<HTMLInputElement>("[name=activation-type]:checked")?.focus();
+    node.addEventListener("change", event => {
+      const radio = event.target as HTMLInputElement;
+      if (radio.name !== "activation-type" || !radio.checked || radio.disabled) return;
+      selection = radio.value as PromotionType | "";
+      updateImpact();
+    });
+    confirm.addEventListener("click", () => {
+      if (confirm.disabled) return;
+      draft.activeType = selection;
+      message = "";
+      node.close();
+      render();
+      page!.querySelector<HTMLButtonElement>('[data-promo-action="activation"]')?.focus();
+    });
   }
 
   function confirmAction(row: Campaign, verb: string, callback: () => void) {
@@ -279,13 +334,13 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
   page.addEventListener("change", event => {
     const target = event.target as HTMLSelectElement;
     if (target.matches("[data-promo-filter]")) { tab = target.value as PromotionType | ""; currentPage = 1; updateRows(); }
-    if (editable && target.matches("[data-promo-active]")) { draft.activeType = target.value as PromotionType | ""; message = ""; render(); }
   });
   page.addEventListener("click", event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-promo-action]");
     if (!control || control.disabled) return;
     const row = draft.campaigns.find(item => item.id === control.dataset.id);
     switch (control.dataset.promoAction) {
+      case "activation": if (editable) openActivationDialog(); break;
       case "definitions": dialog("活动定义", `<dl>${types.map(([type, label]) => `<dt>${label}</dt><dd>${definitions[type]}</dd>`).join("")}</dl><p>同一范围只可启用一种活动类型。活动行开启、时段及终端的会员和云促销互斥检查共同决定是否可用。</p>`); break;
       case "prev": currentPage--; updateRows(); break;
       case "next": currentPage++; updateRows(); break;
