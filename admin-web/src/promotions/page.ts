@@ -77,7 +77,7 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
       localStorage.setItem(key, value);
       storedValue = value;
       saved = next;
-      message = "活动配置已保存到本浏览器。";
+      message = "";
     } catch {
       return "保存失败，活动配置未更改。请重试。";
     }
@@ -102,9 +102,10 @@ export function bindPromotionPage(mount: ParentNode, scope: string, canEdit: boo
         const attrs = `data-id="${escape(row.id)}"`;
         return `<tr><td>${escape(f.name)}</td><td>${promotionTypes[row.type]}</td><td>${[date, days, time].filter(Boolean).map(escape).join("<br>")}</td>
           <td>${escape(summary(row))}</td>
-          <td>${button(row.enabled ? "已开启" : "已关闭", "toggle", `${attrs} role="switch" aria-checked="${row.enabled}" ${editable ? "" : "disabled"}`)}</td>
+          <td>${row.type === saved.activeType ? "已开启" : "已关闭"}</td>
           <td>${status ?? "—"}</td>
-          <td>${button(editable ? "编辑" : "查看", "edit", attrs)} ${editable ? button("删除", "delete", attrs) : ""}</td></tr>`;
+          <td>${button(row.enabled ? "活动已开启" : "活动已关闭", "toggle", `${attrs} role="switch" aria-label="单条活动启停" aria-checked="${row.enabled}" ${editable ? "" : "disabled"}`)}
+            ${button(editable ? "编辑" : "查看", "edit", attrs)} ${editable ? button("删除", "delete", attrs) : ""}</td></tr>`;
       }).join("") || `<tr><td colspan="7" class="promotion-empty">${readFailed ? "无法读取活动" : saved.campaigns.length ? "没有符合条件的活动" : "暂无活动"}</td></tr>`}</tbody></table></div>
       <footer>共 ${results.length} 条 <div>${button("上一页", "prev", currentPage === 1 ? "disabled" : "")} ${currentPage} / ${pages} ${button("下一页", "next", currentPage === pages ? "disabled" : "")}</div></footer>`;
   }
