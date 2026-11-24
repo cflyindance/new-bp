@@ -25,6 +25,8 @@ export function validateCenterState(state:CenterState,resources:Map<string,Resou
   for(const employee of state.employees){
     if(state.employeeAuthorization==='roles-only'&&Object.keys(employee.overrides).length)throw Error('员工仅支持角色授权，不能保存个人例外');
     if(!['unopened','pending','revoked','enabled','disabled'].includes(employee.status))throw Error('账号状态无效');
+    const supplements=employee.supplementalStoreGrants;
+    if(supplements!==undefined&&(!Array.isArray(supplements)||supplements.some(grant=>typeof grant?.storeId!=='string'||!grant.storeId.trim()||!employee.bindings.some(binding=>binding.roleId===grant.roleId))||!unique(supplements.map(grant=>JSON.stringify([grant.roleId,grant.storeId])))))throw Error('补充门店授权无效');
     if(!employee.name.trim()||employee.name.length>30)throw Error('员工姓名无效');
     for(const binding of employee.bindings){
       if(!state.roles.some(r=>r.id===binding.roleId))throw Error('绑定的角色不存在');

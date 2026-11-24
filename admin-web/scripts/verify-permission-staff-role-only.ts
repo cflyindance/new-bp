@@ -35,6 +35,16 @@ for(const store of stores)assert.equal(resolveAccess(savedPending,'e',store.id,p
 const invalid=structuredClone(pending);
 invalid.employees[0].bindings[0].scope={mode:'brands',ids:[]};
 assert.throws(()=>validateCenterState(invalid,c.resources),/有效的授权范围/);
+const supplemented=structuredClone(next);
+supplemented.employees[0].supplementalStoreGrants=[{roleId:'r',storeId:'b'}];
+assert.equal(resolveAccess(supplemented,'e','a',path,stores,c.resources),'read');
+assert.equal(resolveAccess(supplemented,'e','b',path,stores,c.resources),'read');
+assert.equal(resolveAccess(supplemented,'e','outside',path,[...stores,{id:'outside',title:'C',brand:'b',region:'r'}],c.resources),'hidden');
+validateCenterState(supplemented,c.resources);
+const dangling=structuredClone(supplemented);
+dangling.employees[0].bindings=[];
+assert.equal(resolveAccess(dangling,'e','b',path,stores,c.resources),'hidden');
+assert.throws(()=>validateCenterState(dangling,c.resources),/补充门店授权无效/);
 const html=renderPermissionEditor({catalog:c,page:path,group:'',preview:false,readonly:true,staff:false,value:k=>resolveAccess(next,'e','a',k,stores,c.resources),own:()=> 'inherit',search:''});
 assert.doesNotMatch(html,/data-grant=|data-authorization=|data-category-grant=/);
 const contaminated=structuredClone(next);contaminated.employees[0].overrides={a:{[path]:'hidden'},b:{[path]:'read'}};

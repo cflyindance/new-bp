@@ -17,9 +17,9 @@ import {rolePageRoute} from './center-role-route';
 import {normalizePermissionCenterPath} from './center-routes';
 import {applySubmenuMode} from './center-page-mode';
 import {bindDialogBackdropClose} from './center-dialog-backdrop';
-import {renderStaffRoles,renderScope,scopeStoreItems,scopeLabel,applicableRoles,updateBindingScope} from './center-staff-roles';
+import {renderStaffRoles,renderScope,scopeStoreItems,scopeLabel,applicableRoles} from './center-staff-roles';
 import { readCenterState, saveCenterState, centerStores,centerBrands } from './center-store';
-import {bindScopePicker,scopePickerOptions,renderGroupedScope} from './center-scope-picker';
+import {bindScopePicker} from './center-scope-picker';
 import { resolveAccess, roleAccess, validateInvite, validateRole, type Access, type CenterState, type Audit, type Employee, type Role } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
 import { authorizationRows } from './center-authorization';
@@ -200,7 +200,7 @@ export function bindCenterPage(): void {
       const roles=draft.roles.filter(role=>selected.has(role.id));
       if(!roles.length)throw Error('请至少选择一个角色');
       employee()!.bindings.push(...roles.map(role=>({
-        id:crypto.randomUUID(),roleId:role.id,scope:{mode:'stores' as const,ids:[]},
+        id:crypto.randomUUID(),roleId:role.id,scope:{mode:'stores' as const,ids:(role.defaultStoreIds??[]).filter(id=>stores.some(store=>store.id===id))},
       })));
       mark();
       render();
@@ -215,34 +215,32 @@ export function bindCenterPage(): void {
       if(trigger)showRolePermissions(trigger.dataset.previewAssignmentRole!);
     });
   }
-  function editBinding(id:string):void {
-    const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
-    const role=draft.roles.find(r=>r.id===binding.roleId);
-    const defaults=(role?.defaultStoreIds??[]).filter(id=>stores.some(store=>store.id===id));
-    const dialog=modal('修改角色授权范围',`<p>员工：${esc(employee()!.name)} · 角色：${esc(role?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label>${defaults.length?'<div><button type="button" data-apply-role-default-stores>使用角色默认门店</button></div>':''}<div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
-      const scope=readScope();
-      const apply=()=>{
-        const current=employee()!;
-        if(updateBindingScope(current,id,scope)){
-          current.migrationReview=false;
-          mark();
-          render();
-        }
-        return true;
-      };
-      if((binding.scope.mode==='brands'||binding.scope.mode==='regions')&&scope.mode!==binding.scope.mode){
-        modal('确认更改授权范围',`<p>原授权为${esc(scopeLabel(binding.scope))}，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>按已选门店授权，未来新增门店不自动加入。保存员工详情后生效。</p>`,apply,'确定');return true;
-      }
-      return apply();
-    },'确认选择');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames,{defaultStoreIds:defaults});
+  function addStoreSupplement():void {
+    const current=employee();
+    if(!staffEditable||!current)return;
+    const roles=draft.roles.filter(role=>current.bindings.some(binding=>binding.roleId===role.id));
+    if(!roles.length)return;
+    const dialog=modal('添加补充门店',`<label>适用角色<select name="supplement-role" required><option value="">请选择角色</option>${roles.map(role=>`<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('')}</select></label><select name="mode" hidden aria-hidden="true"><option value="stores">指定门店</option></select><div data-scope-options></div>`,d=>{
+      const roleId=field(d,'supplement-role');
+      if(!roles.some(role=>role.id===roleId))throw Error('请选择已分配角色');
+      const grants=current.supplementalStoreGrants??[];
+      const {ids}=readScope();
+      const additional=ids.filter(storeId=>!grants.some(grant=>grant.roleId===roleId&&grant.storeId===storeId)).map(storeId=>({roleId,storeId}));
+      if(!additional.length)throw Error('所选门店已添加该角色的补充授权');
+      current.supplementalStoreGrants=[...grants,...additional];
+      mark();
+      render();
+      return true;
+    },'确认添加');
+    const readScope=bindScopePicker(dialog,{mode:'stores',ids:[]},stores,brandNames);
   }
   function showBindingStores(id:string):void {
     const binding=employee()?.bindings.find(b=>b.id===id);
     if(!binding){error('该角色授权不存在，请重新打开员工详情');return;}
     const name=draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色';
     const count=scopeStoreItems(binding.scope,stores).length;
-    const dialog=modal('授权门店',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(binding.scope))} · 共 ${count} 家门店</p><div class="pc-authorized-stores">${renderScope(binding.scope,stores,true)}</div>`,()=>true,'关闭');
-    dialog.classList.add('pc-scope-dialog');dialog.setAttribute('aria-label','授权门店');
+    const dialog=modal('查看角色授权范围',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(binding.scope))} · 共 ${count} 家门店</p><div class="pc-authorized-stores">${renderScope(binding.scope,stores,true)}</div>`,()=>true,'关闭');
+    dialog.classList.add('pc-scope-dialog');dialog.setAttribute('aria-label','查看角色授权范围');
     dialog.querySelector('footer [data-close]')?.remove();
   }
   function showRolePermissions(id:string):void {
@@ -351,16 +349,28 @@ export function bindCenterPage(): void {
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.viewBindingStores){showBindingStores(b.dataset.viewBindingStores);return;}
       if(b.dataset.viewRole){showRolePermissions(b.dataset.viewRole);return;}
-      if(b.dataset.editBinding){editBinding(b.dataset.editBinding);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
       if(b.dataset.members){modal('角色成员',state.employees.filter(e=>e.bindings.some(x=>x.roleId===b.dataset.members)).map(e=>`<p>${link(esc(e.name),`/permissions/staff/${encodeURIComponent(e.id)}`)}</p>`).join('')||'<p>暂无成员</p>',()=>true,'关闭');return;}
       if(b.dataset.delete){const id=b.dataset.delete, members=roleBoundEmployees(state,id);if(members.length){modal('暂不能删除角色',`<p>当前角色已被以下 ${members.length} 位员工绑定，请先解除角色分配，再删除角色。</p><ul>${members.map(e=>`<li>${esc(e.name)}${e.email?`（${esc(e.email)}）`:''}</li>`).join('')}</ul>`,()=>true,'知道了');return;}modal('删除角色','<p>删除后无法恢复，确定删除此角色？</p>',()=>{const next=deleteUnassignedRole(state,id);commit(next,id,'删除角色');return true;},'删除');return;}
-      if(b.dataset.removeBinding){const binding=employee()?.bindings.find(x=>x.id===b.dataset.removeBinding);if(!binding)return;modal('解除角色授权',`<p>员工：${esc(employee()!.name)}</p><p>解除角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p>${renderScope(binding.scope,stores,true)}`,()=>{employee()!.bindings=employee()!.bindings.filter(x=>x.id!==binding.id);mark();render();return true;},'解除角色');return;}
+      if(b.dataset.removeStoreSupplement!==undefined&&staffEditable){
+        const current=employee(),index=Number(b.dataset.removeStoreSupplement);
+        if(!current?.supplementalStoreGrants?.[index])return;
+        modal('移除补充门店授权','<p>确认移除此条补充授权？</p>',()=>{
+          current.supplementalStoreGrants!.splice(index,1);
+          if(!current.supplementalStoreGrants!.length)delete current.supplementalStoreGrants;
+          mark();
+          render();
+          return true;
+        },'移除');
+        return;
+      }
+      if(b.dataset.removeBinding){const binding=employee()?.bindings.find(x=>x.id===b.dataset.removeBinding);if(!binding)return;modal('解除角色授权',`<p>员工：${esc(employee()!.name)}</p><p>解除角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p>${renderScope(binding.scope,stores,true)}`,()=>{const current=employee()!;current.bindings=current.bindings.filter(x=>x.id!==binding.id);if(!current.bindings.some(x=>x.roleId===binding.roleId)&&current.supplementalStoreGrants){current.supplementalStoreGrants=current.supplementalStoreGrants.filter(grant=>grant.roleId!==binding.roleId);if(!current.supplementalStoreGrants.length)delete current.supplementalStoreGrants;}mark();render();return true;},'解除角色');return;}
       switch(b.dataset.do){
         case 'create-role':roleDialog();break;
         case 'invite':invite();break;
         case 'preview':preview();break;
         case 'assign':assign();break;
+        case 'add-store-supplement':addStoreSupplement();break;
         case 'staff-effective':showStaffEffective();break;
 
         case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
