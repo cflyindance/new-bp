@@ -37,3 +37,6 @@
 .pc-batch-preview { max-height: 52dvh; overflow: auto; }
 .pc-batch-preview thead { position: sticky; top: 0; background: var(--card, white); }
 .pc-batch-preview td { white-space: nowrap; }
+
+.pc .pc-rt-table-head label { display:flex; align-items:center; gap:8px; margin:0; }
+.pc .pc-rt-batch strong { margin-right:auto; }
