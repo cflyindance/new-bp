@@ -13,6 +13,65 @@ if(page==='finish'){body='<div class="success"><i>✓</i><p>THANK YOU FOR YOUR O
 if(page==='login'){body='<span class="eyebrow">MEMBERSHIP</span><h1>欢迎回来</h1><p>登录会员，享受专属礼遇。</p><input aria-label="演示手机号" placeholder="输入手机号码" readonly>';action='登录（演示）';}
 return `<div class="em em-layout-${theme}" data-page="${esc(page)}" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${action}</button></footer></div>`;
 }
+function applyNativePalette(frame, palette) {
+  const doc = frame.contentDocument;
+  if (!doc?.head) return;
+  let theme = doc.getElementById('bd-native-palette');
+  if (!palette) {
+    theme?.remove();
+    return;
+  }
+  if (!theme) {
+    theme = doc.createElement('style');
+    theme.id = 'bd-native-palette';
+    doc.head.append(theme);
+  }
+  // Only override colors consumed by the bundled native preview.
+  const tokens = {
+    '--primary-color': palette.primary,
+    '--primary-selected-color': palette.primary,
+    '--primary-secondary-color': palette.selectedFill,
+    '--primary-color-darker': palette.primary,
+    '--background-crm-login': palette.labelFill,
+    '--bd-native-on-primary': palette.onPrimary
+  };
+  const colors = Object.entries(tokens)
+    .filter(([, color]) => /^#[0-9a-f]{6}$/i.test(color))
+    .map(([name, color]) => `${name}: ${color} !important;`)
+    .join('\n');
+  theme.textContent = `
+    :root { ${colors} }
+    .finishWarp___rRV6R .finishBox___-fRHM .close___mL5p5,
+    .btnBox___0kC4F .btnConfirm___1tLDT,
+    .foot___ZRRHB .countBtn___r5-ub .btnEn___1KOE-,
+    .footBtnBox___Qxc-X .countBtn___XvuL- .btnEn___xS78r,
+    .promoCodeArea___HG678 .promoCodeBtn___iluXN,
+    .tipBox___IIwBw .tipBtn___m5zCV .confirmCard___po70Q {
+      color: var(--bd-native-on-primary);
+    }
+  `;
+}
+function renderNative(page, landscape, palette) {
+  const direction = landscape ? 'landscape' : 'portrait';
+  const device = landscape ? 'android-14-1' : 'android-24-1';
+  const src = `native-app/index.html?page=${encodeURIComponent(page)}&orientation=${direction}&device=${device}`;
+  let frame = screen.querySelector('iframe[data-native-preview]');
+  if (frame?.getAttribute('src') !== src) {
+    frame = document.createElement('iframe');
+    frame.dataset.nativePreview = '';
+    frame.title = 'Kiosk 原生参考 f84dd529';
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    Object.assign(frame.style, {
+      width: width * 2 + 'px', height: height * 2 + 'px',
+      transform: 'scale(.5)', pointerEvents: 'none'
+    });
+    frame.src = src;
+    screen.replaceChildren(frame);
+  }
+  const refresh = () => applyNativePalette(frame, palette);
+  frame.onload = refresh;
+  if (frame.contentDocument?.URL !== 'about:blank') refresh();
+}
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='bd-render')return;const {scheme:s,palette,page,orientation}=event.data;const style=s?.styles?.[page];if(!style)return;
 const roleColors=palette?{
   'label-fill':palette.labelFill,'label-text':palette.labelText,
@@ -23,7 +82,7 @@ const roleColors=palette?{
 }:undefined;
 if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
-if(style.mode==='default'){screen.innerHTML=`<iframe title="Kiosk 原生参考 f84dd529" src="native-app/index.html?page=${encodeURIComponent(page)}&orientation=${landscape?'landscape':'portrait'}&device=${landscape?'android-14-1':'android-24-1'}" style="width:${width*2}px;height:${height*2}px;transform:scale(.5);pointer-events:none" sandbox="allow-scripts allow-same-origin"></iframe>`;}
+if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette);}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation});
 if(palette){const item=screen.firstElementChild;const tokens={paper:palette.background,surface:palette.surface,ink:palette.ink,muted:palette.muted,line:palette.line,accent:palette.accent,primary:palette.primary,on:palette.onPrimary};
 for(const [name,color] of Object.entries(tokens))item.style.setProperty('--pt-'+name,color);}}}
