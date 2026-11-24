@@ -198,3 +198,15 @@
   border-radius: 16px;
   padding: 24px;
 }
+
+.pc .pc-staff-authorization > .pc-heading { margin-bottom: 0; }
+.pc .pc-staff-authorization [data-staff-roles] { margin: 0; }
+.pc .pc-staff-authorization .pc-toolbar { margin-bottom: 12px; }
+.pc .pc-staff-authorization .pc-toolbar h2 { margin: 0; }
+.pc .pc-staff-authorization .pc-binding-scope-type { margin-bottom: 6px; }
+.pc .pc-staff-authorization .pc-role-bindings td:last-child { width: 22%; }
+.pc .pc-staff-authorization .brand-more > button { border: 0; background: transparent; color: #1677ff; }
+.pc .pc-staff-authorization .brand-more > button:hover,
+.pc .pc-staff-authorization .brand-more > button[aria-expanded=true] { background: #1677ff18; }
+.pc .pc-staff-authorization .brand-more-popover [role=menuitem] { justify-content: flex-start; }
+.pc .pc-staff-authorization .brand-more-popover .danger { color: var(--color-destructive, #b33131); }
