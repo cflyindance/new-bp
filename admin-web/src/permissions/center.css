@@ -183,20 +183,31 @@
 .pc .pc-staff-overview header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .pc .pc-staff-summary { display:grid; gap:8px; }
 .pc .pc-staff-summary li { display:flex; flex-wrap:wrap; gap:12px; }
-.pc-staff-security dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:12px 16px; }
-.pc-staff-security dd { overflow-wrap:anywhere; }
-.pc-dialog.pc-staff-security { position:fixed; inset:0 0 0 auto; margin:0; width:min(480px,100vw); height:100dvh; max-height:none; border-radius:0; }
-.pc-staff-security .pc-actions { flex-wrap:wrap; }
 
 .pc .pc-full > .pc-staff-detail-heading {
-  margin-top: 18px;
+  margin: 18px 0 0;
   padding: 20px 24px;
   border: 1px solid var(--pc-line);
-  border-radius: 16px;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 0;
   background: color-mix(in srgb, var(--color-primary, #245de3) 7%, var(--color-card, white));
 }
-.pc .pc-staff-detail-email {
-  color: var(--color-muted-foreground, #597088);
+.pc .pc-staff-tabs {
+  flex: none;
+  --brand-detail-blue: #1677ff;
+  background: var(--color-card, white);
+  border: 1px solid var(--pc-line);
+  border-top: 0;
+  border-radius: 0 0 16px 16px;
+}
+.pc .pc-staff-security-panel dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 12px 24px;
+  margin: 0 0 20px;
+}
+.pc .pc-staff-security-panel dd {
+  margin: 0;
   overflow-wrap: anywhere;
 }
 .pc .pc-staff-overview > .pc-card {
