@@ -189,12 +189,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     const planUrl = (id: string, step = '') => `#${ROOT}/pages/edit/${id}?flow=1&channel=${channel}${step ? '&step=' + step : ''}`;
     const stepTitles = ['方案信息', '装修页面', '选择门店', '核对并发布'];
     const flowHeader = (step: number, options: Parameters<typeof renderStandalonePageHeader>[0]) =>
-        renderStandalonePageHeader({ ...options, className: 'bd-flow-header' }) +
-        `<nav class="bd-flow-progress" aria-label="创建装修方案进度">
+        renderStandalonePageHeader({ ...options, className: 'bd-flow-header', progressHtml: `<nav class="bd-flow-progress" aria-label="创建装修方案进度">
             <ol class="bd-flow-steps">${stepTitles.map((title, index) =>
                 `<li ${step === index + 1 ? 'aria-current="step"' : ''}><span class="bd-step-number" aria-hidden="true">${index + 1}</span>${title}</li>`).join('')}</ol>
             <p class="bd-flow-progress-compact" aria-current="step">第 ${step} 步 / 共 ${stepTitles.length} 步 · ${stepTitles[step - 1]}</p>
-        </nav>`;
+        </nav>` });
     const storeNames = (ids: string[]) => ids.map(id => scope.stores.find(store => store.id === id)?.name ?? '门店已不可用').join('、');
     const period = (rules: PlanRules) => rules.kind === 'default' ? '长期' : !rules.starts || !rules.ends ? '待设置' :
         `${formatLocal(rules.starts!, rules.timezone).replace('T', ' ')} 至 ${formatLocal(rules.ends!, rules.timezone).replace('T', ' ')} · ${rules.timezone}`;
@@ -207,6 +206,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             titleHtml: current ? '方案信息' : '新建装修方案',
             backHtml: `<a href="${current ? planUrl(current.id) : '#' + ROOT + '/pages?channel=' + channel}">返回</a>`,
             subtitleHtml: esc(scope.brandName),
+            actionsHtml: '<button type="submit" form="bd-plan-rules" class="bd-primary">下一步：装修页面</button>',
         }) + `<div class="bd-flow-content"><form id="bd-plan-rules" class="bd-card bd-plan-form">
             <div class="bd-flow-grid"><label>方案名称<input name="name" required maxlength="40" value="${esc(current?.name ?? '')}"></label>
             <label>渠道<select name="channel" ${locked}><option value="kiosk" ${channel === 'kiosk' ? 'selected' : ''}>Kiosk</option><option value="emenu" ${channel === 'emenu' ? 'selected' : ''}>eMenu</option></select></label>
@@ -227,7 +227,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <label>活动名称<input name="activityName" maxlength="40" value="${esc(rules?.activityName ?? '')}"></label>
             </div>
             <div data-bd-notice class="bd-notice" role="status"></div>
-            <footer class="bd-flow-actions"><button class="bd-primary" type="submit">下一步：装修页面</button></footer>
             </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-rules')!;
         const update = () => {
@@ -282,6 +281,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.innerHTML = flowHeader(3, {
             titleHtml: esc(s.name), subtitleHtml: esc(label(channel)),
             backHtml: '<button type="submit" form="bd-plan-stores" name="destination" value="editor">保存并返回装修页面</button>',
+            actionsHtml: '<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：核对并发布</button>',
         }) + `<div class="bd-flow-content"><form id="bd-plan-stores" class="bd-card bd-plan-form">
             <h2>适用门店 <span class="bd-muted" data-bd-store-count></span></h2>
             <div class="bd-flow-grid"><label>门店名称<input type="search" data-bd-store-search placeholder="搜索门店"></label>
@@ -293,7 +293,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 <label>结束时间<input type="datetime-local" name="ends" value="${rules.ends ? formatLocal(rules.ends, rules.timezone) : ''}"></label>
             </div></fieldset>` : ''}
             <p data-bd-notice class="bd-notice" role="status"></p>
-            <footer class="bd-flow-actions"><button class="bd-primary" name="destination" value="review">下一步：核对并发布</button></footer>
             </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-stores')!;
         const selected = () => {

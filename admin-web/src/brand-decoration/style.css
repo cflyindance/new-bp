@@ -36,13 +36,28 @@
 .bd-usage-help [role=tooltip]{position:absolute;z-index:5;inset-inline-end:0;top:100%;width:max-content;max-width:min(240px,calc(100vw - 80px));padding:8px 12px;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;line-height:1.5;visibility:hidden}
 .bd-usage-help:hover [role=tooltip],.bd-usage-help:focus-within [role=tooltip]{visibility:visible}
 
-header.standalone-page-header.bd-flow-header[data-standalone-page-header]{min-height:72px;margin-bottom:0}
-.bd-flow-progress{display:grid;justify-items:center;padding:12px 0 20px}
+header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  grid-template-areas:"heading progress actions";align-items:center;gap:16px;min-height:72px;margin-bottom:20px
+}
+.bd-flow-header .standalone-page-heading{grid-area:heading}
+.bd-flow-header .standalone-page-actions{grid-area:actions;justify-self:end}
+.bd-flow-progress{grid-area:progress;justify-self:center}
 .bd-flow-progress .bd-flow-steps{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px;margin:0;text-align:center}
 .bd-flow-steps li{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
 .bd-step-number{display:grid;place-items:center;width:22px;height:22px;border:1px solid currentColor;border-radius:50%;font-size:12px}
-.bd .bd-flow-progress-compact{display:none;margin:0;color:#1677ff;font-weight:600}
-.bd-flow-progress + .bd-notice:empty{display:none}
-@media(max-width:640px){.bd-flow-progress .bd-flow-steps{display:none}.bd .bd-flow-progress-compact{display:block}}
-
-@media(max-width:640px){header.standalone-page-header.bd-flow-header[data-standalone-page-header]{min-height:124px;gap:8px;align-content:flex-start}.bd-flow-header .standalone-page-actions{min-height:44px}.bd-flow-header .standalone-page-actions :is(a,button){min-height:44px;padding-inline:8px}}
+.bd .bd-flow-progress-compact{display:none;margin:0;color:#1677ff;font-weight:600;text-align:center}
+.bd-flow-header + .bd-notice:empty{display:none}
+@media(max-width:1200px){
+  header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
+    grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"heading actions" "progress progress";
+    grid-template-rows:minmax(72px,auto) auto;gap:8px 12px
+  }
+  .bd-flow-progress .bd-flow-steps{display:none}
+  .bd .bd-flow-progress-compact{display:block}
+}
+@media(max-width:640px){
+  header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(104px,auto) auto}
+  .bd-flow-header .standalone-page-actions{min-width:0;min-height:44px}
+  .bd-flow-header .standalone-page-actions :is(a,button){min-height:44px;padding-inline:8px;white-space:normal;text-align:center}
+}
