@@ -187,13 +187,17 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
 
     const planUrl = (id: string, step = '') => `#${ROOT}/pages/edit/${id}?flow=1&channel=${channel}${step ? '&step=' + step : ''}`;
-    const stepTitles = ['方案信息', '装修页面', '选择门店', '核对并发布'];
-    const flowHeader = (step: number, options: Parameters<typeof renderStandalonePageHeader>[0]) =>
-        renderStandalonePageHeader({ ...options, className: 'bd-flow-header', progressHtml: `<nav class="bd-flow-progress" aria-label="创建装修方案进度">
-            <ol class="bd-flow-steps">${stepTitles.map((title, index) =>
+    const flowProgress = (step: number, activity: boolean) => {
+        const titles = ['方案信息', '装修页面', '选择门店', ...(activity ? ['活动有效期'] : []), '核对并发布'];
+        return `<nav class="bd-flow-progress" aria-label="创建装修方案进度">
+            <ol class="bd-flow-steps" style="--bd-step-count:${titles.length}">${titles.map((title, index) =>
                 `<li ${step === index + 1 ? 'aria-current="step"' : ''}><span class="bd-step-number" aria-hidden="true">${index + 1}</span>${title}</li>`).join('')}</ol>
-            <p class="bd-flow-progress-compact" aria-current="step">第 ${step} 步 / 共 ${stepTitles.length} 步 · ${stepTitles[step - 1]}</p>
-        </nav><div class="bd-flow-meter" aria-hidden="true"><i style="width:${step / stepTitles.length * 100}%"></i></div>` });
+            <p class="bd-flow-progress-compact" aria-current="step">第 ${step} 步 / 共 ${titles.length} 步 · ${titles[step - 1]}</p>
+        </nav><div class="bd-flow-meter" aria-hidden="true"><i style="width:${step / titles.length * 100}%"></i></div>`;
+    };
+    const flowHeader = (step: number, options: Parameters<typeof renderStandalonePageHeader>[0]) =>
+        renderStandalonePageHeader({ ...options, className: 'bd-flow-header',
+            progressHtml: flowProgress(step, scheme()?.rules?.kind === 'activity') });
     const storeNames = (ids: string[]) => ids.map(id => scope.stores.find(store => store.id === id)?.name ?? '门店已不可用').join('、');
     const period = (rules: PlanRules) => rules.kind === 'default' ? '长期' : !rules.starts || !rules.ends ? '待设置' :
         `${formatLocal(rules.starts!, rules.timezone).replace('T', ' ')} 至 ${formatLocal(rules.ends!, rules.timezone).replace('T', ' ')} · ${rules.timezone}`;
@@ -233,6 +237,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const activity = new FormData(form).get('kind') === 'activity';
             form.querySelector<HTMLElement>('[data-bd-activity-fields]')!.hidden = !activity;
             form.querySelector<HTMLInputElement>('[name=activityName]')!.required = activity;
+            const progress = root.querySelector('.bd-flow-progress');
+            if (progress) {
+                root.querySelector('.bd-flow-meter')?.remove();
+                progress.outerHTML = flowProgress(1, activity);
+            }
         };
         form.addEventListener('change', update);
         update();
@@ -281,7 +290,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.innerHTML = flowHeader(3, {
             titleHtml: '选择门店', subtitleHtml: esc(s.name + ' · ' + label(channel)),
             backHtml: '<button type="submit" form="bd-plan-stores" name="destination" value="editor">保存并返回装修页面</button>',
-            actionsHtml: '<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：核对并发布</button>',
+            actionsHtml: `<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：${activity ? '活动有效期' : '核对并发布'}</button>`,
         }) + `<div class="bd-store-page"><form id="bd-plan-stores" class="bd-store-form">
             <div class="bd-store-layout">
               <section class="bd-card bd-store-catalog" aria-labelledby="bd-store-list-title">
@@ -305,10 +314,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 <div data-bd-picked></div>
               </section>
             </div>
-            ${activity ? `<section class="bd-card bd-store-period"><h2>活动有效期 <span class="bd-muted" data-bd-zone></span></h2><div class="bd-flow-grid">
-                <label>开始时间<input type="datetime-local" name="starts" value="${rules.starts ? formatLocal(rules.starts, rules.timezone) : ''}"></label>
-                <label>结束时间<input type="datetime-local" name="ends" value="${rules.ends ? formatLocal(rules.ends, rules.timezone) : ''}"></label>
-            </div></section>` : ''}
             <p data-bd-notice class="bd-notice" role="status"></p>
             </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-stores')!;
@@ -343,8 +348,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 chosenPanel.innerHTML = selectionHtml;
                 selectionSignature = signature;
             }
-            const zone = form.querySelector('[data-bd-zone]');
-            if (zone) zone.textContent = [...new Set(chosen.map(store => store.timezone || '时区未配置'))].join('、') || '请先选择门店';
         };
         const filterStores = () => {
             const search = searchInput.value.trim().toLowerCase();
@@ -385,28 +388,63 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         filterStores();
         form.addEventListener('submit', event => {
             event.preventDefault();
-            const fields = new FormData(form);
             const targets = selected();
             const timezone = targets[0]?.timezone ?? '';
             const review = (event.submitter as HTMLButtonElement | null)?.value !== 'editor';
             try {
-                const start = String(fields.get('starts') ?? '');
-                const end = String(fields.get('ends') ?? '');
-                if (activity && (review || start || end) && (!timezone || targets.some(store => store.timezone !== timezone))) {
-                    throw Error('请选择同一时区的门店，跨时区活动请分批设置');
-                }
-                const proposed: PlanRules = { ...rules, timezone: timezone || rules.timezone, storeIds: targets.map(store => store.id) };
-                if (activity) {
-                    proposed.starts = start ? parseLocal(start, timezone) : undefined;
-                    proposed.ends = end ? parseLocal(end, timezone) : undefined;
+                if (review && !targets.length) throw Error('请至少选择一家门店');
+                const proposed: PlanRules = { ...rules, timezone, storeIds: targets.map(store => store.id) };
+                if (activity && rules.timezone !== timezone) {
+                    proposed.starts = undefined;
+                    proposed.ends = undefined;
                 }
                 const next = { ...s, rules: proposed, updatedAt: new Date().toISOString() };
-                if (review) {
-                    checkPlanPublication(data, next, scope.stores);
-                    checkLegacyConflicts(next);
-                }
+                if (review && !activity) checkPlanPublication(data, next, scope.stores);
                 if (mutate(draft => { draft.schemes = draft.schemes.map(item => item.id === s.id ? next : item); })) {
-                    location.hash = planUrl(s.id, review ? 'review' : '');
+                    location.hash = planUrl(s.id, review ? (activity ? 'period' : 'review') : '');
+                }
+            } catch (error) { notice((error as Error).message, true); }
+        });
+    }
+
+    function drawPeriod(s: Scheme) {
+        channel = s.channel;
+        const rules = s.rules!;
+        const targets = scope.stores.filter(store => rules.storeIds.includes(store.id));
+        const zones = [...new Set(targets.map(store => store.timezone))];
+        const timezone = zones.length === 1 ? zones[0] : '';
+        root.innerHTML = flowHeader(4, {
+            titleHtml: '活动有效期', subtitleHtml: esc(s.name + ' · ' + label(channel)),
+            backHtml: `<a href="${planUrl(s.id, 'stores')}">返回选择门店</a>`,
+            actionsHtml: '<button type="submit" form="bd-plan-period" class="bd-primary">下一步：核对并发布</button>',
+        }) + `<div class="bd-flow-content"><form id="bd-plan-period" class="bd-card bd-plan-form">
+            <dl class="bd-review-summary">
+                <div><dt>适用门店</dt><dd>${esc(storeNames(rules.storeIds))}</dd></div>
+                <div><dt>门店时区</dt><dd>${esc(timezone || '所选门店时区不同或未配置')}</dd></div>
+            </dl>
+            <div class="bd-flow-grid">
+                <label>开始时间<input type="datetime-local" name="starts" required value="${timezone && rules.starts ? formatLocal(rules.starts, timezone) : ''}"></label>
+                <label>结束时间<input type="datetime-local" name="ends" required value="${timezone && rules.ends ? formatLocal(rules.ends, timezone) : ''}"></label>
+            </div>
+            ${timezone ? '' : '<p class="bd-error">请返回选择同一时区的门店，跨时区活动请分批设置。</p>'}
+            <p data-bd-notice class="bd-notice" role="status"></p>
+        </form></div>`;
+        const form = root.querySelector<HTMLFormElement>('#bd-plan-period')!;
+        if (!timezone) root.querySelector<HTMLButtonElement>('[form=bd-plan-period]')!.disabled = true;
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            const fields = new FormData(form);
+            try {
+                if (!timezone) throw Error('请选择同一时区的门店');
+                const proposed = { ...rules, timezone,
+                    starts: parseLocal(String(fields.get('starts')), timezone),
+                    ends: parseLocal(String(fields.get('ends')), timezone),
+                };
+                const next = { ...s, rules: proposed, updatedAt: new Date().toISOString() };
+                checkPlanPublication(data, next, scope.stores);
+                checkLegacyConflicts(next);
+                if (mutate(draft => { draft.schemes = draft.schemes.map(item => item.id === s.id ? next : item); })) {
+                    location.hash = planUrl(s.id, 'review');
                 }
             } catch (error) { notice((error as Error).message, true); }
         });
@@ -500,10 +538,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             ...(activity && rules.activityName ? [['活动名称', rules.activityName]] : []),
             ['装修页面', selected.length === pages(channel).length ? '全部 ' + selected.length + ' 页' : selected.map(([, name]) => name).join('、')],
         ];
-        root.innerHTML = flowHeader(4, {
+        root.innerHTML = flowHeader(activity ? 5 : 4, {
             titleHtml: esc(s.name),
             subtitleHtml: esc(scope.brandName),
-            backHtml: `<a href="${planUrl(s.id, 'stores')}">返回选择门店</a>`,
+            backHtml: `<a href="${planUrl(s.id, activity ? 'period' : 'stores')}">返回上一步</a>`,
             actionsHtml: scope.canWrite ? '<button class="bd-primary" data-bd-action="publish-reviewed">确认发布演示版本</button>' : '',
         }) + `<div class="bd-flow-content">
             <section class="bd-card bd-review-card"><h2>发布摘要</h2>
@@ -528,11 +566,18 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         const storeScheme = flow && query.get('step') === 'stores' ? scheme() : undefined;
         if (storeScheme?.rules && scope.canWrite) { drawStores(storeScheme); return; }
+        const periodScheme = flow && query.get('step') === 'period' ? scheme() : undefined;
+        if (periodScheme?.rules?.kind === 'activity' && scope.canWrite) {
+            if (!periodScheme.rules.storeIds.length) drawStores(periodScheme);
+            else drawPeriod(periodScheme);
+            return;
+        }
         const reviewScheme = flow && query.get('step') === 'review' ? scheme() : undefined;
         if (reviewScheme?.rules) {
             if (scope.canWrite && (!reviewScheme.rules.storeIds.length ||
                 (reviewScheme.rules.kind === 'activity' && (!reviewScheme.rules.starts || !reviewScheme.rules.ends)))) {
-                drawStores(reviewScheme);
+                if (reviewScheme.rules.storeIds.length) drawPeriod(reviewScheme);
+                else drawStores(reviewScheme);
                 return;
             }
             drawReview(reviewScheme);

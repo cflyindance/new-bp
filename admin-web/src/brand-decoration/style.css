@@ -43,7 +43,7 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-flow-header .standalone-page-heading{grid-area:heading}
 .bd-flow-header .standalone-page-actions{grid-area:actions;justify-self:end}
 .bd-flow-progress{grid-area:progress;justify-self:center}
-.bd-flow-progress .bd-flow-steps{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px;margin:0;text-align:center}
+.bd-flow-progress .bd-flow-steps{display:grid;grid-template-columns:repeat(var(--bd-step-count,4),minmax(106px,1fr));gap:12px;margin:0;text-align:center}
 .bd-flow-steps li{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
 .bd-step-number{display:grid;place-items:center;width:22px;height:22px;border:1px solid currentColor;border-radius:50%;font-size:12px}
 .bd .bd-flow-progress-compact{display:none;margin:0;color:#1677ff;font-weight:600;text-align:center}
