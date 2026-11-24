@@ -200,23 +200,31 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.innerHTML = renderStandalonePageHeader({
             titleHtml: current ? '设置使用规则' : '新建装修方案',
             backHtml: `<a href="${current ? planUrl(current.id) : '#' + ROOT + '/pages?channel=' + channel}">返回</a>`,
-            actionsHtml: '<button class="bd-primary" type="submit" form="bd-plan-rules">下一步：装修页面</button>',
-        }) + tip() + stepBar(1) + `<form id="bd-plan-rules" class="bd-card bd-plan-form">
-            <label>方案名称<input name="name" required maxlength="40" value="${esc(current?.name ?? '')}"></label>
+            subtitleHtml: esc(scope.brandName),
+        }) + `<div class="bd-flow-content">${stepBar(1)}<form id="bd-plan-rules" class="bd-card bd-plan-form">
+            <div class="bd-flow-grid"><label>方案名称<input name="name" required maxlength="40" value="${esc(current?.name ?? '')}"></label>
             <label>渠道<select name="channel" ${locked}><option value="kiosk" ${channel === 'kiosk' ? 'selected' : ''}>Kiosk</option><option value="emenu" ${channel === 'emenu' ? 'selected' : ''}>eMenu</option></select></label>
-            <label>方案类型<select name="kind"><option value="default">默认方案 · 长期使用</option><option value="activity" ${rules?.kind === 'activity' ? 'selected' : ''}>活动方案 · 限时使用</option></select></label>
-            <fieldset><legend>适用门店</legend><div class="bd-page-checks">${scope.stores.map(store => `<label><input type="checkbox" name="store" value="${esc(store.id)}" ${picked.includes(store.id) ? 'checked' : ''}>${esc(store.name)}</label>`).join('') || '当前范围没有可选门店'}</div></fieldset>
+            </div>
+            <fieldset class="bd-flow-fieldset"><legend>方案类型</legend><div class="bd-flow-grid">
+            <label class="bd-choice"><input type="radio" name="kind" value="default" ${rules?.kind !== 'activity' ? 'checked' : ''}>默认方案</label>
+            <label class="bd-choice"><input type="radio" name="kind" value="activity" ${rules?.kind === 'activity' ? 'checked' : ''}>活动方案</label>
+            </div></fieldset>
+            <fieldset class="bd-flow-fieldset"><legend>适用门店 <span class="bd-muted" data-bd-store-count></span></legend><div class="bd-page-checks">${scope.stores.map(store => `<label><input type="checkbox" name="store" value="${esc(store.id)}" ${picked.includes(store.id) ? 'checked' : ''}>${esc(store.name)}</label>`).join('') || '当前范围没有可选门店'}</div></fieldset>
             <div data-bd-activity-fields>
-            <label>活动名称<input name="activityName" maxlength="40" value="${esc(rules?.activityName ?? '')}"></label>
-            <p>门店时区 <strong data-bd-zone></strong></p>
+            <label>活动名称<input name="activityName" placeholder="例如：冬季新品活动" maxlength="40" value="${esc(rules?.activityName ?? '')}"></label>
+            <fieldset class="bd-flow-fieldset"><legend>有效期 <span class="bd-muted" data-bd-zone></span></legend><div class="bd-flow-grid">
             <label>开始时间<input name="starts" type="datetime-local" value="${rules?.starts ? formatLocal(rules.starts, rules.timezone) : ''}"></label>
             <label>结束时间<input name="ends" type="datetime-local" value="${rules?.ends ? formatLocal(rules.ends, rules.timezone) : ''}"></label>
-            </div></form>`;
+            </div></fieldset></div>
+            <div data-bd-notice class="bd-notice" role="status"></div>
+            <footer class="bd-flow-actions"><button class="bd-primary" type="submit">下一步：装修页面</button></footer>
+            </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-rules')!;
         const selectedStores = () => scope.stores.filter(store => new FormData(form).getAll('store').includes(store.id));
         const update = () => {
             const activity = new FormData(form).get('kind') === 'activity';
             form.querySelector<HTMLElement>('[data-bd-activity-fields]')!.hidden = !activity;
+            form.querySelector('[data-bd-store-count]')!.textContent = '已选 ' + selectedStores().length + ' 家';
             form.querySelector('[data-bd-zone]')!.textContent = [...new Set(selectedStores().map(store => store.timezone || '时区未配置'))].join('、') || '请先选择门店';
         };
         form.addEventListener('change', update);
@@ -309,37 +317,37 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (conflict) throw Error('门店「' + storeNames([id]) + '」与已有活动「' + conflict.name + '」时段重叠');
         }
     }
-    function reviewPlan(s: Scheme) {
+    function drawReview(s: Scheme) {
+        channel = s.channel;
         const rules = s.rules!;
-        const rows = [
-            { label: '方案类型', before: '—', after: rules.kind === 'activity' ? '活动方案' : '默认方案' },
-            { label: '渠道', before: '—', after: label(s.channel) },
-            { label: '适用门店', before: '—', after: storeNames(rules.storeIds) },
-            { label: '生效时间', before: '—', after: period(rules) },
-            ...(rules.activityName ? [{ label: '活动名称', before: '—', after: rules.activityName }] : []),
-            { label: '装修页面', before: '—', after: pages(s.channel).filter(([id]) => rules.kind === 'default' || rules.pageIds.includes(id)).map(([, name]) => name).join('、') },
-            ...rules.storeIds.map(id => {
-                const current = planAt(data, id, s.channel, Date.now()).fallback?.snapshot.name ?? resolveSchedule(legacyForStore(id), s.channel, Date.now()).fallback?.snapshot.name ?? '项目原生样式';
-                return { label: storeNames([id]), before: current, after: rules.kind === 'default' ? s.name : s.name + '（结束后恢复届时的默认方案）' };
-            }),
+        const activity = rules.kind === 'activity';
+        const now = Date.now();
+        const selected = pages(channel).filter(([id]) => !activity || rules.pageIds.includes(id));
+        const summary = [
+            ['方案类型', activity ? '活动方案' : '默认方案'],
+            ['渠道', label(channel)],
+            ['适用门店', storeNames(rules.storeIds)],
+            ['生效时间', activity ? period(rules) : '长期有效'],
+            ...(activity && rules.activityName ? [['活动名称', rules.activityName]] : []),
+            ['装修页面', selected.length === pages(channel).length ? '全部 ' + selected.length + ' 页' : selected.map(([, name]) => name).join('、')],
         ];
-        checkPlanPublication(data, s, scope.stores);
-        checkLegacyConflicts(s);
-        confirm('第 3 步：核对并发布', rows, '确认发布演示版本', () => {
-            if (mutate(next => {
-                checkLegacyConflicts(s);
-                publishPlan(next, s, decorationScope().stores, getAuthenticatedEmail() || '当前账号');
-            })) {
-                closeModal();
-                location.hash = `${ROOT}/pages?channel=${s.channel}`;
-            } else {
-                const error = modal?.querySelector('[data-bd-publish-error]') ?? document.createElement('p');
-                error.setAttribute('data-bd-publish-error', '');
-                error.setAttribute('role', 'alert');
-                error.textContent = message;
-                modal?.querySelector('[data-bd-modal-confirm]')?.after(error);
-            }
-        });
+        root.innerHTML = renderStandalonePageHeader({
+            titleHtml: esc(s.name),
+            subtitleHtml: esc(scope.brandName),
+            backHtml: `<a href="${planUrl(s.id)}">返回装修页面</a>`,
+            actionsHtml: scope.canWrite ? '<button class="bd-primary" data-bd-action="publish-reviewed">确认发布演示版本</button>' : '',
+        }) + `<div class="bd-flow-content">${stepBar(3)}
+            <section class="bd-card bd-review-card"><h2>发布摘要</h2>
+            <dl class="bd-review-summary">${summary.map(([title, value]) => `<div><dt>${title}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>
+            <section class="bd-card bd-review-card"><h2>门店生效预览</h2>
+            <div class="bd-table-wrap"><table><thead><tr><th>门店</th><th>${activity ? '活动期间' : '当前默认方案'}</th><th>${activity ? '结束后恢复' : '发布后默认方案'}</th></tr></thead>
+            <tbody>${rules.storeIds.map(id => {
+                const fallback = planAt(data, id, channel, now).fallback?.snapshot.name ??
+                    resolveSchedule(legacyForStore(id), channel, now).fallback?.snapshot.name ?? '项目原生样式';
+                return `<tr><td>${esc(storeNames([id]))}</td><td>${esc(activity ? s.name : fallback)}</td><td>${esc(activity ? fallback : s.name)}</td></tr>`;
+            }).join('')}</tbody></table></div>
+            ${activity ? '<p class="bd-help">活动结束时恢复届时生效的默认方案。</p>' : ''}
+            <div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div></section></div>`;
     }
 
     function draw() {
@@ -349,6 +357,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             else root.innerHTML = '<p role="alert">暂无装修编辑权限</p><a href="#/brand-decoration/pages">返回方案列表</a>';
             return;
         }
+        const reviewScheme = flow && query.get('step') === 'review' ? scheme() : undefined;
+        if (reviewScheme?.rules) { drawReview(reviewScheme); return; }
         if (editorId) {
             drawEditor();
             return;
@@ -378,7 +388,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         channel = s.channel;
         const style = s.styles[page];
-        root.innerHTML = renderStandalonePageHeader({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：使用规则</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：核对并发布" : "发布演示版本"}</button>` }) + tip() + (flow ? stepBar(2) : "") + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${s.styles[id].mode === 'default' ? '默认' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend><label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="default" ${style.mode === 'default' ? 'checked' : ''}>项目默认</label><label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="custom" ${style.mode === 'custom' ? 'checked' : ''}>自定义装修</label></fieldset>${style.mode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}${s.rules?.kind === 'activity' ? `<label class="bd-radio"><input type="checkbox" data-bd-field="activity-page" ${s.rules.pageIds.includes(page) ? 'checked' : ''} ${writable()}>活动期间应用此页</label>${s.rules.pageIds.includes(page) ? "" : `<p class="bd-help">沿用默认装修 · 预览门店：${esc(storeNames(s.rules.storeIds.slice(0, 1)))}</p>`} ` : ''}<hr><h2>方案与品牌</h2><label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label><label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label><label>自定义主色<span class="bd-color"><input type="color" data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></span></label><p class="bd-help">品牌名称与主色仅作用于此方案的自定义页面。</p></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage"><iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section></div>`;
+        const activity = s.rules?.kind === 'activity';
+        const inherited = activity && !s.rules!.pageIds.includes(page);
+        const currentMode = inherited ? 'inherit' : style.mode;
+        const modes = activity
+            ? [['inherit', '沿用默认装修'], ['default', '使用项目原生样式'], ['custom', '自定义装修']]
+            : [['default', '使用项目原生样式'], ['custom', '自定义装修']];
+        const modeControls = modes.map(([value, title]) =>
+            `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
+        root.innerHTML = renderStandalonePageHeader({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：使用规则</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：核对并发布" : "发布演示版本"}</button>` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>${stepBar(2)}` : tip()) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用默认装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${inherited ? `<p class="bd-help">预览门店：${esc(storeNames(s.rules!.storeIds.slice(0, 1)))}</p>` : ''}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label><label>自定义主色<span class="bd-color"><input type="color" data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></span></label><p class="bd-help">应用于自定义页面。</p></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage"><iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section></div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -503,11 +521,23 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             } });
             return;
         }
+        if (action === 'publish-reviewed' && flow && query.get('step') === 'review' && s.rules) {
+            if (mutate(next => {
+                checkLegacyConflicts(s);
+                publishPlan(next, s, decorationScope().stores, getAuthenticatedEmail() || '当前账号');
+            })) location.hash = `${ROOT}/pages?channel=${s.channel}`;
+            return;
+        }
         if (action === 'publish') {
             try {
                 ensureWrite();
                 validateScheme(s);
-                if (flow) { reviewPlan(s); return; }
+                if (flow) {
+                    checkPlanPublication(data, s, scope.stores);
+                    checkLegacyConflicts(s);
+                    location.hash = planUrl(s.id, 'review');
+                    return;
+                }
                 const previous = data.releases.find(r => r.snapshot.channel === channel && (!r.rules || r.rules.storeIds.every(id => scope.stores.some(store => store.id === id))));
                 const rows = changes(previous?.snapshot, s);
                 if (!rows.length) {
@@ -537,20 +567,17 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         draw();
         return;
     } const s = scheme();
-    if (field === 'activity-page' && s?.rules) {
-        if (mutate(next => {
-            const rules = next.schemes.find(item => item.id === s.id)!.rules!;
-            rules.pageIds = input.checked ? [...new Set([...rules.pageIds, page])] : rules.pageIds.filter(id => id !== page);
-        })) draw();
-        else input.checked = !input.checked;
-        return;
-    }
     if (!s)
-        return; const value = input.value.trim(); if (mutate(next => { const current = next.schemes.find(item => item.id === s.id)!; if (field === 'mode')
-        current.styles[page].mode = value as 'default' | 'custom';
+        return; const value = input.value.trim(); if (mutate(next => { const current = next.schemes.find(item => item.id === s.id)!; if (field === 'mode') {
+        if (current.rules?.kind === 'activity') {
+            current.rules.pageIds = value === 'inherit' ? current.rules.pageIds.filter(id => id !== page)
+                : [...new Set([...current.rules.pageIds, page])];
+        }
+        if (value !== 'inherit') current.styles[page].mode = value as 'default' | 'custom';
+    }
     else if (field === 'name' || field === 'brandName' || field === 'primary')
         current[field] = value; current.updatedAt = new Date().toISOString(); validateScheme(current); })) {
-        if (field === 'mode')
+        if (field === 'mode' || field === 'brandName' || field === 'primary')
             draw();
         else {
             const updated = scheme()!;
@@ -563,8 +590,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             root.querySelector<HTMLIFrameElement>('[data-bd-frame]')?.contentWindow?.postMessage({ type: 'bd-render', scheme: updated, page, orientation }, location.origin);
         }
     }
-    else
-        input.value = field === 'mode' ? s.styles[page].mode : String(s[field as 'name' | 'brandName' | 'primary'] ?? ''); };
+    else if (field === 'mode') draw();
+    else input.value = String(s[field as 'name' | 'brandName' | 'primary'] ?? ''); };
     const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'bd-ready')
         return; let s = showSchedule ? selectedPreview() : planPreviewOpen ? planPreviewScheme() : scheme();
         if (flow && s?.rules?.kind === 'activity' && !s.rules.pageIds.includes(page)) {
