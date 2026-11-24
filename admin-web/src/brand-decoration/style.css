@@ -4,3 +4,25 @@
 .bd-schedule iframe{width:100%;height:100%;border:0}.bd-schedule>.bd-toolbar{margin-top:16px}.bd-schedule>p{margin:8px 0}.bd-schedule>.bd-table-wrap{margin-top:16px}
 
 .bd-flow-steps{display:flex;flex-wrap:wrap;gap:12px 24px;padding:0;margin:0 0 24px;list-style:none}.bd-flow-steps li{padding:10px 12px;border-radius:8px;color:var(--muted-foreground)}.bd-flow-steps [aria-current=step]{background:#eff6ff;color:#1677ff;font-weight:600}.bd-plan-form{display:grid;gap:20px;max-width:760px}.bd-plan-form [data-bd-activity-fields]:not([hidden]){display:grid;gap:16px}.bd-plan-form .bd-page-checks label{display:flex;flex-direction:row;align-items:center;gap:8px}.bd-plan-form input[type=checkbox]{min-height:16px;width:16px;accent-color:#1677ff}
+.bd-flow-content{width:min(100%,900px);margin:24px auto 0}
+.bd-flow-content .bd-flow-steps{justify-content:center;gap:12px 24px}
+.bd-flow-content .bd-plan-form{max-width:none;gap:24px}
+.bd-flow-grid,.bd-review-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}
+.bd-flow-fieldset{margin:0;padding:0;border:0;min-width:0}
+.bd-flow-fieldset legend{font-weight:600;margin-bottom:12px}
+.bd-flow-fieldset legend .bd-muted{font-weight:400;margin-inline-start:8px}
+.bd-plan-form .bd-choice{display:flex;flex-direction:row;align-items:center;min-height:48px;border:1px solid var(--border);border-radius:8px;padding:0 12px}
+.bd-choice:has(:checked){border-color:#1677ff;background:var(--accent)}
+.bd-choice input[type=radio]{min-height:16px;width:16px;padding:0;accent-color:#1677ff}
+.bd-flow-actions{display:flex;justify-content:flex-end}
+.bd-flow-content .bd-notice:empty{display:none}
+.bd-review-card+.bd-review-card{margin-top:16px}
+.bd-review-summary{margin:0}
+.bd-review-summary dt{color:var(--muted-foreground);margin-bottom:4px}
+.bd-review-summary dd{margin:0;overflow-wrap:anywhere}
+.bd-review-card .bd-help{margin-top:12px}
+.bd-brand-settings{border-top:1px solid var(--border);padding-top:14px}
+.bd-brand-settings summary{cursor:pointer;font-weight:600}
+.bd-brand-settings label{margin-top:12px}
+.bd-workbench .bd-preview-stage{height:clamp(340px,calc(100dvh - 260px),780px)}
+@media(max-width:640px){.bd-flow-grid,.bd-review-summary{grid-template-columns:1fr}.bd-flow-content .bd-flow-steps{justify-content:flex-start;gap:4px}.bd-workbench .bd-preview-stage{height:520px}}
