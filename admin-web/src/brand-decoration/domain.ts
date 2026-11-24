@@ -1,4 +1,4 @@
-import { PALETTES, describePalette, type PaletteId } from './palette';
+import { DEFAULT_PALETTE_ID, PALETTES, describePalette, type PaletteId } from './palette';
 import type { PlanRules } from './plans';
 import type { DecorationSchedule } from './schedule';
 export type Channel = 'kiosk' | 'emenu';
@@ -54,7 +54,7 @@ export interface DecorationData {
 }
 export const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export function newScheme(channel: Channel, name: string, brandName: string): Scheme {
-    return { id: crypto.randomUUID(), name, channel, brandName: brandName.slice(0, 20), primary: PALETTES.pine.primary, paletteId: 'pine', updatedAt: new Date().toISOString(), styles: Object.fromEntries(pages(channel).map(([id]) => [id, { mode: 'default', theme: 'jade' }])) };
+    return { id: crypto.randomUUID(), name, channel, brandName: brandName.slice(0, 20), primary: PALETTES[DEFAULT_PALETTE_ID].primary, paletteId: DEFAULT_PALETTE_ID, updatedAt: new Date().toISOString(), styles: Object.fromEntries(pages(channel).map(([id]) => [id, { mode: 'default', theme: 'jade' }])) };
 }
 export function validateScheme(s: Scheme): void {
     if (!s || !['kiosk', 'emenu'].includes(s.channel) || typeof s.id !== 'string' || !s.id || typeof s.name !== 'string' || !s.name.trim() || s.name.length > 40 || typeof s.brandName !== 'string' || !s.brandName.trim() || s.brandName.length > 20 || !/^#[\da-f]{6}$/i.test(s.primary))
