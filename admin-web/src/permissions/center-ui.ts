@@ -234,17 +234,11 @@ export function bindCenterPage(): void {
         if(b.dataset.roleTreeCategory){roleTree.category=b.dataset.roleTreeCategory;roleTree.search='';render();root.querySelector<HTMLElement>('[data-role-tree-category="'+CSS.escape(b.dataset.roleTreeCategory)+'"]')?.focus({preventScroll:true});return;}
         if(b.dataset.roleTreeToggle){const id=b.dataset.roleTreeToggle;roleTree.collapsed.has(id)?roleTree.collapsed.delete(id):roleTree.collapsed.add(id);render();root.querySelector<HTMLElement>('[data-role-tree-toggle="'+CSS.escape(id)+'"]')?.focus({preventScroll:true});return;}
         if(b.dataset.roleTreeExpand){for(const n of flattenRoleTree(treeNodes))b.dataset.roleTreeExpand==='all'?roleTree.collapsed.delete(n.id):roleTree.collapsed.add(n.id);render();root.querySelector<HTMLElement>('[data-role-tree-expand="'+b.dataset.roleTreeExpand+'"]')?.focus({preventScroll:true});return;}
-        if(b.hasAttribute('data-role-tree-batch')){
-          const nodes=roleSelectionTargets(treeNodes).filter(n=>roleTree.selected.has(n.id));
-          const mode=(root.querySelector<HTMLSelectElement>('[data-role-tree-batch-mode]')?.value??'read') as Access;
-          const original=role()!;
-          const candidate=structuredClone(original);
-          if(!applyTreeBatch(catalog,candidate,nodes,mode))throw Error('所选项目已是目标权限');
-          const changes=roleSelectionTargets(treeNodes).filter(node=>treeChanged(catalog,candidate,original,node));
-          const label=(node:typeof changes[number],subject:Role)=>treeChoices(node).find(([value])=>value===treeSelection(catalog,subject,node))?.[1]??'—';
-          const rows=changes.map(node=>`<tr><th scope="row">${esc(roleTreePath(treeNodes,node.id))}</th><td>${esc(label(node,original))}</td><td>${esc(label(node,candidate))}</td></tr>`).join('');
-          const confirmation=modal('批量设置权限',`<p>涉及 ${changes.length} 项配置。目录和内容最高设为可见，独立操作需单独授权。</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${rows}</tbody></table></div>`,()=>{if(applyTreeBatch(catalog,role()!,nodes,mode))mark();roleTree.selected.clear();render();return true;},'确认应用');
-          confirmation.classList.add('pc-batch-dialog');return;
+        if(b.hasAttribute('data-role-tree-clear')){
+          roleTree.selected.clear();
+          render();
+          root.querySelector<HTMLElement>('[data-role-tree-select-all]')?.focus();
+          return;
         }
       }
       if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
@@ -303,8 +297,35 @@ export function bindCenterPage(): void {
     const isMenu=target.hasAttribute('data-menu-search');if(isMenu)menuSearch=target.value;else query=target.value;
     const position=target.selectionStart;render();const input=root.querySelector<HTMLInputElement>(isMenu?'[data-menu-search]':'[data-query]');input?.focus();input?.setSelectionRange(position,position);
   });
+  function openRoleBatch(mode:Access):void {
+    try {
+      const nodes=roleSelectionTargets(treeNodes).filter(n=>roleTree.selected.has(n.id));
+      const original=role()!;
+      const candidate=structuredClone(original);
+      if(!applyTreeBatch(catalog,candidate,nodes,mode))throw Error('所选项目已是目标权限');
+      const changes=roleSelectionTargets(treeNodes).filter(node=>treeChanged(catalog,candidate,original,node));
+      const label=(node:typeof changes[number],subject:Role)=>treeChoices(node).find(([value])=>value===treeSelection(catalog,subject,node))?.[1]??'—';
+      const summary=[...new Set(changes.map(node=>label(node,candidate)))].map(status=>status+' '+changes.filter(node=>label(node,candidate)===status).length+' 项').join(' · ');
+      const changedIds=new Set(changes.map(node=>node.id));
+      const rows=treeNodes.map(category=>{
+        const items=roleSelectionTargets([category]).filter(node=>changedIds.has(node.id));
+        if(!items.length)return '';
+        return `<tbody><tr class="pc-batch-group"><th colspan="3" scope="rowgroup">${esc(category.title)} · ${items.length} 项</th></tr>`+items.map(node=>`<tr><th scope="row">${esc(roleTreePath(treeNodes,node.id))}</th><td>${esc(label(node,original))}</td><td>${esc(label(node,candidate))}</td></tr>`).join('')+'</tbody>';
+      }).join('');
+      const confirmation=modal('批量设置权限',`<p>实际变更 ${changes.length} 项。应用后进入草稿，保存更改后生效。</p><p>${esc(summary)}</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead>${rows}</table></div>`,()=>{if(applyTreeBatch(catalog,role()!,nodes,mode))mark();roleTree.selected.clear();render();return true;},'应用到草稿');
+      confirmation.classList.add('pc-batch-dialog');return;
+    } catch(error){
+      modal('批量设置暂不可应用',`<p>${esc((error as Error).message)}</p>`,()=>true,'返回调整');
+    }
+  }
   root.addEventListener('change',ev=>{const target=ev.target as HTMLSelectElement;
     if(roleId&&!roleView&&role())try{
+      if(target.hasAttribute('data-role-tree-batch-mode')){
+        const mode=target.value;
+        target.value='';
+        if(mode==='hidden'||mode==='read'||mode==='edit')openRoleBatch(mode);
+        return;
+      }
       if(target.hasAttribute('data-role-tree-grant')){const n=treeNode(target.dataset.roleTreeGrant!);if(n&&applyTreeChoice(catalog,role()!,n,target.value as Access))mark();render();root.querySelector<HTMLElement>('[data-role-tree-grant="'+CSS.escape(n?.id??'')+'"]')?.focus({preventScroll:true});return;}
       if(target.hasAttribute('data-role-tree-filter')){const checked=(target as unknown as HTMLInputElement).checked;if(target.dataset.roleTreeFilter==='granted')roleTree.onlyGranted=checked;else roleTree.onlyChanged=checked;render();root.querySelector<HTMLElement>('[data-role-tree-filter="'+target.dataset.roleTreeFilter+'"]')?.focus({preventScroll:true});return;}
       if(target.hasAttribute('data-role-tree-category-select')){const n=treeNode(target.dataset.roleTreeCategorySelect!);if(n)toggleRoleSelection(treeNodes,[n],roleTree.selected,(target as unknown as HTMLInputElement).checked);render();root.querySelector<HTMLElement>('[data-role-tree-category-select="'+CSS.escape(n?.id??'')+'"]')?.focus({preventScroll:true});return;}
