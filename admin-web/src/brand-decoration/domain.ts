@@ -1,3 +1,4 @@
+import { PALETTES, describePalette, type PaletteId } from './palette';
 import type { PlanRules } from './plans';
 import type { DecorationSchedule } from './schedule';
 export type Channel = 'kiosk' | 'emenu';
@@ -24,6 +25,7 @@ export interface Style {
     theme: Theme;
 }
 export interface Scheme {
+    paletteId?: PaletteId;
     draftStep?: 'rules' | 'editor' | 'stores' | 'period' | 'review';
     rules?: PlanRules;
     id: string;
@@ -52,11 +54,14 @@ export interface DecorationData {
 }
 export const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export function newScheme(channel: Channel, name: string, brandName: string): Scheme {
-    return { id: crypto.randomUUID(), name, channel, brandName: brandName.slice(0, 20), primary: '#254e40', updatedAt: new Date().toISOString(), styles: Object.fromEntries(pages(channel).map(([id]) => [id, { mode: 'default', theme: 'jade' }])) };
+    return { id: crypto.randomUUID(), name, channel, brandName: brandName.slice(0, 20), primary: PALETTES.pine.primary, paletteId: 'pine', updatedAt: new Date().toISOString(), styles: Object.fromEntries(pages(channel).map(([id]) => [id, { mode: 'default', theme: 'jade' }])) };
 }
 export function validateScheme(s: Scheme): void {
     if (!s || !['kiosk', 'emenu'].includes(s.channel) || typeof s.id !== 'string' || !s.id || typeof s.name !== 'string' || !s.name.trim() || s.name.length > 40 || typeof s.brandName !== 'string' || !s.brandName.trim() || s.brandName.length > 20 || !/^#[\da-f]{6}$/i.test(s.primary))
         throw Error('方案名称需为 1–40 字，品牌名称需为 1–20 字，主色需为有效颜色');
+    if (s.paletteId !== undefined && s.paletteId !== 'custom' &&
+        (!Object.hasOwn(PALETTES, s.paletteId) || s.primary !== PALETTES[s.paletteId].primary))
+        throw Error('方案主题色无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
         throw Error('页面配置不完整');
     for (const [id] of pages(s.channel)) {
@@ -91,10 +96,13 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
         before: string;
         after: string;
     }> = [];
-    for (const [key, label] of [['name', '方案名称'], ['brandName', '品牌名称'], ['primary', '品牌主色']] as const) {
+    for (const [key, label] of [['name', '方案名称'], ['brandName', '品牌名称']] as const) {
         if (before?.[key] !== after[key])
             output.push({ label, before: before?.[key] ?? '未发布', after: after[key] });
     }
+    const palette = describePalette(after.paletteId, after.primary);
+    const previousPalette = before ? describePalette(before.paletteId, before.primary) : '未发布';
+    if (palette !== previousPalette) output.push({ label: '方案主题色', before: previousPalette, after: palette });
     const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : THEMES[s.theme].name) : '未发布';
     for (const [id, label] of pages(after.channel)) {
         const prev = before?.styles[id], next = after.styles[id];

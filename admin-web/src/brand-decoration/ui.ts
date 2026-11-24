@@ -1,3 +1,4 @@
+import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
 import { checkPlanPublication, latestPlanReleases, planAt, publishPlan, validatePlanRules, type PlanRules } from './plans';
 import { effectiveEnd, emptySchedule, formatLocal, parseLocal, resolveSchedule, saveActivity, type DecorationActivity } from './schedule';
 import './style.css';
@@ -589,6 +590,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const summary = [
             ['使用方式', activity ? '限时装修' : '日常装修'],
             ['渠道', label(channel)],
+            ['方案主题色', describePalette(s.paletteId, s.primary)],
             ['适用门店', storeNames(rules.storeIds)],
             ['生效时间', activity ? period(rules) : '长期有效'],
             ...(activity && rules.activityName ? [['活动名称', rules.activityName]] : []),
@@ -662,6 +664,21 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const schemes = data.schemes.filter(s => matchesList(s, data.releases.some(r => r.snapshot.id === s.id)));
         root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + listToolbar(true) + `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${lineLabel[s.channel]}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
+    function paletteControls(s: Scheme) {
+        const selected = s.paletteId;
+        const options = Object.entries(PALETTES).map(([id, palette]) => `<button type="button"
+            class="bd-palette-option" data-bd-action="palette" data-value="${id}"
+            aria-pressed="${selected === id}" ${writable()}>
+            <i style="background:${palette.primary}" aria-hidden="true"></i>${palette.name}</button>`).join('');
+        return `<section class="bd-card bd-palette-panel" aria-label="方案主题色">
+            <div><h2>方案主题色</h2><p class="bd-help">${selected ? '本方案的自定义页面统一使用该主题色。' : '当前沿用原配色，选择主题色后统一应用。'}</p></div>
+            <div class="bd-palette-options">${options}
+                <button type="button" class="bd-palette-option" data-bd-action="palette" data-value="custom"
+                    aria-pressed="${selected === 'custom'}" ${writable()}>自定义</button>
+                ${!selected || selected === 'custom' ? `<label class="bd-palette-custom"><span>主色</span><input type="color"
+                    data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></label>` : ''}
+            </div></section>`;
+    }
     function drawEditor() {
         const s = scheme();
         if (!s) {
@@ -682,7 +699,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             : [['default', '使用项目原生样式'], ['custom', '自定义装修']];
         const modeControls = modes.map(([value, title]) =>
             `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用门店日常装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label><label>自定义主色<span class="bd-color"><input type="color" data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></span></label><p class="bd-help">应用于自定义页面。</p></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用门店日常装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -770,8 +787,19 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const s = scheme();
         if (!s)
             return;
+        if (action === 'palette') {
+            const id = el.dataset.value as PaletteId;
+            if (id !== 'custom' && !Object.hasOwn(PALETTES, id)) return;
+            if (mutate(next => {
+                const current = next.schemes.find(item => item.id === s.id)!;
+                current.paletteId = id;
+                if (id !== 'custom') current.primary = PALETTES[id].primary;
+                current.updatedAt = new Date().toISOString();
+            })) draw();
+            return;
+        }
         if (action === 'theme') {
-            if (mutate(next => { const current = next.schemes.find(s => s.id === editorId)!; current.styles[page] = { mode: 'custom', theme: el.dataset.value as Theme }; current.primary = THEMES[el.dataset.value as Theme].color; current.updatedAt = new Date().toISOString(); }))
+            if (mutate(next => { const current = next.schemes.find(s => s.id === editorId)!; current.styles[page] = { mode: 'custom', theme: el.dataset.value as Theme }; current.updatedAt = new Date().toISOString(); }))
                 draw();
             return;
         }
@@ -846,8 +874,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (value !== 'inherit') current.styles[page].mode = value as 'default' | 'custom';
     }
-    else if (field === 'name' || field === 'brandName' || field === 'primary')
-        current[field] = value; current.updatedAt = new Date().toISOString(); validateScheme(current); })) {
+    else if (field === 'name' || field === 'brandName' || field === 'primary') {
+        current[field] = value;
+        if (field === 'primary') current.paletteId = 'custom';
+    } current.updatedAt = new Date().toISOString(); validateScheme(current); })) {
         if (field === 'mode')
             draw();
         else {
@@ -855,11 +885,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const title = root.querySelector('.standalone-page-title h1');
             if (title)
                 title.textContent = updated.name;
-            const code = root.querySelector('.bd-color code');
+            const code = root.querySelector('.bd-palette-custom code');
             if (code)
                 code.textContent = updated.primary;
             const inherits = flow && updated.rules?.kind === 'activity' && !updated.rules.pageIds.includes(page);
-            if (!inherits) root.querySelector<HTMLIFrameElement>('[data-bd-frame]')?.contentWindow?.postMessage({ type: 'bd-render', scheme: updated, page, orientation }, location.origin);
+            if (!inherits) root.querySelector<HTMLIFrameElement>('[data-bd-frame]')?.contentWindow?.postMessage({ type: 'bd-render', scheme: updated, palette: resolvePalette(updated.paletteId, updated.primary), page, orientation }, location.origin);
         }
     }
     else if (field === 'mode') draw();
@@ -875,7 +905,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             s = previewPage(s, s);
         }
         if (s)
-        frame.contentWindow?.postMessage({ type: 'bd-render', scheme: s, page, orientation }, location.origin); };
+        frame.contentWindow?.postMessage({ type: 'bd-render', scheme: s, palette: resolvePalette(s.paletteId, s.primary), page, orientation }, location.origin); };
     const storage = (event: StorageEvent) => { if (event.key?.startsWith('menusifu:brand-decoration:v1:'))
         notice('其他窗口的装修数据已变化，请刷新后继续编辑', true); };
     let lastActive = '';
