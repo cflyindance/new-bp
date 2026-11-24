@@ -98,8 +98,6 @@ export function bindCenterPage(): void {
     dialog.querySelector('footer [data-close]')?.remove();
   }
   let accountDeleted=false;
-  const staffTabs=[['overview','门店与权限'],['security','登录与安全'],['records','变更记录']] as const;
-  const staffNavigation=(id:string)=>`<nav class="brand-detail-tabs pc-staff-tabs" aria-label="员工详情">${staffTabs.map(([view,label])=>`<a href="#${staffPath(id)}${view==='overview'?'':'/'+view}" ${view===staffView?'aria-current="page"':''}>${label}</a>`).join('')}</nav>`;
   function staffDetail():string {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
     if(staffEditable)return renderStaffRoles(e,draft.roles,stores);
@@ -117,9 +115,10 @@ export function bindCenterPage(): void {
     const scroll=new Map([...root!.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));
     const expanded=new Map([...root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]')].map(el=>[el.dataset.menuNode!,el.open]));
     if(isDetail){
-      const overviewEmployee=!roleId&&!staffEditable?employee():undefined;
-      const overviewStatus=overviewEmployee?` <span class="pc-tag">${accountStatus(overviewEmployee)}</span>`:'';
-      root!.innerHTML=`<section class="pc-full">${renderStandalonePageHeader({className:overviewEmployee?'pc-heading pc-staff-detail-heading':'pc-heading',titleHtml:esc(role()?.name??employee()?.name??'记录不存在'),backHtml:btn('← 返回','back'),subtitleHtml:overviewEmployee?overviewStatus:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(roleId&&!roleView||staffEditable?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}${overviewEmployee?staffNavigation(overviewEmployee.id):''}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId||staffEditable?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
+      const staffEmployee=!roleId?employee():undefined;
+      const staffTitle={overview:'门店与权限',authorization:'管理授权',security:'登录与安全',records:'变更记录'}[staffView];
+      const staffSubtitle=staffEmployee?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
+      root!.innerHTML=`<section class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(roleId&&!roleView||staffEditable?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId||staffEditable?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
@@ -320,7 +319,7 @@ export function bindCenterPage(): void {
         case 'assign':assign();break;
         case 'staff-effective':showStaffEffective();break;
 
-        case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':employeeId&&staffEditable?staffPath(employeeId):'/permissions/staff';}break;
+        case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
         case 'save':{
           if(!dirty){modal('无需保存','<p>当前没有未保存的修改。</p>',()=>true,'知道了');return;}
           const id=roleId||employeeId,old=roleId?state.roles.find(r=>r.id===id):state.employees.find(e=>e.id===id),next=roleId?role():employee();
