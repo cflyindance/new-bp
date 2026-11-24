@@ -18,7 +18,7 @@ export function renderScope(scope:Scope,stores:Store[],expanded=false,bindingId=
   const shown=expanded||list.length<=2||!bindingId?list.join(''):list.slice(0,2).join('')+`<button type="button" class="pc-scope-more" data-view-binding-stores="${esc(bindingId)}">共 ${list.length} 家，查看全部</button>`;
   return `<div class="pc-scope-list">${shown||'<span class="pc-muted">当前无匹配门店</span>'}</div>${dynamic}`;
 }
-export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[]):string {
+export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],accountStatus:string):string {
   const rows=employee.bindings.map(binding=>{
     const role=roles.find(item=>item.id===binding.roleId);
     const roleName=esc(role?.name??'已失效角色');
@@ -27,12 +27,16 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[]):
       <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${renderScope(binding.scope,stores,false,binding.id)}</td>
       <td><div class="pc-actions">
         <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
-        <button type="button" data-edit-binding="${id}">修改授权门店</button>
+        <button type="button" data-edit-binding="${id}">修改角色授权范围</button>
         <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>
       </div></td></tr>`;
   }).join('');
   return `<section class="pc-card" data-staff-roles>
-    <div class="pc-toolbar"><h2>已分配角色</h2><div class="pc-actions">
+    <div class="pc-toolbar">
+      <div class="pc-staff-authorization-identity">
+        <strong>${esc(employee.name)}</strong>
+        <span class="pc-tag">${esc(accountStatus)}</span>
+      </div><div class="pc-actions">
       <button type="button" data-do="assign">分配员工角色</button>
       <button type="button" data-do="staff-effective">查看员工生效权限</button>
     </div></div>
