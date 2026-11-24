@@ -100,7 +100,7 @@ export function bindCenterPage(): void {
   let accountDeleted=false;
   function staffDetail():string {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
-    if(staffEditable)return renderStaffRoles(e,draft.roles,stores);
+    if(staffEditable)return renderStaffRoles(e,draft.roles,stores,accountStatus(e));
     if(staffView==='security')return staffSecurityContent(e);
     if(staffView==='records')return `<div class="pc-card">${logs(e.id)}</div>`;
     const assigned=e.bindings.map(binding=>{
@@ -117,7 +117,7 @@ export function bindCenterPage(): void {
     if(isDetail){
       const staffEmployee=!roleId?employee():undefined;
       const staffTitle={overview:'门店与权限',authorization:'管理授权',security:'登录与安全',records:'变更记录'}[staffView];
-      const staffSubtitle=staffEmployee?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>${staffEditable&&staffEmployee.demoAuthorization?'<span class="pc-tag">预设演示员工</span>':''}`:'';
+      const staffSubtitle=staffEmployee&&!staffEditable?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
       root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';
@@ -212,7 +212,7 @@ export function bindCenterPage(): void {
   }
   function editBinding(id:string):void {
     const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
-    const dialog=modal('修改授权门店',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
+    const dialog=modal('修改角色授权范围',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
       const scope=readScope();
       const apply=()=>{if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;};
       if((binding.scope.mode==='brands'||binding.scope.mode==='regions')&&scope.mode!==binding.scope.mode){

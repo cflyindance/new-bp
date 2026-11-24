@@ -220,3 +220,7 @@
 .pc .pc-role-assignment-list th { position: sticky; top: 0; z-index: 1; }
 .pc .pc-role-assignment-list :is(th, td):first-child { width: 1%; white-space: nowrap; }
 .pc .pc-role-assignment-list :is(th, td):last-child { width: 1%; white-space: nowrap; }
+
+.pc .pc-staff-authorization-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.pc .pc-staff-authorization-identity strong { font-size: 22px; font-weight: 650; overflow-wrap: anywhere; }
+.pc .pc-staff-authorization-identity .pc-tag { margin: 0; }
