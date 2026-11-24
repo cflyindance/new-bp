@@ -178,7 +178,7 @@ export function bindCenterPage(): void {
       <td><button type="button" data-preview-assignment-role="${esc(role.id)}" aria-label="查看 ${esc(role.name)} 的角色权限">查看角色权限</button></td>
     </tr>`).join('');
     const selectedRoleIds=(d:HTMLDialogElement)=>new Set([...d.querySelectorAll<HTMLInputElement>('[name="role"]:checked')].map(input=>input.value));
-    const dialog=modal('分配角色',`<div class="pc-role-assignment-list"><table aria-label="角色列表">
+    const dialog=modal('分配员工角色',`<div class="pc-role-assignment-list"><table aria-label="角色列表">
       <thead><tr><th scope="col">选择</th><th scope="col">角色</th><th scope="col">操作</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="3" class="pc-empty">暂无可分配角色</td></tr>'}</tbody>
     </table></div>`,d=>{
@@ -188,7 +188,7 @@ export function bindCenterPage(): void {
       const roleNames=roles.map(role=>esc(role.name)).join('、');
       const scopeDialog=modal('选择授权门店',`<p>角色：${roleNames}</p><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,scopeStep=>{
         const scope=readScope();
-        modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${roleNames}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
+        modal('确认分配员工角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${roleNames}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
           employee()!.bindings.push(...roles.map(role=>({id:crypto.randomUUID(),roleId:role.id,scope:structuredClone(scope)})));
           employee()!.migrationReview=false;
           scopeDialog.close();
@@ -246,7 +246,7 @@ export function bindCenterPage(): void {
     const content=()=>{
       selected=effectiveMenuView(catalog,value,selected).page;
       const current=stores.find(s=>s.id===storeId),roles=applicableRoles(e,draft.roles,current);
-      const empty=!current?'暂无可选门店，暂时无法查看门店生效权限':roles.length?`当前门店匹配到 ${roles.length} 个角色，但合并后暂无可访问菜单，请检查角色权限配置。`:'该员工在当前门店暂无适用角色，请先分配角色。';
+      const empty=!current?'暂无可选门店，暂时无法查看门店生效权限':roles.length?`当前门店匹配到 ${roles.length} 个角色，但合并后暂无可访问菜单，请检查角色权限配置。`:'该员工在当前门店暂无适用角色，请先分配员工角色。';
       return `<div class="pc-toolbar"><label>查看门店<select data-effective-store ${stores.length?'':'disabled'}>${stores.length?stores.map(s=>`<option value="${esc(s.id)}" ${s.id===storeId?'selected':''}>${esc(s.title)}</option>`).join(''):'<option>暂无可选门店</option>'}</select></label></div><p>当前生效角色：${roles.map(r=>`<span class="pc-tag">${esc(r.name)}</span>`).join('')||'<span class="pc-muted">暂无适用角色</span>'}</p>${renderPermissionEditor({catalog,page:selected,group:category,search,preview:false,readonly:true,staff:false,effectiveOnly:true,emptyMessage:empty,value,own:()=> 'inherit'})}`;
     };
     const dialog=modal(`${e.name} · 员工生效权限`,`<div data-effective-content>${content()}</div>`,()=>true,'关闭');dialog.classList.add('pc-effective-drawer');
