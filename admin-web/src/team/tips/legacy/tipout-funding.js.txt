@@ -223,8 +223,8 @@
       (f.orders||[]).forEach(function(o){
         var area=o.area==='main'?'Main Dining':o.area==='bar'?'Bar Area':o.area;
         var orderType=o.orderType==='dine_in'?'Dine In':o.orderType==='takeout'?'To Go':o.orderType;
-        if(c.area&&c.area!=='全部'&&c.area!==area)return;
-        if(c.orderType&&c.orderType!=='全部'&&c.orderType!==orderType)return;
+        if(c.area&&(Array.isArray(c.area)?c.area:[c.area]).length&&(Array.isArray(c.area)?c.area:[c.area]).indexOf('全部')<0&&(Array.isArray(c.area)?c.area:[c.area]).indexOf(area)<0)return;
+        if(c.orderType&&(Array.isArray(c.orderType)?c.orderType:[c.orderType]).length&&(Array.isArray(c.orderType)?c.orderType:[c.orderType]).indexOf('全部')<0&&(Array.isArray(c.orderType)?c.orderType:[c.orderType]).indexOf(orderType)<0)return;
         if((c.paymentMethods||[]).length&&!c.paymentMethods.some(function(p){return p===o.paymentMethod||(p==='credit_card'&&o.paymentMethod==='card');}))return;
         if(c.orderTipStatus==='has_tip'&&!cents(o.tipAmount))return;
         if(c.orderTipStatus==='no_tip'&&cents(o.tipAmount))return;

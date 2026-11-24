@@ -1,0 +1,65 @@
+/** Adapter for TipOut's existing menu paths; browsing never changes selection. */
+function tipMenuLeaves(pl, group, category) {
+  var result = [];
+  Object.keys(menuTreeByProductLine[pl] || {}).forEach(function(g) {
+    if (group && g !== group) return;
+    Object.keys(menuTreeByProductLine[pl][g]).forEach(function(c) {
+      if (category && c !== category) return;
+      menuTreeByProductLine[pl][g][c].forEach(function(item) { result.push([pl,g,c,item].join(MENU_KEY_SEP)); });
+    });
+  });
+  return result;
+}
+function applyTipMenuPicker(picker, stored) {
+  if (!picker) return;
+  var source = stored || {}, selected = new Set();
+  var lines = source.productLine || [], groups = source.menuGroup || [], categories = source.category || [], items = source.item || [];
+  if (!Array.isArray(lines)) lines = [lines];
+  if (!lines.length && categories.length) lines = ['POS'];
+  lines.forEach(function(pl) { tipMenuLeaves(pl).forEach(function(key) {
+    var parts = key.split(MENU_KEY_SEP), g = parts.slice(0,2).join(MENU_KEY_SEP), c = parts.slice(0,3).join(MENU_KEY_SEP);
+    if (items.length ? items.indexOf(key)>=0 || items.indexOf(parts[3])>=0 : categories.length ? categories.indexOf(c)>=0 || categories.indexOf(parts[2])>=0 : groups.length ? groups.indexOf(g)>=0 : true) selected.add(key);
+  }); });
+  picker._tipMenu = { selected:selected, line:lines[0] || menuProductLines[0], group:'', category:'', query:'' };
+  picker.dataset.ready='true';
+  picker.innerHTML='<div class="tip-menu-tools"><label><span aria-hidden="true">⌕</span><input type="search" aria-label="搜索当前渠道商品" placeholder="搜索商品"></label><button type="button" class="btn-link tip-menu-clear">一键清空</button></div><div class="tip-menu-columns"></div>';
+  picker.querySelector('input').addEventListener('input',function(event){picker._tipMenu.query=event.target.value;renderTipMenuPicker(picker);});
+  picker.querySelector('.tip-menu-clear').addEventListener('click',function(){picker._tipMenu.selected.clear();renderTipMenuPicker(picker);});
+  renderTipMenuPicker(picker);
+}
+function collectTipMenuPicker(picker) {
+  var state=picker._tipMenu;if(!state||!state.selected.size)return null;
+  var lines=new Set(),groups=new Set(),categories=new Set(),items=[];
+  state.selected.forEach(function(key){var p=key.split(MENU_KEY_SEP);lines.add(p[0]);groups.add(p.slice(0,2).join(MENU_KEY_SEP));categories.add(p.slice(0,3).join(MENU_KEY_SEP));items.push(key);});
+  return {productLine:Array.from(lines),menuGroup:Array.from(groups),category:Array.from(categories),item:items};
+}
+function renderTipMenuPicker(picker) {
+  var state=picker._tipMenu,tree=menuTreeByProductLine[state.line]||{},groups=Object.keys(tree);
+  if(groups.indexOf(state.group)<0)state.group=groups[0]||'';
+  var categories=Object.keys(tree[state.group]||{});if(categories.indexOf(state.category)<0)state.category=categories[0]||'';
+  var columns=picker.querySelector('.tip-menu-columns');columns.replaceChildren();
+  function column(title){var col=document.createElement('section'),heading=document.createElement('h4'),list=document.createElement('div');heading.textContent=title;col.appendChild(heading);col.appendChild(list);columns.appendChild(col);return list;}
+  function row(list,label,keys,active,browse,check){
+    var line=document.createElement('div');line.className='tip-menu-row'+(active?' is-active':'');
+    if(check){var cb=document.createElement('input');cb.type='checkbox';cb.setAttribute('aria-label','选择'+label);var count=keys.filter(function(k){return state.selected.has(k);}).length;cb.checked=count===keys.length&&keys.length>0;cb.indeterminate=count>0&&count<keys.length;cb.addEventListener('change',function(){keys.forEach(function(k){if(cb.checked)state.selected.add(k);else state.selected.delete(k);});renderTipMenuPicker(picker);});line.appendChild(cb);}
+    var button=document.createElement('button');button.type='button';button.textContent=label;button.title=label;button.addEventListener('click',browse);line.appendChild(button);
+    if(!check){var badge=document.createElement('span');badge.textContent=String(keys.length);badge.title='可选商品数';line.appendChild(badge);}list.appendChild(line);
+  }
+  var lines=column('渠道');menuProductLines.forEach(function(pl){row(lines,pl,tipMenuLeaves(pl),pl===state.line,function(){state.line=pl;state.group='';state.category='';renderTipMenuPicker(picker);},false);});
+  var gs=column('组'),cs=column('类'),ds=column('商品'),query=state.query.trim().toLocaleLowerCase();
+  if(query){var matches=tipMenuLeaves(state.line).filter(function(key){return key.split(MENU_KEY_SEP).slice(1).join(' ').toLocaleLowerCase().includes(query);});
+    matches.forEach(function(key){row(ds,key.split(MENU_KEY_SEP).slice(1).join(' / '),[key],false,function(){var next=!state.selected.has(key);if(next)state.selected.add(key);else state.selected.delete(key);renderTipMenuPicker(picker);},true);});
+    if(!matches.length){var empty=document.createElement('p');empty.textContent='暂无匹配商品';ds.appendChild(empty);}return;
+  }
+  groups.forEach(function(g){row(gs,g,tipMenuLeaves(state.line,g),g===state.group,function(){state.group=g;state.category='';renderTipMenuPicker(picker);},true);});
+  categories.forEach(function(c){row(cs,c,tipMenuLeaves(state.line,state.group,c),c===state.category,function(){state.category=c;renderTipMenuPicker(picker);},true);});
+  (tree[state.group]&&tree[state.group][state.category]||[]).forEach(function(item){var key=[state.line,state.group,state.category,item].join(MENU_KEY_SEP);row(ds,item,[key],state.selected.has(key),function(){if(state.selected.has(key))state.selected.delete(key);else state.selected.add(key);renderTipMenuPicker(picker);},true);});
+}
+function hydrateConditionRadios() {
+  document.querySelectorAll('.condition-card[id$="-revenueType"],.condition-card[id$="-orderTipStatus"]').forEach(function(card){
+    var select=card.querySelector('select');if(!select||card.querySelector('.condition-radio-options'))return;
+    var options=document.createElement('div');options.className='condition-radio-options';select.hidden=true;
+    Array.from(select.options).filter(function(option){return option.value;}).forEach(function(option){var label=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=card.id+'-choice';radio.value=option.value;radio.checked=select.value===option.value;label.appendChild(radio);label.appendChild(document.createTextNode(option.textContent));radio.addEventListener('change',function(){select.value=radio.value;select.dispatchEvent(new Event('change',{bubbles:true}));});options.appendChild(label);});
+    select.after(options);
+  });
+}

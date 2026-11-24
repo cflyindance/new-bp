@@ -83,6 +83,7 @@ function initStoreFilter() {
           '<td>' +
             '<div class="tipout-rule-identity">' +
               '<strong class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</strong>' +
+              '<span class="status-chip">' + (rule.enabled === false ? '已禁用' : '已启用') + '</span>' +
               (referenceIssues.length ? '<span class="status-chip status-warning">引用失效</span>' : '') +
             '</div>' +
           '</td>' +
@@ -97,6 +98,7 @@ function initStoreFilter() {
             '<div class="tipout-rule-actions">' +
               '<button type="button" class="btn tipout-rule-more" aria-haspopup="menu" aria-expanded="false" aria-controls="' + menuId + '" onclick="toggleRuleActions(this)">更多操作</button>' +
               '<div class="tipout-rule-actions-menu" id="' + menuId + '" role="menu" hidden>' +
+                '<button type="button" role="menuitem" onclick="toggleRuleEnabled(this)">' + (rule.enabled === false ? '启用规则' : '禁用规则') + '</button>' +
                 '<button type="button" role="menuitem" onclick="copyRule(this)">复制规则</button>' +
                 '<button type="button" role="menuitem" class="danger" onclick="deleteRule(this)">删除规则</button>' +
               '</div>' +
@@ -130,6 +132,7 @@ function initStoreFilter() {
     }
 
     function deleteRule(el) {
+      if(ruleStatusBusy){showNotification('正在重算，请稍后操作');return;}
       confirmAction('确定要删除该规则吗？此操作不可恢复。', function() {
         var row = el.closest('[data-rule-id]');
         var id = row.getAttribute('data-rule-id');
@@ -154,6 +157,7 @@ function initStoreFilter() {
     }
 
     function copyRule(el) {
+      if(ruleStatusBusy){showNotification('正在重算，请稍后操作');return;}
       var row = el.closest('[data-rule-id]');
       var id = row.getAttribute('data-rule-id');
       var rule = ruleData.getRuleById(id);
@@ -188,3 +192,51 @@ function initStoreFilter() {
     }
     initStoreFilter();
     renderRulesTable();
+var ruleStatusBusy = false;
+var ruleStatusJobKey = 'tipout_rule_status_recalculation_v1';
+function ruleStatusActive() { if (window.tipoutIsPageActive && !window.tipoutIsPageActive()) throw new Error('已离开规则页面，待返回后重试'); }
+function saveRuleStatusJob(job) { localStorage.setItem(ruleStatusJobKey, JSON.stringify(job)); }
+function showRuleStatusJob(job, running) {
+  var box=document.getElementById('ruleStatusReport');
+  if(!box){box=document.createElement('section');box.id='ruleStatusReport';box.className='rule-status-report';box.setAttribute('aria-live','polite');document.getElementById('rulesTableBody').closest('table').before(box);}
+  box.replaceChildren();var title=document.createElement('strong');title.textContent=running?'正在重新分配小费':'规则禁用处理结果';box.appendChild(title);
+  job.dates.forEach(function(item){var p=document.createElement('p');p.textContent=item.date+' · '+({pending:'等待处理',done:'已重算',paid:'已发放，保留结果',failed:'处理失败'}[item.status]||item.status)+(item.error?'：'+item.error:'');box.appendChild(p);});
+  if(!running && job.dates.some(function(x){return x.status==='failed'||x.status==='pending';})){var retry=document.createElement('button');retry.className='btn btn-primary';retry.textContent='重试未完成日期';retry.addEventListener('click',function(){confirmAction('将按当前规则重新系统分配未完成日期，并覆盖这些日期当前的手动调整；已发放日期仍保留。',function(){job.dates.forEach(function(item){if(item.status==='failed'||item.status==='pending'){item.fingerprint=JSON.stringify(TipOutAllocationResults.read(job.store,item.date));item.status='pending';}});saveRuleStatusJob(job);runRuleStatusJob(job);},{title:'重试日期重算',okText:'确认重试'});});box.appendChild(retry);}
+}
+async function runRuleStatusJob(job) {
+  if(ruleStatusBusy)return;ruleStatusBusy=true;
+  try {
+    for(var item of job.dates){
+      if(item.status==='done'||item.status==='paid')continue;
+      try {
+        ruleStatusActive();var rule=ruleData.getRuleById(job.ruleId);if(!rule||rule.enabled!==false)throw new Error('规则状态已变化，无法继续本次重算');
+        var state=TipOutDateState.inspect(job.store,item.date);if(state.locked){if(state.payoutStatus==='paid'){item.status='paid';item.error='';saveRuleStatusJob(job);continue;}throw new Error(state.error||'日期已锁定');}
+        var current=TipOutAllocationResults.read(job.store,item.date);
+        if(JSON.stringify(current)!==item.fingerprint)throw new Error('分配结果已被其他操作修改，请核对后重新发起');
+        var config=JSON.stringify(ruleData.getRules());
+        function assertCurrent(){ruleStatusActive();if(JSON.stringify(ruleData.getRules())!==config)throw new Error('规则配置已变化，请重试');}
+        if(ruleData.getRulesForStore(job.store).length){
+          var snapshot=await window.prepareTipoutQuickSnapshot(job.store,item.date,true);
+          assertCurrent();await TipOutAllocationResults.commit(snapshot,{expectedSnapshotFingerprint:item.fingerprint,assertActive:assertCurrent});
+        }else{await TipOutAllocationResults.cancel(job.store,item.date,{expectedSnapshotFingerprint:item.fingerprint,assertActive:assertCurrent});}
+        item.status='done';item.error='';
+        try { if (window.TipOutPayrollBridge) window.TipOutPayrollBridge.syncAfterAllocation(job.store,item.date,item.date); } catch(syncError) { item.error='分配已更新，薪资同步失败：'+syncError.message; }
+      }catch(error){item.status='failed';item.error=error.message||String(error);}
+      saveRuleStatusJob(job);showRuleStatusJob(job,true);
+      if(window.tipoutIsPageActive&&!window.tipoutIsPageActive())break;
+    }
+  }finally{ruleStatusBusy=false;saveRuleStatusJob(job);showRuleStatusJob(job,false);renderRulesTable();}
+}
+function toggleRuleEnabled(el){
+  if(ruleStatusBusy){showNotification('正在重算，请稍后操作');return;}
+  var previousJob=JSON.parse(localStorage.getItem(ruleStatusJobKey)||'null');
+  if(previousJob&&previousJob.dates.some(function(x){return x.status==='pending'||x.status==='failed';})){showNotification('请先完成上次规则禁用的日期重算');showRuleStatusJob(previousJob,false);return;}
+  var id=el.closest('[data-rule-id]').getAttribute('data-rule-id'),rule=ruleData.getRuleById(id);if(!rule)return;
+  var disabling=rule.enabled!==false,dates=[],paid=0,manual=0;
+  try{if(disabling){var results=JSON.parse(localStorage.getItem('tipout_allocation_results_v1')||'{}');Object.values(results).forEach(function(snapshot){if(snapshot.store!==rule.store||!Array.isArray(snapshot.pools)||!snapshot.pools.some(function(p){return String(p.ruleId)===String(id);}))return;var state=TipOutDateState.inspect(rule.store,snapshot.dateKey);if(state.payoutStatus==='paid'){paid++;return;}if(snapshot.allocationSource==='manual')manual++;dates.push({date:snapshot.dateKey,status:'pending',fingerprint:JSON.stringify(TipOutAllocationResults.read(rule.store,snapshot.dateKey))});});}}catch(error){showNotification('无法读取分配结果：'+error.message);return;}
+  var fingerprint=JSON.stringify(rule);
+  confirmAction(disabling?'禁用后不再参与分配。将重新系统分配 '+dates.length+' 个待发放日期，覆盖这些日期的手动调整（其中 '+manual+' 个手动分配日期）。保留 '+paid+' 个已发放日期。'+(dates.length?'日期：'+dates.map(function(x){return x.date;}).join('、'):''):'启用后恢复参与后续分配，历史结果保持不变。',function(){
+    try{var rules=ruleData.getRules(),target=rules.find(function(r){return String(r.id)===String(id);});if(!target||JSON.stringify(target)!==fingerprint)throw new Error('规则已变化，请重新操作');target.enabled=!disabling;ruleData.saveRules(rules);renderRulesTable();if(disabling&&dates.length){var job={ruleId:id,store:rule.store,dates:dates};saveRuleStatusJob(job);runRuleStatusJob(job);}else showNotification(disabling?'规则已禁用':'规则已启用');}catch(error){showNotification(error.message);}
+  },{title:disabling?'禁用并重算待发放日期':'启用规则',okText:disabling?'禁用并重算':'启用'});
+}
+try{var pendingRuleJob=JSON.parse(localStorage.getItem(ruleStatusJobKey)||'null');if(pendingRuleJob&&pendingRuleJob.dates.some(function(x){return x.status==='pending'||x.status==='failed';}))showRuleStatusJob(pendingRuleJob,false);}catch(_){}

@@ -105,8 +105,8 @@
           if (formula.type !== 'manual') {
             var area = item.area === 'main' ? 'Main Dining' : item.area === 'bar' ? 'Bar Area' : item.area;
             var orderType = item.orderType === 'dine_in' ? 'Dine In' : item.orderType === 'takeout' ? 'To Go' : item.orderType;
-            if (conditions.area && conditions.area !== '全部' && conditions.area !== area) return;
-            if (conditions.orderType && conditions.orderType !== '全部' && conditions.orderType !== orderType) return;
+            if(conditions.area&&(Array.isArray(conditions.area)?conditions.area:[conditions.area]).length&&(Array.isArray(conditions.area)?conditions.area:[conditions.area]).indexOf('全部')<0&&(Array.isArray(conditions.area)?conditions.area:[conditions.area]).indexOf(area)<0)return;
+            if(conditions.orderType&&(Array.isArray(conditions.orderType)?conditions.orderType:[conditions.orderType]).length&&(Array.isArray(conditions.orderType)?conditions.orderType:[conditions.orderType]).indexOf('全部')<0&&(Array.isArray(conditions.orderType)?conditions.orderType:[conditions.orderType]).indexOf(orderType)<0)return;
             if ((conditions.paymentMethods || []).length && !conditions.paymentMethods.some(function(p) { return p === item.paymentMethod || (p === 'credit_card' && item.paymentMethod === 'card'); })) return;
             if (conditions.orderTipStatus === 'has_tip' && !cents(item.tipAmount)) return;
             if (conditions.orderTipStatus === 'no_tip' && cents(item.tipAmount)) return;

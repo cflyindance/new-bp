@@ -135,6 +135,7 @@
     var sv = (storeVal || '').trim();
     if (!sv) return [];
     return rules.filter(function(r) {
+      if (r.enabled === false) return false;
       var rs = (r.store || '').trim();
       if (!rs) return false;
       if (sv.indexOf(rs) >= 0 || rs.indexOf(sv) >= 0) return true;
