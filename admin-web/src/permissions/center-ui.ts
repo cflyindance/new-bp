@@ -172,15 +172,24 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const roles=draft.roles.map(role=>`<label><input type="radio" name="role" value="${esc(role.id)}" required>${esc(role.name)}</label>`).join('');
-    const dialog=modal('分配角色',`<div class="pc-choice-list" role="group" aria-label="角色列表">${roles||'<p class="pc-muted">暂无可分配角色</p>'}</div><button type="button" data-view-selected-role disabled>查看角色权限</button>`,d=>{
-      const roleId=d.querySelector<HTMLInputElement>('[name="role"]:checked')?.value;
-      const role=draft.roles.find(item=>item.id===roleId);
-      if(!role)throw Error('请选择角色');
-      const scopeDialog=modal('选择授权门店',`<p>角色：${esc(role.name)}</p><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,scopeStep=>{
+    const rows=draft.roles.map(role=>`<tr>
+      <td><input type="checkbox" name="role" value="${esc(role.id)}" aria-label="选择 ${esc(role.name)}"></td>
+      <td>${esc(role.name)}</td>
+      <td><button type="button" data-preview-assignment-role="${esc(role.id)}" aria-label="查看 ${esc(role.name)} 的角色权限">查看角色权限</button></td>
+    </tr>`).join('');
+    const selectedRoleIds=(d:HTMLDialogElement)=>new Set([...d.querySelectorAll<HTMLInputElement>('[name="role"]:checked')].map(input=>input.value));
+    const dialog=modal('分配角色',`<div class="pc-role-assignment-list"><table aria-label="角色列表">
+      <thead><tr><th scope="col">选择</th><th scope="col">角色</th><th scope="col">操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="3" class="pc-empty">暂无可分配角色</td></tr>'}</tbody>
+    </table></div>`,d=>{
+      const selected=selectedRoleIds(d);
+      const roles=draft.roles.filter(role=>selected.has(role.id));
+      if(!roles.length)throw Error('请至少选择一个角色');
+      const roleNames=roles.map(role=>esc(role.name)).join('、');
+      const scopeDialog=modal('选择授权门店',`<p>角色：${roleNames}</p><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,scopeStep=>{
         const scope=readScope();
-        modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(role.name)}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
-          employee()!.bindings.push({id:crypto.randomUUID(),roleId:role.id,scope});
+        modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${roleNames}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
+          employee()!.bindings.push(...roles.map(role=>({id:crypto.randomUUID(),roleId:role.id,scope:structuredClone(scope)})));
           employee()!.migrationReview=false;
           scopeDialog.close();
           dialog.close();
@@ -194,12 +203,11 @@ export function bindCenterPage(): void {
       return false;
     },'下一步');
     const next=dialog.querySelector<HTMLButtonElement>('[type="submit"]')!;
-    const preview=dialog.querySelector<HTMLButtonElement>('[data-view-selected-role]')!;
     next.disabled=true;
-    dialog.addEventListener('change',()=>{next.disabled=preview.disabled=!dialog.querySelector('[name="role"]:checked');});
-    preview.addEventListener('click',()=>{
-      const selected=dialog.querySelector<HTMLInputElement>('[name="role"]:checked');
-      if(selected)showRolePermissions(selected.value);
+    dialog.addEventListener('change',()=>{next.disabled=selectedRoleIds(dialog).size===0;});
+    dialog.addEventListener('click',event=>{
+      const trigger=(event.target as Element).closest<HTMLButtonElement>('[data-preview-assignment-role]');
+      if(trigger)showRolePermissions(trigger.dataset.previewAssignmentRole!);
     });
   }
   function editBinding(id:string):void {

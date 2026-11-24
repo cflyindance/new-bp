@@ -215,3 +215,8 @@
 .pc .pc-store-picker-table td:nth-child(4) { min-width: 120px; overflow-wrap: anywhere; }
 .pc .pc-store-picker-table [hidden] { display: none; }
 .pc-dialog.pc-brand-scope-dialog { width: min(1080px, 96vw); }
+
+.pc .pc-role-assignment-list { max-height: min(52vh, 440px); overflow: auto; border: 1px solid var(--pc-line); border-radius: 8px; }
+.pc .pc-role-assignment-list th { position: sticky; top: 0; z-index: 1; }
+.pc .pc-role-assignment-list :is(th, td):first-child { width: 1%; white-space: nowrap; }
+.pc .pc-role-assignment-list :is(th, td):last-child { width: 1%; white-space: nowrap; }
