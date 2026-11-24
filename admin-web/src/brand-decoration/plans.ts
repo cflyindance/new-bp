@@ -1,3 +1,4 @@
+import { formatLocal } from './schedule';
 import { copy, pages, type Channel, type DecorationData, type Release, type Scheme } from './domain';
 
 export interface PlanRules {
@@ -66,7 +67,7 @@ export function checkPlanPublication(data: DecorationData, scheme: Scheme, store
         if (release.snapshot.id === scheme.id || release.snapshot.channel !== scheme.channel || previous.kind !== 'activity') continue;
         if (rules.starts! >= previous.ends! || previous.starts! >= rules.ends!) continue;
         const collisions = stores.filter(store => rules.storeIds.includes(store.id) && previous.storeIds.includes(store.id));
-        if (collisions.length) throw Error('门店「' + collisions.map(store => store.name).join('、') + '」与活动「' + previous.activityName + '」时段重叠');
+        if (collisions.length) throw Error('门店「' + collisions.map(store => store.name).join('、') + '」与活动「' + previous.activityName + '」时段重叠（' + formatLocal(previous.starts!, rules.timezone).replace('T', ' ') + ' 至 ' + formatLocal(previous.ends!, rules.timezone).replace('T', ' ') + '）');
     }
 }
 

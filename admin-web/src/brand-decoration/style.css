@@ -26,3 +26,5 @@
 .bd-brand-settings label{margin-top:12px}
 .bd-workbench .bd-preview-stage{height:clamp(340px,calc(100dvh - 260px),780px)}
 @media(max-width:640px){.bd-flow-grid,.bd-review-summary{grid-template-columns:1fr}.bd-flow-content .bd-flow-steps{justify-content:flex-start;gap:4px}.bd-workbench .bd-preview-stage{height:520px}}
+
+.bd-plan-form [data-bd-store-item][hidden]{display:none}.bd-flow-actions{gap:12px;flex-wrap:wrap}
