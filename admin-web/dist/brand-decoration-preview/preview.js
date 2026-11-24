@@ -40,7 +40,10 @@ function applyNativePalette(frame, palette) {
     .map(([name, color]) => `${name}: ${color} !important;`)
     .join('\n');
   theme.textContent = `
-    :root { ${colors} }
+    :root, .appContent___4gt1b { ${colors} }
+    .orderingBtn___jUzMM,
+    .waitLst___joqc3,
+    .togo___spBB9,
     .finishWarp___rRV6R .finishBox___-fRHM .close___mL5p5,
     .btnBox___0kC4F .btnConfirm___1tLDT,
     .foot___ZRRHB .countBtn___r5-ub .btnEn___1KOE-,
