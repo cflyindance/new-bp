@@ -177,3 +177,13 @@
 .pc-account-opening [data-account-method] input[type=radio] { width:16px; height:16px; flex:none; margin:0; }
 .pc-account-opening [data-account-passwords] { border:0; padding:0; margin:0; display:grid; gap:16px; min-width:0; }
 .pc-account-opening [data-account-passwords][hidden] { display:none; }
+
+.pc .pc-staff-overview { display:grid; gap:16px; }
+.pc .pc-staff-overview > .pc-card { margin:0; }
+.pc .pc-staff-overview header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.pc .pc-staff-summary { display:grid; gap:8px; }
+.pc .pc-staff-summary li { display:flex; flex-wrap:wrap; gap:12px; }
+.pc-staff-overview dl,.pc-staff-security dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:12px 16px; }
+.pc-staff-overview dd,.pc-staff-security dd { overflow-wrap:anywhere; }
+.pc-dialog.pc-staff-security { position:fixed; inset:0 0 0 auto; margin:0; width:min(480px,100vw); height:100dvh; max-height:none; border-radius:0; }
+.pc-staff-security .pc-actions { flex-wrap:wrap; }
