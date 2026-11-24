@@ -1,7 +1,7 @@
 export const DEFAULT_PALETTE_ID = 'system' as const;
 
 export const PALETTES = {
-    system: { name: '系统默认', primary: '#0958d9', background: '#f5f7fa', surface: '#ffffff', ink: '#17212b' },
+    system: { name: '系统默认', primary: '#ffb702', background: '#f5f5f5', surface: '#ffffff', ink: '#000000' },
     pine: { name: '松石绿', primary: '#254e40', background: '#f5f3ec', surface: '#fffdf8', ink: '#203d34' },
     amber: { name: '琥珀金', primary: '#dbc18d', background: '#191c1b', surface: '#272c29', ink: '#f5ebd7' },
     clay: { name: '陶土红', primary: '#ad432e', background: '#fbf1e4', surface: '#fffaf3', ink: '#492c26' },
