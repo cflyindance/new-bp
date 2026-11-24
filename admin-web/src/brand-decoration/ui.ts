@@ -193,7 +193,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <ol class="bd-flow-steps">${stepTitles.map((title, index) =>
                 `<li ${step === index + 1 ? 'aria-current="step"' : ''}><span class="bd-step-number" aria-hidden="true">${index + 1}</span>${title}</li>`).join('')}</ol>
             <p class="bd-flow-progress-compact" aria-current="step">第 ${step} 步 / 共 ${stepTitles.length} 步 · ${stepTitles[step - 1]}</p>
-        </nav>` });
+        </nav><div class="bd-flow-meter" aria-hidden="true"><i style="width:${step / stepTitles.length * 100}%"></i></div>` });
     const storeNames = (ids: string[]) => ids.map(id => scope.stores.find(store => store.id === id)?.name ?? '门店已不可用').join('、');
     const period = (rules: PlanRules) => rules.kind === 'default' ? '长期' : !rules.starts || !rules.ends ? '待设置' :
         `${formatLocal(rules.starts!, rules.timezone).replace('T', ' ')} 至 ${formatLocal(rules.ends!, rules.timezone).replace('T', ' ')} · ${rules.timezone}`;
@@ -213,12 +213,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             </div>
             <fieldset class="bd-flow-fieldset"><legend>使用方式</legend><div class="bd-flow-grid">
             <div class="bd-choice-help">
-                <label class="bd-choice"><input type="radio" name="kind" value="default" ${rules?.kind !== 'activity' ? 'checked' : ''}>日常装修</label>
+                <label class="bd-choice"><input type="radio" name="kind" value="default" ${rules?.kind !== 'activity' ? 'checked' : ''}><span class="bd-choice-icon" aria-hidden="true">◷</span><span>日常装修</span></label>
                 <div class="bd-usage-help"><button type="button" aria-label="日常装修说明" aria-describedby="bd-usage-daily">?</button>
                     <span id="bd-usage-daily" role="tooltip">门店平时使用的装修。</span></div>
             </div>
             <div class="bd-choice-help">
-                <label class="bd-choice"><input type="radio" name="kind" value="activity" ${rules?.kind === 'activity' ? 'checked' : ''}>限时装修</label>
+                <label class="bd-choice"><input type="radio" name="kind" value="activity" ${rules?.kind === 'activity' ? 'checked' : ''}><span class="bd-choice-icon" aria-hidden="true">◈</span><span>限时装修</span></label>
                 <div class="bd-usage-help"><button type="button" aria-label="限时装修说明" aria-describedby="bd-usage-timed">?</button>
                     <span id="bd-usage-timed" role="tooltip">在指定时间内展示，到期后恢复门店的日常装修。</span></div>
             </div>
@@ -279,19 +279,36 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const picked = rules.storeIds.length ? rules.storeIds : scope.stores.length === 1 ? [scope.stores[0].id] : [];
         const regions = [...new Set(scope.stores.map(store => store.region))].sort();
         root.innerHTML = flowHeader(3, {
-            titleHtml: esc(s.name), subtitleHtml: esc(label(channel)),
+            titleHtml: '选择门店', subtitleHtml: esc(s.name + ' · ' + label(channel)),
             backHtml: '<button type="submit" form="bd-plan-stores" name="destination" value="editor">保存并返回装修页面</button>',
             actionsHtml: '<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：核对并发布</button>',
-        }) + `<div class="bd-flow-content"><form id="bd-plan-stores" class="bd-card bd-plan-form">
-            <h2>适用门店 <span class="bd-muted" data-bd-store-count></span></h2>
-            <div class="bd-flow-grid"><label>门店名称<input type="search" data-bd-store-search placeholder="搜索门店"></label>
-            <label>区域<select data-bd-store-region><option value="">全部区域</option>${regions.map(region => `<option value="${esc(region)}">${esc(region)}</option>`).join('')}</select></label></div>
-            <div class="bd-page-checks">${scope.stores.map(store => `<label data-bd-store-item data-region="${esc(store.region)}"><input type="checkbox" name="store" value="${esc(store.id)}" ${picked.includes(store.id) ? 'checked' : ''}>${esc(store.name)}</label>`).join('') || '当前范围没有可选门店'}</div>
-            <p class="bd-help" data-bd-picked></p>
-            ${activity ? `<fieldset class="bd-flow-fieldset"><legend>活动有效期 <span class="bd-muted" data-bd-zone></span></legend><div class="bd-flow-grid">
+        }) + `<div class="bd-store-page"><form id="bd-plan-stores" class="bd-store-form">
+            <div class="bd-store-layout">
+              <section class="bd-card bd-store-catalog" aria-labelledby="bd-store-list-title">
+                <h2 id="bd-store-list-title">门店列表</h2>
+                <div class="bd-store-filters">
+                  <input type="search" data-bd-store-search aria-label="搜索门店" placeholder="门店名称 / MID" autocomplete="off">
+                  <select data-bd-store-region aria-label="区域"><option value="">全部区域</option>${regions.map(region => `<option value="${esc(region)}">${esc(region)}</option>`).join('')}</select>
+                  <button type="button" data-bd-store-reset>重置</button>
+                </div>
+                <div class="bd-table-wrap bd-store-table"><table>
+                  <thead><tr><th scope="col"><input type="checkbox" data-bd-store-all aria-label="全选当前筛选结果"></th><th scope="col">门店名称</th><th scope="col">MID</th><th scope="col">区域</th></tr></thead>
+                  <tbody>${scope.stores.map(store => `<tr data-bd-store-item data-region="${esc(store.region)}">
+                    <td><input type="checkbox" name="store" value="${esc(store.id)}" aria-label="${esc(store.name)}" ${picked.includes(store.id) ? 'checked' : ''}></td>
+                    <td>${esc(store.name)}</td><td>${esc(store.id)}</td><td>${esc(store.region)}</td>
+                  </tr>`).join('')}<tr data-bd-store-empty hidden><td colspan="4" class="bd-empty">没有符合条件的门店</td></tr></tbody>
+                </table></div>
+                <p class="bd-help" data-bd-store-total></p>
+              </section>
+              <section class="bd-card bd-store-selection" aria-labelledby="bd-picked-title">
+                <h2 id="bd-picked-title">已选门店 <span class="bd-muted" data-bd-store-count></span></h2>
+                <div data-bd-picked></div>
+              </section>
+            </div>
+            ${activity ? `<section class="bd-card bd-store-period"><h2>活动有效期 <span class="bd-muted" data-bd-zone></span></h2><div class="bd-flow-grid">
                 <label>开始时间<input type="datetime-local" name="starts" value="${rules.starts ? formatLocal(rules.starts, rules.timezone) : ''}"></label>
                 <label>结束时间<input type="datetime-local" name="ends" value="${rules.ends ? formatLocal(rules.ends, rules.timezone) : ''}"></label>
-            </div></fieldset>` : ''}
+            </div></section>` : ''}
             <p data-bd-notice class="bd-notice" role="status"></p>
             </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-stores')!;
@@ -299,21 +316,73 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const ids = new FormData(form).getAll('store');
             return scope.stores.filter(store => ids.includes(store.id));
         };
-        const update = () => {
+        const searchInput = form.querySelector<HTMLInputElement>('[data-bd-store-search]')!;
+        const regionInput = form.querySelector<HTMLSelectElement>('[data-bd-store-region]')!;
+        const all = form.querySelector<HTMLInputElement>('[data-bd-store-all]')!;
+        const chosenPanel = form.querySelector<HTMLElement>('[data-bd-picked]')!;
+        const nextButton = root.querySelector<HTMLButtonElement>('[form=bd-plan-stores][value=review]')!;
+        const rows = Array.from(form.querySelectorAll<HTMLTableRowElement>('[data-bd-store-item]'));
+        const visibleChecks = () => rows.filter(row => !row.hidden)
+            .map(row => row.querySelector<HTMLInputElement>('input[name=store]')!);
+        let selectionSignature = "";
+        const renderSelection = () => {
             const chosen = selected();
-            const search = form.querySelector<HTMLInputElement>('[data-bd-store-search]')!.value.trim().toLowerCase();
-            const region = form.querySelector<HTMLSelectElement>('[data-bd-store-region]')!.value;
-            form.querySelectorAll<HTMLElement>('[data-bd-store-item]').forEach(item => {
-                item.hidden = !item.textContent!.toLowerCase().includes(search) || (!!region && item.dataset.region !== region);
-            });
-            form.querySelector('[data-bd-store-count]')!.textContent = '已选 ' + chosen.length + ' 家';
-            form.querySelector('[data-bd-picked]')!.textContent = chosen.map(store => store.name).join('、');
+            const visible = visibleChecks();
+            const checkedCount = visible.filter(input => input.checked).length;
+            all.disabled = !visible.length;
+            all.checked = !!visible.length && checkedCount === visible.length;
+            all.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+            nextButton.disabled = !chosen.length;
+            form.querySelector('[data-bd-store-count]')!.textContent = '(' + chosen.length + ')';
+            const selectionHtml = chosen.length ? `<ul class="bd-picked-stores">${chosen.map(store => `<li>
+                <span><strong>${esc(store.name)}</strong><small>${esc(store.id)}</small></span>
+                <button type="button" class="bd-link" data-bd-store-remove="${esc(store.id)}" aria-label="移除 ${esc(store.name)}">移除</button>
+            </li>`).join('')}</ul>` : '<p class="bd-store-empty">请从门店列表勾选适用门店</p>';
+            const signature = JSON.stringify(chosen.map(store => store.id));
+            if (signature !== selectionSignature) {
+                chosenPanel.innerHTML = selectionHtml;
+                selectionSignature = signature;
+            }
             const zone = form.querySelector('[data-bd-zone]');
             if (zone) zone.textContent = [...new Set(chosen.map(store => store.timezone || '时区未配置'))].join('、') || '请先选择门店';
         };
-        form.addEventListener('input', update);
-        form.addEventListener('change', update);
-        update();
+        const filterStores = () => {
+            const search = searchInput.value.trim().toLowerCase();
+            const region = regionInput.value;
+            rows.forEach(row => {
+                row.hidden = ![row.cells[1], row.cells[2]].some(cell => cell.textContent!.toLowerCase().includes(search)) || (!!region && row.dataset.region !== region);
+            });
+            const visible = visibleChecks().length;
+            form.querySelector<HTMLElement>('[data-bd-store-empty]')!.hidden = visible > 0;
+            form.querySelector('[data-bd-store-total]')!.textContent = '共 ' + visible + ' 家门店';
+            renderSelection();
+        };
+        searchInput.addEventListener('input', filterStores);
+        regionInput.addEventListener('change', filterStores);
+        form.querySelector('[data-bd-store-reset]')!.addEventListener('click', () => {
+            searchInput.value = '';
+            regionInput.value = '';
+            filterStores();
+        });
+        all.addEventListener('change', () => {
+            visibleChecks().forEach(input => { input.checked = all.checked; });
+            renderSelection();
+        });
+        form.addEventListener('change', event => {
+            if ((event.target as HTMLInputElement).name === 'store') renderSelection();
+        });
+        chosenPanel.addEventListener('click', event => {
+            const remove = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-bd-store-remove]');
+            if (!remove) return;
+            const input = rows.flatMap(row => Array.from(row.querySelectorAll<HTMLInputElement>('input[name=store]')))
+                .find(option => option.value === remove.dataset.bdStoreRemove);
+            if (!input) return;
+            input.checked = false;
+            renderSelection();
+            if (input.closest('tr')?.hidden) searchInput.focus();
+            else input.focus();
+        });
+        filterStores();
         form.addEventListener('submit', event => {
             event.preventDefault();
             const fields = new FormData(form);
