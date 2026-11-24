@@ -9,11 +9,17 @@ import { type CenterState, type Store, type Scope, type Access } from "./center-
 import { persistCenterChange } from './center-persistence';
 import { migrateNavigationPermissions } from './center-navigation-migration';
 import {migrateRoleOnlyState} from './center-role-only';
-import {getEnterpriseMerchantSnapshot} from '../config/enterprise-merchant-store';
+import {getEnterpriseMerchantSnapshot,getEnterpriseMerchantSnapshotForAuthorization} from '../config/enterprise-merchant-store';
 import type {ScopeBrand} from './center-brand-store-selection';
 
 export const CENTER_KEY = 'menusifu:permission-center-local:v4';
-export const centerStores = (): Store[] => listMPlatformStoreScopeEntries().map(s=>({id:s.storeId,title:s.storeName,brand:s.merchantId,region:s.regionName}));
+export const centerStores = (): Store[] => {
+  const metadata = new Map(getEnterpriseMerchantSnapshotForAuthorization().stores.map(store=>[store.storeId,store]));
+  return listMPlatformStoreScopeEntries().map(store=>({
+    id:store.storeId,title:store.storeName,brand:store.merchantId,region:store.regionName,
+    address:metadata.get(store.storeId)?.address,postalCode:metadata.get(store.storeId)?.postalCode,
+  }));
+};
 export const centerBrands = (): ScopeBrand[] => getEnterpriseMerchantSnapshot().merchants.map(m=>({id:m.merchantId,name:m.name}));
 export function readCenterState(): CenterState {
   const raw = localStorage.getItem(CENTER_KEY);

@@ -205,3 +205,13 @@
 .pc .pc-staff-authorization .pc-toolbar h2 { margin: 0; }
 .pc .pc-staff-authorization .pc-binding-scope-type { margin-bottom: 6px; }
 .pc .pc-staff-authorization .pc-role-bindings .pc-actions > button { white-space: nowrap; }
+
+.pc .pc-store-picker-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 10px; }
+.pc .pc-store-picker-toolbar input[type=search] { width: min(100%, 300px); }
+.pc .pc-store-picker-scroll { max-height: min(44vh, 360px); overflow: auto; border: 1px solid var(--pc-line); border-radius: 8px; }
+.pc .pc-store-picker-table th { position: sticky; top: 0; z-index: 1; }
+.pc .pc-store-picker-table :is(th,td) { padding: 9px 10px; }
+.pc .pc-store-picker-table th, .pc .pc-store-picker-table td:nth-child(3), .pc .pc-store-picker-table td:nth-child(5) { white-space: nowrap; }
+.pc .pc-store-picker-table td:nth-child(4) { min-width: 120px; overflow-wrap: anywhere; }
+.pc .pc-store-picker-table [hidden] { display: none; }
+.pc-dialog.pc-brand-scope-dialog { width: min(1080px, 96vw); }
