@@ -11,6 +11,7 @@ import { THEMES, copy, newScheme, pages, changes, publish, validateScheme, type 
 const ROOT = '/brand-decoration';
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const date = (s: string) => new Date(s).toLocaleString('zh-CN', { hour12: false });
+const lineLabel: Record<Channel, string> = { kiosk: 'Kiosk', emenu: 'eMenu' };
 const label = (c: Channel) => c === 'kiosk' ? 'Kiosk 自助点餐' : 'eMenu 电子菜单';
 const route = () => location.hash.replace(/^#/, '').split('?')[0];
 let dispose: undefined | (() => void);
@@ -523,7 +524,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             `<option value="${id}" ${value === id ? 'selected' : ''}>${title}</option>`).join('');
         return `<form class="bd-toolbar" data-bd-list-filters>
             <label>方案名称<input type="search" name="name" maxlength="40" placeholder="搜索方案名称" value="${esc(listFilters.name)}"></label>
-            <label>产线<select name="channel">${options([['','全部产线'],['kiosk','Kiosk 自助点餐'],['emenu','eMenu 电子菜单']], listFilters.channel)}</select></label>
+            <label>产线<select name="channel">${options([['','全部产线'],['kiosk',lineLabel.kiosk],['emenu',lineLabel.emenu]], listFilters.channel)}</select></label>
             ${legacyList ? '' : `<label>使用方式<select name="kind">${options([['','全部方式'],['default','日常装修'],['activity','限时装修']], listFilters.kind)}</select></label>`}
             <label>发布状态<select name="published">${options([['','全部状态'],['draft','未发布'],['published','有发布版本']], listFilters.published)}</select></label>
             <button type="submit" class="bd-primary">查询</button><button type="button" data-bd-action="reset-plan-filters">重置</button>
@@ -557,7 +558,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? '草稿' : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${label(item.channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id, scope.canWrite ? resumeStep(item) : '', item.channel)}">${scope.canWrite ? (!release || item.draftStep ? '继续草稿' : '装修') : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
+                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id, scope.canWrite ? resumeStep(item) : '', item.channel)}">${scope.canWrite ? (!release || item.draftStep ? '继续草稿' : '装修') : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
             }).join('') || '<tr><td colspan="7" class="bd-empty">没有符合条件的装修方案</td></tr>'}
             </tbody></table></div><div class="bd-pagination">共 ${plans.length} 个方案</div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
     }
@@ -654,7 +655,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (!legacy) { drawPlanList(); return; }
         const schemes = data.schemes.filter(s => matchesList(s, data.releases.some(r => r.snapshot.id === s.id)));
-        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + listToolbar(true) + `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
+        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + listToolbar(true) + `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${lineLabel[s.channel]}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
     function drawEditor() {
         const s = scheme();
