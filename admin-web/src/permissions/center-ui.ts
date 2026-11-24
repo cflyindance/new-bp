@@ -298,6 +298,10 @@ export function bindCenterPage(): void {
     const position=target.selectionStart;render();const input=root.querySelector<HTMLInputElement>(isMenu?'[data-menu-search]':'[data-query]');input?.focus();input?.setSelectionRange(position,position);
   });
   function openRoleBatch(mode:Access):void {
+    if(dirty){
+      modal('请先处理未保存的修改','<p>批量设置会直接保存。请先保存现有修改，或取消编辑后重新进入。</p>',()=>true,'返回编辑');
+      return;
+    }
     try {
       const nodes=roleSelectionTargets(treeNodes).filter(n=>roleTree.selected.has(n.id));
       const original=role()!;
@@ -312,7 +316,15 @@ export function bindCenterPage(): void {
         if(!items.length)return '';
         return `<tbody><tr class="pc-batch-group"><th colspan="3" scope="rowgroup">${esc(category.title)} · ${items.length} 项</th></tr>`+items.map(node=>`<tr><th scope="row">${esc(roleTreePath(treeNodes,node.id))}</th><td>${esc(label(node,original))}</td><td>${esc(label(node,candidate))}</td></tr>`).join('')+'</tbody>';
       }).join('');
-      const confirmation=modal('批量设置权限',`<p>实际变更 ${changes.length} 项。应用后进入草稿，保存更改后生效。</p><p>${esc(summary)}</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead>${rows}</table></div>`,()=>{if(applyTreeBatch(catalog,role()!,nodes,mode))mark();roleTree.selected.clear();render();return true;},'应用到草稿');
+      const confirmation=modal('批量设置权限',`<p>实际变更 ${changes.length} 项。确认保存后立即生效。</p><p>${esc(summary)}</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead>${rows}</table></div>`,()=>{
+        if(dirty)throw Error('请先处理未保存的修改，再重新预览批量设置');
+        const next=structuredClone(state);
+        next.roles=next.roles.map(item=>item.id===roleId?candidate:item);
+        commit(next,roleId,'更新角色权限');
+        roleTree.selected.clear();
+        render();
+        return true;
+      },'确认并保存');
       confirmation.classList.add('pc-batch-dialog');return;
     } catch(error){
       modal('批量设置暂不可应用',`<p>${esc((error as Error).message)}</p>`,()=>true,'返回调整');
