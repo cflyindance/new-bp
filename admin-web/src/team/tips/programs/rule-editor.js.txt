@@ -4190,7 +4190,7 @@ var poolSalesDeductions = {};
       var message = input && Number(input.value) > 100 ? '接收方占比不能大于100%' :
         (total > 100 ? '接收方占比合计不能大于100%，当前为' + total + '%' :
         (saving && total !== 100 ? '接收方占比合计必须等于100%，当前为' + total + '%' : ''));
-      setReceiverPercentError(message);
+      setReceiverPercentError(message || (total !== 100 ? '接收方占比合计必须等于100%，当前为' + total + '%' : ''));
       if (message) showNotification(message, 'error');
       return !message;
     }
@@ -4198,7 +4198,7 @@ var poolSalesDeductions = {};
       var total = receiverPercentTotal();
       document.getElementById('totalPercent').textContent = total;
       document.getElementById('totalPercent').style.color = total === 100 ? 'var(--success)' : 'var(--danger)';
-      setReceiverPercentError('');
+      setReceiverPercentError(total === 100 ? '' : '接收方占比合计必须等于100%，当前为' + total + '%');
     }
 
     function toggleWeightBtn(show) {
@@ -5279,6 +5279,7 @@ var poolSalesDeductions = {};
         initPoolKindFromParams(params, false);
       }
       syncRuleEditorContext();
+      calcTotal();
     })();
 
     document.addEventListener('focusout', function(event) {
