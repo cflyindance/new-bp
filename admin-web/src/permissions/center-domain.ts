@@ -27,7 +27,7 @@ function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:s
 export interface Store { id: string; title: string; brand: string; region: string; address?: string; postalCode?: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
-export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants?:string[]}
+export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants?:string[];defaultStoreIds?:string[]}
 export interface Resource {readonlyAllowed?:boolean; editRequires?:string[]}
 export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }

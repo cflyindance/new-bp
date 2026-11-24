@@ -6,6 +6,7 @@ export function validateCenterState(state:CenterState,resources:Map<string,Resou
   if(!unique(state.roles.map(r=>r.id))||!unique(state.employees.map(e=>e.id)))throw Error('角色或员工编号重复');
   for(const role of state.roles){
     validateRole(state,role);
+    if(role.defaultStoreIds!==undefined&&(!Array.isArray(role.defaultStoreIds)||role.defaultStoreIds.some(id=>typeof id!=='string'||!id.trim())||!unique(role.defaultStoreIds)))throw Error('角色默认授权门店无效');
     if(role.defaultedGrants!==undefined&&(!Array.isArray(role.defaultedGrants)||role.defaultedGrants.some(k=>typeof k!=='string')||!unique(role.defaultedGrants)))throw Error('默认权限来源无效');
     if(role.readonlyChildren!==undefined){
       if(!role.readonlyChildren||typeof role.readonlyChildren!=='object'||Array.isArray(role.readonlyChildren))throw Error('新增子项默认策略无效');
