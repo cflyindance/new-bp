@@ -19,7 +19,8 @@ try{
   const themed=D.newScheme('kiosk','方案','品牌');
   const old=D.copy(themed);delete old.paletteId;D.validateScheme(old);
   themed.styles.home.theme='noir';
-  assert.equal(themed.paletteId,'pine');
+  assert.equal(themed.paletteId,'system');
+  assert.equal(themed.primary,C.PALETTES.system.primary);
   const changed={...themed,paletteId:'indigo',primary:C.PALETTES.indigo.primary};
   D.validateScheme(changed);
   assert.ok(D.changes(themed,changed).some(item=>item.label==='方案主题色'&&item.after==='靛蓝'));
