@@ -143,7 +143,17 @@ export function applyTreeBatch(c:Catalog,role:Role,nodes:RoleTreeNode[],choice:A
   if(!nodes.length)throw Error('请先勾选要修改的项目');
   if(nodes.some(n=>n.kind==='action'))throw Error('独立操作请逐项授权');
   const candidate=structuredClone(role),before=JSON.stringify(role);
-  for(const n of nodes){if(choice==='edit'&&n.kind!=='page'&&n.kind!=='setting'&&n.kind!=='object')continue;applyTreeChoice(c,candidate,n,choice);}
+  let pending=nodes.map(node=>({node,mode:choice==='edit'&&(node.kind==='directory'||node.kind==='content')?'read' as const:choice}));
+  while(pending.length){
+    const blocked:typeof pending=[];
+    let reason='';
+    for(const item of pending){
+      try{applyTreeChoice(c,candidate,item.node,item.mode);}
+      catch(error){blocked.push(item);if(!reason)reason=item.node.title+'：'+(error as Error).message;}
+    }
+    if(blocked.length===pending.length)throw Error(reason);
+    pending=blocked;
+  }
   if(before===JSON.stringify(candidate))return false;
   role.grants=candidate.grants;role.readonlyChildren=candidate.readonlyChildren;role.defaultedGrants=candidate.defaultedGrants;return true;
 }

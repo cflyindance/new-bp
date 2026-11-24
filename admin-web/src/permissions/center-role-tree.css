@@ -32,3 +32,8 @@
 .pc .pc-rt-category>button{flex:1;min-width:0;width:auto;margin:0;padding-left:8px;padding-right:8px}
 .pc .pc-rt-category>input{flex:none}
 @media(max-width:700px){.pc .pc-rt-nav-label{display:none}.pc .pc-rt-category{flex:none;margin:0}.pc .pc-rt-category>button{min-width:max-content}}
+
+.pc-dialog.pc-batch-dialog { width: min(960px, calc(100vw - 32px)); }
+.pc-batch-preview { max-height: 52dvh; overflow: auto; }
+.pc-batch-preview thead { position: sticky; top: 0; background: var(--card, white); }
+.pc-batch-preview td { white-space: nowrap; }

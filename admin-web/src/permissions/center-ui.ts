@@ -1,5 +1,5 @@
-import {renderRoleTree,visibleRoleTree} from './center-role-tree';
-import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch} from './center-role-tree-model';
+import {renderRoleTree,visibleRoleTree,treeChoices} from './center-role-tree';
+import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
 import {openCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
@@ -237,10 +237,14 @@ export function bindCenterPage(): void {
         if(b.hasAttribute('data-role-tree-batch')){
           const nodes=roleSelectionTargets(treeNodes).filter(n=>roleTree.selected.has(n.id));
           const mode=(root.querySelector<HTMLSelectElement>('[data-role-tree-batch-mode]')?.value??'read') as Access;
-          const targets=nodes.filter(n=>mode!=='edit'||['page','setting','object'].includes(n.kind));
-          if(!targets.length)throw Error('勾选项不支持所选权限状态');
-          const label=mode==='hidden'?'不可见':mode==='read'?'可见不可编辑（目录、内容设为可见）':'可编辑';
-          modal('批量设置权限',`<p>将已勾选的 ${targets.length} 项设为${label}。独立操作保持原配置。</p><ul>${targets.map(n=>`<li>${esc(roleTreePath(treeNodes,n.id))}</li>`).join('')}</ul>`,()=>{if(applyTreeBatch(catalog,role()!,targets,mode))mark();roleTree.selected.clear();render();return true;},'确认应用');return;
+          const original=role()!;
+          const candidate=structuredClone(original);
+          if(!applyTreeBatch(catalog,candidate,nodes,mode))throw Error('所选项目已是目标权限');
+          const changes=roleSelectionTargets(treeNodes).filter(node=>treeChanged(catalog,candidate,original,node));
+          const label=(node:typeof changes[number],subject:Role)=>treeChoices(node).find(([value])=>value===treeSelection(catalog,subject,node))?.[1]??'—';
+          const rows=changes.map(node=>`<tr><th scope="row">${esc(roleTreePath(treeNodes,node.id))}</th><td>${esc(label(node,original))}</td><td>${esc(label(node,candidate))}</td></tr>`).join('');
+          const confirmation=modal('批量设置权限',`<p>涉及 ${changes.length} 项配置。目录和内容最高设为可见，独立操作需单独授权。</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${rows}</tbody></table></div>`,()=>{if(applyTreeBatch(catalog,role()!,nodes,mode))mark();roleTree.selected.clear();render();return true;},'确认应用');
+          confirmation.classList.add('pc-batch-dialog');return;
         }
       }
       if(roleView && !(b.dataset.page||b.dataset.group||['back','preview'].includes(b.dataset.do??'')))return;
