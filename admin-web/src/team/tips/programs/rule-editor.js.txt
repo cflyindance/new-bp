@@ -4173,13 +4173,32 @@ var poolSalesDeductions = {};
       });
     }
 
-    function calcTotal() {
-      let total = 0;
+    function receiverPercentTotal() {
+      var total = 0;
       document.querySelectorAll('#receiverTableBody tr.receiver-primary-row input[type="number"]').forEach(function(input) {
-        total += parseFloat(input.value) || 0;
+        var value = Number(input.value);
+        if (Number.isFinite(value)) total += value;
       });
+      return Math.round(total * 100000000) / 100000000;
+    }
+    function setReceiverPercentError(message) {
+      var error = document.getElementById('receiverPercentError');
+      if (error) { error.textContent = message; error.hidden = !message; }
+    }
+    function validateReceiverPercent(input, saving) {
+      var total = receiverPercentTotal();
+      var message = input && Number(input.value) > 100 ? '接收方占比不能大于100%' :
+        (total > 100 ? '接收方占比合计不能大于100%，当前为' + total + '%' :
+        (saving && total !== 100 ? '接收方占比合计必须等于100%，当前为' + total + '%' : ''));
+      setReceiverPercentError(message || (total !== 100 ? '接收方占比合计必须等于100%，当前为' + total + '%' : ''));
+      if (message) showNotification(message, 'error');
+      return !message;
+    }
+    function calcTotal() {
+      var total = receiverPercentTotal();
       document.getElementById('totalPercent').textContent = total;
       document.getElementById('totalPercent').style.color = total === 100 ? 'var(--success)' : 'var(--danger)';
+      setReceiverPercentError(total === 100 ? '' : '接收方占比合计必须等于100%，当前为' + total + '%');
     }
 
     function toggleWeightBtn(show) {
@@ -5046,6 +5065,7 @@ var poolSalesDeductions = {};
           showNotification(tipTerm('请至少添加一条小费池接收方规则（角色、占比均需填写）'), 'error');
           return;
         }
+        if (!validateReceiverPercent(null, true)) return;
         var condErr = null;
         document.querySelectorAll('.pool-rule-card[data-rule-id]').forEach(function(card) {
           var ruleId = card.dataset.ruleId;
@@ -5259,7 +5279,14 @@ var poolSalesDeductions = {};
         initPoolKindFromParams(params, false);
       }
       syncRuleEditorContext();
+      calcTotal();
     })();
+
+    document.addEventListener('focusout', function(event) {
+      if (event.target && event.target.matches('#receiverTableBody tr.receiver-primary-row input[type="number"]')) {
+        validateReceiverPercent(event.target, false);
+      }
+    });
 
     document.addEventListener('input', function(event) {
       if (event.target && event.target.matches('#ruleName')) syncRuleEditorContext();
