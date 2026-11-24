@@ -61,3 +61,31 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   .bd-flow-header .standalone-page-actions{min-width:0;min-height:44px}
   .bd-flow-header .standalone-page-actions :is(a,button){min-height:44px;padding-inline:8px;white-space:normal;text-align:center}
 }
+
+header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-template-areas:"heading progress actions" "meter meter meter";row-gap:12px}
+.bd-flow-meter{grid-area:meter;height:4px;width:100%;border-radius:4px;background:var(--muted);overflow:hidden}
+.bd-flow-meter i{display:block;height:100%;background:#1677ff}
+.bd-plan-form .bd-choice-help .bd-choice{min-height:76px;gap:12px;padding-inline-start:16px;font-weight:600;cursor:pointer}
+.bd-plan-form .bd-choice:has(:checked){color:#1677ff;background:#1677ff0d}
+.bd-choice-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:var(--muted);font-size:20px}
+.bd-choice:has(:checked) .bd-choice-icon{background:#1677ff19}
+.bd-store-form{display:grid;gap:16px}
+.bd-store-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,320px);gap:16px}
+.bd-store-catalog,.bd-store-selection,.bd-store-period{min-width:0}
+.bd-store-filters{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.bd-store-filters input{flex:1;min-width:170px}
+.bd-store-table{max-height:min(52vh,520px);overflow:auto}
+.bd-store-table thead{position:sticky;top:0;z-index:1}
+.bd-store-table th:first-child,.bd-store-table td:first-child{width:48px}
+.bd .bd-store-table input[type=checkbox]{width:16px;min-height:16px;padding:0;accent-color:#1677ff}
+.bd-store-table tr[hidden]{display:none}
+.bd-store-catalog > .bd-help{margin:12px 0 0}
+.bd-picked-stores{list-style:none;padding:0;margin:0;display:grid;gap:8px;max-height:min(52vh,520px);overflow:auto}
+.bd-picked-stores li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:8px}
+.bd-picked-stores strong,.bd-picked-stores small{display:block;overflow-wrap:anywhere}
+.bd-picked-stores small{color:var(--muted-foreground)}
+.bd-store-empty{border:1px dashed var(--border);border-radius:10px;padding:40px 12px;text-align:center;color:var(--muted-foreground)}
+.bd-store-period h2 span{font-weight:400;margin-inline-start:8px}
+.bd-store-form > .bd-notice:empty{display:none}
+@media(max-width:1200px){header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-template-areas:"heading actions" "progress progress" "meter meter"}}
+@media(max-width:860px){.bd-store-layout{grid-template-columns:1fr}}
