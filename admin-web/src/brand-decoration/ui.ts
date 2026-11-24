@@ -47,7 +47,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.innerHTML = `<div class="bd-empty" role="alert">${esc(String((error as Error).message))}</div>`;
         return;
     }
-    let channel: Channel = query.get('channel') === 'emenu' ? 'emenu' : 'kiosk', page = 'home', orientation = 'portrait', search = '', status = 'all';
+    let channel: Channel = query.get('channel') === 'emenu' ? 'emenu' : 'kiosk', page = 'home', orientation = 'portrait';
     let message = query.get('draft') === 'saved' ? '草稿已保存' : '', messageError = false, modal: HTMLElement | undefined;
     const editorId = route().startsWith(ROOT + '/pages/edit/') ? decodeURIComponent(route().split('/').pop()!) : undefined;
     const scheme = () => data.schemes.find(s => s.id === editorId && (!flow || s.rules?.storeIds.every(id => scope.stores.some(store => store.id === id))));
@@ -186,7 +186,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         return true;
     }
 
-    const planUrl = (id: string, step = '') => `#${ROOT}/pages/edit/${id}?flow=1&channel=${channel}${step ? '&step=' + step : ''}`;
+    const planUrl = (id: string, step = '', targetChannel = channel) => `#${ROOT}/pages/edit/${id}?flow=1&channel=${targetChannel}${step ? '&step=' + step : ''}`;
     const returnAfterDraft = (target: Channel) => { location.hash = `${ROOT}/pages?channel=${target}&draft=saved`; };
     const draftButton = (form?: string) => form
         ? `<button class="bd-draft-action" type="submit" form="${form}" name="destination" value="draft" formnovalidate>保存草稿</button>`
@@ -512,24 +512,54 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             </div>${inherited ? `<p class="bd-help">本页沿用门店日常装修 · ${esc(previewPage(s).name)}</p>` : ''}
             <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
     }
+    type ListFilters = { channel: string; kind: string; name: string; published: string };
+    const emptyListFilters = (): ListFilters => ({ channel: '', kind: '', name: '', published: '' });
+    const listFilterKey = 'menusifu:brand-decoration:filters:' + dataKey;
+    let listFilters = emptyListFilters();
+    try { listFilters = { ...listFilters, ...JSON.parse(sessionStorage.getItem(listFilterKey) ?? '{}') }; }
+    catch { /* Use the default filters when browser storage is unavailable. */ }
+    const listToolbar = (legacyList = false) => {
+        const options = (items: [string, string][], value: string) => items.map(([id, title]) =>
+            `<option value="${id}" ${value === id ? 'selected' : ''}>${title}</option>`).join('');
+        return `<form class="bd-toolbar" data-bd-list-filters>
+            <label>方案名称<input type="search" name="name" maxlength="40" placeholder="搜索方案名称" value="${esc(listFilters.name)}"></label>
+            <label>产线<select name="channel">${options([['','全部产线'],['kiosk','Kiosk 自助点餐'],['emenu','eMenu 电子菜单']], listFilters.channel)}</select></label>
+            ${legacyList ? '' : `<label>使用方式<select name="kind">${options([['','全部方式'],['default','日常装修'],['activity','限时装修']], listFilters.kind)}</select></label>`}
+            <label>发布状态<select name="published">${options([['','全部状态'],['draft','未发布'],['published','有发布版本']], listFilters.published)}</select></label>
+            <button type="submit" class="bd-primary">查询</button><button type="button" data-bd-action="reset-plan-filters">重置</button>
+        </form>`;
+    };
+    const matchesList = (s: Scheme, published: boolean, rules = s.rules) =>
+        (!listFilters.channel || s.channel === listFilters.channel) &&
+        (!listFilters.kind || rules?.kind === listFilters.kind) &&
+        (!listFilters.published || published === (listFilters.published === 'published')) &&
+        s.name.toLowerCase().includes(listFilters.name.toLowerCase());
+    function applyListFilters(filters: ListFilters) {
+        listFilters = filters;
+        try { sessionStorage.setItem(listFilterKey, JSON.stringify(filters)); } catch { /* Keep filters for this view. */ }
+        draw();
+    }
     function drawPlanList() {
-        const plans = data.schemes.filter(item => item.rules && item.channel === channel &&
-            item.rules.storeIds.every(id => scope.stores.some(store => store.id === id)));
         const releases = latestPlanReleases(data);
+        const plans = data.schemes.flatMap(item => {
+            if (!item.rules || !item.rules.storeIds.every(id => scope.stores.some(store => store.id === id))) return [];
+            const release = releases.find(record => record.snapshot.id === item.id);
+            const rules = release?.rules ?? item.rules;
+            if (!rules.storeIds.every(id => scope.stores.some(store => store.id === id)) || !matchesList(item, !!release, rules)) return [];
+            return [{ item, release, rules }];
+        });
         root.innerHTML = heading('页面装修', '管理各门店的日常装修和限时装修。',
-            `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new')}">新建装修方案</a>` : ''}`) + tip() + channelTabs() +
+            `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new', '', listFilters.channel === 'emenu' ? 'emenu' : listFilters.channel === 'kiosk' ? 'kiosk' : channel)}">新建装修方案</a>` : ''}`) + tip() + listToolbar() +
             `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>使用方式</th><th>渠道</th><th>适用门店</th><th>生效时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
-            ${plans.map(item => {
-                const release = releases.find(record => record.snapshot.id === item.id);
-                const rules = release?.rules ?? item.rules!;
+            ${plans.map(({ item, release, rules }) => {
                 const now = Date.now();
-                const activeStores = rules.storeIds.filter(id => planAt(data, id, channel, now).fallback?.snapshot.id === item.id);
+                const activeStores = rules.storeIds.filter(id => planAt(data, id, item.channel, now).fallback?.snapshot.id === item.id);
                 const state = !release ? '草稿' : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${label(channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id, scope.canWrite ? resumeStep(item) : '')}">${scope.canWrite ? (!release || item.draftStep ? '继续草稿' : '装修') : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview')}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
-            }).join('') || '<tr><td colspan="7" class="bd-empty">暂无装修方案</td></tr>'}
-            </tbody></table></div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
+                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${label(item.channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id, scope.canWrite ? resumeStep(item) : '', item.channel)}">${scope.canWrite ? (!release || item.draftStep ? '继续草稿' : '装修') : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
+            }).join('') || '<tr><td colspan="7" class="bd-empty">没有符合条件的装修方案</td></tr>'}
+            </tbody></table></div><div class="bd-pagination">共 ${plans.length} 个方案</div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
     }
 
     function legacyForStore(id: string) {
@@ -623,8 +653,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             return;
         }
         if (!legacy) { drawPlanList(); return; }
-        const schemes = data.schemes.filter(s => s.channel === channel && s.name.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || (status === 'published' ? data.releases.some(r => r.snapshot.id === s.id) : !data.releases.some(r => r.snapshot.id === s.id))));
-        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
+        const schemes = data.schemes.filter(s => matchesList(s, data.releases.some(r => r.snapshot.id === s.id)));
+        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + listToolbar(true) + `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
     function drawEditor() {
         const s = scheme();
@@ -694,23 +724,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             previewAt = undefined;
             page = 'home';
             channel = el.dataset.value as Channel;
-            search = '';
-            status = 'all';
             draw();
             return;
         }
-        if (action === 'filter') {
-            search = (root.querySelector('[data-bd-filter="search"]') as HTMLInputElement).value.trim();
-            status = (root.querySelector('[data-bd-filter="status"]') as HTMLSelectElement).value;
-            draw();
-            return;
-        }
-        if (action === 'reset') {
-            search = '';
-            status = 'all';
-            draw();
-            return;
-        }
+        if (action === 'reset-plan-filters') { applyListFilters(emptyListFilters()); return; }
         if (action === 'create' && legacy) {
             const html = `<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-create-title"><button class="bd-modal-backdrop" data-bd-modal-close tabindex="-1" aria-label="取消新建"></button><section class="bd-modal-panel"><header><button data-bd-modal-close aria-label="取消新建">×</button><h2 id="bd-create-title">新建${channel === 'kiosk' ? ' Kiosk' : ' eMenu'}方案</h2><button class="bd-primary" data-bd-modal-confirm>创建方案</button></header><form data-bd-create><label>方案名称<input name="name" required maxlength="40" placeholder="例如：冬季品牌方案"></label><p class="bd-help">创建 ${pages(channel).length} 个默认页面，后续可逐页切换自定义装修。</p><p data-bd-form-error role="alert"></p></form></section></div>`;
             openModal(html, () => { const input = modal!.querySelector<HTMLInputElement>('[name="name"]')!; if (!input.reportValidity())
@@ -863,10 +880,23 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         lastActive = activeId;
         draw();
     }, 1000);
+    const filterSubmit = (event: SubmitEvent) => {
+        const form = event.target as HTMLFormElement;
+        if (!form.matches('[data-bd-list-filters]')) return;
+        event.preventDefault();
+        const fields = new FormData(form);
+        applyListFilters({
+            name: String(fields.get('name') ?? '').trim(),
+            channel: String(fields.get('channel') ?? ''),
+            kind: String(fields.get('kind') ?? ''),
+            published: String(fields.get('published') ?? ''),
+        });
+    };
+    root.addEventListener('submit', filterSubmit);
     root.addEventListener('click', click);
     root.addEventListener('change', change);
     window.addEventListener('message', frameMessage);
     window.addEventListener('storage', storage);
-    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('click', click); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
+    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
     draw();
 }
