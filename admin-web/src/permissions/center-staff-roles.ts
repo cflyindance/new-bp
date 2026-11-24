@@ -1,4 +1,4 @@
-import {scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
+import {bindingAppliesToStore,scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
 import {esc} from './center-editor';
 
 const isUnconfiguredScope=(scope:Scope):boolean=>scope.mode==='stores'&&scope.ids.length===0;
@@ -6,7 +6,7 @@ export const scopeLabel=(scope:Scope):string=>scope.mode==='stores'?(isUnconfigu
 export const bindingStores=(scope:Scope,stores:Store[]):Store[]=>stores.filter(s=>scopeMatches(scope,s));
 export function applicableRoles(employee:Employee,roles:Role[],store:Store|undefined):Role[]{
   if(!store)return [];
-  const ids=new Set(employee.bindings.filter(b=>scopeMatches(b.scope,store)).map(b=>b.roleId));
+  const ids=new Set(employee.bindings.filter(b=>bindingAppliesToStore(employee,b,store)).map(b=>b.roleId));
   return roles.filter(r=>ids.has(r.id));
 }
 /** Preserve unmatched stored IDs; reading or viewing never repairs authorization. */
@@ -29,10 +29,15 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
       <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${isUnconfiguredScope(binding.scope)?'':renderScope(binding.scope,stores,false,binding.id)}</td>
       <td><div class="pc-actions">
         <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
-        <button type="button" data-edit-binding="${id}">修改角色授权范围</button>
+        <button type="button" data-view-binding-stores="${id}">查看角色授权范围</button>
         <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>
       </div></td></tr>`;
   }).join('');
+  const supplements=(employee.supplementalStoreGrants??[]).map((grant,index)=>`<tr>
+    <td>${esc(stores.find(store=>store.id===grant.storeId)?.title??'已失效门店')} <small>${esc(grant.storeId)}</small></td>
+    <td>${esc(roles.find(role=>role.id===grant.roleId)?.name??'已失效角色')}</td>
+    <td><button type="button" class="danger" data-remove-store-supplement="${index}">移除</button></td>
+  </tr>`).join('');
   return `<section class="pc-card" data-staff-roles>
     <div class="pc-toolbar">
       <div class="pc-staff-authorization-identity">
@@ -45,6 +50,9 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
     ${employee.migrationReview?'<p class="pc-notice">旧授权范围需复核：请明确门店范围后重新分配，旧数据未删除。</p>':''}
     <table class="pc-role-bindings"><thead><tr><th>角色</th><th>授权范围</th><th>操作</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="3" class="pc-empty">该员工尚未分配角色</td></tr>'}</tbody></table>
+  </section><section class="pc-card" data-account-store-scope>
+    <div class="pc-toolbar"><h2>补充门店授权</h2><button type="button" data-do="add-store-supplement" ${employee.bindings.some(binding=>roles.some(role=>role.id===binding.roleId))?'':'disabled'}>添加门店</button></div>
+    ${supplements?`<table><thead><tr><th>门店</th><th>适用角色</th><th>操作</th></tr></thead><tbody>${supplements}</tbody></table>`:'<p class="pc-muted">暂无补充门店，当前按角色授权访问。</p>'}
   </section>`;
 }
 /** Atomically replace only this binding's scope. Equivalent sets are a no-op. */

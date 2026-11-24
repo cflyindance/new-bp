@@ -33,7 +33,7 @@ function storeTable(stores:Store[],selected:Set<string>,query:string,selectedOnl
 }
 
 /** Controller owns transient scope choices; read() is the only submission boundary. */
-export function bindScopePicker(dialog:HTMLDialogElement,initial:Scope,stores:Store[],names:ScopeBrand[],options:{allowEmptyStores?:boolean;defaultStoreIds?:string[]}={}):()=>Scope {
+export function bindScopePicker(dialog:HTMLDialogElement,initial:Scope,stores:Store[],names:ScopeBrand[],options:{allowEmptyStores?:boolean}={}):()=>Scope {
   const select=dialog.querySelector<HTMLSelectElement>('[name="mode"]')!;
   const area=dialog.querySelector<HTMLElement>('[data-scope-options]')!;
   const choices=new Map<ScopePickerMode,Set<string>>([[initial.mode,new Set(initial.ids)]]);
@@ -83,14 +83,6 @@ export function bindScopePicker(dialog:HTMLDialogElement,initial:Scope,stores:St
     for(const box of area.querySelectorAll<HTMLInputElement>('[data-scope-brand]'))box.indeterminate=brands.state(box.dataset.scopeBrand!)==='partial';
     syncTable();
   };
-  dialog.querySelector('[data-apply-role-default-stores]')?.addEventListener('click',()=>{
-    mode='stores';
-    select.value=mode;
-    choices.set(mode,new Set(options.defaultStoreIds));
-    storeSearch='';
-    selectedOnly=false;
-    render();
-  });
   select.addEventListener('change',()=>{remember();mode=select.value as ScopePickerMode;storeSearch='';selectedOnly=false;render();});
   area.addEventListener('click',ev=>{const button=(ev.target as Element).closest<HTMLButtonElement>('[data-open-brand]');if(!button)return;brands.activate(button.dataset.openBrand!);storeSearch='';render();[...area.querySelectorAll<HTMLButtonElement>('[data-open-brand]')].find(b=>b.dataset.openBrand===brands.active)?.focus({preventScroll:true});});
   area.addEventListener('change',ev=>{

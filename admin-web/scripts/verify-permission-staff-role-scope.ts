@@ -12,7 +12,7 @@ assert(brandHtml.includes('茶语一家')&&brandHtml.includes('广州天河店')
 assert(renderScope({mode:'regions',ids:['华东']},stores).includes('动态区域：'));
 const html=renderStaffRoles(employee,roles,stores,'已启用');
 assert.match(html,/王小明/);assert.match(html,/已启用/);assert.doesNotMatch(html,/已分配角色|预设演示员工/);assert.match(html,/茶语一家/);assert.match(html,/广州天河店/);assert.match(html,/上海店/);assert.match(html,/已失效门店/);assert.match(html,/已失效角色/);
-assert.equal((html.match(/data-edit-binding=/g)??[]).length,4);assert.match(html,/data-view-role="r"/);assert.match(html,/解除角色/);assert(!html.includes('data-store'));
+assert.equal((html.match(/data-view-binding-stores=/g)??[]).length,4);assert.match(html,/data-view-role="r"/);assert.match(html,/解除角色/);assert(!html.includes('data-store'));
 assert.deepEqual(applicableRoles(employee,roles,stores[0]).map(r=>r.id),['r','ops']);assert.deepEqual(applicableRoles(employee,roles,undefined),[]);
 assert.equal(JSON.stringify(employee),before);
 assert.equal(bindingStores({mode:'brands',ids:['b']},[...stores,{id:'new',title:'未来店',brand:'b',region:'华南'}]).length,3);
@@ -22,7 +22,7 @@ assert.throws(()=>updateBindingScope(employee,'one',{mode:'stores',ids:[]}),/至
 assert.equal(updateBindingScope(employee,'one',{mode:'stores',ids:['s3']}),true);assert.equal(employee.bindings[0].id,'one');assert.equal(employee.bindings[0].roleId,'r');assert.deepEqual(employee.bindings.slice(1),JSON.parse(before).bindings.slice(1));
 const hostile=structuredClone(employee);hostile.bindings[0].scope.ids=['<script>'];assert(!renderStaffRoles(hostile,roles,stores,'已启用').includes('<script>'));
 const long=structuredClone(employee);long.bindings[0].scope.ids=['s1','s2','s3'];assert.match(renderStaffRoles(long,roles,stores,'已启用'),/共 3 家/);
-const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('renderStaffRoles(e,draft.roles,stores,accountStatus(e))'));assert(ui.includes('员工生效权限'));assert(ui.includes('dataset.viewRole'));assert(ui.includes('dataset.editBinding'));assert(ui.includes('保存员工详情后生效'));
+const ui=readFileSync('src/permissions/center-ui.ts','utf8');assert(ui.includes('renderStaffRoles(e,draft.roles,stores,accountStatus(e))'));assert(ui.includes('员工生效权限'));assert(ui.includes('dataset.viewRole'));assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes('add-store-supplement'));
 console.log('PASS staff role scope: all bindings, named stores, dynamic scope, lost references, safe no-op/atomic edit, readonly role entry, separated store filter');
 
 const longHtml=renderStaffRoles(long,roles,stores,'已启用');
@@ -32,5 +32,5 @@ assert(fullScope.includes('上海店')&&fullScope.includes('已失效门店'));a
 const {scopeStoreItems}=await import('../src/permissions/center-staff-roles');
 assert.equal(scopeStoreItems({mode:'brands',ids:['b','c']},stores).length,3);
 assert.equal(scopeStoreItems({mode:'stores',ids:['s1','missing']},stores).length,2);
-assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes("modal('授权门店'"));
+assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes("modal('查看角色授权范围'"));
 console.log('PASS: scope preview button, full dialog items, dynamic and invalid store counts');

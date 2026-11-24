@@ -224,3 +224,6 @@
 .pc .pc-staff-authorization-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .pc .pc-staff-authorization-identity strong { font-size: 22px; font-weight: 650; overflow-wrap: anywhere; }
 .pc .pc-staff-authorization-identity .pc-tag { margin: 0; }
+
+.pc .pc-staff-authorization [data-account-store-scope] { margin: 16px 0 0; }
+.pc .pc-staff-authorization [data-account-store-scope] .pc-scope-list { margin-top: 10px; }

@@ -56,6 +56,12 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
           add('角色授权',name+' → 授权范围',scopeItems(x),scopeItems(y));
         }
       }
+    }else if(key==='supplementalStoreGrants'&&!isRole){
+      const supplementalItems=(values:unknown):Item[]=>Array.isArray(values)?values.map(value=>{
+        const grant=object(value),storeId=String(grant.storeId),roleId=String(grant.roleId);
+        return {key:JSON.stringify([roleId,storeId]),text:`${ctx.stores.find(store=>store.id===storeId)?.title??missing(storeId)} · ${roleName(roleId)}`};
+      }):[];
+      add('角色授权','补充门店授权',supplementalItems(a[key]),supplementalItems(b[key]));
     }else if(key==='defaultStoreIds'&&isRole){
       add('角色资料','默认授权门店',scopeItems({mode:'stores',ids:a[key]}),scopeItems({mode:'stores',ids:b[key]}));
     }else if(key==='readonlyChildren'){
