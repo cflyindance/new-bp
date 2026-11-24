@@ -184,22 +184,6 @@
 .pc .pc-staff-summary { display:grid; gap:8px; }
 .pc .pc-staff-summary li { display:flex; flex-wrap:wrap; gap:12px; }
 
-.pc .pc-full > .pc-staff-detail-heading {
-  margin: 18px 0 0;
-  padding: 20px 24px;
-  border: 1px solid var(--pc-line);
-  border-radius: 16px 16px 0 0;
-  border-bottom: 0;
-  background: color-mix(in srgb, var(--color-primary, #245de3) 7%, var(--color-card, white));
-}
-.pc .pc-staff-tabs {
-  flex: none;
-  --brand-detail-blue: #1677ff;
-  background: var(--color-card, white);
-  border: 1px solid var(--pc-line);
-  border-top: 0;
-  border-radius: 0 0 16px 16px;
-}
 .pc .pc-staff-security-panel dl {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
