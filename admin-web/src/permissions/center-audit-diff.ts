@@ -56,14 +56,10 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
           add('角色授权',name+' → 授权范围',scopeItems(x),scopeItems(y));
         }
       }
-    }else if(key==='supplementalStoreGrants'&&!isRole){
-      const supplementalItems=(values:unknown):Item[]=>Array.isArray(values)?values.map(value=>{
-        const grant=object(value),storeId=String(grant.storeId),roleId=String(grant.roleId);
-        return {key:JSON.stringify([roleId,storeId]),text:`${ctx.stores.find(store=>store.id===storeId)?.title??missing(storeId)} · ${roleName(roleId)}`};
-      }):[];
-      add('角色授权','额外授权门店',supplementalItems(a[key]),supplementalItems(b[key]));
+    }else if(key==='extraStoreIds'||key==='supplementalStoreGrants'){
+      continue;
     }else if(key==='defaultStoreIds'&&isRole){
-      add('角色资料','默认授权门店',scopeItems({mode:'stores',ids:a[key]}),scopeItems({mode:'stores',ids:b[key]}));
+      add('角色资料','授权门店',scopeItems({mode:'stores',ids:a[key]}),scopeItems({mode:'stores',ids:b[key]}));
     }else if(key==='readonlyChildren'){
       const left=object(a[key]),right=object(b[key]);
       for(const parent of new Set([...Object.keys(left),...Object.keys(right)]))scalar('新增子项默认权限',resourceName(parent),left[parent]?'可见不可编辑；操作默认禁止':undefined,right[parent]?'可见不可编辑；操作默认禁止':undefined);
@@ -72,6 +68,10 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
       const left=object(a[key]),right=object(b[key]);
       for(const id of new Set([...Object.keys(left),...Object.keys(right)]))grants(object(left[id]),object(right[id]),'个人例外',(ctx.stores.find(s=>s.id===id)?.title??missing(id))+' → ');
     }else scalar(isRole?'角色资料':'账号资料',key==='name'&&isRole?'角色名称':labels[key]??`其他字段（${key}）`,a[key],b[key],key==='status');
+  }
+  if(!isRole){
+    const extraIds=(employee:Record<string,unknown>)=>employee.extraStoreIds??(Array.isArray(employee.supplementalStoreGrants)?employee.supplementalStoreGrants.map(value=>object(value).storeId):[]);
+    add('账号资料','额外授权门店',scopeItems({mode:'stores',ids:extraIds(a)}),scopeItems({mode:'stores',ids:extraIds(b)}));
   }
   const name=String(b.name??a.name??ctx.state.employees.find(e=>e.id===log.objectId)?.name??ctx.state.roles.find(r=>r.id===log.objectId)?.name??missing(log.objectId));
   const cell=(values:Item[],other:Item[],kind:'added'|'removed')=>values.length?`<ul class="pc-audit-values">${values.map(v=>{const changed=!other.some(x=>x.key===v.key);return `<li${changed?` class="pc-audit-${kind}"`:''}>${escape(v.text)}${changed?` <span class="pc-audit-badge">${kind==='added'?'新增':'移除'}</span>`:''}</li>`;}).join('')}</ul>`:'<span class="pc-muted">无</span>';

@@ -1,4 +1,4 @@
-import {bindingAppliesToStore,scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
+import {accountExtraStoreIds,roleBindingScope,scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
 import {esc} from './center-editor';
 
 const isUnconfiguredScope=(scope:Scope):boolean=>scope.mode==='stores'&&scope.ids.length===0;
@@ -6,7 +6,7 @@ export const scopeLabel=(scope:Scope):string=>scope.mode==='stores'?(isUnconfigu
 export const bindingStores=(scope:Scope,stores:Store[]):Store[]=>stores.filter(s=>scopeMatches(scope,s));
 export function applicableRoles(employee:Employee,roles:Role[],store:Store|undefined):Role[]{
   if(!store)return [];
-  const ids=new Set(employee.bindings.filter(b=>bindingAppliesToStore(employee,b,store)).map(b=>b.roleId));
+  const ids=new Set(employee.bindings.filter(b=>scopeMatches(roleBindingScope(b,roles.find(role=>role.id===b.roleId)),store)).map(b=>b.roleId));
   return roles.filter(r=>ids.has(r.id));
 }
 /** Preserve unmatched stored IDs; reading or viewing never repairs authorization. */
@@ -17,27 +17,32 @@ export function renderScope(scope:Scope,stores:Store[],expanded=false,bindingId=
   const item=(s:{id:string;title:string})=>`<span class="pc-store-name">${esc(s.title)}<small>${esc(s.id)}</small></span>`;
   const list=items.map(item);
   const dynamic=scope.mode!=='regions'?'':`<p class="pc-muted">${scopeLabel(scope)}：${esc(scope.ids.join('、'))}；包括未来新增或纳入的门店。</p>`;
-  const shown=expanded||list.length<=2||!bindingId?list.join(''):list.slice(0,2).join('')+`<button type="button" class="pc-scope-more" data-view-binding-stores="${esc(bindingId)}">共 ${list.length} 家，查看全部</button>`;
+  const shown=expanded||!list.length||!bindingId?list.join(''):list.slice(0,2).join('')+`<button type="button" class="pc-scope-more" data-view-binding-stores="${esc(bindingId)}">共 ${list.length} 家，查看全部</button>`;
   return `<div class="pc-scope-list">${shown||'<span class="pc-muted">当前无匹配门店</span>'}</div>${dynamic}`;
 }
 export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],accountStatus:string):string {
   const rows=employee.bindings.map(binding=>{
     const role=roles.find(item=>item.id===binding.roleId);
+    const scope=roleBindingScope(binding,role);
     const roleName=esc(role?.name??'已失效角色');
     const id=esc(binding.id);
     return `<tr><td><strong>${roleName}</strong></td>
-      <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${isUnconfiguredScope(binding.scope)?'':renderScope(binding.scope,stores,false,binding.id)}</td>
+      <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(scope))}</span>${isUnconfiguredScope(scope)?'':renderScope(scope,stores,false,binding.id)}</td>
       <td><div class="pc-actions">
         <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
-        <button type="button" data-view-binding-stores="${id}">查看角色授权门店</button>
         <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>
       </div></td></tr>`;
   }).join('');
-  const supplements=(employee.supplementalStoreGrants??[]).map((grant,index)=>`<tr>
-    <td>${esc(stores.find(store=>store.id===grant.storeId)?.title??'已失效门店')} <small>${esc(grant.storeId)}</small></td>
-    <td>${esc(roles.find(role=>role.id===grant.roleId)?.name??'已失效角色')}</td>
-    <td><button type="button" class="danger" data-remove-store-supplement="${index}">移除</button></td>
-  </tr>`).join('');
+  const extras=accountExtraStoreIds(employee).map(id=>{
+    const store=stores.find(row=>row.id===id);
+    const name=store?.title??'已失效门店';
+    return `<tr><td><input type="checkbox" data-extra-store-selection value="${esc(id)}" aria-label="选择 ${esc(name)}"></td>
+      <td>${esc(name)} <small>${esc(id)}</small></td>
+      <td>${esc(store?.address?.trim()||'—')}</td>
+      <td>${esc(store?.postalCode?.trim()||'—')}</td>
+      <td><button type="button" class="danger" data-remove-extra-store="${esc(id)}">移除</button></td>
+    </tr>`;
+  }).join('');
   return `<section class="pc-card" data-staff-roles>
     <div class="pc-toolbar">
       <div class="pc-staff-authorization-identity">
@@ -51,8 +56,8 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
     <table class="pc-role-bindings"><thead><tr><th>角色</th><th>授权范围</th><th>操作</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="3" class="pc-empty">该员工尚未分配角色</td></tr>'}</tbody></table>
   </section><section class="pc-card" data-account-store-scope>
-    <div class="pc-toolbar"><h2>额外授权门店</h2><button type="button" data-do="add-store-supplement" ${employee.bindings.some(binding=>roles.some(role=>role.id===binding.roleId))?'':'disabled'}>添加门店</button></div>
-    ${supplements?`<table><thead><tr><th>门店</th><th>适用角色</th><th>操作</th></tr></thead><tbody>${supplements}</tbody></table>`:'<p class="pc-muted">暂无额外授权门店，当前按角色授权访问。</p>'}
+    <div class="pc-toolbar"><h2>额外授权门店</h2><div class="pc-actions"><button type="button" data-do="remove-extra-stores" disabled>批量移除</button><button type="button" data-do="add-store-supplement">添加门店</button></div></div>
+    ${extras?`<table><thead><tr><th><input type="checkbox" data-extra-store-all aria-label="全选额外授权门店"></th><th>门店</th><th>地址</th><th>邮编</th><th>操作</th></tr></thead><tbody>${extras}</tbody></table>`:'<p class="pc-muted">暂无额外授权门店，当前按角色授权访问。</p>'}
   </section>`;
 }
 /** Atomically replace only this binding's scope. Equivalent sets are a no-op. */

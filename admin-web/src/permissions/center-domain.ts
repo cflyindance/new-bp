@@ -30,7 +30,7 @@ export interface Role { id: string; name: string; description: string; system: b
 export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants?:string[];defaultStoreIds?:string[]}
 export interface Resource {readonlyAllowed?:boolean; editRequires?:string[]}
 export interface Binding { id: string; roleId: string; scope: Scope }
-export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean; supplementalStoreGrants?: {roleId:string;storeId:string}[] }
+export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean; extraStoreIds?: string[]; supplementalStoreGrants?: {roleId:string;storeId:string}[] }
 export interface Audit { source?:'demo'; id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
 export interface CenterState { schema: 1; navigationVersion?: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
 export interface CenterState {employeeAuthorization?:'roles-only'}
@@ -47,8 +47,17 @@ function pageGrantFallback(resource:Resource,own:(key:string)=>Access|undefined)
 function treePageCeiling(resource:Resource,role:Role):boolean {
   return !!resource.aggregateRelatedGrants&&!!role.readonlyChildren?.[resource.key.replace(/^setting-page:/,'')];
 }
-export function bindingAppliesToStore(employee:Employee,binding:Binding,store:Store):boolean {
-  return scopeMatches(binding.scope,store)||!!employee.supplementalStoreGrants?.some(grant=>grant.roleId===binding.roleId&&grant.storeId===store.id);
+export function accountExtraStoreIds(employee:Employee):string[] {
+  return [...new Set(employee.extraStoreIds??employee.supplementalStoreGrants?.map(grant=>grant.storeId)??[])];
+}
+export function roleBindingScope(binding:Binding,role:Role|undefined):Scope {
+  return role?.defaultStoreIds===undefined?binding.scope:{mode:'stores',ids:role.defaultStoreIds};
+}
+export function accessibleEmployeeStores(employee:Employee,roles:Role[],stores:Store[]):Store[] {
+  const extras=new Set(accountExtraStoreIds(employee));
+  const validRoles=new Set(roles.map(role=>role.id));
+  const bindings=employee.bindings.filter(binding=>validRoles.has(binding.roleId));
+  return stores.filter(store=>extras.has(store.id)||bindings.some(binding=>scopeMatches(roleBindingScope(binding,roles.find(role=>role.id===binding.roleId)),store)));
 }
 export function scopeMatches(scope: Scope, store: Store): boolean {
   return scope.ids.includes(scope.mode === "stores" ? store.id : scope.mode === "brands" ? store.brand : store.region);
@@ -79,7 +88,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
     if(target.parentChoiceKey&&employee.overrides[storeId]?.[target.parentChoiceKey]==='read')return undefined;
     const override=employee.overrides[storeId]?.[k];if(override!==undefined)return override;
     if(k.startsWith('setting-parent-choice:'))return undefined;
-    let value:Access|undefined;for(const binding of employee.bindings)if(bindingAppliesToStore(employee,binding,store)){
+    let value:Access|undefined;for(const binding of employee.bindings)if(scopeMatches(roleBindingScope(binding,state.roles.find(role=>role.id===binding.roleId)),store)){
       const role=state.roles.find(r=>r.id===binding.roleId);if(!role)continue;
       const explicit=target.parentChoiceKey&&role.grants[target.parentChoiceKey]==='read'?undefined:role.grants[k]??readonlyChildDefault(role,target,resources);
       const parent=target.inheritFrom?resources.get(target.inheritFrom):undefined;
@@ -89,7 +98,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if(resource.pageContentKeys&&!coreVisible(resource,resources,raw))return 'hidden';
   if(resource.type==='field'&&resource.followParentVisibility&&resource.parent)return 'read';
   const override = employee.overrides[storeId]?.[key];
-  const treeCeiling=employee.bindings.some(binding=>bindingAppliesToStore(employee,binding,store)&&state.roles.some(r=>r.id===binding.roleId&&treePageCeiling(resource,r)));
+  const treeCeiling=employee.bindings.some(binding=>scopeMatches(roleBindingScope(binding,state.roles.find(role=>role.id===binding.roleId)),store)&&state.roles.some(r=>r.id===binding.roleId&&treePageCeiling(resource,r)));
   const finish=(value:Access):Access=>capAccess(resource,(treeCeiling?[]:resource.relatedGrantKeys??[]).reduce<Access>((a,k)=>{const b=resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen));return rank[a]<rank[b]?a:b;},value),k=>resolveAccess(state,employeeId,storeId,k,stores,resources,new Set(seen)));
   if(resource.inheritFrom&&resource.parentChoiceKey&&employee.overrides[storeId]?.[resource.parentChoiceKey]==='read')return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   if (override !== undefined) return finish(validAccess(resource,override));
@@ -100,7 +109,7 @@ export function resolveAccess(state: CenterState, employeeId: string, storeId: s
   if(resource.inheritFrom&&raw(key)===undefined)return finish(resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)));
   let value: Access = "hidden";
   for (const binding of employee.bindings) {
-    if (!bindingAppliesToStore(employee,binding,store)) continue;
+    if (!scopeMatches(roleBindingScope(binding,state.roles.find(role=>role.id===binding.roleId)),store)) continue;
     const role = state.roles.find(r => r.id === binding.roleId);
     // Union applicable roles first. Ancestor gates use the same effective union above.
     const inherited=resource.inheritFrom?resolveAccess(state,employeeId,storeId,resource.inheritFrom,stores,resources,new Set(seen)):resource.defaultAccess??(role?pageGrantFallback(resource,k=>role.grants[k]):undefined);
