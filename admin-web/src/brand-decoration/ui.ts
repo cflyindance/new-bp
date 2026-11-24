@@ -261,36 +261,54 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         });
     }
 
+    const previewRoute = query.get('step') === 'preview';
     let previewStore = '';
-    let planPreviewAt: number | undefined;
-    let planPreviewOpen = false;
-    function planPreviewScheme() {
-        const at = planPreviewAt ?? Date.now();
-        const { active, fallback } = planAt(data, previewStore, channel, at);
-        const legacy = resolveSchedule(legacyForStore(previewStore), channel, at);
-        return (active?.rules.pageIds.includes(page) ? active.snapshot : undefined) ??
-            (!active && legacy.active?.pageIds.includes(page) ? legacy.activeRelease?.snapshot : undefined) ??
-            fallback?.snapshot ?? legacy.fallback?.snapshot ?? newScheme(channel, '项目原生样式', scope.brandName);
+    let previewDraft = false;
+    function previewRelease(s: Scheme) {
+        if (!flow) return data.releases.find(record => record.snapshot.id === s.id);
+        return latestPlanReleases(data).find(record => record.snapshot.id === s.id &&
+            record.rules.storeIds.every(id => scope.stores.some(store => store.id === id)));
     }
-    function drawPlanPreview() {
-        if (!planPreviewOpen || !scope.stores.length) return '';
-        const store = scope.stores.find(item => item.id === previewStore) ?? scope.stores[0];
-        previewStore = store.id;
-        const zone = store.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-        return `<section class="bd-card bd-schedule"><h2>门店效果预览</h2><div class="bd-toolbar">
-            <label>门店<select data-bd-field="plan-store">${scope.stores.map(item => `<option value="${esc(item.id)}" ${item.id === previewStore ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}</select></label>
-            <label>预览时间（${esc(zone)}）<input type="datetime-local" data-bd-plan-time value="${planPreviewAt === undefined ? '' : formatLocal(planPreviewAt, zone)}"></label>
-            <button data-bd-action="plan-preview-time">预览</button><button data-bd-action="plan-preview-now">当前时间</button>
+    function previewVersion(s: Scheme) {
+        const release = previewRelease(s);
+        return previewDraft || !release ? s : release.snapshot;
+    }
+    function previewPage(s: Scheme, version = previewVersion(s)) {
+        const rules = version.rules;
+        if (rules?.kind !== 'activity' || rules.pageIds.includes(page)) return version;
+        const store = rules.storeIds.includes(previewStore) ? previewStore : rules.storeIds[0];
+        if (!store) return newScheme(s.channel, '项目原生样式', scope.brandName);
+        const now = Date.now();
+        return planAt(data, store, s.channel, now).fallback?.snapshot ??
+            resolveSchedule(legacyForStore(store), s.channel, now).fallback?.snapshot ??
+            newScheme(s.channel, '项目原生样式', scope.brandName);
+    }
+    function drawPlanPreview(s: Scheme) {
+        channel = s.channel;
+        const release = previewRelease(s);
+        const version = previewVersion(s);
+        const storeOptions = scope.stores.filter(store => version.rules?.storeIds.includes(store.id));
+        if (!storeOptions.some(store => store.id === previewStore)) previewStore = storeOptions[0]?.id ?? '';
+        const inherited = version.rules?.kind === 'activity' && !version.rules.pageIds.includes(page);
+        root.innerHTML = renderStandalonePageHeader({
+            titleHtml: esc(s.name) + ' · 效果预览',
+            subtitleHtml: esc(label(channel)),
+            backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? '&legacy=1' : ''}">返回方案列表</a>`,
+        }) + `<section class="bd-card bd-schedule bd-plan-preview">
+            <div class="bd-toolbar">
+            ${release ? `<label>版本<select data-bd-field="preview-version"><option value="published">已发布 · V${release.version}</option><option value="draft" ${previewDraft ? 'selected' : ''}>当前草稿</option></select></label>` : '<span class="bd-tag">草稿</span>'}
+            ${storeOptions.length ? `<label>门店<select data-bd-field="plan-store">${storeOptions.map(store => `<option value="${esc(store.id)}" ${store.id === previewStore ? 'selected' : ''}>${esc(store.name)}</option>`).join('')}</select></label>` : ''}
             <label>页面<select data-bd-field="schedule-page">${pages(channel).map(([id, title]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${title}</option>`).join('')}</select></label>
-            </div><p>页面使用方案 <strong>${esc(planPreviewScheme().name)}</strong></p>
-            <div class="bd-preview-stage"><iframe title="门店装修预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
+            ${channel === 'kiosk' ? `<label>设备方向<select data-bd-field="orientation"><option value="portrait">竖屏</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>横屏</option></select></label>` : ''}
+            </div>${inherited ? `<p class="bd-help">本页沿用门店默认装修 · ${esc(previewPage(s).name)}</p>` : ''}
+            <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
     }
     function drawPlanList() {
         const plans = data.schemes.filter(item => item.rules && item.channel === channel &&
             item.rules.storeIds.every(id => scope.stores.some(store => store.id === id)));
         const releases = latestPlanReleases(data);
         root.innerHTML = heading('页面装修', '管理各门店的默认方案和活动方案。',
-            `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new')}">新建装修方案</a>` : ''}<button data-bd-action="plan-preview-toggle">门店效果预览</button>`) + tip() + channelTabs() +
+            `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new')}">新建装修方案</a>` : ''}`) + tip() + channelTabs() +
             `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>类型</th><th>渠道</th><th>适用门店</th><th>生效时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
             ${plans.map(item => {
                 const release = releases.find(record => record.snapshot.id === item.id);
@@ -300,9 +318,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? '草稿' : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '默认使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '活动方案' : '默认方案'}</td><td>${label(channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id)}">${scope.canWrite ? '装修' : '查看'}</a></td></tr>`;
+                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '活动方案' : '默认方案'}</td><td>${label(channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id)}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview')}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
             }).join('') || '<tr><td colspan="7" class="bd-empty">暂无装修方案</td></tr>'}
-            </tbody></table></div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}${drawPlanPreview()}`;
+            </tbody></table></div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
     }
 
     function legacyForStore(id: string) {
@@ -360,6 +378,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const reviewScheme = flow && query.get('step') === 'review' ? scheme() : undefined;
         if (reviewScheme?.rules) { drawReview(reviewScheme); return; }
         if (editorId) {
+            const selected = scheme();
+            if (previewRoute && selected) { drawPlanPreview(selected); return; }
             drawEditor();
             return;
         }
@@ -378,7 +398,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (!legacy) { drawPlanList(); return; }
         const schemes = data.schemes.filter(s => s.channel === channel && s.name.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || (status === 'published' ? data.releases.some(r => r.snapshot.id === s.id) : !data.releases.some(r => r.snapshot.id === s.id))));
-        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">默认装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
+        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">默认装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
     function drawEditor() {
         const s = scheme();
@@ -439,16 +459,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         after: string;
     }>, action: string, callback: () => void, subtitle = '确认后仅更新本机演示配置，不向设备下发。') => openModal(renderChangePreviewDialog({ mode: 'confirm', dialogId: 'bd-confirm', title, subtitle, changes: rows, confirmLabel: action, closeAttr: 'data-bd-modal-close', backdropAttr: 'data-bd-modal-close', confirmAttr: 'data-bd-modal-confirm', zClass: 'z-[10060]' }), callback);
     function act(action: string, el: HTMLElement) {
-        if (action === 'plan-preview-toggle') { planPreviewOpen = !planPreviewOpen; draw(); return; }
-        if (action === 'plan-preview-time' || action === 'plan-preview-now') {
-            try {
-                const zone = scope.stores.find(item => item.id === previewStore)?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-                planPreviewAt = action === 'plan-preview-now' ? undefined :
-                    parseLocal(root.querySelector<HTMLInputElement>('[data-bd-plan-time]')!.value, zone);
-                draw();
-            } catch (error) { notice((error as Error).message, true); }
-            return;
-        }
         if (scheduleAction(action, el)) return;
         if (action === 'channel') {
             previewAt = undefined;
@@ -558,7 +568,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     const click = (event: Event) => { const button = (event.target as HTMLElement).closest<HTMLElement>('[data-bd-action]'); if (button && !button.hasAttribute('disabled'))
         act(button.dataset.bdAction!, button); };
     const change = (event: Event) => { const input = event.target as HTMLInputElement; const field = input.dataset.bdField; if (!field)
-        return; if (field === 'plan-store') { previewStore = input.value; planPreviewAt = undefined; draw(); return; } if (field === 'page' || field === 'schedule-page') {
+        return; if (field === 'preview-version') { previewDraft = input.value === 'draft'; draw(); return; } if (field === 'plan-store') { previewStore = input.value; draw(); return; } if (field === 'page' || field === 'schedule-page') {
         page = input.value;
         draw();
         return;
@@ -593,12 +603,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     else if (field === 'mode') draw();
     else input.value = String(s[field as 'name' | 'brandName' | 'primary'] ?? ''); };
     const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'bd-ready')
-        return; let s = showSchedule ? selectedPreview() : planPreviewOpen ? planPreviewScheme() : scheme();
-        if (flow && s?.rules?.kind === 'activity' && !s.rules.pageIds.includes(page)) {
-            const store = s.rules.storeIds[0];
-            s = planAt(data, store, channel, Date.now()).fallback?.snapshot ??
-                resolveSchedule(legacyForStore(store), channel, Date.now()).fallback?.snapshot ??
-                newScheme(channel, '项目原生样式', scope.brandName);
+        return; let s = showSchedule ? selectedPreview() : scheme();
+        if (previewRoute && s) s = previewPage(s);
+        else if (flow && s?.rules?.kind === 'activity' && !s.rules.pageIds.includes(page)) {
+            s = previewPage(s, s);
         }
         if (s)
         frame.contentWindow?.postMessage({ type: 'bd-render', scheme: s, page, orientation }, location.origin); };
