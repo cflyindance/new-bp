@@ -183,7 +183,23 @@
 .pc .pc-staff-overview header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .pc .pc-staff-summary { display:grid; gap:8px; }
 .pc .pc-staff-summary li { display:flex; flex-wrap:wrap; gap:12px; }
-.pc-staff-overview dl,.pc-staff-security dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:12px 16px; }
-.pc-staff-overview dd,.pc-staff-security dd { overflow-wrap:anywhere; }
+.pc-staff-security dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:12px 16px; }
+.pc-staff-security dd { overflow-wrap:anywhere; }
 .pc-dialog.pc-staff-security { position:fixed; inset:0 0 0 auto; margin:0; width:min(480px,100vw); height:100dvh; max-height:none; border-radius:0; }
 .pc-staff-security .pc-actions { flex-wrap:wrap; }
+
+.pc .pc-full > .pc-staff-detail-heading {
+  margin-top: 18px;
+  padding: 20px 24px;
+  border: 1px solid var(--pc-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-primary, #245de3) 7%, var(--color-card, white));
+}
+.pc .pc-staff-detail-email {
+  color: var(--color-muted-foreground, #597088);
+  overflow-wrap: anywhere;
+}
+.pc .pc-staff-overview > .pc-card {
+  border-radius: 16px;
+  padding: 24px;
+}

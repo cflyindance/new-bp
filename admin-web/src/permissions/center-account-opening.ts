@@ -30,3 +30,25 @@ export function openCenterAccount(state:CenterState, employeeId:string, input:{n
     throw error;
   }
 }
+
+/** Delete only the disabled login credential and preserve the employee and their authorization history. */
+export function deleteCenterAccount(state:CenterState,employeeId:string,actor:string):CenterState {
+  const employee=state.employees.find(e=>e.id===employeeId);
+  const account=accounts.listStaffLoginAccounts().find(a=>a.employeeId===employeeId);
+  if(!employee||!account)throw Error('账号不存在，请刷新后重试');
+  if(employee.status!=='disabled'||account.enabled)throw Error('请先停用账号');
+  if(account.isSystem)throw Error('系统预设账号不能删除');
+  const beforeAccounts=localStorage.getItem(ACCOUNT_KEY);
+  const next=structuredClone(state);
+  const target=next.employees.find(e=>e.id===employeeId)!;
+  target.status='unopened';
+  target.email='';
+  try {
+    if(!accounts.deleteStaffLoginAccount(account.id))throw Error('账号删除失败，请刷新后重试');
+    return saveCenterState(next,state.version,employeeId,'删除登录账号',actor);
+  } catch(error){
+    if(beforeAccounts===null)localStorage.removeItem(ACCOUNT_KEY);
+    else localStorage.setItem(ACCOUNT_KEY,beforeAccounts);
+    throw error;
+  }
+}
