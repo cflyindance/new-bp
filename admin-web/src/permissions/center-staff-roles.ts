@@ -1,7 +1,8 @@
 import {scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
 import {esc} from './center-editor';
 
-export const scopeLabel=(scope:Scope):string=>scope.mode==='stores'?'指定门店':scope.mode==='brands'?'动态品牌':'动态区域';
+const isUnconfiguredScope=(scope:Scope):boolean=>scope.mode==='stores'&&scope.ids.length===0;
+export const scopeLabel=(scope:Scope):string=>scope.mode==='stores'?(isUnconfiguredScope(scope)?'未配置门店':'指定门店'):scope.mode==='brands'?'动态品牌':'动态区域';
 export const bindingStores=(scope:Scope,stores:Store[]):Store[]=>stores.filter(s=>scopeMatches(scope,s));
 export function applicableRoles(employee:Employee,roles:Role[],store:Store|undefined):Role[]{
   if(!store)return [];
@@ -11,6 +12,7 @@ export function applicableRoles(employee:Employee,roles:Role[],store:Store|undef
 /** Preserve unmatched stored IDs; reading or viewing never repairs authorization. */
 export const scopeStoreItems=(scope:Scope,stores:Store[]):{id:string;title:string}[]=>scope.mode==='stores'?scope.ids.map(id=>({id,title:stores.find(s=>s.id===id)?.title??'已失效门店'})):bindingStores(scope,stores).map(s=>({id:s.id,title:s.title}));
 export function renderScope(scope:Scope,stores:Store[],expanded=false,bindingId=''):string {
+  if(isUnconfiguredScope(scope))return '<span class="pc-muted">未配置门店</span>';
   const items=scopeStoreItems(scope,stores);
   const item=(s:{id:string;title:string})=>`<span class="pc-store-name">${esc(s.title)}<small>${esc(s.id)}</small></span>`;
   const list=items.map(item);
@@ -24,7 +26,7 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
     const roleName=esc(role?.name??'已失效角色');
     const id=esc(binding.id);
     return `<tr><td><strong>${roleName}</strong></td>
-      <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${renderScope(binding.scope,stores,false,binding.id)}</td>
+      <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${isUnconfiguredScope(binding.scope)?'':renderScope(binding.scope,stores,false,binding.id)}</td>
       <td><div class="pc-actions">
         <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
         <button type="button" data-edit-binding="${id}">修改角色授权范围</button>

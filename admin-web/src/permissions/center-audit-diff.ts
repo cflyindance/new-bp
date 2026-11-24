@@ -34,6 +34,7 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
     const text=mode==='stores'?ctx.stores.find(s=>s.id===value)?.title:mode==='brands'?ctx.brands.find(b=>b.id===value)?.name:mode==='regions'?value:undefined;
     return {key:`${String(mode)}:${value}`,text:text??missing(value)};
   }):[];
+  const displayScopeMode=(scope:Record<string,unknown>)=>scope.mode==='stores'&&Array.isArray(scope.ids)&&!scope.ids.length?'未配置门店':scope.mode;
   const grants=(left:Record<string,unknown>,right:Record<string,unknown>,group:string,prefix='')=>{
     for(const key of new Set([...Object.keys(left),...Object.keys(right)]))scalar(group,prefix+resourceName(key),left[key],right[key],true);
   };
@@ -46,12 +47,12 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
         if(!old||!next){
           const binding=next??old!;const scope=object(binding.scope);
           add('角色授权',name+' → 角色分配',old?[{key:'assigned',text:'已分配'}]:[],next?[{key:'assigned',text:'已分配'}]:[]);
-          scalar('角色授权',name+' → 授权范围类型',old?object(old.scope).mode:undefined,next?scope.mode:undefined,true);
+          scalar('角色授权',name+' → 授权范围类型',old?displayScopeMode(object(old.scope)):undefined,next?displayScopeMode(scope):undefined,true);
           add('角色授权',name+' → 授权范围',old?scopeItems(object(old.scope)):[],next?scopeItems(scope):[]);
         }else{
           if(old.roleId!==next.roleId)add('角色授权',name+' → 角色',[{key:String(old.roleId),text:roleName(String(old.roleId))}],[{key:String(next.roleId),text:name}]);
           const x=object(old.scope),y=object(next.scope);
-          scalar('角色授权',name+' → 授权范围类型',x.mode,y.mode,true);
+          scalar('角色授权',name+' → 授权范围类型',displayScopeMode(x),displayScopeMode(y),true);
           add('角色授权',name+' → 授权范围',scopeItems(x),scopeItems(y));
         }
       }
