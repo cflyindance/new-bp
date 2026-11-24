@@ -1,4 +1,3 @@
-import {renderBrandMoreActions} from '../config/brand-more-actions';
 import {scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
 import {esc} from './center-editor';
 
@@ -24,12 +23,13 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[]):
     const role=roles.find(item=>item.id===binding.roleId);
     const roleName=esc(role?.name??'已失效角色');
     const id=esc(binding.id);
-    const more=renderBrandMoreActions(`${roleName}的更多操作`,`
-      <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
-      <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>`);
     return `<tr><td><strong>${roleName}</strong></td>
       <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${renderScope(binding.scope,stores,false,binding.id)}</td>
-      <td><div class="pc-actions"><button type="button" data-edit-binding="${id}">修改范围</button>${more}</div></td></tr>`;
+      <td><div class="pc-actions">
+        <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
+        <button type="button" data-edit-binding="${id}">修改授权门店</button>
+        <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>
+      </div></td></tr>`;
   }).join('');
   return `<section class="pc-card" data-staff-roles>
     <div class="pc-toolbar"><h2>已分配角色</h2><div class="pc-actions">

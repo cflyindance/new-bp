@@ -1,4 +1,3 @@
-import {bindBrandMoreActions} from '../config/brand-more-actions';
 import {renderRoleTree,visibleRoleTree,treeChoices} from './center-role-tree';
 import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
@@ -136,7 +135,6 @@ export function bindCenterPage(): void {
         input.indeterminate=roleSelectionState(n?[n]:shown,roleTree.selected).indeterminate;
       }
     }
-    if(staffEditable)bindBrandMoreActions(root!);
     for(const el of root!.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=scroll.get(el.dataset.scroll!)??0;
     for(const el of root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]'))if(expanded.has(el.dataset.menuNode!))el.open=expanded.get(el.dataset.menuNode!)!;
   }
