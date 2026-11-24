@@ -172,15 +172,35 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const dialog=modal('分配角色 · 选择范围',`<div class="pc-role-picker"><label>角色<select name="role" required><option value="">请选择角色</option>${draft.roles.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label><button type="button" data-view-selected-role disabled>查看角色权限</button></div><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,d=>{
-      const roleId=field(d,'role'),scope=readScope();
-      if(!roleId)throw Error('请选择角色');
-      modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(draft.roles.find(r=>r.id===roleId)?.name)}</p><p>授权范围：${field(d,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{employee()!.bindings.push({id:crypto.randomUUID(),roleId,scope});employee()!.migrationReview=false;mark();render();return true;},'确定').classList.add('pc-assignment-confirm');return true;
+    const roles=draft.roles.map(role=>`<label><input type="radio" name="role" value="${esc(role.id)}" required>${esc(role.name)}</label>`).join('');
+    const dialog=modal('分配角色',`<div class="pc-choice-list" role="group" aria-label="角色列表">${roles||'<p class="pc-muted">暂无可分配角色</p>'}</div><button type="button" data-view-selected-role disabled>查看角色权限</button>`,d=>{
+      const roleId=d.querySelector<HTMLInputElement>('[name="role"]:checked')?.value;
+      const role=draft.roles.find(item=>item.id===roleId);
+      if(!role)throw Error('请选择角色');
+      const scopeDialog=modal('选择授权门店',`<p>角色：${esc(role.name)}</p><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,scopeStep=>{
+        const scope=readScope();
+        modal('确认分配角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${esc(role.name)}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
+          employee()!.bindings.push({id:crypto.randomUUID(),roleId:role.id,scope});
+          employee()!.migrationReview=false;
+          scopeDialog.close();
+          dialog.close();
+          mark();
+          render();
+          return true;
+        },'确定').classList.add('pc-assignment-confirm');
+        return false;
+      },'下一步');
+      const readScope=bindScopePicker(scopeDialog,{mode:'stores',ids:storeId?[storeId]:[]},stores,brandNames);
+      return false;
     },'下一步');
-    const readScope=bindScopePicker(dialog,{mode:'stores',ids:storeId?[storeId]:[]},stores,brandNames);
-    dialog.classList.add('pc-assignment-dialog');
-    dialog.querySelector('[name="role"]')!.addEventListener('change',()=>{(dialog.querySelector('[data-view-selected-role]') as HTMLButtonElement).disabled=!draft.roles.some(r=>r.id===field(dialog,'role'));});
-    dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('[data-view-selected-role]'))showRolePermissions(field(dialog,'role'));});
+    const next=dialog.querySelector<HTMLButtonElement>('[type="submit"]')!;
+    const preview=dialog.querySelector<HTMLButtonElement>('[data-view-selected-role]')!;
+    next.disabled=true;
+    dialog.addEventListener('change',()=>{next.disabled=preview.disabled=!dialog.querySelector('[name="role"]:checked');});
+    preview.addEventListener('click',()=>{
+      const selected=dialog.querySelector<HTMLInputElement>('[name="role"]:checked');
+      if(selected)showRolePermissions(selected.value);
+    });
   }
   function editBinding(id:string):void {
     const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
@@ -191,7 +211,7 @@ export function bindCenterPage(): void {
         modal('确认更改授权范围',`<p>原授权为${esc(scopeLabel(binding.scope))}，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>按已选门店授权，未来新增门店不自动加入。保存员工详情后生效。</p>`,apply,'确定');return true;
       }
       return apply();
-    },'确定');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames);
+    },'确认选择');const readScope=bindScopePicker(dialog,binding.scope,stores,brandNames);
   }
   function showBindingStores(id:string):void {
     const binding=employee()?.bindings.find(b=>b.id===id);

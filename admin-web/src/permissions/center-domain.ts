@@ -24,7 +24,7 @@ function coreVisible(resource:Resource,resources:Map<string,Resource>,own:(key:s
     return visible(r)&&(r.relatedGrantKeys??[]).every(k=>{const related=resources.get(k);return !!related&&visible(related);});
   });
 }
-export interface Store { id: string; title: string; brand: string; region: string }
+export interface Store { id: string; title: string; brand: string; region: string; address?: string; postalCode?: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
 export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants?:string[]}
