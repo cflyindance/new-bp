@@ -1,3 +1,4 @@
+import './lib/permission-tree-test-env';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {buildCenterCatalog} from '../src/permissions/center-catalog';
@@ -24,6 +25,16 @@ assert.equal(data.get(key+':before-roles-only:v4'),JSON.stringify(original));ass
 const beforeWrites=writes.length;assert.equal(migrateRoleOnlyState(storage,key,next,JSON.stringify(next)),next);assert.equal(writes.length,beforeWrites);
 const stores=[{id:'a',title:'A',brand:'b',region:'r'},{id:'b',title:'B',brand:'b',region:'r'}];
 assert.equal(resolveAccess(next,'e','a',path,stores,c.resources),'read');assert.equal(resolveAccess(next,'e','b',path,stores,c.resources),'hidden');
+const pending=structuredClone(next);
+pending.employees[0].bindings[0].scope={mode:'stores',ids:[]};
+const pendingData=new Map([[key,JSON.stringify(next)]]);
+const pendingStorage={getItem:(k:string)=>pendingData.get(k)??null,setItem:(k:string,v:string)=>pendingData.set(k,v)};
+const savedPending=persistCenterChange(pendingStorage,key,pending,next.version,'e','更新员工授权','test',c.resources);
+assert.deepEqual(savedPending.employees[0].bindings[0].scope,{mode:'stores',ids:[]});
+for(const store of stores)assert.equal(resolveAccess(savedPending,'e',store.id,path,stores,c.resources),'hidden');
+const invalid=structuredClone(pending);
+invalid.employees[0].bindings[0].scope={mode:'brands',ids:[]};
+assert.throws(()=>validateCenterState(invalid,c.resources),/有效的授权范围/);
 const html=renderPermissionEditor({catalog:c,page:path,group:'',preview:false,readonly:true,staff:false,value:k=>resolveAccess(next,'e','a',k,stores,c.resources),own:()=> 'inherit',search:''});
 assert.doesNotMatch(html,/data-grant=|data-authorization=|data-category-grant=/);
 const contaminated=structuredClone(next);contaminated.employees[0].overrides={a:{[path]:'hidden'},b:{[path]:'read'}};

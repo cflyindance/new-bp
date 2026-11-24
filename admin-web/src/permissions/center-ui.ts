@@ -185,23 +185,14 @@ export function bindCenterPage(): void {
       const selected=selectedRoleIds(d);
       const roles=draft.roles.filter(role=>selected.has(role.id));
       if(!roles.length)throw Error('请至少选择一个角色');
-      const roleNames=roles.map(role=>esc(role.name)).join('、');
-      const scopeDialog=modal('选择授权门店',`<p>角色：${roleNames}</p><label>授权范围<select name="mode">${scopePickerOptions()}</select></label><div data-scope-options></div>`,scopeStep=>{
-        const scope=readScope();
-        modal('确认分配员工角色',`<p>员工：${esc(employee()!.name)}</p><p>角色：${roleNames}</p><p>授权范围：${field(scopeStep,'mode')==='brand-stores'?'品牌 / 已选门店':esc(scopeLabel(scope))}</p>${renderGroupedScope(scope,stores,brandNames)}${scope.mode==='stores'?'<p>按已选门店授权，未来新增门店不自动加入。</p>':''}`,()=>{
-          employee()!.bindings.push(...roles.map(role=>({id:crypto.randomUUID(),roleId:role.id,scope:structuredClone(scope)})));
-          employee()!.migrationReview=false;
-          scopeDialog.close();
-          dialog.close();
-          mark();
-          render();
-          return true;
-        },'确定').classList.add('pc-assignment-confirm');
-        return false;
-      },'下一步');
-      const readScope=bindScopePicker(scopeDialog,{mode:'stores',ids:storeId?[storeId]:[]},stores,brandNames);
-      return false;
-    },'下一步');
+      employee()!.bindings.push(...roles.map(role=>({
+        id:crypto.randomUUID(),roleId:role.id,scope:{mode:'stores' as const,ids:[]},
+      })));
+      mark();
+      render();
+      return true;
+    },'确认分配');
+    dialog.classList.add('pc-assignment-dialog');
     const next=dialog.querySelector<HTMLButtonElement>('[type="submit"]')!;
     next.disabled=true;
     dialog.addEventListener('change',()=>{next.disabled=selectedRoleIds(dialog).size===0;});
@@ -214,7 +205,15 @@ export function bindCenterPage(): void {
     const binding=employee()?.bindings.find(b=>b.id===id);if(!binding)return;
     const dialog=modal('修改角色授权范围',`<p>员工：${esc(employee()!.name)} · 角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p><label>授权范围<select name="mode">${scopePickerOptions(binding.scope)}</select></label><div data-scope-options></div><p class="pc-muted">仅修改这条角色授权的门店范围，不影响其他角色；保存员工详情后生效。</p>`,()=>{
       const scope=readScope();
-      const apply=()=>{if(updateBindingScope(employee()!,id,scope)){mark();render();}return true;};
+      const apply=()=>{
+        const current=employee()!;
+        if(updateBindingScope(current,id,scope)){
+          current.migrationReview=false;
+          mark();
+          render();
+        }
+        return true;
+      };
       if((binding.scope.mode==='brands'||binding.scope.mode==='regions')&&scope.mode!==binding.scope.mode){
         modal('确认更改授权范围',`<p>原授权为${esc(scopeLabel(binding.scope))}，本次确认后将改为${esc(scopeLabel(scope))}。</p>${renderGroupedScope(scope,stores,brandNames)}<p>按已选门店授权，未来新增门店不自动加入。保存员工详情后生效。</p>`,apply,'确定');return true;
       }

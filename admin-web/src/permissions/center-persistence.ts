@@ -27,7 +27,7 @@ export function validateCenterState(state:CenterState,resources:Map<string,Resou
     if(!employee.name.trim()||employee.name.length>30)throw Error('员工姓名无效');
     for(const binding of employee.bindings){
       if(!state.roles.some(r=>r.id===binding.roleId))throw Error('绑定的角色不存在');
-      if(!['stores','brands','regions'].includes(binding.scope.mode)||!binding.scope.ids.length||binding.scope.ids.some(id=>!id))throw Error('必须指定有效的授权范围');
+      if(!['stores','brands','regions'].includes(binding.scope.mode)||!Array.isArray(binding.scope.ids)||(binding.scope.mode!=='stores'&&!binding.scope.ids.length)||binding.scope.ids.some(id=>typeof id!=='string'||!id.trim()))throw Error('必须指定有效的授权范围');
     }
     for(const grants of Object.values(employee.overrides))for(const [key,value] of Object.entries(grants))validGrant(key,value);
   }
