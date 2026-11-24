@@ -6,8 +6,24 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const dir=await mkdtemp(join(process.env.BRAND_DECORATION_TEST_TEMP||tmpdir(),'brand-decoration-'));
 try{
-  await Promise.all(['domain','store','schedule','plans'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
+  await Promise.all(['domain','store','schedule','plans','palette'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
   const D=await import(pathToFileURL(join(dir,'domain.mjs'))),S=await import(pathToFileURL(join(dir,'store.mjs')));
+  const C=await import(pathToFileURL(join(dir,'palette.mjs')));
+  for(const id of [...Object.keys(C.PALETTES),'custom']){
+    for(const color of ['#808080','#fff2c5','#0a1830']){
+      const palette=C.resolvePalette(id,color);
+      assert.ok(C.contrast(palette.primary,palette.onPrimary)>=4.5);
+      assert.ok(C.contrast(palette.ink,palette.background)>=4.5);
+    }
+  }
+  const themed=D.newScheme('kiosk','方案','品牌');
+  const old=D.copy(themed);delete old.paletteId;D.validateScheme(old);
+  themed.styles.home.theme='noir';
+  assert.equal(themed.paletteId,'pine');
+  const changed={...themed,paletteId:'indigo',primary:C.PALETTES.indigo.primary};
+  D.validateScheme(changed);
+  assert.ok(D.changes(themed,changed).some(item=>item.label==='方案主题色'&&item.after==='靛蓝'));
+  console.log('PASS: palette contrast, legacy compatibility and publication differences.');
   const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
   let data=S.readData('brand-a/store-a','甲品牌',storage);
   assert.equal(data.schemes[0].styles.home.mode,'default');assert.equal(Object.keys(data.schemes[0].styles).length,24);
