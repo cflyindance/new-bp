@@ -76,7 +76,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     const writable = () => scope.canWrite ? '' : 'disabled';
     const heading = (title: string, note: string, actions = '') => `<header class="bd-heading"><div><h1>${title}</h1><p>${note}</p></div><div class="bd-actions">${actions}</div></header>`;
-    const tip = () => `<div class="bd-scope"><span>当前范围：<b>${esc(scope.name)}</b></span>${scope.canWrite ? '' : '<span class="bd-tag">只读</span>'}</div><div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>`;
+    const listNotice = () => `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>`;
+    const tip = () => `<div class="bd-scope"><span>当前范围：<b>${esc(scope.name)}</b></span>${scope.canWrite ? '' : '<span class="bd-tag">只读</span>'}</div>${listNotice()}`;
     const channelTabs = () => `<div class="bd-tabs" role="tablist" aria-label="点餐渠道">${(['kiosk', 'emenu'] as Channel[]).map(c => `<button role="tab" aria-selected="${channel === c}" data-bd-action="channel" data-value="${c}">${label(c)}</button>`).join('')}</div>`;
     let previewAt: number | undefined;
     let showSchedule = false;
@@ -549,8 +550,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (!rules.storeIds.every(id => scope.stores.some(store => store.id === id)) || !matchesList(item, !!release, rules)) return [];
             return [{ item, release, rules }];
         });
-        root.innerHTML = heading('页面装修', '管理各门店的日常装修和限时装修。',
-            `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new', '', listFilters.channel === 'emenu' ? 'emenu' : listFilters.channel === 'kiosk' ? 'kiosk' : channel)}">新建装修方案</a>` : ''}`) + tip() + listToolbar() +
+        const createChannel = listFilters.channel === 'emenu' || listFilters.channel === 'kiosk' ? listFilters.channel : channel;
+        root.innerHTML = `<header class="bd-heading bd-plan-list-header">
+            <h1>页面装修</h1>
+            ${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new', '', createChannel)}">新建装修方案</a>`
+                : '<span class="bd-tag">只读</span>'}
+        </header>${listNotice()}` + listToolbar() +
             `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>使用方式</th><th>渠道</th><th>适用门店</th><th>生效时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
             ${plans.map(({ item, release, rules }) => {
                 const now = Date.now();
