@@ -220,13 +220,13 @@ export function bindCenterPage(): void {
     if(!staffEditable||!current)return;
     const roles=draft.roles.filter(role=>current.bindings.some(binding=>binding.roleId===role.id));
     if(!roles.length)return;
-    const dialog=modal('添加补充门店',`<label>适用角色<select name="supplement-role" required><option value="">请选择角色</option>${roles.map(role=>`<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('')}</select></label><select name="mode" hidden aria-hidden="true"><option value="stores">指定门店</option></select><div data-scope-options></div>`,d=>{
+    const dialog=modal('添加门店',`<label>适用角色<select name="supplement-role" required><option value="">请选择角色</option>${roles.map(role=>`<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('')}</select></label><select name="mode" hidden aria-hidden="true"><option value="stores">指定门店</option></select><div data-scope-options></div>`,d=>{
       const roleId=field(d,'supplement-role');
       if(!roles.some(role=>role.id===roleId))throw Error('请选择已分配角色');
       const grants=current.supplementalStoreGrants??[];
       const {ids}=readScope();
       const additional=ids.filter(storeId=>!grants.some(grant=>grant.roleId===roleId&&grant.storeId===storeId)).map(storeId=>({roleId,storeId}));
-      if(!additional.length)throw Error('所选门店已添加该角色的补充授权');
+      if(!additional.length)throw Error('所选门店已为该角色添加授权');
       current.supplementalStoreGrants=[...grants,...additional];
       mark();
       render();
@@ -239,8 +239,8 @@ export function bindCenterPage(): void {
     if(!binding){error('该角色授权不存在，请重新打开员工详情');return;}
     const name=draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色';
     const count=scopeStoreItems(binding.scope,stores).length;
-    const dialog=modal('查看角色授权范围',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(binding.scope))} · 共 ${count} 家门店</p><div class="pc-authorized-stores">${renderScope(binding.scope,stores,true)}</div>`,()=>true,'关闭');
-    dialog.classList.add('pc-scope-dialog');dialog.setAttribute('aria-label','查看角色授权范围');
+    const dialog=modal('查看角色授权门店',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(binding.scope))} · 共 ${count} 家门店</p><div class="pc-authorized-stores">${renderScope(binding.scope,stores,true)}</div>`,()=>true,'关闭');
+    dialog.classList.add('pc-scope-dialog');dialog.setAttribute('aria-label','查看角色授权门店');
     dialog.querySelector('footer [data-close]')?.remove();
   }
   function showRolePermissions(id:string):void {
@@ -355,7 +355,7 @@ export function bindCenterPage(): void {
       if(b.dataset.removeStoreSupplement!==undefined&&staffEditable){
         const current=employee(),index=Number(b.dataset.removeStoreSupplement);
         if(!current?.supplementalStoreGrants?.[index])return;
-        modal('移除补充门店授权','<p>确认移除此条补充授权？</p>',()=>{
+        modal('移除额外授权门店','<p>确认移除此条额外门店授权？</p>',()=>{
           current.supplementalStoreGrants!.splice(index,1);
           if(!current.supplementalStoreGrants!.length)delete current.supplementalStoreGrants;
           mark();
