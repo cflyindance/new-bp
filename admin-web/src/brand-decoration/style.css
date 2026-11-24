@@ -89,3 +89,5 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-t
 .bd-store-form > .bd-notice:empty{display:none}
 @media(max-width:1200px){header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-template-areas:"heading actions" "progress progress" "meter meter"}}
 @media(max-width:860px){.bd-store-layout{grid-template-columns:1fr}}
+
+.bd-flow-header .bd-draft-action{order:-1}

@@ -24,6 +24,7 @@ export interface Style {
     theme: Theme;
 }
 export interface Scheme {
+    draftStep?: 'rules' | 'editor' | 'stores' | 'period' | 'review';
     rules?: PlanRules;
     id: string;
     name: string;
