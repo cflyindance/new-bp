@@ -94,3 +94,29 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-t
 
 .bd .bd-plan-list-header{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px}
 .bd-plan-list-header + .bd-notice:empty{min-height:0;margin:0;padding:0}
+
+/* Let the scrolling workbench own the canvas, including space below short steps. */
+[data-decoration-workbench]{background:var(--background,#f5f6f8)}
+[data-decoration-workbench] > .bd{background:transparent}
+
+/* Full-width step header, matching the advertising workflow layout. */
+[data-decoration-workbench] > .bd:has(> .bd-flow-header){
+  --bd-flow-gutter:24px;
+  padding-top:0;
+}
+header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
+  width:calc(100% + 2 * var(--bd-flow-gutter,24px));
+  margin-inline:calc(-1 * var(--bd-flow-gutter,24px));
+  padding:16px var(--bd-flow-gutter,24px) 0;
+  background:var(--card,#fff);
+  border-bottom:1px solid var(--border,#e5e7eb);
+}
+.bd-flow-header .bd-flow-meter{
+  width:calc(100% + 2 * var(--bd-flow-gutter,24px));
+  margin-inline:calc(-1 * var(--bd-flow-gutter,24px));
+  border-radius:0;
+  background:var(--border,#e5e7eb);
+}
+@media(max-width:800px){
+  [data-decoration-workbench] > .bd:has(> .bd-flow-header){--bd-flow-gutter:16px}
+}
