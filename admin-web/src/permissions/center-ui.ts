@@ -1,3 +1,4 @@
+import {bindBrandMoreActions} from '../config/brand-more-actions';
 import {renderRoleTree,visibleRoleTree,treeChoices} from './center-role-tree';
 import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
@@ -117,8 +118,8 @@ export function bindCenterPage(): void {
     if(isDetail){
       const staffEmployee=!roleId?employee():undefined;
       const staffTitle={overview:'门店与权限',authorization:'管理授权',security:'登录与安全',records:'变更记录'}[staffView];
-      const staffSubtitle=staffEmployee?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
-      root!.innerHTML=`<section class="pc-full">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(roleId&&!roleView||staffEditable?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId||staffEditable?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
+      const staffSubtitle=staffEmployee?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>${staffEditable&&staffEmployee.demoAuthorization?'<span class="pc-tag">预设演示员工</span>':''}`:'';
+      root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="4" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
@@ -135,6 +136,7 @@ export function bindCenterPage(): void {
         input.indeterminate=roleSelectionState(n?[n]:shown,roleTree.selected).indeterminate;
       }
     }
+    if(staffEditable)bindBrandMoreActions(root!);
     for(const el of root!.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=scroll.get(el.dataset.scroll!)??0;
     for(const el of root!.querySelectorAll<HTMLDetailsElement>('[data-menu-node]'))if(expanded.has(el.dataset.menuNode!))el.open=expanded.get(el.dataset.menuNode!)!;
   }

@@ -1,3 +1,4 @@
+import {renderBrandMoreActions} from '../config/brand-more-actions';
 import {scopeMatches,type Employee,type Role,type Scope,type Store} from './center-domain';
 import {esc} from './center-editor';
 
@@ -19,7 +20,26 @@ export function renderScope(scope:Scope,stores:Store[],expanded=false,bindingId=
   return `<div class="pc-scope-list">${shown||'<span class="pc-muted">当前无匹配门店</span>'}</div>${dynamic}`;
 }
 export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[]):string {
-  return `<section class="pc-card" data-staff-roles><div class="pc-toolbar"><div><h2>已分配角色</h2>${employee.demoAuthorization?'<span class="pc-tag">预设演示员工</span>':''}</div><div class="pc-actions"><button type="button" data-do="staff-effective">查看员工生效权限</button><button type="button" class="primary" data-do="assign">分配角色</button></div></div>${employee.migrationReview?'<p class="pc-notice">旧授权范围需复核：请明确门店范围后重新分配，旧数据未删除。</p>':''}<table class="pc-role-bindings"><thead><tr><th>角色</th><th>授权门店 / 范围</th><th>操作</th></tr></thead><tbody>${employee.bindings.map(b=>{const role=roles.find(r=>r.id===b.roleId);return `<tr><td><strong>${esc(role?.name??'已失效角色')}</strong><p class="pc-muted">${esc(scopeLabel(b.scope))}</p></td><td>${renderScope(b.scope,stores,false,b.id)}</td><td><div class="pc-actions"><button type="button" data-view-role="${esc(b.roleId)}" ${role?'':'disabled'}>查看权限</button><button type="button" data-edit-binding="${esc(b.id)}">修改门店</button><button type="button" class="danger" data-remove-binding="${esc(b.id)}">解除角色</button></div></td></tr>`;}).join('')||'<tr><td colspan="3" class="pc-empty">该员工尚未分配角色</td></tr>'}</tbody></table></section>`;
+  const rows=employee.bindings.map(binding=>{
+    const role=roles.find(item=>item.id===binding.roleId);
+    const roleName=esc(role?.name??'已失效角色');
+    const id=esc(binding.id);
+    const more=renderBrandMoreActions(`${roleName}的更多操作`,`
+      <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
+      <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>`);
+    return `<tr><td><strong>${roleName}</strong></td>
+      <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${renderScope(binding.scope,stores,false,binding.id)}</td>
+      <td><div class="pc-actions"><button type="button" data-edit-binding="${id}">修改范围</button>${more}</div></td></tr>`;
+  }).join('');
+  return `<section class="pc-card" data-staff-roles>
+    <div class="pc-toolbar"><h2>已分配角色</h2><div class="pc-actions">
+      <button type="button" data-do="assign">分配角色</button>
+      <button type="button" data-do="staff-effective">查看员工生效权限</button>
+    </div></div>
+    ${employee.migrationReview?'<p class="pc-notice">旧授权范围需复核：请明确门店范围后重新分配，旧数据未删除。</p>':''}
+    <table class="pc-role-bindings"><thead><tr><th>角色</th><th>授权范围</th><th>操作</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="3" class="pc-empty">该员工尚未分配角色</td></tr>'}</tbody></table>
+  </section>`;
 }
 /** Atomically replace only this binding's scope. Equivalent sets are a no-op. */
 export function updateBindingScope(employee:Employee,id:string,scope:Scope):boolean {
