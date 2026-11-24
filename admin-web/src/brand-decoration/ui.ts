@@ -674,7 +674,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     `<i style="background:${color}"></i>`).join('')}</span>${palette.name}</button>`;
         }).join('');
         return `<section class="bd-card bd-palette-panel" aria-label="方案主题">
-            <div><h2>方案主题</h2><p class="bd-help">${selected ? '自定义页面共用按钮、文字、标签和状态配色。' : '当前沿用原配色，选择主题色后统一应用。'}</p></div>
+            <div><h2>方案主题</h2><p class="bd-help">${selected ? '同一方案共用配色，Kiosk 原生页面应用组件支持的主题色。' : '当前沿用原配色，选择主题色后统一应用。'}</p></div>
             <div class="bd-palette-options">${options}
                 <button type="button" class="bd-palette-option" data-bd-action="palette" data-value="custom"
                     aria-pressed="${selected === 'custom'}" ${writable()}>自定义</button>
@@ -687,9 +687,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             type: 'bd-render', scheme: s, palette: resolvePalette(s.paletteId, s.primary), page, orientation,
         }, location.origin);
     }
-    function updateCustomPreview(s: Scheme) {
+    function updateEditorPreview(s: Scheme) {
         const inherits = flow && s.rules?.kind === 'activity' && !s.rules.pageIds.includes(page);
-        if (!inherits && s.styles[page].mode === 'custom') sendPreview(s);
+        if (!inherits) sendPreview(s);
     }
     function drawEditor() {
         const s = scheme();
@@ -816,7 +816,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 if (document.activeElement === document.body) {
                     root.querySelector<HTMLElement>(`[data-bd-action="palette"][data-value="${id}"]`)?.focus();
                 }
-                updateCustomPreview(updated);
+                updateEditorPreview(updated);
             }
             return;
         }
@@ -910,7 +910,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const code = root.querySelector('.bd-palette-custom code');
             if (code)
                 code.textContent = updated.primary;
-            updateCustomPreview(updated);
+            updateEditorPreview(updated);
         }
     }
     else if (field === 'mode') draw();
