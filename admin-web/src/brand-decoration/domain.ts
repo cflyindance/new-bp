@@ -12,6 +12,11 @@ export const THEMES: Record<Theme, {
     noir: { name: '曜石金序', color: '#dbc18d', note: '深色与黄铜，适合精品餐饮' },
     terra: { name: '赤陶食集', color: '#ad432e', note: '暖色与自然质感，适合咖啡烘焙' },
 };
+export const PAGE_TEMPLATES: Record<Theme, { name: string; note: string }> = {
+    jade: { name: '留白图文', note: '主图与内容分区，留出阅读空间' },
+    noir: { name: '紧凑列表', note: '收紧间距，突出信息与操作顺序' },
+    terra: { name: '大图卡片', note: '突出图片和卡片层次' },
+};
 export const KIOSK_PAGES = [
     ['screensaver', '屏保／待机页'], ['home', '首页'], ['orderType', '用餐方式页'], ['menu', '菜单页'], ['detail', '商品详情'], ['combo', '套餐选择'], ['review', '购物车／订单确认'], ['payment', '支付方式页'], ['finish', '完成页'], ['waitList', '等位登记'], ['tableService', '取餐／送餐方式'], ['phoneInput', '手机号输入'], ['reward', '会员奖励'], ['enterName', '姓名输入'], ['partySizeSelection', '用餐人数'], ['togoOption', '打包选项'], ['chooseTable', '选择桌台'], ['tippingPanel', '小费选择'], ['cardPayment', '刷卡支付过程'], ['afterCreditCardPay', '支付后处理'], ['signature', '签名'], ['login', '会员登录'], ['paymentMember', '支付后会员'], ['connectionError', '连接异常'],
 ] as const;
@@ -103,7 +108,7 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
     const palette = describePalette(after.paletteId, after.primary);
     const previousPalette = before ? describePalette(before.paletteId, before.primary) : '未发布';
     if (palette !== previousPalette) output.push({ label: '方案主题色', before: previousPalette, after: palette });
-    const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : THEMES[s.theme].name) : '未发布';
+    const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : PAGE_TEMPLATES[s.theme].name) : '未发布';
     for (const [id, label] of pages(after.channel)) {
         const prev = before?.styles[id], next = after.styles[id];
         if (text(prev) !== text(next))

@@ -11,14 +11,25 @@ if(page==='review'){body='<span class="eyebrow">YOUR ORDER</span><h1>确认这�
 if(page==='payment'){body='<span class="eyebrow">CHECKOUT</span><h1>选择支付方式</h1><p>应付金额</p><h1>¥60.00</h1><div class="row"><b>信用卡／借记卡</b><span>○</span></div><div class="row"><b>扫码支付</b><span>○</span></div>';action='确认支付（演示）';}
 if(page==='finish'){body='<div class="success"><i>✓</i><p>THANK YOU FOR YOUR ORDER</p><h2>下单成功</h2><p>您的取餐号</p><h1>A038</h1><p>请留意取餐屏叫号</p></div>';action='返回菜单';}
 if(page==='login'){body='<span class="eyebrow">MEMBERSHIP</span><h1>欢迎回来</h1><p>登录会员，享受专属礼遇。</p><input aria-label="演示手机号" placeholder="输入手机号码" readonly>';action='登录（演示）';}
-return `<div class="em" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${action}</button></footer></div>`;
+return `<div class="em em-layout-${theme}" data-page="${esc(page)}" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${action}</button></footer></div>`;
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='bd-render')return;const {scheme:s,palette,page,orientation}=event.data;const style=s?.styles?.[page];if(!style)return;
+const roleColors=palette?{
+  'label-fill':palette.labelFill,'label-text':palette.labelText,
+  'selected-fill':palette.selectedFill,'selected-text':palette.selectedText,
+  'success-fill':palette.successFill,'success-text':palette.successText,
+  'warning-fill':palette.warningFill,'warning-text':palette.warningText,
+  'error-fill':palette.errorFill,'error-text':palette.errorText
+}:undefined;
 if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
 if(style.mode==='default'){screen.innerHTML=`<iframe title="Kiosk 原生参考 f84dd529" src="native-app/index.html?page=${encodeURIComponent(page)}&orientation=${landscape?'landscape':'portrait'}&device=${landscape?'android-14-1':'android-24-1'}" style="width:${width*2}px;height:${height*2}px;transform:scale(.5);pointer-events:none" sandbox="allow-scripts allow-same-origin"></iframe>`;}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation});
 if(palette){const item=screen.firstElementChild;const tokens={paper:palette.background,surface:palette.surface,ink:palette.ink,muted:palette.muted,line:palette.line,accent:palette.accent,primary:palette.primary,on:palette.onPrimary};
 for(const [name,color] of Object.entries(tokens))item.style.setProperty('--pt-'+name,color);}}}
+if(roleColors && style.mode==='custom' && screen.firstElementChild){
+  screen.firstElementChild.classList.add('has-scheme-palette');
+  for(const [role,color] of Object.entries(roleColors))screen.firstElementChild.style.setProperty('--bd-role-'+role,color);
+}
 screen.style.pointerEvents='none';fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();

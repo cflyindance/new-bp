@@ -8,7 +8,7 @@ import { renderChangePreviewDialog } from '../config/deployment-change-preview';
 import { getAuthenticatedEmail } from '../auth/login';
 import { decorationScope } from './scope';
 import { readData, writeData } from './store';
-import { THEMES, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData } from './domain';
+import { PAGE_TEMPLATES, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData } from './domain';
 const ROOT = '/brand-decoration';
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const date = (s: string) => new Date(s).toLocaleString('zh-CN', { hour12: false });
@@ -288,7 +288,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 if (inherited.length) {
                     confirm('切换为日常装修', inherited.map(([id, title]) => ({
                         label: title, before: '沿用门店日常装修',
-                        after: next.styles[id].mode === 'custom' ? THEMES[next.styles[id].theme].name : '项目原生样式',
+                        after: next.styles[id].mode === 'custom' ? PAGE_TEMPLATES[next.styles[id].theme].name : '项目原生样式',
                     })), '确认切换', save, '以下页面将使用本方案中保留的样式。');
                 } else save();
             } catch (error) { notice((error as Error).message, true); }
@@ -666,12 +666,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     function paletteControls(s: Scheme) {
         const selected = s.paletteId;
-        const options = Object.entries(PALETTES).map(([id, palette]) => `<button type="button"
-            class="bd-palette-option" data-bd-action="palette" data-value="${id}"
-            aria-pressed="${selected === id}" ${writable()}>
-            <i style="background:${palette.primary}" aria-hidden="true"></i>${palette.name}</button>`).join('');
-        return `<section class="bd-card bd-palette-panel" aria-label="方案主题色">
-            <div><h2>方案主题色</h2><p class="bd-help">${selected ? '本方案的自定义页面统一使用该主题色。' : '当前沿用原配色，选择主题色后统一应用。'}</p></div>
+        const options = Object.entries(PALETTES).map(([id, palette]) => {
+            const colors = resolvePalette(id as PaletteId, palette.primary)!;
+            return `<button type="button" class="bd-palette-option"
+                data-bd-action="palette" data-value="${id}" aria-pressed="${selected === id}" ${writable()}>
+                <span class="bd-palette-swatches" aria-hidden="true">${[colors.primary, colors.background, colors.ink, colors.successText].map(color =>
+                    `<i style="background:${color}"></i>`).join('')}</span>${palette.name}</button>`;
+        }).join('');
+        return `<section class="bd-card bd-palette-panel" aria-label="方案主题">
+            <div><h2>方案主题</h2><p class="bd-help">${selected ? '自定义页面共用按钮、文字、标签和状态配色。' : '当前沿用原配色，选择主题色后统一应用。'}</p></div>
             <div class="bd-palette-options">${options}
                 <button type="button" class="bd-palette-option" data-bd-action="palette" data-value="custom"
                     aria-pressed="${selected === 'custom'}" ${writable()}>自定义</button>
@@ -699,7 +702,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             : [['default', '使用项目原生样式'], ['custom', '自定义装修']];
         const modeControls = modes.map(([value, title]) =>
             `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用门店日常装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用门店日常装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -805,7 +808,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (action === 'suite') {
             const theme = s.styles[page].theme;
-            confirm('应用整套模板', pages(channel).filter(([id]) => s.styles[id].mode !== 'custom' || s.styles[id].theme !== theme).map(([id, name]) => ({ label: name, before: s.styles[id].mode === 'default' ? '项目默认' : THEMES[s.styles[id].theme].name, after: THEMES[theme].name })), '应用到全部页面', () => { if (mutate(next => { const current = next.schemes.find(s => s.id === editorId)!; for (const [id] of pages(channel))
+            confirm('应用整套模板', pages(channel).filter(([id]) => s.styles[id].mode !== 'custom' || s.styles[id].theme !== theme).map(([id, name]) => ({ label: name, before: s.styles[id].mode === 'default' ? '项目默认' : PAGE_TEMPLATES[s.styles[id].theme].name, after: PAGE_TEMPLATES[theme].name })), '应用到全部页面', () => { if (mutate(next => { const current = next.schemes.find(s => s.id === editorId)!; for (const [id] of pages(channel))
                 current.styles[id] = { mode: 'custom', theme }; current.updatedAt = new Date().toISOString(); })) {
                 closeModal();
                 draw();
