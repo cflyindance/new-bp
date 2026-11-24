@@ -44,7 +44,7 @@ validateCenterState(supplemented,c.resources);
 const dangling=structuredClone(supplemented);
 dangling.employees[0].bindings=[];
 assert.equal(resolveAccess(dangling,'e','b',path,stores,c.resources),'hidden');
-assert.throws(()=>validateCenterState(dangling,c.resources),/补充门店授权无效/);
+assert.throws(()=>validateCenterState(dangling,c.resources),/额外授权门店无效/);
 const html=renderPermissionEditor({catalog:c,page:path,group:'',preview:false,readonly:true,staff:false,value:k=>resolveAccess(next,'e','a',k,stores,c.resources),own:()=> 'inherit',search:''});
 assert.doesNotMatch(html,/data-grant=|data-authorization=|data-category-grant=/);
 const contaminated=structuredClone(next);contaminated.employees[0].overrides={a:{[path]:'hidden'},b:{[path]:'read'}};

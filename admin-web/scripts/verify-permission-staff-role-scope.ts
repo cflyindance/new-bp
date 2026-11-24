@@ -32,5 +32,5 @@ assert(fullScope.includes('上海店')&&fullScope.includes('已失效门店'));a
 const {scopeStoreItems}=await import('../src/permissions/center-staff-roles');
 assert.equal(scopeStoreItems({mode:'brands',ids:['b','c']},stores).length,3);
 assert.equal(scopeStoreItems({mode:'stores',ids:['s1','missing']},stores).length,2);
-assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes("modal('查看角色授权范围'"));
+assert(ui.includes('dataset.viewBindingStores'));assert(ui.includes("modal('查看角色授权门店'"));
 console.log('PASS: scope preview button, full dialog items, dynamic and invalid store counts');

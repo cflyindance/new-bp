@@ -29,7 +29,7 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
       <td><span class="pc-tag pc-binding-scope-type">${esc(scopeLabel(binding.scope))}</span>${isUnconfiguredScope(binding.scope)?'':renderScope(binding.scope,stores,false,binding.id)}</td>
       <td><div class="pc-actions">
         <button type="button" data-view-role="${esc(binding.roleId)}" ${role?'':'disabled'}>查看角色权限</button>
-        <button type="button" data-view-binding-stores="${id}">查看角色授权范围</button>
+        <button type="button" data-view-binding-stores="${id}">查看角色授权门店</button>
         <button type="button" class="danger" data-remove-binding="${id}">解除角色</button>
       </div></td></tr>`;
   }).join('');
@@ -51,8 +51,8 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[],a
     <table class="pc-role-bindings"><thead><tr><th>角色</th><th>授权范围</th><th>操作</th></tr></thead>
     <tbody>${rows||'<tr><td colspan="3" class="pc-empty">该员工尚未分配角色</td></tr>'}</tbody></table>
   </section><section class="pc-card" data-account-store-scope>
-    <div class="pc-toolbar"><h2>补充门店授权</h2><button type="button" data-do="add-store-supplement" ${employee.bindings.some(binding=>roles.some(role=>role.id===binding.roleId))?'':'disabled'}>添加门店</button></div>
-    ${supplements?`<table><thead><tr><th>门店</th><th>适用角色</th><th>操作</th></tr></thead><tbody>${supplements}</tbody></table>`:'<p class="pc-muted">暂无补充门店，当前按角色授权访问。</p>'}
+    <div class="pc-toolbar"><h2>额外授权门店</h2><button type="button" data-do="add-store-supplement" ${employee.bindings.some(binding=>roles.some(role=>role.id===binding.roleId))?'':'disabled'}>添加门店</button></div>
+    ${supplements?`<table><thead><tr><th>门店</th><th>适用角色</th><th>操作</th></tr></thead><tbody>${supplements}</tbody></table>`:'<p class="pc-muted">暂无额外授权门店，当前按角色授权访问。</p>'}
   </section>`;
 }
 /** Atomically replace only this binding's scope. Equivalent sets are a no-op. */
