@@ -1181,6 +1181,19 @@ var poolSalesDeductions = {};
         '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
         '<div class="multi-select-dropdown"><div class="multi-select-placeholder" style="padding:8px 12px">请先选择角色</div></div></div></div>';
     }
+    function conditionOptionsBody(type) {
+      var options = type === 'area' ? ['Main Dining','Bar Area','Patio','Private Room','Counter / To Go'] : ['Dine In','Delivery','Pick Up','To Go','Online Order','Catering'];
+      return '<div class="condition-option-set" data-condition-options="' + type + '">' + options.map(function(value) {
+        return '<label><input type="checkbox" value="' + value + '"> <span>' + value + '</span></label>';
+      }).join('') + '</div>';
+    }
+    function applyConditionOptions(card, value) {
+      var values = Array.isArray(value) ? value : (value ? [value] : []);
+      card.querySelectorAll('.condition-option-set input').forEach(function(input) { input.checked = values.indexOf('全部') >= 0 || values.indexOf(input.value) >= 0; });
+    }
+    function collectConditionOptions(card) {
+      return Array.from(card.querySelectorAll('.condition-option-set input:checked')).map(function(input) { return input.value; });
+    }
     var areaSelectHtml = '<option value="">请选择</option><option>全部</option><option>Main Dining</option><option>Bar Area</option><option>Patio</option><option>Private Room</option><option>Counter / To Go</option>';
     var orderTypeSelectHtml = '<option value="">请选择</option><option>全部</option><option>Dine In</option><option>Delivery</option><option>Pick Up</option><option>To Go</option><option>Online Order</option><option>Catering</option>';
     var menuProductLines = ['POS', 'eMenu', 'Kiosklite', 'OO', 'SDI', 'POSGo'];
@@ -1351,23 +1364,9 @@ var poolSalesDeductions = {};
       }
     }
     function getMenuCascadeFourRowsHtml(ids) {
-      var arrowSvg = '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>';
-      function row(label, id, ph, innerDropdown, extraClass) {
-        var cls = 'multi-select menu-cascade-pl';
-        if (extraClass === 'group') cls = 'multi-select menu-cascade-group';
-        else if (extraClass === 'category') cls = 'multi-select menu-cascade-category';
-        else if (extraClass === 'item') cls = 'multi-select menu-cascade-item';
-        return '<div class="drawer-form-row"><label>' + label + '</label><div class="' + cls + '" id="' + id + '" style="flex:1" data-placeholder="' + ph + '">' +
-          '<div class="multi-select-input" onclick="toggleMultiSelect(\'' + id + '\')">' +
-          '<div class="multi-select-tags"><span class="multi-select-placeholder">' + ph + '</span></div>' +
-          arrowSvg + '</div>' +
-          '<div class="multi-select-dropdown">' + innerDropdown + '</div></div></div>';
-      }
-      return row('产品线：', ids.pl, '请选择产品线', menuProductLineOptionsHtml, 'pl') +
-        row('组：', ids.group, '请先选择产品线', menuCascadePlaceholderHtml('请先选择产品线'), 'group') +
-        row('类：', ids.category, '请先选择组', menuCascadePlaceholderHtml('请先选择组'), 'category') +
-        row('菜：', ids.item, '请先选择类', menuCascadePlaceholderHtml('请先选择类'), 'item');
+      return '<div class="tip-menu-picker" data-menu-picker="' + ids.pl + '"></div>';
     }
+
     function inferMenuCascadeKeysFromLegacyCategories(plArr, plainCats) {
       var gk = [];
       var ck = [];
@@ -1403,6 +1402,7 @@ var poolSalesDeductions = {};
     }
     function applyMenuCascadeValue(card, stored) {
       if (!card || !stored || typeof stored !== 'object') return;
+      if (card.querySelector('.tip-menu-picker')) { applyTipMenuPicker(card.querySelector('.tip-menu-picker'), stored); return; }
       var plMs = card.querySelector('.menu-cascade-pl');
       var gMs = card.querySelector('.menu-cascade-group');
       var cMs = card.querySelector('.menu-cascade-category');
@@ -1444,6 +1444,8 @@ var poolSalesDeductions = {};
       if (iMs.id) refreshMultiTags(iMs.id);
     }
     function collectMenuCascadeObject(card) {
+      var picker = card.querySelector('.tip-menu-picker');
+      if (picker) return collectTipMenuPicker(picker);
       var plMs = card.querySelector('.menu-cascade-pl');
       var gMs = card.querySelector('.menu-cascade-group');
       var cMs = card.querySelector('.menu-cascade-category');
@@ -2043,9 +2045,9 @@ var poolSalesDeductions = {};
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('salesEmployeeCondRoleSelect', 'salesEmployeeCondStaffSelect');
       } else if (type === 'area') {
-        body = '<div class="drawer-form-row"><label>订单区域：</label><select class="form-control" style="flex:1">' + areaSelectHtml + '</select></div>';
+        body = conditionOptionsBody('area');
       } else if (type === 'orderType') {
-        body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
+        body = conditionOptionsBody('orderType');
       } else if (type === 'menu') {
         body = getMenuCascadeFourRowsHtml({ pl: 'salesMenuProductLineSelect', group: 'salesMenuGroupSelect', category: 'salesMenuCategorySelect', item: 'salesMenuItemSelect' });
       } else if (type === 'revenueType') {
@@ -2085,7 +2087,7 @@ var poolSalesDeductions = {};
       card.id = cardId;
       var deleteBtn = (type === 'revenueType' || (isSalesRoleRequiredContext() && type === 'role'))
         ? ''
-        : '<button class="btn btn-sm btn-text-danger" onclick="removeSalesCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button>';
+        : '<button class="btn btn-sm btn-text-danger" onclick="removeSalesCondition(\'' + type + '\')" style="padding:0 4px" aria-label="移除条件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8m4-8v8"/></svg></button>';
       var typeLabel = names[type];
       if (isSalesRoleRequiredContext() && type === 'role') {
         typeLabel = '角色<span style="color:var(--danger);margin-left:2px">*</span>';
@@ -2134,9 +2136,9 @@ var poolSalesDeductions = {};
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('tccEmployeeCondRoleSelect', 'tccEmployeeCondStaffSelect');
       } else if (type === 'area') {
-        body = '<div class="drawer-form-row"><label>订单区域：</label><select class="form-control" style="flex:1">' + areaSelectHtml + '</select></div>';
+        body = conditionOptionsBody('area');
       } else if (type === 'orderType') {
-        body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
+        body = conditionOptionsBody('orderType');
       } else if (type === 'menu') {
         body = getMenuCascadeFourRowsHtml({ pl: 'tccMenuProductLineSelect', group: 'tccMenuGroupSelect', category: 'tccMenuCategorySelect', item: 'tccMenuItemSelect' });
       } else if (type === 'revenueType') {
@@ -2164,7 +2166,7 @@ var poolSalesDeductions = {};
       var card = document.createElement('div');
       card.className = 'condition-card';
       card.id = cardId;
-      var deleteBtn = type === 'revenueType' ? '' : '<button class="btn btn-sm btn-text-danger" onclick="removeTipClaimSalesCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button>';
+      var deleteBtn = type === 'revenueType' ? '' : '<button class="btn btn-sm btn-text-danger" onclick="removeTipClaimSalesCondition(\'' + type + '\')" style="padding:0 4px" aria-label="移除条件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8m4-8v8"/></svg></button>';
       card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span>' + deleteBtn + '</div><div class="condition-card-body">' + body + '</div>';
       document.getElementById('tipClaimConditionsContainer').appendChild(card);
       existingTipClaimSalesConditions[type] = true;
@@ -2201,9 +2203,9 @@ var poolSalesDeductions = {};
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('tipsEmployeeCondRoleSelect', 'tipsEmployeeCondStaffSelect');
       } else if (type === 'area') {
-        body = '<div class="drawer-form-row"><label>订单区域：</label><select class="form-control" style="flex:1">' + areaSelectHtml + '</select></div>';
+        body = conditionOptionsBody('area');
       } else if (type === 'orderType') {
-        body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
+        body = conditionOptionsBody('orderType');
       } else if (type === 'hours') {
         body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
@@ -2227,7 +2229,7 @@ var poolSalesDeductions = {};
       var card = document.createElement('div');
       card.className = 'condition-card';
       card.id = cardId;
-      var deleteBtn = '<button class="btn btn-sm btn-text-danger" onclick="removeTipsCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button>';
+      var deleteBtn = '<button class="btn btn-sm btn-text-danger" onclick="removeTipsCondition(\'' + type + '\')" style="padding:0 4px" aria-label="移除条件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8m4-8v8"/></svg></button>';
       card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span>' + deleteBtn + '</div><div class="condition-card-body">' + body + '</div>';
       document.getElementById('tipsConditionsContainer').appendChild(card);
       existingTipsConditions[type] = true;
@@ -2262,9 +2264,9 @@ var poolSalesDeductions = {};
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('surchargeEmployeeCondRoleSelect', 'surchargeEmployeeCondStaffSelect');
       } else if (type === 'area') {
-        body = '<div class="drawer-form-row"><label>订单区域：</label><select class="form-control" style="flex:1">' + areaSelectHtml + '</select></div>';
+        body = conditionOptionsBody('area');
       } else if (type === 'orderType') {
-        body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
+        body = conditionOptionsBody('orderType');
       } else if (type === 'hours') {
         body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
@@ -2292,7 +2294,7 @@ var poolSalesDeductions = {};
       var card = document.createElement('div');
       card.className = 'condition-card';
       card.id = cardId;
-      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span><button class="btn btn-sm btn-text-danger" onclick="removeSurchargeCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button></div><div class="condition-card-body">' + body + '</div>';
+      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span><button class="btn btn-sm btn-text-danger" onclick="removeSurchargeCondition(\'' + type + '\')" style="padding:0 4px" aria-label="移除条件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8m4-8v8"/></svg></button></div><div class="condition-card-body">' + body + '</div>';
       document.getElementById('surchargeConditionsContainer').appendChild(card);
       existingSurchargeConditions[type] = true;
       document.getElementById('surchargeConditionMenu').classList.remove('show');
@@ -2356,7 +2358,7 @@ var poolSalesDeductions = {};
       var card = document.createElement('div');
       card.className = 'condition-card';
       card.id = cardId;
-      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span><button class="btn btn-sm btn-text-danger" onclick="removeManualCondition(\'' + type + '\')" style="font-size:18px;padding:0 4px">×</button></div><div class="condition-card-body">' + body + '</div>';
+      card.innerHTML = '<div class="condition-card-header"><span class="label">' + names[type] + '</span><button class="btn btn-sm btn-text-danger" onclick="removeManualCondition(\'' + type + '\')" style="padding:0 4px" aria-label="移除条件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v8m4-8v8"/></svg></button></div><div class="condition-card-body">' + body + '</div>';
       document.getElementById('manualConditionsContainer').appendChild(card);
       existingManualConditions[type] = true;
       document.getElementById('manualConditionMenu').classList.remove('show');
@@ -2416,6 +2418,8 @@ var poolSalesDeductions = {};
         }
       } else if (type === 'employee') {
         applyStandaloneEmployeeConditionToCard(card, value);
+      } else if (type === 'area' || type === 'orderType') {
+        applyConditionOptions(card, value);
       } else if (type === 'area' || type === 'orderType' || type === 'revenueType' || type === 'orderTipStatus') {
         var sel = card.querySelector('select');
         if (sel && value) sel.value = value;
@@ -2469,6 +2473,8 @@ var poolSalesDeductions = {};
         }
       } else if (type === 'employee') {
         applyStandaloneEmployeeConditionToCard(card, value);
+      } else if (type === 'area' || type === 'orderType') {
+        applyConditionOptions(card, value);
       } else if (type === 'area' || type === 'orderType' || type === 'revenueType') {
         var sel = card.querySelector('select');
         if (sel && value) sel.value = value;
@@ -2510,6 +2516,8 @@ var poolSalesDeductions = {};
         }
       } else if (type === 'employee') {
         applyStandaloneEmployeeConditionToCard(card, value);
+      } else if (type === 'area' || type === 'orderType') {
+        applyConditionOptions(card, value);
       } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
         var sel = card.querySelector('select');
         if (sel && value !== undefined) sel.value = value || '';
@@ -2549,6 +2557,8 @@ var poolSalesDeductions = {};
         }
       } else if (type === 'employee') {
         applyStandaloneEmployeeConditionToCard(card, value);
+      } else if (type === 'area' || type === 'orderType') {
+        applyConditionOptions(card, value);
       } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
         var sel = card.querySelector('select');
         if (sel && value) sel.value = value;
@@ -4718,7 +4728,10 @@ var poolSalesDeductions = {};
           if (surEcStaffMs) {
             cond.employee = Array.from(surEcStaffMs.querySelectorAll('input[type="checkbox"]:not(.role-employee-select-all-cb):checked')).map(function(c) { return c.value; });
           }
-        } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
+        } else if (type === 'area' || type === 'orderType') {
+          var selectedOptions = collectConditionOptions(card);
+          if (selectedOptions.length) cond[type] = selectedOptions;
+      } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
           var sel = card.querySelector('select');
           if (sel) cond[type] = sel.value || '';
         } else if (type === 'surchargeType') {
@@ -4775,7 +4788,10 @@ var poolSalesDeductions = {};
           if (ecStaffMs) {
             cond.employee = Array.from(ecStaffMs.querySelectorAll('input[type="checkbox"]:not(.role-employee-select-all-cb):checked')).map(function(c) { return c.value; });
           }
-        } else if (type === 'area' || type === 'orderType' || type === 'revenueType' || type === 'orderTipStatus') {
+        } else if (type === 'area' || type === 'orderType') {
+          var selectedOptions = collectConditionOptions(card);
+          if (selectedOptions.length) cond[type] = selectedOptions;
+      } else if (type === 'area' || type === 'orderType' || type === 'revenueType' || type === 'orderTipStatus') {
           var sel = card.querySelector('select');
           if (sel) {
             var v = sel.value || '';
@@ -4838,7 +4854,10 @@ var poolSalesDeductions = {};
           if (tccEcStaffMs) {
             cond.employee = Array.from(tccEcStaffMs.querySelectorAll('input[type="checkbox"]:not(.role-employee-select-all-cb):checked')).map(function(c) { return c.value; });
           }
-        } else if (type === 'area' || type === 'orderType' || type === 'revenueType') {
+        } else if (type === 'area' || type === 'orderType') {
+          var selectedOptions = collectConditionOptions(card);
+          if (selectedOptions.length) cond[type] = selectedOptions;
+      } else if (type === 'area' || type === 'orderType' || type === 'revenueType') {
           var sel = card.querySelector('select');
           if (sel) cond[type] = sel.value || '';
         } else if (type === 'paymentMethods') {
@@ -4889,7 +4908,10 @@ var poolSalesDeductions = {};
           if (tipsEcStaffMs) {
             cond.employee = Array.from(tipsEcStaffMs.querySelectorAll('input[type="checkbox"]:not(.role-employee-select-all-cb):checked')).map(function(c) { return c.value; });
           }
-        } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
+        } else if (type === 'area' || type === 'orderType') {
+          var selectedOptions = collectConditionOptions(card);
+          if (selectedOptions.length) cond[type] = selectedOptions;
+      } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
           var sel = card.querySelector('select');
           if (sel) cond[type] = sel.value || '';
         } else if (type === 'containsProduct') {
@@ -5480,3 +5502,7 @@ var poolSalesDeductions = {};
     });
 
     initFieldDescTooltip();
+
+    var tipMenuObserver = new MutationObserver(function(){hydrateConditionRadios();document.querySelectorAll('.tip-menu-picker:not([data-ready])').forEach(function(picker){applyTipMenuPicker(picker,{});});});
+    tipMenuObserver.observe(document.body,{childList:true,subtree:true});
+    window.registerTipOutCleanup(function(){tipMenuObserver.disconnect();});

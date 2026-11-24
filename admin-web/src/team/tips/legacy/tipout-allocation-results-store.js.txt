@@ -89,8 +89,11 @@
     return clone(snapshot);
   }
 
-  async function cancel(store, dateKey) {
+  async function cancel(store, dateKey, options) {
+    options = options || {};
     function execute() {
+      if (options.assertActive) options.assertActive();
+      if (typeof options.expectedSnapshotFingerprint === 'string' && JSON.stringify(read(store,dateKey)) !== options.expectedSnapshotFingerprint) throw new Error('分配结果已变化，请重试');
       if (root.TipOutDateState) root.TipOutDateState.assertDateWritable(store, dateKey);
       var oldResultsRaw = localStorage.getItem(RESULT_KEY), oldAllocatedRaw = localStorage.getItem(ALLOC_KEY);
       var results = resultDocument();
