@@ -267,7 +267,7 @@ export function bindCenterPage(): void {
 
         case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
         case 'save':{
-          if(!dirty)return;
+          if(!dirty){modal('无需保存','<p>当前没有未保存的修改。</p>',()=>true,'知道了');return;}
           const id=roleId||employeeId,old=roleId?state.roles.find(r=>r.id===id):state.employees.find(e=>e.id===id),next=roleId?role():employee();
           const action=roleId?'更新角色权限':'更新员工授权';
           const pendingChange:Audit={id:'draft',at:'',actor:actor(),objectId:id,action,before:JSON.stringify(old??null),after:JSON.stringify(next??null)};
@@ -321,8 +321,6 @@ export function bindCenterPage(): void {
         const next=structuredClone(state);
         next.roles=next.roles.map(item=>item.id===roleId?candidate:item);
         commit(next,roleId,'更新角色权限');
-        roleTree.selected.clear();
-        render();
         return true;
       },'确认并保存');
       confirmation.classList.add('pc-batch-dialog');return;
