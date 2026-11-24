@@ -98,9 +98,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const activities = (data.schedule?.activities ?? []).filter(item => item.channel === channel)
             .sort((left, right) => left.starts - right.starts);
         const now = Date.now();
-        return `<section class="bd-card bd-schedule"><h2>默认装修与活动排期</h2>
-            <div class="bd-toolbar"><label>默认装修<select data-bd-default ${writable()}><option value="">项目原生样式</option>${versionOptions(fallback?.id)}</select></label>
-            <button data-bd-action="default-save" ${writable()}>保存默认装修</button>
+        return `<section class="bd-card bd-schedule"><h2>日常装修与活动排期</h2>
+            <div class="bd-toolbar"><label>日常装修<select data-bd-default ${writable()}><option value="">项目原生样式</option>${versionOptions(fallback?.id)}</select></label>
+            <button data-bd-action="default-save" ${writable()}>保存日常装修</button>
             <button class="bd-primary" data-bd-action="activity-edit" ${writable()}>新建活动</button></div>
             <p>时区 <strong>${esc(zone)}</strong>${scope.timezone ? '' : '（浏览器时区）'}</p>
             <div class="bd-toolbar"><label>预览时间<input type="datetime-local" data-bd-time value="${previewAt === undefined ? '' : formatLocal(previewAt, zone)}"></label>
@@ -127,7 +127,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <label>已发布版本<select name="version" required><option value="">请选择</option>${versionOptions(existing?.releaseId)}</select></label>
             <label>开始时间（${esc(zone)}）<input name="starts" type="datetime-local" required value="${existing ? formatLocal(existing.starts, zone) : ''}" ${running ? 'readonly' : ''}></label>
             <label>结束时间（${esc(zone)}）<input name="ends" type="datetime-local" required value="${existing ? formatLocal(existing.ends, zone) : ''}" ${running ? 'readonly' : ''}></label>
-            <fieldset><legend>应用活动版本的页面</legend><p>未选页面沿用默认装修。已选页面使用活动版本中配置的样式。</p>
+            <fieldset><legend>应用活动版本的页面</legend><p>未选页面沿用门店日常装修。已选页面使用活动版本中配置的样式。</p>
             <div class="bd-page-checks">${pages(channel).map(([id, name]) => `<label><input type="checkbox" name="pageId" value="${id}" ${(!existing || existing.pageIds.includes(id)) ? 'checked' : ''} ${running ? 'disabled' : ''}>${name}</label>`).join('')}</div></fieldset>
             <p data-bd-form-error role="alert"></p></form></section></div>`, () => {
             const form = modal!.querySelector<HTMLFormElement>('form')!;
@@ -166,7 +166,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const config = next.schedule ??= emptySchedule();
                 if (id) config.defaults[channel] = id;
                 else delete config.defaults[channel];
-            })) { message = '默认装修已保存'; draw(); }
+            })) { message = '日常装修已保存'; draw(); }
             return true;
         }
         if (action !== 'activity-edit' && action !== 'activity-end') return false;
@@ -181,7 +181,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         next.schedule!.activities.find(item => item.id === existing.id)!.endedAt = now;
                     })) { closeModal(); message = '活动已结束'; draw(); }
                     else modal?.querySelector('[data-bd-modal-confirm]')?.insertAdjacentText('afterend', message);
-                }, '确认后恢复当前默认装修。');
+                }, '确认后恢复当前日常装修。');
         }
         return true;
     }
@@ -204,9 +204,17 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <div class="bd-flow-grid"><label>方案名称<input name="name" required maxlength="40" value="${esc(current?.name ?? '')}"></label>
             <label>渠道<select name="channel" ${locked}><option value="kiosk" ${channel === 'kiosk' ? 'selected' : ''}>Kiosk</option><option value="emenu" ${channel === 'emenu' ? 'selected' : ''}>eMenu</option></select></label>
             </div>
-            <fieldset class="bd-flow-fieldset"><legend>方案类型</legend><div class="bd-flow-grid">
-            <label class="bd-choice"><input type="radio" name="kind" value="default" ${rules?.kind !== 'activity' ? 'checked' : ''}>默认方案</label>
-            <label class="bd-choice"><input type="radio" name="kind" value="activity" ${rules?.kind === 'activity' ? 'checked' : ''}>活动方案</label>
+            <fieldset class="bd-flow-fieldset"><legend>使用方式</legend><div class="bd-flow-grid">
+            <div class="bd-choice-help">
+                <label class="bd-choice"><input type="radio" name="kind" value="default" ${rules?.kind !== 'activity' ? 'checked' : ''}>日常装修</label>
+                <div class="bd-usage-help"><button type="button" aria-label="日常装修说明" aria-describedby="bd-usage-daily">?</button>
+                    <span id="bd-usage-daily" role="tooltip">门店平时使用的装修。</span></div>
+            </div>
+            <div class="bd-choice-help">
+                <label class="bd-choice"><input type="radio" name="kind" value="activity" ${rules?.kind === 'activity' ? 'checked' : ''}>限时装修</label>
+                <div class="bd-usage-help"><button type="button" aria-label="限时装修说明" aria-describedby="bd-usage-timed">?</button>
+                    <span id="bd-usage-timed" role="tooltip">在指定时间内展示，到期后恢复门店的日常装修。</span></div>
+            </div>
             </div></fieldset>
             <div data-bd-activity-fields>
             <label>活动名称<input name="activityName" maxlength="40" value="${esc(rules?.activityName ?? '')}"></label>
@@ -249,8 +257,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const inherited = rules?.kind === 'activity' && kind === 'default'
                     ? pages(nextChannel).filter(([id]) => !rules.pageIds.includes(id)) : [];
                 if (inherited.length) {
-                    confirm('切换为默认方案', inherited.map(([id, title]) => ({
-                        label: title, before: '沿用门店默认装修',
+                    confirm('切换为日常装修', inherited.map(([id, title]) => ({
+                        label: title, before: '沿用门店日常装修',
                         after: next.styles[id].mode === 'custom' ? THEMES[next.styles[id].theme].name : '项目原生样式',
                     })), '确认切换', save, '以下页面将使用本方案中保留的样式。');
                 } else save();
@@ -368,16 +376,16 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             ${storeOptions.length ? `<label>门店<select data-bd-field="plan-store">${storeOptions.map(store => `<option value="${esc(store.id)}" ${store.id === previewStore ? 'selected' : ''}>${esc(store.name)}</option>`).join('')}</select></label>` : ''}
             <label>页面<select data-bd-field="schedule-page">${pages(channel).map(([id, title]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${title}</option>`).join('')}</select></label>
             ${channel === 'kiosk' ? `<label>设备方向<select data-bd-field="orientation"><option value="portrait">竖屏</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>横屏</option></select></label>` : ''}
-            </div>${inherited ? `<p class="bd-help">本页沿用门店默认装修 · ${esc(previewPage(s).name)}</p>` : ''}
+            </div>${inherited ? `<p class="bd-help">本页沿用门店日常装修 · ${esc(previewPage(s).name)}</p>` : ''}
             <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
     }
     function drawPlanList() {
         const plans = data.schemes.filter(item => item.rules && item.channel === channel &&
             item.rules.storeIds.every(id => scope.stores.some(store => store.id === id)));
         const releases = latestPlanReleases(data);
-        root.innerHTML = heading('页面装修', '管理各门店的默认方案和活动方案。',
+        root.innerHTML = heading('页面装修', '管理各门店的日常装修和限时装修。',
             `${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl('new')}">新建装修方案</a>` : ''}`) + tip() + channelTabs() +
-            `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>类型</th><th>渠道</th><th>适用门店</th><th>生效时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
+            `<div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>使用方式</th><th>渠道</th><th>适用门店</th><th>生效时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
             ${plans.map(item => {
                 const release = releases.find(record => record.snapshot.id === item.id);
                 const rules = release?.rules ?? item.rules!;
@@ -385,8 +393,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const activeStores = rules.storeIds.filter(id => planAt(data, id, channel, now).fallback?.snapshot.id === item.id);
                 const state = !release ? '草稿' : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
-                    activeStores.length === rules.storeIds.length ? '默认使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '活动方案' : '默认方案'}</td><td>${label(channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id)}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview')}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
+                    activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
+                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${label(channel)}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${state}</td><td><a class="bd-link" href="${planUrl(item.id)}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="${planUrl(item.id, 'preview')}" aria-label="${esc(item.name)}效果预览">效果预览</a></td></tr>`;
             }).join('') || '<tr><td colspan="7" class="bd-empty">暂无装修方案</td></tr>'}
             </tbody></table></div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
     }
@@ -410,7 +418,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const now = Date.now();
         const selected = pages(channel).filter(([id]) => !activity || rules.pageIds.includes(id));
         const summary = [
-            ['方案类型', activity ? '活动方案' : '默认方案'],
+            ['使用方式', activity ? '限时装修' : '日常装修'],
             ['渠道', label(channel)],
             ['适用门店', storeNames(rules.storeIds)],
             ['生效时间', activity ? period(rules) : '长期有效'],
@@ -426,13 +434,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <section class="bd-card bd-review-card"><h2>发布摘要</h2>
             <dl class="bd-review-summary">${summary.map(([title, value]) => `<div><dt>${title}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>
             <section class="bd-card bd-review-card"><h2>门店生效预览</h2>
-            <div class="bd-table-wrap"><table><thead><tr><th>门店</th><th>${activity ? '活动期间' : '当前默认方案'}</th><th>${activity ? '结束后恢复' : '发布后默认方案'}</th></tr></thead>
+            <div class="bd-table-wrap"><table><thead><tr><th>门店</th><th>${activity ? '活动期间' : '当前日常装修'}</th><th>${activity ? '结束后恢复' : '发布后日常装修'}</th></tr></thead>
             <tbody>${rules.storeIds.map(id => {
                 const fallback = planAt(data, id, channel, now).fallback?.snapshot.name ??
                     resolveSchedule(legacyForStore(id), channel, now).fallback?.snapshot.name ?? '项目原生样式';
                 return `<tr><td>${esc(storeNames([id]))}</td><td>${esc(activity ? s.name : fallback)}</td><td>${esc(activity ? fallback : s.name)}</td></tr>`;
             }).join('')}</tbody></table></div>
-            ${activity ? '<p class="bd-help">活动结束时恢复届时生效的默认方案。</p>' : ''}
+            ${activity ? '<p class="bd-help">活动结束时恢复届时生效的日常装修。</p>' : ''}
             <div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div></section></div>`;
     }
 
@@ -476,7 +484,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (!legacy) { drawPlanList(); return; }
         const schemes = data.schemes.filter(s => s.channel === channel && s.name.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || (status === 'published' ? data.releases.some(r => r.snapshot.id === s.id) : !data.releases.some(r => r.snapshot.id === s.id))));
-        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">默认装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
+        root.innerHTML = heading('页面装修', '统一品牌形象，分别管理 Kiosk 与 eMenu 的页面体验。', `<button data-bd-action="schedule-toggle">日常装修与活动排期</button><a class="bd-button" href="#${ROOT}/pages?channel=${channel}">返回装修方案</a>`) + tip() + channelTabs() + `<div class="bd-toolbar"><label>方案名称<input type="search" data-bd-filter="search" placeholder="搜索方案名称" value="${esc(search)}" maxlength="40"></label><label>发布状态<select data-bd-filter="status"><option value="all">全部状态</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>未发布</option><option value="published" ${status === 'published' ? 'selected' : ''}>有演示版本</option></select></label><button data-bd-action="filter">查询</button><button data-bd-action="reset">重置</button></div><div class="bd-table-wrap"><table><thead><tr><th>方案名称</th><th>页面数量</th><th>自定义页面</th><th>演示版本</th><th>草稿更新时间</th><th>操作</th></tr></thead><tbody>${schemes.map(s => { const release = data.releases.find(r => r.snapshot.id === s.id); return `<tr><td><strong>${esc(s.name)}</strong><small>${label(s.channel)}</small></td><td>${pages(s.channel).length} 页</td><td>${Object.values(s.styles).filter(s => s.mode === 'custom').length} 页</td><td>${release ? `<span class="bd-tag">V${release.version}</span>` : '<span class="bd-muted">未发布</span>'}</td><td>${date(s.updatedAt)}</td><td><a class="bd-link" href="#${ROOT}/pages/edit/${s.id}">${scope.canWrite ? '装修' : '查看'}</a><a class="bd-link" href="#${ROOT}/pages/edit/${esc(s.id)}?step=preview" aria-label="${esc(s.name)}效果预览">效果预览</a><button class="bd-link" data-bd-action="duplicate" data-id="${s.id}" ${writable()}>复制</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="bd-empty">没有符合条件的装修方案，请调整筛选条件。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${schemes.length} 个方案</div>`;
     }
     function drawEditor() {
         const s = scheme();
@@ -494,11 +502,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             `<option value="${esc(store.id)}" ${store.id === previewStore ? 'selected' : ''}>${esc(store.name)}</option>`).join('')}</select></label>` : '';
         const currentMode = inherited ? 'inherit' : style.mode;
         const modes = activity
-            ? [['inherit', '沿用默认装修'], ['default', '使用项目原生样式'], ['custom', '自定义装修']]
+            ? [['inherit', '沿用门店日常装修'], ['default', '使用项目原生样式'], ['custom', '自定义装修']]
             : [['default', '使用项目原生样式'], ['custom', '自定义装修']];
         const modeControls = modes.map(([value, title]) =>
             `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
-        root.innerHTML = renderStandalonePageHeader({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>${stepBar(2)}` : tip()) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用默认装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label><label>自定义主色<span class="bd-color"><input type="color" data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></span></label><p class="bd-help">应用于自定义页面。</p></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览默认装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
+        root.innerHTML = renderStandalonePageHeader({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: `${label(channel)}`, actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>${stepBar(2)}` : tip()) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2><label>装修页面<select data-bd-field="page">${pages(channel).map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${name} · ${activity && !s.rules!.pageIds.includes(id) ? '沿用门店日常装修' : s.styles[id].mode === 'default' ? '原生样式' : '自定义'}</option>`).join('')}</select></label><fieldset ${writable()}><legend>当前页面样式</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes">${(Object.keys(THEMES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i style="background:${THEMES[id].color}"></i><span><b>${THEMES[id].name}</b><small>${THEMES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}<details class="bd-brand-settings" ${currentMode === 'custom' ? 'open' : ''}><summary>方案品牌设置</summary>${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}<label>品牌名称<input data-bd-field="brandName" value="${esc(s.brandName)}" maxlength="20" ${writable()}></label><label>自定义主色<span class="bd-color"><input type="color" data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></span></label><p class="bd-help">应用于自定义页面。</p></details></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section></div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }

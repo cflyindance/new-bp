@@ -28,7 +28,7 @@ export function validatePlanRules(rules: PlanRules, channel: Channel, stores: Pl
     if (!targets.length || targets.some(store => !store) || new Set(rules.storeIds).size !== targets.length) {
         throw Error('请选择有权使用的门店');
     }
-    if (rules.kind !== 'default' && rules.kind !== 'activity') throw Error('请选择方案类型');
+    if (rules.kind !== 'default' && rules.kind !== 'activity') throw Error('请选择使用方式');
     if (rules.kind === 'default') return;
     if (targets.some(store => !store!.timezone || store!.timezone !== rules.timezone)) {
         throw Error('活动门店须使用同一时区，请按时区分批创建');
