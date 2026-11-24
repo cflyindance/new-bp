@@ -56,6 +56,8 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
           add('角色授权',name+' → 授权范围',scopeItems(x),scopeItems(y));
         }
       }
+    }else if(key==='defaultStoreIds'&&isRole){
+      add('角色资料','默认授权门店',scopeItems({mode:'stores',ids:a[key]}),scopeItems({mode:'stores',ids:b[key]}));
     }else if(key==='readonlyChildren'){
       const left=object(a[key]),right=object(b[key]);
       for(const parent of new Set([...Object.keys(left),...Object.keys(right)]))scalar('新增子项默认权限',resourceName(parent),left[parent]?'可见不可编辑；操作默认禁止':undefined,right[parent]?'可见不可编辑；操作默认禁止':undefined);
