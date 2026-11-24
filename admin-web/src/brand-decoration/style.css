@@ -21,9 +21,6 @@
 .bd-review-summary dt{color:var(--muted-foreground);margin-bottom:4px}
 .bd-review-summary dd{margin:0;overflow-wrap:anywhere}
 .bd-review-card .bd-help{margin-top:12px}
-.bd-brand-settings{border-top:1px solid var(--border);padding-top:14px}
-.bd-brand-settings summary{cursor:pointer;font-weight:600}
-.bd-brand-settings label{margin-top:12px}
 .bd-workbench .bd-preview-stage{height:clamp(340px,calc(100dvh - 260px),780px)}
 @media(max-width:640px){.bd-flow-grid,.bd-review-summary{grid-template-columns:1fr}.bd-workbench .bd-preview-stage{height:520px}}
 
