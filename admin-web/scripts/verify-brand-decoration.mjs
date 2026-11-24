@@ -26,6 +26,13 @@ try{
   themed.styles.home.theme='noir';
   assert.equal(themed.paletteId,'system');
   assert.equal(themed.primary,C.PALETTES.system.primary);
+  assert.equal(themed.primary,'#ffb702');
+  const formerSystem={...themed,primary:'#0958d9'};
+  D.validateScheme(formerSystem);
+  assert.equal(C.resolvePalette(formerSystem.paletteId,formerSystem.primary).primary,'#ffb702');
+  const customBlue={...formerSystem,paletteId:'custom'};
+  D.validateScheme(customBlue);
+  assert.equal(C.resolvePalette(customBlue.paletteId,customBlue.primary).primary,'#0958d9');
   const changed={...themed,paletteId:'indigo',primary:C.PALETTES.indigo.primary};
   D.validateScheme(changed);
   assert.ok(D.changes(themed,changed).some(item=>item.label==='方案主题色'&&item.after==='靛蓝'));

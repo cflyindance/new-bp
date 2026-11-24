@@ -64,7 +64,9 @@ export function newScheme(channel: Channel, name: string, brandName: string): Sc
 export function validateScheme(s: Scheme): void {
     if (!s || !['kiosk', 'emenu'].includes(s.channel) || typeof s.id !== 'string' || !s.id || typeof s.name !== 'string' || !s.name.trim() || s.name.length > 40 || typeof s.brandName !== 'string' || !s.brandName.trim() || s.brandName.length > 20 || !/^#[\da-f]{6}$/i.test(s.primary))
         throw Error('方案名称需为 1–40 字，品牌名称需为 1–20 字，主色需为有效颜色');
-    if (s.paletteId !== undefined && s.paletteId !== 'custom' &&
+    // Older drafts and release snapshots stored the former system preset alongside its ID.
+    const legacySystemPrimary = s.paletteId === DEFAULT_PALETTE_ID && s.primary === '#0958d9';
+    if (!legacySystemPrimary && s.paletteId !== undefined && s.paletteId !== 'custom' &&
         (!Object.hasOwn(PALETTES, s.paletteId) || s.primary !== PALETTES[s.paletteId].primary))
         throw Error('方案主题色无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
