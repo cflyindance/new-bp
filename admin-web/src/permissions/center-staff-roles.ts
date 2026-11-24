@@ -33,7 +33,7 @@ export function renderStaffRoles(employee:Employee,roles:Role[],stores:Store[]):
   }).join('');
   return `<section class="pc-card" data-staff-roles>
     <div class="pc-toolbar"><h2>已分配角色</h2><div class="pc-actions">
-      <button type="button" data-do="assign">分配角色</button>
+      <button type="button" data-do="assign">分配员工角色</button>
       <button type="button" data-do="staff-effective">查看员工生效权限</button>
     </div></div>
     ${employee.migrationReview?'<p class="pc-notice">旧授权范围需复核：请明确门店范围后重新分配，旧数据未删除。</p>':''}
