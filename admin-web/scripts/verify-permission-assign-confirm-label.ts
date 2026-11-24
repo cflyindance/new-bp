@@ -6,7 +6,7 @@ assert(picker.includes("modal('分配员工角色'"));
 assert(picker.includes("},'确认分配')"));
 assert(!picker.includes('bindScopePicker'));
 assert(!picker.includes('选择授权门店'));
-assert(picker.includes("scope:{mode:'stores' as const,ids:(role.defaultStoreIds??[]).filter"));
+assert(picker.includes("scope:{mode:'stores' as const,ids:[]}"));
 assert(picker.includes('data-preview-assignment-role'));
 assert(!picker.includes('data-role-summary'));
 const css=readFileSync('src/permissions/center.css','utf8');

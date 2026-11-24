@@ -227,3 +227,5 @@
 
 .pc .pc-staff-authorization [data-account-store-scope] { margin: 16px 0 0; }
 .pc .pc-staff-authorization [data-account-store-scope] .pc-scope-list { margin-top: 10px; }
+
+.pc-dialog.pc-role-store-detail { width: min(960px, calc(100vw - 32px)); }
