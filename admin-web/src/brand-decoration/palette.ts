@@ -39,10 +39,26 @@ export function resolvePalette(id: PaletteId | undefined, primary: string) {
         : PALETTES[id];
     const { background, surface, ink } = preset;
     const color = preset.primary;
+    const dark = luminance(background) < 0.2;
+    const tone = (seed: string, amount: number) => {
+        const fill = mix(seed, surface, amount);
+        const hue = dark ? mix(seed, '#ffffff', 0.52) : mix(seed, '#000000', 0.68);
+        return { fill, text: contrast(hue, fill) >= 4.5 ? hue : ink };
+    };
+    const label = tone(color, 0.10);
+    const selected = tone(color, 0.20);
+    const success = tone('#15803d', 0.16);
+    const warning = tone('#b45309', 0.16);
+    const error = tone('#c02626', 0.16);
     return {
         primary: color, background, surface, ink,
         onPrimary: contrast(color, '#ffffff') >= contrast(color, '#000000') ? '#ffffff' : '#000000',
         muted: mix(ink, background, 0.72),
+        labelFill: label.fill, labelText: label.text,
+        selectedFill: selected.fill, selectedText: selected.text,
+        successFill: success.fill, successText: success.text,
+        warningFill: warning.fill, warningText: warning.text,
+        errorFill: error.fill, errorText: error.text,
         line: mix(ink, background, 0.20),
         accent: contrast(color, background) >= 4.5 && contrast(color, surface) >= 4.5 ? color : ink,
     };

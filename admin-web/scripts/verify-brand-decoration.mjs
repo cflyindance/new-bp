@@ -14,6 +14,11 @@ try{
       const palette=C.resolvePalette(id,color);
       assert.ok(C.contrast(palette.primary,palette.onPrimary)>=4.5);
       assert.ok(C.contrast(palette.ink,palette.background)>=4.5);
+      for(const role of ['label','selected','success','warning','error']){
+        assert.ok(C.contrast(palette[role+'Text'],palette[role+'Fill'])>=4.5, id+' '+role);
+      }
+      assert.notEqual(palette.selectedFill,palette.labelFill);
+      assert.notEqual(palette.successFill,palette.errorFill);
     }
   }
   const themed=D.newScheme('kiosk','方案','品牌');
