@@ -83,6 +83,15 @@ export function bindCenterPage(): void {
     return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId||roleView,staff:false,effectiveOnly:!!employeeId||roleView,grantedOnly:roleView,emptyMessage:roleView?'该角色暂无可访问菜单':undefined,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
   }
   let auditFrom='',auditTo='',auditType='';
+  function auditFilters():string {
+    return `<div class="pc-audit-filters" role="group" aria-label="变更记录筛选">
+      <label class="pc-audit-search">搜索<input data-query aria-label="搜索变更记录" placeholder="操作人、对象名称、操作或编号" value="${esc(query)}"></label>
+      <label>变更类型<select data-audit-type><option value="">全部变更类型</option>${['角色','员工授权','账号'].map(type=>`<option${auditType===type?' selected':''}>${type}</option>`).join('')}</select></label>
+      <label>开始日期<input type="date" data-audit-from value="${esc(auditFrom)}"></label>
+      <label>结束日期<input type="date" data-audit-to value="${esc(auditTo)}"></label>
+      <button type="button" data-do="reset-audit-filters"${query||auditType||auditFrom||auditTo?'':' disabled'}>重置</button>
+    </div>`;
+  }
   function logs(objectId?:string):string {
     const needle=query.trim().toLowerCase();
     const rows=state.logs.filter(log=>{
@@ -113,7 +122,7 @@ export function bindCenterPage(): void {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
     if(staffEditable)return renderStaffRoles(e,draft.roles,stores,accountStatus(e));
     if(staffView==='security')return staffSecurityContent(e);
-    if(staffView==='records')return `<div class="pc-card">${logs(e.id)}</div>`;
+    if(staffView==='records')return `${auditFilters()}<div class="pc-card">${logs(e.id)}</div>`;
     const assigned=e.bindings.map(binding=>{
       const name=draft.roles.find(r=>r.id===binding.roleId)?.name??'失效角色';
       return `<li><strong>${esc(name)}</strong>${renderScope(roleBindingScope(binding,draft.roles.find(r=>r.id===binding.roleId)),stores,false,binding.id)}</li>`;
@@ -141,12 +150,7 @@ export function bindCenterPage(): void {
           const methodLabel=method==='email'?'邮箱邀请':method==='password'?'设置密码':'—';
           return `<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td>${methodLabel}</td><td><span class="pc-tag">${accountStatus(e,login)}</span></td><td>${[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><button type="button" data-view-staff-stores="${esc(e.id)}" aria-label="查看 ${esc(e.name)} 的已授权门店，${storeCount} 家">${storeCount} 家</button></td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('变更记录',staffPath(e.id)+'/records')}${staffAccountActions(e,login)}</div></td></tr>`;}).join('')||'<tr><td colspan="7" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       }
-      else if(path.includes('/change-log'))body=`<div class="pc-actions">
-        <input data-query aria-label="搜索变更记录" placeholder="操作人、对象名称、操作或编号" value="${esc(query)}">
-        <select data-audit-type aria-label="变更类型"><option value="">全部变更类型</option>${['角色','员工授权','账号'].map(type=>`<option${auditType===type?' selected':''}>${type}</option>`).join('')}</select>
-        <label>开始日期<input type="date" data-audit-from value="${esc(auditFrom)}"></label>
-        <label>结束日期<input type="date" data-audit-to value="${esc(auditTo)}"></label>
-      </div><div class="pc-card">${logs()}</div>`;
+      else if(path.includes('/change-log'))body=`${auditFilters()}<div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
     }
@@ -487,6 +491,11 @@ export function bindCenterPage(): void {
       }
       if(b.dataset.removeBinding){const binding=employee()?.bindings.find(x=>x.id===b.dataset.removeBinding);if(!binding)return;modal('解除角色授权',`<p>员工：${esc(employee()!.name)}</p><p>解除角色：${esc(draft.roles.find(r=>r.id===binding.roleId)?.name??'已失效角色')}</p>${renderScope(roleBindingScope(binding,draft.roles.find(r=>r.id===binding.roleId)),stores,true)}`,()=>{const current=employee()!;current.bindings=current.bindings.filter(x=>x.id!==binding.id);mark();render();return true;},'解除角色');return;}
       switch(b.dataset.do){
+        case 'reset-audit-filters':
+          query=auditType=auditFrom=auditTo='';
+          render();
+          root.querySelector<HTMLInputElement>('[data-query]')?.focus();
+          break;
         case 'create-role':roleDialog();break;
         case 'invite':invite();break;
         case 'preview':preview();break;
@@ -521,11 +530,13 @@ export function bindCenterPage(): void {
   });
   root.addEventListener('change',ev=>{
     const input=ev.target as HTMLInputElement|HTMLSelectElement;
-    if(input.hasAttribute('data-audit-type'))auditType=input.value;
-    else if(input.hasAttribute('data-audit-from'))auditFrom=input.value;
-    else if(input.hasAttribute('data-audit-to'))auditTo=input.value;
-    else return;
+    const filter=['data-audit-type','data-audit-from','data-audit-to'].find(attr=>input.hasAttribute(attr));
+    if(!filter)return;
+    if(filter==='data-audit-type')auditType=input.value;
+    else if(filter==='data-audit-from')auditFrom=input.value;
+    else auditTo=input.value;
     render();
+    root.querySelector<HTMLElement>(`[${filter}]`)?.focus({preventScroll:true});
   });
   root.addEventListener('input',ev=>{
     const target=ev.target as HTMLInputElement;

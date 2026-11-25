@@ -239,3 +239,28 @@
 .pc-list-layout #permission-center[data-path="/permissions/staff"] td:nth-child(2) {
   overflow-wrap: anywhere;
 }
+
+
+.pc .pc-audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-block: 16px;
+}
+.pc .pc-audit-filters > label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px;
+}
+.pc .pc-audit-filters > .pc-audit-search {
+  flex: 1 1 280px;
+  max-width: 360px;
+}
+.pc .pc-audit-filters :is(input, select, button) {
+  min-height: 48px;
+}
+.pc .pc-audit-filters :is(input, select) {
+  width: 100%;
+}
