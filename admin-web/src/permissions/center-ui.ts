@@ -257,14 +257,15 @@ export function bindCenterPage(): void {
     const items=scopeStoreItems(scope,stores);
     showStoreList('查看角色授权门店',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(scope))} · 共 ${items.length} 家门店</p>`,items,renderScope(scope,stores,true));
   }
-  function showStoreList(title:string,summary:string,items:{id:string;title:string}[],empty:string):void {
+  function showStoreList(title:string,summary:string,items:{id:string;title:string;sources?:string[]}[],empty:string):void {
+    const showSources=items.some(item=>item.sources);
     const rows=items.map(item=>{
       const store=stores.find(row=>row.id===item.id);
       const searchText=[item.title,item.id,store?.address,store?.postalCode].join(' ');
-      return `<tr data-store-list-row data-search="${esc(searchText)}"><td>${esc(item.title)} <small>${esc(item.id)}</small></td><td>${esc(store?.address?.trim()||'—')}</td><td>${esc(store?.postalCode?.trim()||'—')}</td></tr>`;
+      return `<tr data-store-list-row data-search="${esc(searchText)}"><td>${esc(item.title)} <small>${esc(item.id)}</small></td><td>${esc(store?.address?.trim()||'—')}</td><td>${esc(store?.postalCode?.trim()||'—')}</td>${showSources?`<td>${item.sources?.map(source=>`<div>${esc(source)}</div>`).join('')??''}</td>`:''}</tr>`;
     }).join('');
     const detail=rows?`<div class="pc-store-picker-toolbar"><input type="search" data-store-list-search aria-label="搜索门店" placeholder="搜索名称、编号、地址或邮编"></div><div class="pc-store-picker-scroll"><table class="pc-store-picker-table">
-      <thead><tr><th scope="col">门店</th><th scope="col">地址</th><th scope="col">邮编</th></tr></thead><tbody>${rows}<tr data-store-list-empty hidden><td colspan="3" class="pc-empty">没有匹配门店</td></tr></tbody>
+      <thead><tr><th scope="col">门店</th><th scope="col">地址</th><th scope="col">邮编</th>${showSources?`<th scope="col">授权来源</th>`:''}</tr></thead><tbody>${rows}<tr data-store-list-empty hidden><td colspan="${showSources?4:3}" class="pc-empty">没有匹配门店</td></tr></tbody>
     </table></div>`:empty;
     const dialog=modal(title,summary+detail,()=>true,'关闭');
     dialog.classList.add('pc-scope-dialog','pc-role-store-detail');
@@ -455,7 +456,12 @@ export function bindCenterPage(): void {
       if(b.dataset.viewStaffStores){
         const staff=state.employees.find(item=>item.id===b.dataset.viewStaffStores);
         if(!staff)return;
-        const items=accessibleEmployeeStores(staff,state.roles,stores);
+        const extras=new Set(accountExtraStoreIds(staff));
+        const items=accessibleEmployeeStores(staff,state.roles,stores).map(store=>{
+          const sources=applicableRoles(staff,state.roles,store).map(role=>`角色授权 · ${role.name}`);
+          if(extras.has(store.id))sources.push('账号额外授权');
+          return {...store,sources};
+        });
         showStoreList('已授权门店',`<p>员工：<strong>${esc(staff.name)}</strong></p><p>共 ${items.length} 家门店</p>`,items,'<p class="pc-empty">该账号暂无授权门店</p>');
         return;
       }
