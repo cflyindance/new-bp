@@ -54,7 +54,69 @@ function applyNativePalette(frame, palette) {
     }
   `;
 }
-function renderNative(page, landscape, palette) {
+const nativeContent = new WeakMap();
+function updateNativeContent(doc, elements) {
+  const previous = nativeContent.get(doc);
+  previous?.observer.disconnect();
+  previous?.restore();
+  nativeContent.delete(doc);
+  if (!elements.some(field => typeof field.value === 'string')) return;
+  const applied = new Map();
+  const apply = () => {
+    for (const {selector, value} of elements) {
+      if (typeof value !== 'string') continue;
+      const element = doc.querySelector(selector);
+      const text = element && Array.from(element.childNodes).find(node => node.nodeType === 3 && node.textContent.trim());
+      if (!text || text.textContent === value) continue;
+      applied.set(text, { original: text.textContent, value });
+      text.textContent = value;
+    }
+  };
+  const observer = new MutationObserver(apply);
+  apply();
+  observer.observe(doc.documentElement, { subtree: true, childList: true, characterData: true });
+  nativeContent.set(doc, { observer, restore: () => {
+    for (const [node, entry] of applied) {
+      if (node.textContent === entry.value) node.textContent = entry.original;
+    }
+  }});
+}
+function styleNativeHeader(doc, palette) {
+  doc.getElementById('bd-native-header-style')?.remove();
+  if (!palette || ![palette.primary, palette.onPrimary].every(color => /^#[0-9a-f]{6}$/i.test(color))) return;
+  const style = doc.createElement('style');
+  style.id = 'bd-native-header-style';
+  style.textContent = `
+    :is(.logoBox___sS0OZ,.logoBox___vs4kp,.header___BrXnk) {
+      background-color: ${palette.primary};
+      color: ${palette.onPrimary};
+      box-shadow: none;
+    }
+    :is(.logoBox___sS0OZ,.logoBox___vs4kp,.header___BrXnk) :is(img[class*="backPrePage"],img[class*="homeBtn"]) {
+      filter: ${palette.onPrimary === '#ffffff' ? 'brightness(0) invert(1)' : 'brightness(0)'};
+    }
+  `;
+  doc.head.append(style);
+}
+function applyCustomContent(root, elements) {
+  for (const { kind, selector, value } of elements) {
+    const target = root.querySelector(selector);
+    if (!target || !value) continue;
+    if (kind === 'hidden') target.style.display = 'none';
+    else if (kind === 'text') target.textContent = value;
+    else if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+      const image = document.createElement('img');
+      image.className = 'bd-content-image';
+      image.src = value;
+      image.alt = '';
+      const original = target.firstElementChild;
+      image.addEventListener('load', () => { if (original) original.style.display = 'none'; });
+      image.addEventListener('error', () => image.remove());
+      target.append(image);
+    }
+  }
+}
+function renderNative(page, landscape, palette, headerPalette, elements) {
   const direction = landscape ? 'landscape' : 'portrait';
   const device = landscape ? 'android-14-1' : 'android-24-1';
   const src = `native-app/index.html?page=${encodeURIComponent(page)}&orientation=${direction}&device=${device}`;
@@ -71,11 +133,19 @@ function renderNative(page, landscape, palette) {
     frame.src = src;
     screen.replaceChildren(frame);
   }
-  const refresh = () => applyNativePalette(frame, palette);
+  const refresh = () => {
+    applyNativePalette(frame, palette);
+    const doc = frame.contentDocument;
+    if (!doc?.head) return;
+    styleNativeHeader(doc, headerPalette);
+    updateNativeContent(doc, elements);
+  };
   frame.onload = refresh;
   if (frame.contentDocument?.URL !== 'about:blank') refresh();
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='bd-render')return;const {scheme:s,palette,page,orientation}=event.data;const style=s?.styles?.[page];if(!style)return;
+const { headerPalette } = event.data;
+const elements = Array.isArray(event.data.elements) ? event.data.elements : [];
 const roleColors=palette?{
   'label-fill':palette.labelFill,'label-text':palette.labelText,
   'selected-fill':palette.selectedFill,'selected-text':palette.selectedText,
@@ -85,13 +155,22 @@ const roleColors=palette?{
 }:undefined;
 if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
-if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette);}
+if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements);}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation});
 if(palette){const item=screen.firstElementChild;const tokens={paper:palette.background,surface:palette.surface,ink:palette.ink,muted:palette.muted,line:palette.line,accent:palette.accent,primary:palette.primary,on:palette.onPrimary};
 for(const [name,color] of Object.entries(tokens))item.style.setProperty('--pt-'+name,color);}}}
 if(roleColors && style.mode==='custom' && screen.firstElementChild){
   screen.firstElementChild.classList.add('has-scheme-palette');
   for(const [role,color] of Object.entries(roleColors))screen.firstElementChild.style.setProperty('--bd-role-'+role,color);
+}
+if (style.mode === 'custom' && screen.firstElementChild) {
+  applyCustomContent(screen.firstElementChild, elements);
+  const header = screen.firstElementChild.querySelector('header');
+  if (header && headerPalette) {
+    header.style.backgroundColor = headerPalette.primary;
+    header.style.color = headerPalette.onPrimary;
+    header.style.boxShadow = 'none';
+  }
 }
 screen.style.pointerEvents='none';fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();

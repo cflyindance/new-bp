@@ -1,3 +1,4 @@
+import { validatePageContent, type PageContent } from './page-content';
 import { DEFAULT_PALETTE_ID, PALETTES, describePalette, type PaletteId } from './palette';
 import type { PlanRules } from './plans';
 import type { DecorationSchedule } from './schedule';
@@ -29,7 +30,15 @@ export interface Style {
     mode: 'default' | 'custom';
     theme: Theme;
 }
+export const SHARED_HEADER_STYLES = { layout: '系统布局', custom: '自定义布局' } as const;
+export type SharedHeaderStyle = keyof typeof SHARED_HEADER_STYLES;
+export function sharedHeaderLayout(style: Scheme['sharedHeader']): SharedHeaderStyle {
+    return style === 'brand' || style === 'custom' ? 'custom' : 'layout';
+}
+
 export interface Scheme {
+    sharedHeader?: SharedHeaderStyle | 'light' | 'brand';
+    pageContent?: PageContent;
     paletteId?: PaletteId;
     draftStep?: 'rules' | 'editor' | 'stores' | 'period' | 'review';
     rules?: PlanRules;
@@ -70,6 +79,10 @@ export function validateScheme(s: Scheme): void {
     if (!legacySystemPrimary && s.paletteId !== undefined && s.paletteId !== 'custom' &&
         (!Object.hasOwn(PALETTES, s.paletteId) || s.primary !== PALETTES[s.paletteId].primary))
         throw Error('方案主题色无效');
+    if (s.sharedHeader !== undefined && !['layout', 'custom', 'light', 'brand'].includes(s.sharedHeader))
+        throw Error('共用组件顶部样式无效');
+    if (s.pageContent !== undefined && (s.channel !== 'kiosk' || !validatePageContent(s.pageContent)))
+        throw Error('页面内容配置无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
         throw Error('页面配置不完整');
     for (const [id] of pages(s.channel)) {
@@ -108,12 +121,20 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
         if (before?.[key] !== after[key])
             output.push({ label, before: before?.[key] ?? '未发布', after: after[key] });
     }
+    const header = SHARED_HEADER_STYLES[sharedHeaderLayout(after.sharedHeader)];
+    const previousHeader = before ? SHARED_HEADER_STYLES[sharedHeaderLayout(before.sharedHeader)] : '未发布';
+    if (header !== previousHeader) output.push({ label: '页面顶部', before: previousHeader, after: header });
     const palette = describePalette(after.paletteId, after.primary);
     const previousPalette = before ? describePalette(before.paletteId, before.primary) : '未发布';
     if (palette !== previousPalette) output.push({ label: '方案主题色', before: previousPalette, after: palette });
     const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : PAGE_TEMPLATES[s.theme].name) : '未发布';
     for (const [id, label] of pages(after.channel)) {
         const prev = before?.styles[id], next = after.styles[id];
+        const previousContent = before?.pageContent?.[id] ?? {};
+        const content = after.pageContent?.[id] ?? {};
+        const fields = new Set([...Object.keys(previousContent), ...Object.keys(content)]);
+        if ([...fields].some(key => previousContent[key] !== content[key]))
+            output.push({ label: label + ' · 页面内容', before: Object.keys(previousContent).length ? '已配置' : '默认内容', after: Object.keys(content).length ? '已配置' : '默认内容' });
         if (text(prev) !== text(next))
             output.push({ label, before: text(prev), after: text(next) });
     }
