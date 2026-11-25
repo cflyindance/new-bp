@@ -29,6 +29,7 @@ export interface CreateStaffAccountStoreOptions {
   seedAccounts: () => StaffLoginAccount[];
   strictPersistence?: boolean;
   refreshOnRead?: boolean;
+  allowDeletingDisabledSeeds?: boolean;
 }
 
 function normalizeEmail(email: string): string {
@@ -86,6 +87,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       const email = normalizeEmail(seed.loginEmail);
       const existing = byEmail.get(email);
       if (!existing) {
+        if (options.allowDeletingDisabledSeeds) continue;
         byEmail.set(email, seed);
         changed = true;
         continue;
@@ -110,7 +112,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       const raw = localStorage.getItem(options.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as StaffLoginAccount[];
-        if (Array.isArray(parsed) && parsed.length) return mergeSeedAccounts(parsed);
+        if (Array.isArray(parsed) && (parsed.length || options.allowDeletingDisabledSeeds)) return mergeSeedAccounts(parsed);
       }
     } catch {
       /* ignore */
@@ -262,7 +264,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
     deleteStaffLoginAccount: (id) => {
       refreshAccounts();
       const row = accounts.find((a) => a.id === id);
-      if (!row || row.isSystem) return false;
+      if (!row || (row.isSystem && (row.enabled || !options.allowDeletingDisabledSeeds))) return false;
       saveAccounts(accounts.filter((a) => a.id !== id));
       return true;
     },

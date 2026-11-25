@@ -8,6 +8,7 @@ export type { StaffLoginAccount };
 const merchantStaffAccounts = createStaffAccountStore({
   strictPersistence: true,
   refreshOnRead: true,
+  allowDeletingDisabledSeeds: true,
   storageKey: "menusifu:staff-login-accounts:v1",
   seedAccounts: () => {
     const now = new Date().toISOString();

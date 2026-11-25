@@ -24,3 +24,16 @@ store.updateStaffLoginAccount(expired.id,{invitation:{sentAt:new Date().toISOStr
 assert.throws(()=>store.updateStaffLoginAccount(expired.id,{enabled:true,password:'valid-password',invitation:undefined}));
 const before=storage.get('test');fail=true;assert.throws(()=>store.createStaffLoginAccount({employeeId:'failed',employeeName:'Failed',loginEmail:'failed@menusifu.cn',password:'password',enabled:true}));assert.equal(storage.get('test'),before);
 console.log('PASS invite-disabled, no hidden password persistence, acceptance, short-password rejection, duplicate email, expiry, revocation, failed write rollback');
+
+fail=false;
+const seed={id:'seed',employeeId:'seed',employeeName:'Seed',loginEmail:'seed@menusifu.cn',password:'test-password',enabled:true,isSystem:true,updatedAt:new Date().toISOString()};
+const merchantOptions={storageKey:'merchant-seed',seedAccounts:()=>[seed],strictPersistence:true,refreshOnRead:true,allowDeletingDisabledSeeds:true};
+const merchant=exports.createStaffAccountStore(merchantOptions);
+assert.equal(merchant.deleteStaffLoginAccount('seed'),false);
+merchant.updateStaffLoginAccount('seed',{enabled:false});
+assert.equal(merchant.deleteStaffLoginAccount('seed'),true);
+assert.equal(exports.createStaffAccountStore(merchantOptions).getStaffLoginAccountById('seed'),undefined);
+const protectedStore=exports.createStaffAccountStore({...merchantOptions,storageKey:'protected-seed',allowDeletingDisabledSeeds:false});
+protectedStore.updateStaffLoginAccount('seed',{enabled:false});
+assert.equal(protectedStore.deleteStaffLoginAccount('seed'),false);
+console.log('PASS enabled seed protected, merchant disabled seed deleted and not restored, other seed protection preserved');
