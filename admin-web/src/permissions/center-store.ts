@@ -1,7 +1,9 @@
+import {DEMO_LOGIN_ACCOUNT,getAuthenticatedEmail} from '../auth/login';
+import {buildDemoScenarios} from './center-demo-scenarios';
 import {seedDemoBindings} from './center-demo-bindings';
 import {seedDemoAudit} from './center-demo-audit';
 import { getRbacSnapshot } from "./rbac-store";
-import { listStaffLoginAccounts } from "./staff-account-store";
+import { listStaffLoginAccounts,upsertStaffLoginAccount } from "./staff-account-store";
 import { buildPermissionResourceIndex } from "../config/permission-registry";
 import { DEFAULT_DEMO_STORE_ID, listMPlatformStoreScopeEntries } from "./m-platform-store-scope";
 import { buildCenterCatalog, pageKey, settingKey } from "./center-catalog";
@@ -21,6 +23,23 @@ export const centerStores = (): Store[] => {
   }));
 };
 export const centerBrands = (): ScopeBrand[] => getEnterpriseMerchantSnapshot().merchants.map(m=>({id:m.merchantId,name:m.name}));
+function initializeDemoScenarios(state:CenterState,expectedRaw:string|null):CenterState {
+  if(getAuthenticatedEmail()?.toLowerCase()!==DEMO_LOGIN_ACCOUNT)return state;
+  const plans=buildDemoScenarios(state,centerStores(),listStaffLoginAccounts(),new Date());
+  if(plans.state===state)return state;
+  if(localStorage.getItem(CENTER_KEY)!==expectedRaw)throw Error('权限数据已被其他窗口修改，请刷新后重试');
+  const accountKey='menusifu:staff-login-accounts:v1';
+  const previous=localStorage.getItem(accountKey);
+  try{
+    for(const account of plans.accounts)upsertStaffLoginAccount(account);
+    localStorage.setItem(CENTER_KEY,JSON.stringify(plans.state));
+    return plans.state;
+  }catch(error){
+    if(previous===null)localStorage.removeItem(accountKey);
+    else localStorage.setItem(accountKey,previous);
+    throw error;
+  }
+}
 export function readCenterState(): CenterState {
   const raw = localStorage.getItem(CENTER_KEY);
   if (raw) {
@@ -34,7 +53,7 @@ export function readCenterState(): CenterState {
       if(localStorage.getItem(CENTER_KEY)!==expectedRaw)throw Error('权限数据已被其他窗口修改，请刷新后初始化演示记录');
       localStorage.setItem(CENTER_KEY,JSON.stringify(seeded));
     }
-    return seeded;
+    return initializeDemoScenarios(seeded,localStorage.getItem(CENTER_KEY));
   }
   const legacy = getRbacSnapshot(), accounts = listStaffLoginAccounts(), catalog = buildCenterCatalog();
   const registry = buildPermissionResourceIndex();
@@ -58,7 +77,7 @@ export function readCenterState(): CenterState {
   // Keep all legacy keys untouched. Fail visibly if persistence is unavailable.
   const migrated=seedDemoAudit(seedDemoBindings(migrateNavigationPermissions(state,catalog.resources,centerStores()),centerStores(),DEFAULT_DEMO_STORE_ID),centerStores());
   localStorage.setItem(CENTER_KEY,JSON.stringify(migrated));
-  return migrated;
+  return initializeDemoScenarios(migrated,localStorage.getItem(CENTER_KEY));
 }
 export function saveCenterState(next: CenterState, expectedVersion: number, objectId: string, action: string, actor: string): CenterState {
   return persistCenterChange(localStorage,CENTER_KEY,next,expectedVersion,objectId,action,actor,buildCenterCatalog().resources);

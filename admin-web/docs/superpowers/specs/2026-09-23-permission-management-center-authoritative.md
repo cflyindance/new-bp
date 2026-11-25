@@ -1,4 +1,44 @@
-# 权限管理中心：权威产品与交互方案 V3.81
+# 权限管理中心：权威产品与交互方案 V3.82
+
+## 权限管理中心演示数据（PERMISSION-CENTER-DEMO-20261125-01）
+
+2026-11-25 · V3.82 · 基线 e2c6c137。配对：[产品 V3.82](2026-09-23-permission-management-center-authoritative.md) · [研发 V2.82](权限管理中心业务规格说明书（研发交付版）.md) · [个人规范 V2.82](权限管理中心需求文档（个人规范版）.md)。截图来自功能分支的演示账号。
+
+### 员工与账号
+
+![按演示筛选员工](../../验证记录/images/permission-center-demo-scenes/employees.png)
+
+| 演示员工 | 场景 |
+| --- | --- |
+| 林晓 | 已启用，跨店运营和收银双角色，另有账号额外门店。 |
+| 周宁 | 已启用，单店收银。 |
+| 陈雨 | 普通账号已停用，可演示启用、删除和取消。 |
+| 许安 | 待接受邀请，可演示接受、重发和撤销。 |
+| 赵晴 | 邀请已撤销，可演示重发。 |
+| 郑可 | 邀请已过期，可演示重发和过期拦截。 |
+| 宋雨 | 账号未开通，已分配角色，角色门店尚未配置。 |
+| 罗佳 | 账号已启用，尚未分配角色。 |
+
+![跨店员工管理授权](../../验证记录/images/permission-center-demo-scenes/employee-scope.png)
+
+![分配角色中的门店范围](../../验证记录/images/permission-center-demo-scenes/assign.png)
+
+### 角色与功能权限
+
+![预置角色](../../验证记录/images/permission-center-demo-scenes/roles.png)
+
+跨店运营主管有三家门店和成员，门店收银专员有一家门店和多名成员。待分配收银角色无成员，可演示复制、分配和删除；待配置门店角色已有成员、尚未配置门店。功能权限来自现有同类演示角色。
+
+![查看角色授权门店](../../验证记录/images/permission-center-demo-scenes/role-stores.png)
+
+### 变更记录
+
+![全局演示变更记录](../../验证记录/images/permission-center-demo-scenes/audit.png)
+
+预置角色门店、员工角色、额外门店、停用和邀请状态等记录。带「演示」标识的条目用于查看前后值，查看不会改变授权。可按员工和操作搜索，员工的变更记录页使用同一数据源。
+
+![额外门店变更前后值](../../验证记录/images/permission-center-demo-scenes/audit-detail.png)
+
 
 ## 员工列表账号操作（STAFF-LIST-ACCOUNT-ACTIONS-20261125-01）
 
