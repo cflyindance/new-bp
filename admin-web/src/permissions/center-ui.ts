@@ -64,7 +64,7 @@ export function bindCenterPage(): void {
   const treeNode=(id:string)=>flattenRoleTree(treeNodes).find(n=>n.id===id);
   const originalRole=()=>state.roles.find(r=>r.id===roleId)!;
   const employee=()=>draft.employees.find(e=>e.id===employeeId);
-  const accountStatus=(e:Employee)=>{const a=listStaffLoginAccounts().find(a=>a.employeeId===e.id);return a?.invitation?invitationStatus(a):statusLabels[e.status];};
+  const accountStatus=(e:Employee,a=listStaffLoginAccounts().find(a=>a.employeeId===e.id))=>a?.invitation?invitationStatus(a):statusLabels[e.status];
   const actor=()=>getUserSessionContext()?.employeeName??'本地管理员';
   const memberCount=(id:string)=>state.employees.filter(e=>e.bindings.some(b=>b.roleId===id)).length;
   const btn=(label:string,action:string,cls='')=>`<button type="button" class="${cls}" data-do="${action}">${label}</button>`;
@@ -98,7 +98,7 @@ export function bindCenterPage(): void {
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
   }
-  let accountDeleted=false;
+  let accountNotice='';
   function staffDetail():string {
     const e=employee();if(!e)return '<div class="pc-empty">员工不存在</div>';
     if(staffEditable)return renderStaffRoles(e,draft.roles,stores,accountStatus(e));
@@ -123,7 +123,10 @@ export function bindCenterPage(): void {
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>授权门店</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><button type="button" data-view-role-stores="${esc(r.id)}">${r.defaultStoreIds?.length??0} 家</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button type="button" data-role-default-stores="${esc(r.id)}">授权门店</button><button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
-      else if(path.includes('/staff'))body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div><div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td><span class="pc-tag">${accountStatus(e)}</span></td><td>${e.migrationReview?"待复核":[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('登录与安全',staffPath(e.id)+'/security')}${link('变更记录',staffPath(e.id)+'/records')}</div></td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
+      else if(path.includes('/staff')){
+        const logins=new Map(listStaffLoginAccounts().map(account=>[account.employeeId,account]));
+        body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div>${accountNotice?`<p class="pc-notice" role="status">${esc(accountNotice)}</p>`:''}<div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>账号状态</th><th>门店角色</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td><span class="pc-tag">${accountStatus(e,logins.get(e.id))}</span></td><td>${e.migrationReview?"待复核":[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('变更记录',staffPath(e.id)+'/records')}${staffAccountActions(e,logins.get(e.id))}</div></td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
+      }
       else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、授权员工、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
@@ -354,15 +357,17 @@ export function bindCenterPage(): void {
     });
     area.addEventListener('input',ev=>{if((ev.target as HTMLElement).hasAttribute('data-menu-search')){previewSearch=(ev.target as HTMLInputElement).value;const pos=(ev.target as HTMLInputElement).selectionStart;area.innerHTML=previewEditor();const input=area.querySelector<HTMLInputElement>('[data-menu-search]')!;input.focus();input.setSelectionRange(pos,pos);}});
   }
-  function staffSecurityContent(e:Employee):string {
-    const id=e.id;
-    const login=listStaffLoginAccounts().find(account=>account.employeeId===id);
-    return `<section class="pc-card pc-staff-security-panel"><h2>登录账号</h2>${accountDeleted?'<p role="status">登录账号已删除。</p>':''}<dl><dt>登录邮箱</dt><dd>${esc(e.email)||'—'}</dd><dt>账号状态</dt><dd>${accountStatus(e)}</dd></dl><div class="pc-actions">
+  function staffAccountActions(e:Employee,login:ReturnType<typeof listStaffLoginAccounts>[number]|undefined):string {
+    return `<div class="pc-actions" data-staff-account="${esc(e.id)}">
       ${e.status==='pending'||e.status==='revoked'?btn('重发演示邀请','resend'):''}
       ${e.status==='pending'?btn('撤销邀请','revoke','danger')+btn('演示接受邀请','accept-invite'):''}
       ${e.status==='enabled'||e.status==='disabled'?btn(e.status==='enabled'?'停用账号':'启用账号','toggle-account'):''}
       ${e.status==='disabled'&&login&&!login.enabled&&!login.isSystem?btn('删除账号','delete-account','danger'):''}
-    </div>${e.status==='disabled'&&login?.isSystem?'<p class="pc-muted">系统预设账号不能删除。</p>':''}</section>`;
+    </div>`;
+  }
+  function staffSecurityContent(e:Employee):string {
+    const login=listStaffLoginAccounts().find(account=>account.employeeId===e.id);
+    return `<section class="pc-card pc-staff-security-panel"><h2>登录账号</h2>${accountNotice?`<p role="status">${esc(accountNotice)}</p>`:''}<dl><dt>登录邮箱</dt><dd>${esc(e.email)||'—'}</dd><dt>账号状态</dt><dd>${accountStatus(e,login)}</dd></dl>${staffAccountActions(e,login)}${e.status==='disabled'&&login?.isSystem?'<p class="pc-muted">系统预设账号不能删除。</p>':''}</section>`;
   }
   function handleStaffSecurity(action:string,e:Employee):void {
     const id=e.id;
@@ -379,7 +384,7 @@ export function bindCenterPage(): void {
         modal('删除账号',`<p>确定删除 <strong>${esc(e.name)}</strong> 的登录账号？</p><p>原登录凭据将被删除。员工资料、门店授权和变更记录会保留。</p>`,()=>{
           state=deleteCenterAccount(state,e.id,actor());
           draft=structuredClone(state);
-          accountDeleted=true;
+          accountNotice=`${e.name}的登录账号已删除。`;
           render();
           return true;
         },'确认删除').querySelector('button[type="submit"]')?.classList.add('danger');
@@ -387,8 +392,9 @@ export function bindCenterPage(): void {
       }
       case 'toggle-account':{
         if(dirty)throw Error('请先保存或取消当前员工的授权草稿');
-        modal(e.status==='enabled'?'停用账号':'启用账号','<p>角色及门店范围保留，确认后立即更新本地账号状态。</p>',()=>{
-          state=openCenterAccount(state,e.id,{name:e.name,email:e.email,password:'',confirmPassword:'',method:'password'},actor(),'toggle');draft=structuredClone(state);render();return true;
+        const actionLabel=e.status==='enabled'?'停用':'启用';
+        modal(actionLabel+'账号',`<p>确认${actionLabel} <strong>${esc(e.name)}</strong> 的登录账号？</p><p>角色及门店范围保留，确认后立即更新本地账号状态。</p>`,()=>{
+          state=openCenterAccount(state,e.id,{name:e.name,email:e.email,password:'',confirmPassword:'',method:'password'},actor(),'toggle');draft=structuredClone(state);accountNotice=`${e.name}的登录账号已${actionLabel}。`;render();return true;
         });break;
       }
     }}catch(errorValue){error((errorValue as Error).message);}
@@ -413,7 +419,12 @@ export function bindCenterPage(): void {
       if(b.dataset.submenuMode){ev.preventDefault();if(!role())return;const v=b.dataset.value;if(v!=='hidden'&&v!=='read'&&v!=='edit')throw Error('子导航状态无效');if(applySubmenuMode(catalog,role()!,page,b.dataset.submenuMode,v)){mark();render();}return;}
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
-      if(b.closest('.pc-staff-security-panel')&&b.dataset.do){const e=employee();if(e)handleStaffSecurity(b.dataset.do,e);return;}
+      const accountActions=b.closest<HTMLElement>('[data-staff-account]');
+      if(accountActions&&b.dataset.do){
+        const employee=state.employees.find(item=>item.id===accountActions.dataset.staffAccount);
+        if(employee)handleStaffSecurity(b.dataset.do,employee);
+        return;
+      }
       if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';assertPageFeatureChoice(page,row,v,value);if(page!=='page:/operations/queue-call/buffet-rules'&&(v==='edit'||row.mode==='visibility'&&v==='read'))for(const key of [row.contentKey,...row.editKeys])assertSettingChoice(catalog,catalog.resources.get(key)!,'edit',value);if(employeeId)return;if(role()&&v!=='inherit')applyPageAuthorization(catalog,page,role()!.grants,row,v);else return;mark();render();return;}
       if(b.dataset.categoryGrant){ev.preventDefault();if(employeeId)return;const v=b.dataset.value as Access|'inherit';if(role()&&v!=='inherit')applyCategoryGrant(catalog,page,b.dataset.categoryGrant,role()!.grants,v);else return;mark();render();return;}
       if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(catalog.resources.get(key)?.type==='action'&&value(page)==='hidden'&&v!=='hidden')throw Error('页面不可见，不能开启功能授权');assertSettingChoice(catalog,catalog.resources.get(key)!,v,value);if(employeeId)return;if(role()&&v!=='inherit')applyPageResourceGrant(catalog,page,role()!.grants,catalog.resources.get(key)!,v);else return;mark();render();return;}
