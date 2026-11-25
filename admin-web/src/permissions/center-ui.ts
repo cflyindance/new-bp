@@ -94,7 +94,7 @@ export function bindCenterPage(): void {
       (!auditType||row.category===auditType)&&
       (!needle||[row.log.actor,row.log.action,row.log.objectId,row.name,row.action].join(' ').toLowerCase().includes(needle))
     );
-    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,objectLabel,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(objectLabel)}</td><td>${esc(action)}${log.source==='demo'?' <span class="pc-tag">演示</span>':''}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="6" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>变更类型</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,objectLabel,category,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(objectLabel)}</td><td>${esc(category)}</td><td>${esc(action)}${log.source==='demo'?' <span class="pc-tag">演示</span>':''}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="7" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
   }
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
