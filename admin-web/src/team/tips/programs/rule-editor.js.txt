@@ -277,7 +277,9 @@ var poolSalesDeductions = {};
       'Shift Lead': ['Jessica Martinez']
     };
 
+    var editingRuleStore = null;
     function getRuleEditorStoreName() {
+      if (editingRuleStore !== null) return editingRuleStore;
       var select = document.getElementById('storeSelect');
       return select ? select.value : '';
     }
@@ -527,7 +529,15 @@ var poolSalesDeductions = {};
       applyPoolKindUi(true);
       document.getElementById('ruleName').value = rule.ruleName || '';
       var storeSel = document.getElementById('storeSelect');
-      storeSel.value = rule.store || '';
+      editingRuleStore = rule.store || '';
+      if (editingRuleStore && !Array.from(storeSel.options).some(function(option) { return option.value === editingRuleStore; })) {
+        var savedStoreOption = document.createElement('option');
+        savedStoreOption.value = editingRuleStore; savedStoreOption.textContent = editingRuleStore;
+        storeSel.appendChild(savedStoreOption);
+      }
+      storeSel.value = editingRuleStore;
+      storeSel.disabled = true;
+      storeSel.setAttribute('aria-disabled', 'true');
       var tipBody = document.getElementById('tipClaimsTableBody');
       if (tipBody) {
         tipBody.innerHTML = '';
@@ -4939,8 +4949,7 @@ var poolSalesDeductions = {};
 
     function collectFormData() {
       var ruleName = document.getElementById('ruleName').value.trim();
-      var storeSel = document.getElementById('storeSelect');
-      var store = storeSel.value || '';
+      var store = getRuleEditorStoreName();
       var poolRules = [];
       document.querySelectorAll('.pool-rule-card').forEach(function(card) {
         var ruleId = card.dataset.ruleId;
@@ -5059,8 +5068,7 @@ var poolSalesDeductions = {};
         showNotification('请输入规则名称', 'error');
         return;
       }
-      var storeSel = document.getElementById('storeSelect');
-      var store = storeSel.value || '';
+      var store = getRuleEditorStoreName();
       if (!store) {
         showNotification('请选择门店', 'error');
         return;
@@ -5212,7 +5220,7 @@ var poolSalesDeductions = {};
         rule = rules.filter(function(r) { return r.id === parseInt(params.id, 10); })[0];
         if (rule) {
           rule.ruleName = data.ruleName;
-          rule.store = data.store;
+          // Existing rules retain their store; only creation assigns data.store.
           rule.distribution = data.distribution;
           rule.clockin = data.clockin;
           rule.allocationScope=data.allocationScope;delete rule.shifts;
