@@ -59,6 +59,12 @@
               <option value="tip">小费池</option>
               <option value="surcharge">加收服务费池</option>
             </select>
+            <label class="filter-field-label" for="ruleStatusFilter">规则状态</label>
+            <select class="form-control" id="ruleStatusFilter" aria-label="规则状态" data-native-onchange="renderRulesTable()">
+              <option value="">全部状态</option>
+              <option value="enabled">已启用</option>
+              <option value="disabled">已禁用</option>
+            </select>
           </div>
             <div>
               <h1 id="rulesTitle" class="sr-only">分配规则</h1>
@@ -83,6 +89,7 @@
                   <th>规则名称</th>
                   <th>门店</th>
                   <th>池类型</th>
+                  <th>规则状态</th>
                   <th>操作</th>
                 </tr>
               </thead>
