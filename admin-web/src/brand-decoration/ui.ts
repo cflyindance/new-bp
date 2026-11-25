@@ -824,9 +824,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
         const components = workbenchMode === 'components';
         const sidebar = components
-            ? `<h2>组件列表</h2><ul class="bd-component-list">
-                <li aria-current="true"><strong>顶部导航</strong><small>${SHARED_HEADER_STYLES[sharedHeaderLayout(s.sharedHeader)]}</small></li>
-            </ul>${sharedComponentControls(s)}`
+            ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
+                ${sharedComponentControls(s)}`
             : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}
                 <button type="button" class="bd-link bd-component-shortcut" data-bd-action="workbench-mode" data-value="components">编辑共用顶部导航</button>`;
         root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench${components ? ' bd-workbench-components' : ''}"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? '' : pageContentPanel(s, currentMode)}</div>`;
@@ -1093,12 +1092,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             current.sharedHeader = value;
             current.updatedAt = new Date().toISOString();
             validateScheme(current);
-        })) {
-            const updated = scheme()!;
-            const modeLabel = root.querySelector('.bd-component-list small');
-            if (modeLabel) modeLabel.textContent = SHARED_HEADER_STYLES[sharedHeaderLayout(updated.sharedHeader)];
-            updateEditorPreview(updated);
-        } else {
+        })) updateEditorPreview(scheme()!);
+        else {
             const previous = root.querySelector<HTMLInputElement>(`[name="bd-header-mode"][value="${sharedHeaderLayout(s.sharedHeader)}"]`);
             if (previous) previous.checked = true;
         }

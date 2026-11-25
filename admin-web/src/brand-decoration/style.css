@@ -122,11 +122,6 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 
 .bd-palette-swatches{display:inline-flex;gap:2px}.bd-palette-swatches i{width:9px;height:12px;border-radius:3px}.bd-themes h3{font-size:14px;font-weight:600;margin:0}.bd-theme .bd-template-mark{width:32px;height:40px;border:1px solid var(--border);border-radius:6px;background:linear-gradient(var(--muted-foreground) 0 0) center 7px/18px 3px no-repeat,linear-gradient(var(--muted) 0 0) center 15px/20px 15px no-repeat,var(--card)}.bd-theme .bd-template-mark[data-layout=noir]{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 7px) center/20px 26px no-repeat,var(--card)}.bd-theme .bd-template-mark[data-layout=terra]{background:linear-gradient(var(--muted) 0 0) center 5px/23px 21px no-repeat,linear-gradient(var(--muted-foreground) 0 0) center 30px/16px 3px no-repeat,var(--card)}
 
-.bd-config .bd-shared-components {
-  display: block;
-  border-bottom: 1px solid var(--bd-border);
-  padding-bottom: 18px;
-}
 
 .bd-content-panel .bd-page-content { display: grid; gap: 12px; }
 .bd-page-content small { color: var(--bd-muted, #6b7280); }
@@ -175,20 +170,17 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   gap: 18px;
   min-width: 0;
 }
-.bd-component-list { list-style: none; padding: 0; margin: 0; }
-.bd-component-list li {
-  display: grid;
-  gap: 4px;
-  background: #f0f7ff;
-  border: 1px solid #1677ff;
-  border-radius: 8px;
-  padding: 12px 14px;
-}
-.bd-component-list small { color: #6b7280; }
-
 .bd-config .bd-component-shortcut { align-self: start; }
 
-.bd-config .bd-shared-components { border: 0; padding: 0; }
+.bd-config .bd-shared-components {
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.bd-config .bd-shared-components .bd-radio { gap: 6px; white-space: nowrap; }
+.bd-config .bd-shared-components input { flex: 0 0 18px; }
 @media (min-width: 1280px) {
   .bd-workbench.bd-workbench-components { grid-template-columns: minmax(232px, 280px) minmax(0, 1fr); }
 }
