@@ -514,7 +514,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     type ListFilters = { channel: string; kind: string; name: string; published: string };
     const emptyListFilters = (): ListFilters => ({ channel: '', kind: '', name: '', published: '' });
-    const listFilterKey = 'menusifu:brand-decoration:filters:' + dataKey;
+    const releasesView = route() === ROOT + '/releases';
+    const listFilterKey = 'menusifu:brand-decoration:filters:' + dataKey + (releasesView ? ':releases' : '');
     let listFilters = emptyListFilters();
     try { listFilters = { ...listFilters, ...JSON.parse(sessionStorage.getItem(listFilterKey) ?? '{}') }; }
     catch { /* Use the default filters when browser storage is unavailable. */ }
@@ -524,8 +525,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         return `<form class="bd-toolbar" data-bd-list-filters>
             <label>方案名称<input type="search" name="name" maxlength="40" placeholder="搜索方案名称" value="${esc(listFilters.name)}"></label>
             <label>产线<select name="channel">${options([['','全部产线'],['kiosk',lineLabel.kiosk],['emenu',lineLabel.emenu]], listFilters.channel)}</select></label>
-            ${legacyList ? '' : `<label>使用方式<select name="kind">${options([['','全部方式'],['default','日常装修'],['activity','限时装修']], listFilters.kind)}</select></label>`}
-            <label>${legacyList ? '发布状态' : '上架状态'}<select name="published">${options([['','全部状态'],['draft',legacyList ? '未发布' : '未上架'],['published',legacyList ? '有发布版本' : '已上架']], listFilters.published)}</select></label>
+            ${legacyList || releasesView ? '' : `<label>使用方式<select name="kind">${options([['','全部方式'],['default','日常装修'],['activity','限时装修']], listFilters.kind)}</select></label>`}
+            ${releasesView ? '' : `<label>${legacyList ? '发布状态' : '上架状态'}<select name="published">${options([['','全部状态'],['draft',legacyList ? '未发布' : '未上架'],['published',legacyList ? '有发布版本' : '已上架']], listFilters.published)}</select></label>`}
             <button type="submit" class="bd-primary">查询</button><button type="button" data-bd-action="reset-plan-filters">重置</button>
         </form>`;
     };
@@ -538,6 +539,22 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         listFilters = filters;
         try { sessionStorage.setItem(listFilterKey, JSON.stringify(filters)); } catch { /* Keep filters for this view. */ }
         draw();
+    }
+    const releaseInScope = (record: DecorationData['releases'][number]) =>
+        !record.rules || record.rules.storeIds.every(id => scope.stores.some(store => store.id === id));
+    function drawReleaseList() {
+        const records = data.releases.filter(record => releaseInScope(record) &&
+            (!listFilters.channel || record.snapshot.channel === listFilters.channel) &&
+            record.snapshot.name.toLowerCase().includes(listFilters.name.toLowerCase()));
+        root.innerHTML = `<header class="bd-heading bd-plan-list-header"><h1>发布记录</h1></header>` + listNotice() + listToolbar() +
+            `<div class="bd-table-wrap"><table>
+                <thead><tr><th>版本</th><th>装修方案</th><th>产线</th><th>发布范围</th><th>发布时间</th><th>操作人</th><th>结果</th><th>操作</th></tr></thead>
+                <tbody>${records.map(record => `<tr><td>V${record.version}</td><td>${esc(record.snapshot.name)}</td>
+                    <td>${lineLabel[record.snapshot.channel]}</td><td>${esc(record.scopeName)}</td><td>${date(record.createdAt)}</td>
+                    <td>${esc(record.actor)}</td><td><span class="bd-tag">演示版本已生成</span></td>
+                    <td><button class="bd-link" data-bd-action="record" data-id="${esc(record.id)}">查看快照</button></td></tr>`).join('')
+                    || `<tr><td colspan="8" class="bd-empty">${listFilters.channel || listFilters.name ? '没有符合条件的发布记录' : '暂无发布记录'}</td></tr>`}</tbody>
+            </table></div><div class="bd-pagination">共 ${records.length} 条记录</div>`;
     }
     function drawPlanList() {
         const releases = latestPlanReleases(data);
@@ -659,7 +676,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             return;
         }
         if (currentPath === ROOT + '/releases') {
-            root.innerHTML = heading('发布记录', '查看各渠道的演示版本及当时的配置快照。') + tip() + channelTabs() + `<div class="bd-table-wrap"><table><thead><tr><th>版本</th><th>装修方案</th><th>发布范围</th><th>发布时间</th><th>操作人</th><th>结果</th><th>操作</th></tr></thead><tbody>${data.releases.filter(r => r.snapshot.channel === channel && (!r.rules || r.rules.storeIds.every(id => scope.stores.some(store => store.id === id)))).map(r => `<tr><td>V${r.version}</td><td>${esc(r.snapshot.name)}</td><td>${esc(r.scopeName)}</td><td>${date(r.createdAt)}</td><td>${esc(r.actor)}</td><td><span class="bd-tag">演示版本已生成</span></td><td><button class="bd-link" data-bd-action="record" data-id="${r.id}">查看快照</button></td></tr>`).join('') || '<tr><td colspan="7" class="bd-empty">暂无发布记录。请先进入页面装修，发布一个演示版本。</td></tr>'}</tbody></table></div><div class="bd-pagination">共 ${data.releases.filter(r => r.snapshot.channel === channel && (!r.rules || r.rules.storeIds.every(id => scope.stores.some(store => store.id === id)))).length} 条记录</div>`;
+            drawReleaseList();
             return;
         }
         if (showSchedule) {
@@ -962,7 +979,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             return;
         }
         if (action === 'record') {
-            const record = data.releases.find(r => r.id === el.dataset.id);
+            const record = data.releases.find(r => r.id === el.dataset.id && releaseInScope(r));
             if (!record)
                 return;
             openModal(renderChangePreviewDialog({ mode: 'view', dialogId: 'bd-snapshot', title: `V${record.version} · ${record.snapshot.name}`, subtitle: `${record.scopeName} · ${date(record.createdAt)} · 演示快照，未向设备下发`, changes: changes(undefined, record.snapshot), closeAttr: 'data-bd-modal-close', backdropAttr: 'data-bd-modal-close', zClass: 'z-[10060]' }));
