@@ -141,5 +141,5 @@ export function validateInvite(state: CenterState, name: string, email: string):
 
 export interface CenterState {demoAuditSeedVersion?:1}
 
-export interface CenterState {demoBindingsSeedVersion?:1;demoScenarioSeedVersion?:1}
+export interface CenterState {demoBindingsSeedVersion?:1;demoScenarioSeedVersion?:1|2}
 export interface Employee {demoAuthorization?:'single-store'|'multi-store'|'split-roles'}

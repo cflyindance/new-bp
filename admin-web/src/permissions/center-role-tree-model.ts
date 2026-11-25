@@ -86,6 +86,14 @@ export function selectSavedRolePermissions(catalog:Catalog,nodes:RoleTreeNode[],
     else selected.delete(node.id);
   }
 }
+export function countEffectiveRolePermissions(catalog:Catalog,nodes:RoleTreeNode[],role:Role):number {
+  const granted=new Set<string>();
+  for(const node of flattenRoleTree(nodes)){
+    if(!node.key||node.kind==='directory'||node.kind==='group'||node.id.startsWith('category:'))continue;
+    if(treeEffective(catalog,role,node)!=='hidden')granted.add(node.id);
+  }
+  return granted.size;
+}
 export function treeRestriction(c:Catalog,role:Role,n:RoleTreeNode):string {
   if(!n.key)return '';
   const value=(k:string)=>roleAccess(role,k,c.resources),r=c.resources.get(n.key)!;

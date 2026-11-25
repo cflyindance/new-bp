@@ -1,6 +1,6 @@
 import {accountExtraStoreIds,accessibleEmployeeStores,roleBindingScope,type Scope} from './center-domain';
 import {renderRoleTree,visibleRoleTree,treeChoices} from './center-role-tree';
-import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged,selectSavedRolePermissions} from './center-role-tree-model';
+import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged,selectSavedRolePermissions,countEffectiveRolePermissions} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
 import {openCenterAccount,deleteCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
@@ -59,7 +59,15 @@ export function bindCenterPage(): void {
   const isDetail=!!roleId||path.startsWith('/permissions/staff/');
   const role=()=>draft.roles.find(r=>r.id===roleId);
   const roleTree=createRoleTreeState();
-  const treeNodes=roleId&&!roleView?buildRoleTree(catalog):[];
+  const treeNodes=(roleId&&!roleView)||path==='/permissions/roles'?buildRoleTree(catalog):[];
+  const permissionCounts=new WeakMap<Role,number>();
+  const permissionCount=(role:Role)=>{
+    const cached=permissionCounts.get(role);
+    if(cached!==undefined)return cached;
+    const count=countEffectiveRolePermissions(catalog,treeNodes,role);
+    permissionCounts.set(role,count);
+    return count;
+  };
   for(const n of flattenRoleTree(treeNodes))if(n.kind==='page'&&n.children.length)roleTree.collapsed.add(n.id);
   const treeNode=(id:string)=>flattenRoleTree(treeNodes).find(n=>n.id===id);
   const originalRole=()=>state.roles.find(r=>r.id===roleId)!;
@@ -145,7 +153,7 @@ export function bindCenterPage(): void {
       root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span role="status">${hasPendingChanges()?'有未保存修改':roleSaveNotice||'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';
-      if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>授权门店</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><button type="button" data-view-role-stores="${esc(r.id)}">${r.defaultStoreIds?.length??0} 家</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button type="button" data-role-default-stores="${esc(r.id)}">授权门店</button><button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
+      if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>权限数量</th><th>成员数</th><th>授权门店</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td>${link(permissionCount(r)+' 项',`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><button type="button" data-view-role-stores="${esc(r.id)}">${r.defaultStoreIds?.length??0} 家</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button type="button" data-role-default-stores="${esc(r.id)}">授权门店</button><button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="6" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/staff')){
         const logins=new Map(listStaffLoginAccounts().map(account=>[account.employeeId,account]));
         body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div>${accountNotice?`<p class="pc-notice" role="status">${esc(accountNotice)}</p>`:''}<div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>开通方式</th><th>账号状态</th><th>门店角色</th><th>已授权门店</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>{const login=logins.get(e.id);
