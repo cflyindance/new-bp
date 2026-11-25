@@ -55,22 +55,28 @@ function applyNativePalette(frame, palette) {
   `;
 }
 const nativeContent = new WeakMap();
-function updateNativeContent(doc, elements) {
+function updateNativeContent(doc, elements, reportDefaults) {
   const previous = nativeContent.get(doc);
   previous?.observer.disconnect();
   previous?.restore();
   nativeContent.delete(doc);
-  if (!elements.some(field => typeof field.value === 'string')) return;
+  if (!reportDefaults && !elements.some(field => typeof field.value === 'string')) return;
   const applied = new Map();
   const apply = () => {
-    for (const {selector, value} of elements) {
-      if (typeof value !== 'string') continue;
+    const defaults = {};
+    for (const {id, kind, selector, value} of elements) {
+      if (kind !== 'text') continue;
       const element = doc.querySelector(selector);
       const text = element && Array.from(element.childNodes).find(node => node.nodeType === 3 && node.textContent.trim());
-      if (!text || text.textContent === value) continue;
-      applied.set(text, { original: text.textContent, value });
+      if (!text) continue;
+      const existing = applied.get(text);
+      const original = existing && text.textContent === existing.value ? existing.original : text.textContent;
+      defaults[id] = original.trim();
+      if (typeof value !== 'string' || text.textContent === value) continue;
+      applied.set(text, { original, value });
       text.textContent = value;
     }
+    reportDefaults?.(defaults);
   };
   const observer = new MutationObserver(apply);
   apply();
@@ -116,7 +122,7 @@ function applyCustomContent(root, elements) {
     }
   }
 }
-function renderNative(page, landscape, palette, headerPalette, elements) {
+function renderNative(page, landscape, palette, headerPalette, elements, reportDefaults) {
   const direction = landscape ? 'landscape' : 'portrait';
   const device = landscape ? 'android-14-1' : 'android-24-1';
   const src = `native-app/index.html?page=${encodeURIComponent(page)}&orientation=${direction}&device=${device}`;
@@ -138,7 +144,7 @@ function renderNative(page, landscape, palette, headerPalette, elements) {
     const doc = frame.contentDocument;
     if (!doc?.head) return;
     styleNativeHeader(doc, headerPalette);
-    updateNativeContent(doc, elements);
+    updateNativeContent(doc, elements, reportDefaults);
   };
   frame.onload = refresh;
   if (frame.contentDocument?.URL !== 'about:blank') refresh();
@@ -146,6 +152,15 @@ function renderNative(page, landscape, palette, headerPalette, elements) {
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='bd-render')return;const {scheme:s,palette,page,orientation}=event.data;const style=s?.styles?.[page];if(!style)return;
 const { headerPalette } = event.data;
 const elements = Array.isArray(event.data.elements) ? event.data.elements : [];
+const request = event.data.defaultCopyRequest;
+let previousDefaults = '';
+const reportDefaults = Number.isInteger(request) ? values => {
+  const snapshot = JSON.stringify(values);
+  if (snapshot === previousDefaults || !Object.keys(values).length) return;
+  previousDefaults = snapshot;
+  parent.postMessage({ type: 'bd-default-copy', request, values }, location.origin);
+} : undefined;
+
 const roleColors=palette?{
   'label-fill':palette.labelFill,'label-text':palette.labelText,
   'selected-fill':palette.selectedFill,'selected-text':palette.selectedText,
@@ -155,7 +170,7 @@ const roleColors=palette?{
 }:undefined;
 if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
-if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements);}
+if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements,reportDefaults);}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation});
 if(palette){const item=screen.firstElementChild;const tokens={paper:palette.background,surface:palette.surface,ink:palette.ink,muted:palette.muted,line:palette.line,accent:palette.accent,primary:palette.primary,on:palette.onPrimary};
 for(const [name,color] of Object.entries(tokens))item.style.setProperty('--pt-'+name,color);}}}
@@ -164,6 +179,15 @@ if(roleColors && style.mode==='custom' && screen.firstElementChild){
   for(const [role,color] of Object.entries(roleColors))screen.firstElementChild.style.setProperty('--bd-role-'+role,color);
 }
 if (style.mode === 'custom' && screen.firstElementChild) {
+  if (reportDefaults) {
+    const defaults = {};
+    for (const {id, kind, selector} of elements) {
+      if (kind !== 'text') continue;
+      const target = screen.firstElementChild.querySelector(selector);
+      if (target) defaults[id] = target.innerText.trim();
+    }
+    reportDefaults(defaults);
+  }
   applyCustomContent(screen.firstElementChild, elements);
   const header = screen.firstElementChild.querySelector('header');
   if (header && headerPalette) {

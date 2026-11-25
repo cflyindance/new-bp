@@ -188,3 +188,10 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   .bd-workbench-components > .bd-config,
   .bd-workbench-components > .bd-preview { grid-row: auto; }
 }
+
+.bd-page-content .bd-default-copy {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

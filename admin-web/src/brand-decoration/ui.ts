@@ -689,9 +689,20 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     data-bd-field="primary" value="${s.primary}" ${writable()}><code>${s.primary}</code></label>` : ''}
             </div></section>`;
     }
+    let defaultCopyRequest = 0;
+    let defaultCopyKey = '';
+    let defaultCopy: Record<string, string> = {};
+    const copyKey = (s: Scheme, pageId: string) =>
+        [s.id, pageId, s.styles[pageId].mode, s.styles[pageId].theme, orientation].join(':');
     function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]')) {
+        const request = ++defaultCopyRequest;
+        const key = copyKey(s, page);
+        if (defaultCopyKey !== key) {
+            defaultCopyKey = key;
+            defaultCopy = {};
+        }
         frame?.contentWindow?.postMessage({
-            type: 'bd-render', scheme: { ...s, brandName: scope.brandName },
+            type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? resolvePalette(s.paletteId ?? 'custom', s.primary) : undefined,
             elements: s.channel === 'kiosk' ? pageElements(page).flatMap(field => {
@@ -772,7 +783,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         ? `<input type="checkbox" ${attrs} ${value ? 'checked' : ''}>`
                         : `<input ${attrs} maxlength="${MAX_PAGE_TEXT}" placeholder="使用默认文案" value="${esc(typeof value === 'string' ? value : '')}">`;
                 const reset = value === undefined ? '' : `<button type="button" class="bd-link" data-bd-action="reset-element" data-value="${field.id}" aria-label="恢复${field.label}">恢复默认</button>`;
-                return `<div><label>${field.label}${control}</label>${reset}</div>`;
+                const original = field.kind === 'text'
+                    ? `<small class="bd-default-copy">系统默认：<span data-bd-default-copy="${field.id}">${esc(
+                        (defaultCopyKey === copyKey(s, page) && defaultCopy[field.id]) || '…'
+                    )}</span></small>` : '';
+                return `<div><label>${field.label}${original}${control}</label>${reset}</div>`;
             }).join('')}
             ${Object.keys(content).length ? '<button type="button" class="bd-link" data-bd-action="reset-page-content">恢复整页内容</button>' : ''}
         </fieldset>`;
@@ -1125,8 +1140,21 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     else if (field === 'mode') draw();
     else input.value = String(s[field as 'name' | 'primary'] ?? ''); };
-    const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'bd-ready')
-        return; let s = showSchedule ? selectedPreview() : scheme();
+    const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow)
+        return;
+        if (event.data?.type === 'bd-default-copy' && event.data.request === defaultCopyRequest) {
+            const values = event.data.values;
+            if (!values || typeof values !== 'object') return;
+            for (const target of root.querySelectorAll<HTMLElement>('[data-bd-default-copy]')) {
+                const id = target.dataset.bdDefaultCopy!;
+                if (!Object.hasOwn(values, id) || typeof values[id] !== 'string') continue;
+                defaultCopy[id] = values[id].slice(0, 240);
+                target.textContent = defaultCopy[id];
+            }
+            return;
+        }
+        if (event.data?.type !== 'bd-ready') return;
+        let s = showSchedule ? selectedPreview() : scheme();
         if (s?.rules?.kind === 'activity' && !s.rules.storeIds.length && !s.rules.pageIds.includes(page)) {
             if (frame) frame.hidden = true;
             return;
