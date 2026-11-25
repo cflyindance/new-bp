@@ -705,11 +705,37 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const inherits = flow && s.rules?.kind === 'activity' && !s.rules.pageIds.includes(page);
         if (!inherits) sendPreview(s);
     }
+    let workbenchMode: 'page' | 'components' = 'page';
+    let pageBeforeComponents = page;
+    function switchWorkbench(mode: typeof workbenchMode) {
+        if (mode === workbenchMode) return;
+        if (mode === 'components') {
+            pageBeforeComponents = page;
+            if (channel === 'kiosk' && (page === 'home' || page === 'screensaver')) {
+                const current = scheme();
+                const candidates = ['finish', 'orderType', 'menu'];
+                page = current?.rules?.kind === 'activity'
+                    ? candidates.find(id => current.rules!.pageIds.includes(id)) ?? page
+                    : 'finish';
+            }
+        } else page = pageBeforeComponents;
+        workbenchMode = mode;
+        draw();
+        root.querySelector<HTMLElement>(`#bd-workbench-${mode}-tab`)?.focus();
+    }
+    function workbenchTabs() {
+        const tabs = [['page', '页面装修'], ['components', '共用组件']] as const;
+        return `<div class="bd-tabs bd-workbench-tabs" role="tablist" aria-label="装修工作台">
+            ${tabs.map(([id, label]) => `<button type="button" id="bd-workbench-${id}-tab" role="tab"
+                data-bd-action="workbench-mode" data-value="${id}" aria-controls="bd-workbench-panel"
+                aria-selected="${workbenchMode === id}" tabindex="${workbenchMode === id ? 0 : -1}">${label}</button>`).join('')}
+        </div>`;
+    }
     function sharedComponentControls(s: Scheme) {
         const selected = sharedHeaderLayout(s.sharedHeader);
         const options = Object.entries(SHARED_HEADER_STYLES).map(([id, name]) =>
             `<option value="${id}" ${id === selected ? 'selected' : ''}>${name}</option>`).join('');
-        return `<fieldset class="bd-shared-components" ${writable()}><legend>共用组件</legend>
+        return `<fieldset class="bd-shared-components" aria-label="顶部导航" ${writable()}>
             <label>顶栏布局<select data-bd-field="shared-header">${options}</select></label></fieldset>`;
     }
     const wideWorkbench = window.matchMedia('(min-width: 1280px)');
@@ -718,16 +744,18 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const panel = root.querySelector<HTMLDetailsElement>('.bd-content-panel');
         if (panel) panel.open = wideWorkbench.matches || narrowContentOpen;
     }
-    function pageContentPanel(s: Scheme, mode: string) {
-        const fields = pageContentControls(s, mode);
-        const empty = mode === 'inherit' ? '此页沿用门店日常装修。' : '当前页面布局暂无可编辑内容。';
+    function contentPanel(title: string, content: string) {
         return `<details class="bd-card bd-content-panel" ${wideWorkbench.matches || narrowContentOpen ? 'open' : ''}>
-            <summary data-bd-action="toggle-content-panel">页面内容</summary>
+            <summary data-bd-action="toggle-content-panel">${title}</summary>
             <div class="bd-content-panel-body">
-                <h2>页面内容</h2>
-                ${fields || `<p class="bd-help">${empty}</p>`}
+                <h2>${title}</h2>
+                ${content}
             </div>
         </details>`;
+    }
+    function pageContentPanel(s: Scheme, mode: string) {
+        const empty = mode === 'inherit' ? '此页沿用门店日常装修。' : '当前页面布局暂无可编辑内容。';
+        return contentPanel('页面内容', pageContentControls(s, mode) || `<p class="bd-help">${empty}</p>`);
     }
     function pageContentControls(s: Scheme, mode: string) {
         if (s.channel !== 'kiosk' || mode === 'inherit') return '';
@@ -794,7 +822,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             : [['default', '系统布局'], ['custom', '自定义布局']];
         const modeControls = modes.map(([value, title]) =>
             `<label class="bd-radio"><input type="radio" name="bd-mode" data-bd-field="mode" value="${value}" ${currentMode === value ? 'checked' : ''}>${title}</label>`).join('');
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config"><h2>页面与样式</h2>${sharedComponentControls(s)}<label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}</aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong><label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${pageContentPanel(s, currentMode)}</div>`;
+        const components = workbenchMode === 'components';
+        const sidebar = components
+            ? `<aside class="bd-card bd-config"><h2>组件列表</h2><ul class="bd-component-list">
+                <li aria-current="true"><strong>顶部导航</strong><small>${SHARED_HEADER_STYLES[sharedHeaderLayout(s.sharedHeader)]}</small></li>
+            </ul></aside>`
+            : `<aside class="bd-card bd-config"><h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}
+                <button type="button" class="bd-link bd-component-shortcut" data-bd-action="workbench-mode" data-value="components">编辑共用顶部导航</button></aside>`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + workbenchTabs() + `<div class="bd-workbench" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}<section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="/brand-decoration-preview/index.html" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? contentPanel('顶部导航', sharedComponentControls(s)) : pageContentPanel(s, currentMode)}</div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -843,6 +878,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             page = 'home';
             channel = el.dataset.value as Channel;
             draw();
+            return;
+        }
+        if (action === 'workbench-mode') {
+            switchWorkbench(el.dataset.value === 'components' ? 'components' : 'page');
             return;
         }
         if (action === 'reset-plan-filters') { applyListFilters(emptyListFilters()); return; }
@@ -1054,8 +1093,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             current.sharedHeader = value;
             current.updatedAt = new Date().toISOString();
             validateScheme(current);
-        })) updateEditorPreview(scheme()!);
-        else input.value = sharedHeaderLayout(s.sharedHeader);
+        })) {
+            const updated = scheme()!;
+            const modeLabel = root.querySelector('.bd-component-list small');
+            if (modeLabel) modeLabel.textContent = SHARED_HEADER_STYLES[sharedHeaderLayout(updated.sharedHeader)];
+            updateEditorPreview(updated);
+        } else input.value = sharedHeaderLayout(s.sharedHeader);
         return;
     }
     const value = input.value.trim(); if (mutate(next => { const current = next.schemes.find(item => item.id === s.id)!; if (field === 'mode') {
@@ -1118,6 +1161,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             published: String(fields.get('published') ?? ''),
         });
     };
+    const workbenchKeydown = (event: KeyboardEvent) => {
+        if (!(event.target instanceof Element) || !event.target.matches('.bd-workbench-tabs [role=tab]')) return;
+        const modes = { Home: 'page', End: 'components', ArrowLeft: workbenchMode === 'page' ? 'components' : 'page', ArrowRight: workbenchMode === 'page' ? 'components' : 'page' } as const;
+        const mode = modes[event.key as keyof typeof modes];
+        if (!mode) return;
+        event.preventDefault();
+        switchWorkbench(mode);
+    };
+    root.addEventListener('keydown', workbenchKeydown);
     root.addEventListener('submit', filterSubmit);
     root.addEventListener('click', click);
     root.addEventListener('click', toggleContentPanel);
@@ -1125,6 +1177,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     root.addEventListener('change', change);
     window.addEventListener('message', frameMessage);
     window.addEventListener('storage', storage);
-    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
+    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('keydown', workbenchKeydown); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
     draw();
 }

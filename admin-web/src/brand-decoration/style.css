@@ -157,3 +157,17 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   .bd-workbench > .bd-content-panel { order: 2; }
   .bd-workbench > .bd-preview { order: 3; }
 }
+
+.bd-workbench-tabs { margin: 0 0 16px; }
+.bd-component-list { list-style: none; padding: 0; margin: 0; }
+.bd-component-list li {
+  display: grid;
+  gap: 4px;
+  background: #f0f7ff;
+  border: 1px solid #1677ff;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.bd-component-list small { color: #6b7280; }
+.bd-content-panel .bd-shared-components { min-width: 0; border: 0; margin: 0; padding: 0; }
+.bd-config .bd-component-shortcut { align-self: start; }
