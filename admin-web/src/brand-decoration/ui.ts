@@ -51,7 +51,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         return;
     }
     let channel: Channel = query.get('channel') === 'emenu' ? 'emenu' : 'kiosk', page = 'home', orientation = 'portrait';
-    let message = query.get('draft') === 'saved' ? '草稿已保存' : query.get('saved') === '1' ? '方案已保存' : '', messageError = false, modal: HTMLElement | undefined;
+    let message = query.get('saved') === '1' ? '方案已保存' : '', messageError = false, modal: HTMLElement | undefined;
     const editorId = route().startsWith(ROOT + '/pages/edit/') ? decodeURIComponent(route().split('/').pop()!) : undefined;
     const scheme = () => data.schemes.find(s => s.id === editorId && (!flow || s.rules?.storeIds.every(id => scope.stores.some(store => store.id === id))));
     const ensureWrite = () => { const current = decorationScope(); if (current.key !== scope.key)
@@ -68,7 +68,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const next = copy(data);
             fn(next);
             data = writeData(dataKey, next, data.revision);
-            notice('草稿已保存');
+            notice('');
             return true;
         }
         catch (error) {
@@ -191,7 +191,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
 
     const planUrl = (id: string, step = '', targetChannel = channel) => `#${ROOT}/pages/edit/${id}?flow=1&channel=${targetChannel}${step ? '&step=' + step : ''}`;
-    const returnAfterDraft = (target: Channel) => { location.hash = `${ROOT}/pages?channel=${target}&draft=saved`; };
+    const returnAfterDraft = (target: Channel) => { location.hash = `${ROOT}/pages?channel=${target}`; };
     const draftButton = (form?: string) => form
         ? `<button class="bd-draft-action" type="submit" form="${form}" name="destination" value="draft" formnovalidate>保存草稿</button>`
         : '<button class="bd-draft-action" type="button" data-bd-action="save-flow-draft">保存草稿</button>';
