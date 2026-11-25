@@ -1,3 +1,4 @@
+import {describeAuditStoreChange} from './center-audit-metadata';
 import type { Audit, CenterState, Resource, Store } from './center-domain';
 
 interface Context { state:CenterState; stores:Store[]; brands:{id:string;name:string}[]; resources:Map<string,Resource> }
@@ -9,7 +10,7 @@ const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const items=(v:unknown,translate=false):Item[]=>v===undefined||v===null||v===''?[]:[{key:JSON.stringify(v),text:typeof v==='boolean'?(v?'是':'否'):typeof v==='string'?(translate?(statuses[v]??v):v):JSON.stringify(v)}];
 const missing=(id:string)=>`名称不可用（${id}）`;
-export function renderAuditDiff(log:Audit,ctx:Context):string {
+export function renderAuditDiff(log:Audit,ctx:Context,employeeId?:string):string {
   let before:unknown,after:unknown;
   try {before=log.before?JSON.parse(log.before):null;after=log.after?JSON.parse(log.after):null;} catch {
     return `<p class="pc-notice">此历史记录无法解析，暂不能生成变更对照。</p><details><summary>查看原始记录</summary><h3>变更前</h3><pre class="pc-log-json">${escape(log.before)}</pre><h3>变更后</h3><pre class="pc-log-json">${escape(log.after)}</pre></details>`;
@@ -17,7 +18,7 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
   if((before!==null&&typeof before!=='object')||(after!==null&&typeof after!=='object')||Array.isArray(before)||Array.isArray(after))return '<p class="pc-notice">此历史记录不是角色或员工对象，无法生成业务变更对照。</p>';
   const a=object(before),b=object(after),rows:Row[]=[];
   const isRole='grants' in a||'grants' in b;
-  const roleName=(id:string)=>ctx.state.roles.find(r=>r.id===id)?.name??missing(id);
+  const roleName=(id:string)=>log.names?.roles[id]??ctx.state.roles.find(r=>r.id===id)?.name??missing(id);
   const resourceName=(key:string):string=>{
     const parts:string[]=[],seen=new Set<string>();let r=ctx.resources.get(key);
     if(!r)return missing(key);
@@ -31,7 +32,7 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
   const scalar=(group:string,label:string,left:unknown,right:unknown,translate=false)=>add(group,label,items(left,translate),items(right,translate));
   const scopeItems=(scope:Record<string,unknown>):Item[]=>Array.isArray(scope.ids)?scope.ids.map(id=>{
     const value=String(id),mode=scope.mode;
-    const text=mode==='stores'?ctx.stores.find(s=>s.id===value)?.title:mode==='brands'?ctx.brands.find(b=>b.id===value)?.name:mode==='regions'?value:undefined;
+    const text=mode==='stores'?(log.names?.stores[value]??ctx.stores.find(s=>s.id===value)?.title):mode==='brands'?(log.names?.brands[value]??ctx.brands.find(b=>b.id===value)?.name):mode==='regions'?value:undefined;
     return {key:`${String(mode)}:${value}`,text:text??missing(value)};
   }):[];
   const displayScopeMode=(scope:Record<string,unknown>)=>scope.mode==='stores'&&Array.isArray(scope.ids)&&!scope.ids.length?'未配置门店':scope.mode;
@@ -72,6 +73,32 @@ export function renderAuditDiff(log:Audit,ctx:Context):string {
   if(!isRole){
     const extraIds=(employee:Record<string,unknown>)=>employee.extraStoreIds??(Array.isArray(employee.supplementalStoreGrants)?employee.supplementalStoreGrants.map(value=>object(value).storeId):[]);
     add('账号资料','额外授权门店',scopeItems({mode:'stores',ids:extraIds(a)}),scopeItems({mode:'stores',ids:extraIds(b)}));
+  }
+  if(log.account){
+    const left=log.account.before,right=log.account.after;
+    const method=(value:typeof left)=>value?.method==='email'?'邮箱邀请':value?.method==='password'?'设置密码':undefined;
+    const invite=(value:typeof left)=>value?.invitation==='pending'?'待接受邀请':value?.invitation==='expired'?'邀请已过期':value?.invitation==='revoked'?'邀请已撤销':undefined;
+    const timeChange=(label:string,from:string|undefined,to:string|undefined)=>{
+      const format=(value:string)=>new Date(value).toLocaleString();
+      const sameSecond=from&&to&&from!==to&&format(from)===format(to);
+      const timestamp=(value:string|undefined):Item[]=>value?[{
+        key:value,
+        text:sameSecond?new Date(value).toLocaleString(undefined,{hour:'numeric',minute:'2-digit',second:'2-digit',fractionalSecondDigits:3,year:'numeric',month:'numeric',day:'numeric'}):format(value),
+      }]:[];
+      add('账号开通与邀请',label,timestamp(from),timestamp(to));
+    };
+    if(method(left)===method(right)&&method(right))rows.push({group:'账号开通与邀请',label:'开通方式',before:items(method(left)),after:items(method(right))});
+    else scalar('账号开通与邀请','开通方式',method(left),method(right));
+    scalar('账号开通与邀请','邀请状态',invite(left),invite(right));
+    timeChange('邀请发送时间',left?.sentAt,right?.sentAt);
+    timeChange('邀请有效期',left?.expiresAt,right?.expiresAt);
+  }
+  const impacts=log.storeChanges?.filter(change=>!employeeId||change.employeeId===employeeId)??[];
+  for(const change of impacts){
+    for(const store of change.stores){
+      const values=(sources:string[])=>sources.map(source=>({key:source,text:source}));
+      add('门店授权影响',`${change.employeeName} · ${store.name}（${store.id}） · ${describeAuditStoreChange(store)}`,values(store.before),values(store.after));
+    }
   }
   const name=String(b.name??a.name??ctx.state.employees.find(e=>e.id===log.objectId)?.name??ctx.state.roles.find(r=>r.id===log.objectId)?.name??missing(log.objectId));
   const cell=(values:Item[],other:Item[],kind:'added'|'removed')=>values.length?`<ul class="pc-audit-values">${values.map(v=>{const changed=!other.some(x=>x.key===v.key);return `<li${changed?` class="pc-audit-${kind}"`:''}>${escape(v.text)}${changed?` <span class="pc-audit-badge">${kind==='added'?'新增':'移除'}</span>`:''}</li>`;}).join('')}</ul>`:'<span class="pc-muted">无</span>';

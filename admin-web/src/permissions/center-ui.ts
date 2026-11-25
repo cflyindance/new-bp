@@ -6,7 +6,7 @@ import {openCenterAccount,deleteCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {isRoleOnlyMigrationAudit} from './center-audit-visibility';
-import {auditEmployeeName} from './center-audit-employee';
+import {presentAudit} from './center-audit-presentation';
 import {renderAuditDiff} from './center-audit-diff';
 import { applyCategoryGrant } from './center-category-grants';
 import {deleteUnassignedRole,roleBoundEmployees} from './center-role-delete';
@@ -82,10 +82,19 @@ export function bindCenterPage(): void {
     }
     return renderPermissionEditor({catalog,page:selectedPage,group:selectedGroup,preview,readonly:!!employeeId||roleView,staff:false,effectiveOnly:!!employeeId||roleView,grantedOnly:roleView,emptyMessage:roleView?'该角色暂无可访问菜单':undefined,value,own:key=>employeeId?'inherit':(role()?.grants[key]??catalog.resources.get(key)?.defaultAccess??'hidden'),parentInherited:key=>{const r=catalog.resources.get(key);const g=role()?.grants;return !employeeId&&!!r?.inheritFrom&&(g?.[r.parentChoiceKey!]==='read'||!employeeId&&g?.[key]===undefined);},search});
   }
-  function logs(objectId?:string,limit?:number):string {
-    const showEmployee=!objectId&&path.includes('/change-log');
-    const rows=state.logs.filter(l=>!isRoleOnlyMigrationAudit(l)&&(!objectId||l.objectId===objectId)&&(!query||`${l.actor} ${l.action} ${l.objectId}${showEmployee?' '+auditEmployeeName(l,state):''}`.includes(query)));
-    return `<table><thead><tr><th>时间</th><th>操作人</th>${showEmployee?'<th>授权员工</th>':''}<th>操作</th><th>变更内容</th></tr></thead><tbody>${rows.slice(0,limit??rows.length).map(l=>`<tr><td>${esc(new Date(l.at).toLocaleString())}</td><td>${esc(l.actor)}</td>${showEmployee?`<td>${esc(auditEmployeeName(l,state))}</td>`:''}<td>${esc(l.action)}</td><td><button type="button" data-log-id="${esc(l.id)}">查看前后值</button></td></tr>`).join('')||`<tr><td colspan="${showEmployee?5:4}" class="pc-empty">暂无变更记录</td></tr>`}</tbody></table>`;
+  let auditFrom='',auditTo='',auditType='';
+  function logs(objectId?:string):string {
+    const needle=query.trim().toLowerCase();
+    const rows=state.logs.filter(log=>{
+      if(isRoleOnlyMigrationAudit(log))return false;
+      if(objectId&&log.objectId!==objectId&&!log.storeChanges?.some(change=>change.employeeId===objectId))return false;
+      const time=Date.parse(log.at);
+      return (!auditFrom||time>=Date.parse(auditFrom+'T00:00:00'))&&(!auditTo||time<=Date.parse(auditTo+'T23:59:59.999'));
+    }).map(log=>({log,...presentAudit(log,state,objectId)})).filter(row=>
+      (!auditType||row.category===auditType)&&
+      (!needle||[row.log.actor,row.log.action,row.log.objectId,row.name,row.action].join(' ').toLowerCase().includes(needle))
+    );
+    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,objectLabel,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(objectLabel)}</td><td>${esc(action)}${log.source==='demo'?' <span class="pc-tag">演示</span>':''}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="6" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
   }
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
@@ -93,7 +102,8 @@ export function bindCenterPage(): void {
     changeDetail(log);
   }
   function changeDetail(log:Audit,pending=false):void {
-    const dialog=modal('变更详情',`${log.source==='demo'?'<p class="pc-notice">演示记录，仅用于展示示例，不代表真实操作历史。</p>':''}<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(log.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources})}`,()=>true,'关闭');
+    const entry=presentAudit(log,state,employeeId||undefined);
+    const dialog=modal('变更详情',`${log.source==='demo'?'<p class="pc-notice">演示记录，仅用于展示示例，不代表真实操作历史。</p>':''}<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(entry.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources},employeeId||undefined)}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
@@ -131,7 +141,12 @@ export function bindCenterPage(): void {
           const methodLabel=method==='email'?'邮箱邀请':method==='password'?'设置密码':'—';
           return `<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td>${methodLabel}</td><td><span class="pc-tag">${accountStatus(e,login)}</span></td><td>${[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><button type="button" data-view-staff-stores="${esc(e.id)}" aria-label="查看 ${esc(e.name)} 的已授权门店，${storeCount} 家">${storeCount} 家</button></td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('变更记录',staffPath(e.id)+'/records')}${staffAccountActions(e,login)}</div></td></tr>`;}).join('')||'<tr><td colspan="7" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       }
-      else if(path.includes('/change-log'))body=`<input data-query aria-label="筛选变更记录" placeholder="操作人、授权员工、操作或对象编号" value="${esc(query)}"><div class="pc-card">${logs()}</div>`;
+      else if(path.includes('/change-log'))body=`<div class="pc-actions">
+        <input data-query aria-label="搜索变更记录" placeholder="操作人、对象名称、操作或编号" value="${esc(query)}">
+        <select data-audit-type aria-label="变更类型"><option value="">全部变更类型</option>${['角色','员工授权','账号'].map(type=>`<option${auditType===type?' selected':''}>${type}</option>`).join('')}</select>
+        <label>开始日期<input type="date" data-audit-from value="${esc(auditFrom)}"></label>
+        <label>结束日期<input type="date" data-audit-to value="${esc(auditTo)}"></label>
+      </div><div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
       root!.innerHTML=`<header class="pc-heading"><h1>${title}</h1></header>${body}`;
     }
@@ -504,6 +519,14 @@ export function bindCenterPage(): void {
     all.indeterminate=count>0&&count<boxes.length;
     root!.querySelector<HTMLButtonElement>('[data-do="remove-extra-stores"]')!.disabled=!count;
   });
+  root.addEventListener('change',ev=>{
+    const input=ev.target as HTMLInputElement|HTMLSelectElement;
+    if(input.hasAttribute('data-audit-type'))auditType=input.value;
+    else if(input.hasAttribute('data-audit-from'))auditFrom=input.value;
+    else if(input.hasAttribute('data-audit-to'))auditTo=input.value;
+    else return;
+    render();
+  });
   root.addEventListener('input',ev=>{
     const target=ev.target as HTMLInputElement;
     if(target.hasAttribute('data-role-tree-search')){roleTree.search=target.value;const pos=target.selectionStart;render();const next=root.querySelector<HTMLInputElement>('[data-role-tree-search]');next?.focus();next?.setSelectionRange(pos,pos);return;}
@@ -534,7 +557,7 @@ export function bindCenterPage(): void {
         if(dirty)throw Error('请先处理未保存的修改，再重新预览批量设置');
         const next=structuredClone(state);
         next.roles=next.roles.map(item=>item.id===roleId?candidate:item);
-        commit(next,roleId,'更新角色权限');
+        commit(next,roleId,'批量更新角色权限');
         return true;
       },'确认并保存');
       confirmation.classList.add('pc-batch-dialog');return;

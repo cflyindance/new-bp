@@ -1,4 +1,5 @@
-import { validateRole, type CenterState, type Resource } from './center-domain';
+import { auditMetadata } from './center-audit-metadata';
+import { validateRole, type Audit, type CenterState, type Resource, type Store } from './center-domain';
 export function validateCenterState(state:CenterState,resources:Map<string,Resource>):void {
   if(state.employeeAuthorization!==undefined&&state.employeeAuthorization!=='roles-only')throw Error('员工角色授权模式无效');
   if(state.navigationVersion!==undefined&&state.navigationVersion!==1)throw Error('导航权限数据版本无效');
@@ -35,7 +36,7 @@ export function validateCenterState(state:CenterState,resources:Map<string,Resou
     for(const grants of Object.values(employee.overrides))for(const [key,value] of Object.entries(grants))validGrant(key,value);
   }
 }
-export function persistCenterChange(storage:Pick<Storage,'getItem'|'setItem'>,key:string,next:CenterState,expectedVersion:number,objectId:string,action:string,actor:string,resources:Map<string,Resource>):CenterState {
+export function persistCenterChange(storage:Pick<Storage,'getItem'|'setItem'>,key:string,next:CenterState,expectedVersion:number,objectId:string,action:string,actor:string,resources:Map<string,Resource>,audit?:{stores:Store[];brands:{id:string;name:string}[];account?:Audit['account']}):CenterState {
   const raw=storage.getItem(key);if(!raw)throw Error('原权限数据不存在，请刷新后重新编辑');
   const current=JSON.parse(raw) as CenterState;
   if(current.version!==expectedVersion)throw Error('数据已被其他窗口修改。请保留当前内容，刷新后重新编辑');
@@ -44,7 +45,8 @@ export function persistCenterChange(storage:Pick<Storage,'getItem'|'setItem'>,ke
   for(const old of current.roles)if(!next.roles.some(r=>r.id===old.id)&&[...current.employees,...next.employees].some(e=>e.bindings.some(b=>b.roleId===old.id)))throw Error('请先解除员工的角色分配，再删除角色');
   const saved=structuredClone(next);
   const object=(s:CenterState)=>s.roles.find(r=>r.id===objectId)??s.employees.find(e=>e.id===objectId)??null;
-  saved.logs=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor,objectId,action,before:JSON.stringify(object(current)),after:JSON.stringify(object(next))},...current.logs];
+  const metadata=audit?auditMetadata(current,saved,objectId,audit.stores,audit.brands,audit.account):{};
+  saved.logs=[{...metadata,id:crypto.randomUUID(),at:new Date().toISOString(),actor,objectId,action,before:JSON.stringify(object(current)),after:JSON.stringify(object(next))},...current.logs];
   saved.version=current.version+1;
   // One write; publish state to the caller only after persistence succeeds.
   storage.setItem(key,JSON.stringify(saved));return saved;

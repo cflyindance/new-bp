@@ -31,6 +31,13 @@ export interface Role {readonlyChildren?:Record<string,string[]>;defaultedGrants
 export interface Resource {readonlyAllowed?:boolean; editRequires?:string[]}
 export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean; extraStoreIds?: string[]; supplementalStoreGrants?: {roleId:string;storeId:string}[] }
+export interface AuditAccount { method?:'email'|'password'; invitation?:'pending'|'expired'|'revoked'; sentAt?:string; expiresAt?:string }
+export interface AuditStoreChange { id:string; name:string; before:string[]; after:string[] }
+export interface Audit {
+  names?:{roles:Record<string,string>;stores:Record<string,string>;brands:Record<string,string>};
+  account?:{before?:AuditAccount;after?:AuditAccount};
+  storeChanges?:{employeeId:string;employeeName:string;stores:AuditStoreChange[]}[];
+}
 export interface Audit { source?:'demo'; id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
 export interface CenterState { schema: 1; navigationVersion?: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
 export interface CenterState {employeeAuthorization?:'roles-only'}

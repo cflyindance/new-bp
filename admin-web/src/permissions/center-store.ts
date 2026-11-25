@@ -7,7 +7,7 @@ import { listStaffLoginAccounts,upsertStaffLoginAccount } from "./staff-account-
 import { buildPermissionResourceIndex } from "../config/permission-registry";
 import { DEFAULT_DEMO_STORE_ID, listMPlatformStoreScopeEntries } from "./m-platform-store-scope";
 import { buildCenterCatalog, pageKey, settingKey } from "./center-catalog";
-import { type CenterState, type Store, type Scope, type Access } from "./center-domain";
+import { type Audit, type CenterState, type Store, type Scope, type Access } from "./center-domain";
 import { persistCenterChange } from './center-persistence';
 import { migrateNavigationPermissions } from './center-navigation-migration';
 import {migrateRoleOnlyState} from './center-role-only';
@@ -79,6 +79,6 @@ export function readCenterState(): CenterState {
   localStorage.setItem(CENTER_KEY,JSON.stringify(migrated));
   return initializeDemoScenarios(migrated,localStorage.getItem(CENTER_KEY));
 }
-export function saveCenterState(next: CenterState, expectedVersion: number, objectId: string, action: string, actor: string): CenterState {
-  return persistCenterChange(localStorage,CENTER_KEY,next,expectedVersion,objectId,action,actor,buildCenterCatalog().resources);
+export function saveCenterState(next: CenterState, expectedVersion: number, objectId: string, action: string, actor: string, account?:Audit['account']): CenterState {
+  return persistCenterChange(localStorage,CENTER_KEY,next,expectedVersion,objectId,action,actor,buildCenterCatalog().resources,{stores:centerStores(),brands:centerBrands(),account});
 }

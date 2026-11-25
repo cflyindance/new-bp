@@ -1,7 +1,20 @@
 import * as accounts from './staff-account-store';
 import {saveCenterState} from './center-store';
-import type {CenterState} from './center-domain';
+import type {AuditAccount,CenterState} from './center-domain';
 const ACCOUNT_KEY='menusifu:staff-login-accounts:v1';
+
+function auditAccount(account:accounts.StaffLoginAccount|undefined):AuditAccount|undefined {
+  if(!account)return;
+  const invite=account.invitation;
+  return {
+    method:account.openedVia??(invite?'email':account.isSystem?'password':undefined),
+    ...(invite?{
+      invitation:invite.revoked?'revoked':Date.parse(invite.expiresAt)<=Date.now()?'expired':'pending',
+      sentAt:invite.sentAt,
+      expiresAt:invite.expiresAt,
+    }:{}),
+  };
+}
 /** Both local stores roll back together; credentials never enter the permission audit. */
 export function openCenterAccount(state:CenterState, employeeId:string, input:{name:string;email:string;password:string;confirmPassword:string;method:'invite'|'password'}, actor:string, operation:'create'|'accept'|'resend'|'revoke'|'toggle'='create'):CenterState {
   const previous=accounts.listStaffLoginAccounts().find(a=>a.employeeId===employeeId);
@@ -24,7 +37,7 @@ export function openCenterAccount(state:CenterState, employeeId:string, input:{n
     const next=structuredClone(state); let employee=next.employees.find(e=>e.id===employeeId);
     if(!employee){employee={id:employeeId,name:input.name,email:input.email,status:'unopened',bindings:[],overrides:{}};next.employees.push(employee);}
     employee.status=account.invitation?account.invitation.revoked?'revoked':'pending':account.enabled?'enabled':'disabled';
-    return saveCenterState(next,state.version,employeeId,operation==='create'?(input.method==='invite'?'创建演示邀请':'设置密码开通账号'):operation==='accept'?'演示接受邀请':operation==='resend'?'重发演示邀请':operation==='toggle'?'变更账号状态':'撤销邀请',actor);
+    return saveCenterState(next,state.version,employeeId,operation==='create'?(input.method==='invite'?'创建演示邀请':'设置密码开通账号'):operation==='accept'?'演示接受邀请':operation==='resend'?'重发演示邀请':operation==='toggle'?(account.enabled?'启用账号':'停用账号'):'撤销邀请',actor,{before:auditAccount(previous),after:auditAccount(account)});
   } catch(error) {
     if(beforeAccounts===null)localStorage.removeItem(ACCOUNT_KEY);else localStorage.setItem(ACCOUNT_KEY,beforeAccounts);
     throw error;
@@ -45,7 +58,7 @@ export function deleteCenterAccount(state:CenterState,employeeId:string,actor:st
   target.email='';
   try {
     if(!accounts.deleteStaffLoginAccount(account.id))throw Error('账号删除失败，请刷新后重试');
-    return saveCenterState(next,state.version,employeeId,'删除登录账号',actor);
+    return saveCenterState(next,state.version,employeeId,'删除登录账号',actor,{before:auditAccount(account)});
   } catch(error){
     if(beforeAccounts===null)localStorage.removeItem(ACCOUNT_KEY);
     else localStorage.setItem(ACCOUNT_KEY,beforeAccounts);
