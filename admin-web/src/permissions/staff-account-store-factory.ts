@@ -247,6 +247,7 @@ export function createStaffAccountStore(options: CreateStaffAccountStoreOptions)
       const row: StaffLoginAccount = {
         ...existing,
         ...merged,
+        ...(existing.invitation && !existing.openedVia ? { openedVia: "email" as const } : {}),
         ...(patch.invitation ? { enabled: false, password: "" } : {}),
         ...(Object.prototype.hasOwnProperty.call(patch, "invitation") ? { invitation: patch.invitation } : {}),
         loginEmail: normalizeEmail(merged.loginEmail),

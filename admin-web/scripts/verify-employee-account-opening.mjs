@@ -11,7 +11,11 @@ const invite=store.createStaffLoginAccount({employeeId:'one',employeeName:'One',
 assert.equal(invite.enabled,false);assert.equal(invite.password,'');assert.ok(invite.invitation);
 assert.throws(()=>store.updateStaffLoginAccount(invite.id,{enabled:true}));
 assert.throws(()=>store.updateStaffLoginAccount(invite.id,{enabled:true,password:'123',invitation:undefined}));
-const accepted=store.updateStaffLoginAccount(invite.id,{enabled:true,password:'valid-password',invitation:undefined});assert.equal(accepted.enabled,true);assert.equal(accepted.invitation,undefined);
+const accepted=store.updateStaffLoginAccount(invite.id,{enabled:true,password:'valid-password',invitation:undefined});assert.equal(accepted.enabled,true);assert.equal(accepted.invitation,undefined);assert.equal(accepted.openedVia,'email');
+const {openedVia, ...legacyInvite}=invite;
+store.upsertStaffLoginAccount(legacyInvite);
+const acceptedLegacy=store.updateStaffLoginAccount(invite.id,{enabled:true,password:'valid-password',invitation:undefined});
+assert.equal(acceptedLegacy.openedVia,'email');
 assert.throws(()=>store.createStaffLoginAccount({employeeId:'two',employeeName:'Two',loginEmail:'ONE@menusifu.cn',password:'password',enabled:true}));
 const expired=store.createStaffLoginAccount({employeeId:'old',employeeName:'Old',loginEmail:'old@menusifu.cn',password:'',enabled:false,openingMethod:'invite'});
 store.updateStaffLoginAccount(expired.id,{invitation:{sentAt:new Date(0).toISOString(),expiresAt:new Date(0).toISOString()}});
