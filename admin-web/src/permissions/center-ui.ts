@@ -190,15 +190,21 @@ export function bindCenterPage(): void {
   }
   function assign():void {
     if(!employee())return;
-    const rows=draft.roles.map(role=>`<tr>
-      <td><input type="checkbox" name="role" value="${esc(role.id)}" aria-label="选择 ${esc(role.name)}"></td>
-      <td>${esc(role.name)}</td>
-      <td><button type="button" data-preview-assignment-role="${esc(role.id)}" aria-label="查看 ${esc(role.name)} 的角色权限">查看角色权限</button></td>
-    </tr>`).join('');
+    const rows=draft.roles.map(role=>{
+      const scope:Scope={mode:'stores',ids:role.defaultStoreIds??[]};
+      const items=scopeStoreItems(scope,stores);
+      return `<tr>
+        <td><input type="checkbox" name="role" value="${esc(role.id)}" aria-label="选择 ${esc(role.name)}"></td>
+        <td>${esc(role.name)}</td>
+        <td>${items.length?items.slice(0,2).map(item=>esc(item.title)).join('、'):'<span class="pc-muted">未配置门店</span>'}
+        ${items.length>2?`<button type="button" class="pc-scope-more" data-preview-assignment-stores="${esc(role.id)}">共 ${items.length} 家，查看全部</button>`:''}</td>
+        <td><button type="button" data-preview-assignment-role="${esc(role.id)}" aria-label="查看 ${esc(role.name)} 的角色权限">查看角色权限</button></td>
+      </tr>`;
+    }).join('');
     const selectedRoleIds=(d:HTMLDialogElement)=>new Set([...d.querySelectorAll<HTMLInputElement>('[name="role"]:checked')].map(input=>input.value));
     const dialog=modal('分配员工角色',`<div class="pc-role-assignment-list"><table aria-label="角色列表">
-      <thead><tr><th scope="col">选择</th><th scope="col">角色</th><th scope="col">操作</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="3" class="pc-empty">暂无可分配角色</td></tr>'}</tbody>
+      <thead><tr><th scope="col">选择</th><th scope="col">角色</th><th scope="col">授权门店</th><th scope="col">操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="4" class="pc-empty">暂无可分配角色</td></tr>'}</tbody>
     </table></div>`,d=>{
       const selected=selectedRoleIds(d);
       const roles=draft.roles.filter(role=>selected.has(role.id));
@@ -210,13 +216,16 @@ export function bindCenterPage(): void {
       render();
       return true;
     },'确认分配');
-    dialog.classList.add('pc-assignment-dialog');
+    dialog.classList.add('pc-assignment-dialog','pc-role-assignment-dialog');
     const next=dialog.querySelector<HTMLButtonElement>('[type="submit"]')!;
     next.disabled=true;
     dialog.addEventListener('change',()=>{next.disabled=selectedRoleIds(dialog).size===0;});
     dialog.addEventListener('click',event=>{
       const trigger=(event.target as Element).closest<HTMLButtonElement>('[data-preview-assignment-role]');
-      if(trigger)showRolePermissions(trigger.dataset.previewAssignmentRole!);
+      if(trigger){showRolePermissions(trigger.dataset.previewAssignmentRole!);return;}
+      const storesTrigger=(event.target as Element).closest<HTMLButtonElement>('[data-preview-assignment-stores]');
+      const role=draft.roles.find(item=>item.id===storesTrigger?.dataset.previewAssignmentStores);
+      if(role)showRoleStores(role.name,{mode:'stores',ids:role.defaultStoreIds??[]});
     });
   }
   function addStoreSupplement():void {
