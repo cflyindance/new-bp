@@ -94,6 +94,12 @@ try{
   P.publishPlan(flow,newDaily,stores,'demo');
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id);
   assert.equal(P.planPage(flow,'b','kiosk','home',end).snapshot.id,daily.id);
+  P.publishPlan(flow,newDaily,stores,'demo');
+  flow.releases.find(item=>item.snapshot.id===newDaily.id).offShelf=true;
+  assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,daily.id,'下架后不能回退到同方案的历史版本');
+  P.publishPlan(flow,newDaily,stores,'demo');
+  assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id,'重新上架使用新快照');
+
   console.log('PASS: multi-store plans, partial pages, overlaps, timezone and latest fallback.');
   console.log('PASS: activity boundaries, overlap, fallback, channel isolation and time zones.');
   console.log('PASS: seed stability; 24 pages; persistence; brand/store/channel isolation; revision conflicts; immutable snapshots; independent versions; duplicate publish; validation; storage failure; corrupt data.');

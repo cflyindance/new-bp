@@ -42,6 +42,7 @@ export interface Scheme {
     styles: Record<string, Style>;
 }
 export interface Release {
+    offShelf?: true;
     rules?: PlanRules;
     id: string;
     version: number;

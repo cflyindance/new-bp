@@ -19,7 +19,7 @@ export function latestPlanReleases(data: DecorationData): PlanRelease[] {
     return data.releases.flatMap(release => {
         if (!release.rules || seen.has(release.snapshot.id)) return [];
         seen.add(release.snapshot.id);
-        return [{ ...release, rules: release.rules }];
+        return release.offShelf ? [] : [{ ...release, rules: release.rules }];
     });
 }
 
