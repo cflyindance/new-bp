@@ -156,11 +156,11 @@ export function bindCenterPage(): void {
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>权限数量</th><th>成员数</th><th>授权门店</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td>${link(permissionCount(r)+' 项',`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><button type="button" data-view-role-stores="${esc(r.id)}">${r.defaultStoreIds?.length??0} 家</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button type="button" data-role-default-stores="${esc(r.id)}">授权门店</button><button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="6" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
       else if(path.includes('/staff')){
         const logins=new Map(listStaffLoginAccounts().map(account=>[account.employeeId,account]));
-        body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div>${accountNotice?`<p class="pc-notice" role="status">${esc(accountNotice)}</p>`:''}<div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>开通方式</th><th>账号状态</th><th>门店角色</th><th>已授权门店</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>{const login=logins.get(e.id);
-          const storeCount=accessibleEmployeeStores(e,state.roles,stores).length;
+        body=`<div class="pc-toolbar"><div class="pc-actions"><input data-query aria-label="搜索员工" placeholder="员工姓名或邮箱" value="${esc(query)}"><select data-status aria-label="账号状态"><option value="">全部账号状态</option>${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${filter===v?'selected':''}>${l}</option>`).join('')}</select></div>${btn('新增员工账号','invite','primary')}</div>${accountNotice?`<p class="pc-notice" role="status">${esc(accountNotice)}</p>`:''}<div class="pc-card"><table><thead><tr><th>员工</th><th>登录邮箱</th><th>开通方式</th><th>账号状态</th><th>门店角色</th><th>角色授权门店</th><th>账号单独授权门店</th><th>操作</th></tr></thead><tbody>${state.employees.filter(e=>(!filter||e.status===filter)&&`${e.name} ${e.email}`.toLowerCase().includes(query.toLowerCase())).map(e=>{const login=logins.get(e.id);
+          const storeLists=staffStoreLists(e);
           const method=login?.openedVia??(login?.invitation?'email':login?.isSystem?'password':undefined);
           const methodLabel=method==='email'?'邮箱邀请':method==='password'?'设置密码':'—';
-          return `<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td>${methodLabel}</td><td><span class="pc-tag">${accountStatus(e,login)}</span></td><td>${[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><button type="button" data-view-staff-stores="${esc(e.id)}" aria-label="查看 ${esc(e.name)} 的已授权门店，${storeCount} 家">${storeCount} 家</button></td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('变更记录',staffPath(e.id)+'/records')}${staffAccountActions(e,login)}</div></td></tr>`;}).join('')||'<tr><td colspan="7" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
+          return `<tr><td>${esc(e.name)}</td><td>${esc(e.email)||"—"}</td><td>${methodLabel}</td><td><span class="pc-tag">${accountStatus(e,login)}</span></td><td>${[...new Set(e.bindings.map(b=>b.roleId))].map(id=>esc(state.roles.find(r=>r.id===id)?.name??"失效角色")).join("、")||"未授权"}</td><td><button type="button" data-view-staff-stores="${esc(e.id)}" data-store-source="role" aria-label="查看 ${esc(e.name)} 的角色授权门店，${storeLists.role.length} 家">${storeLists.role.length} 家</button></td><td><button type="button" data-view-staff-stores="${esc(e.id)}" data-store-source="extra" aria-label="查看 ${esc(e.name)} 的账号单独授权门店，${storeLists.extra.length} 家">${storeLists.extra.length} 家</button></td><td><div class="pc-actions">${link('管理授权',staffPath(e.id)+'/authorization')}${link('变更记录',staffPath(e.id)+'/records')}${staffAccountActions(e,login)}</div></td></tr>`;}).join('')||'<tr><td colspan="8" class="pc-empty">暂无匹配员工</td></tr>'}</tbody></table></div>`;
       }
       else if(path.includes('/change-log'))body=`${auditFilters()}<div class="pc-card">${logs()}</div>`;
       else body='<div class="pc-empty">未找到页面</div>';
@@ -294,6 +294,15 @@ export function bindCenterPage(): void {
   function showRoleStores(name:string,scope:Scope):void {
     const items=scopeStoreItems(scope,stores);
     showStoreList('查看角色授权门店',`<p>角色：<strong>${esc(name)}</strong></p><p>${esc(scopeLabel(scope))} · 共 ${items.length} 家门店</p>`,items,renderScope(scope,stores,true));
+  }
+  function staffStoreLists(staff:typeof state.employees[number]) {
+    const extraIds=new Set(accountExtraStoreIds(staff));
+    const roleOwned=stores.flatMap(store=>{
+      const sources=applicableRoles(staff,state.roles,store).map(role=>role.name);
+      return sources.length?[{...store,sources}]:[];
+    });
+    const extra=stores.filter(store=>extraIds.has(store.id));
+    return {role:roleOwned,extra};
   }
   function showStoreList(title:string,summary:string,items:{id:string;title:string;sources?:string[]}[],empty:string):void {
     const showSources=items.some(item=>item.sources);
@@ -494,13 +503,11 @@ export function bindCenterPage(): void {
       if(b.dataset.viewStaffStores){
         const staff=state.employees.find(item=>item.id===b.dataset.viewStaffStores);
         if(!staff)return;
-        const extras=new Set(accountExtraStoreIds(staff));
-        const items=accessibleEmployeeStores(staff,state.roles,stores).map(store=>{
-          const sources=applicableRoles(staff,state.roles,store).map(role=>`角色授权 · ${role.name}`);
-          if(extras.has(store.id))sources.push('账号额外授权');
-          return {...store,sources};
-        });
-        showStoreList('已授权门店',`<p>员工：<strong>${esc(staff.name)}</strong></p><p>共 ${items.length} 家门店</p>`,items,'<p class="pc-empty">该账号暂无授权门店</p>');
+        const extra=b.dataset.storeSource==='extra';
+        const lists=staffStoreLists(staff);
+        const items=extra?lists.extra:lists.role;
+        const title=extra?'账号单独授权门店':'角色授权门店';
+        showStoreList(title,`<p>员工：<strong>${esc(staff.name)}</strong></p><p>共 ${items.length} 家门店</p>`,items,`<p class="pc-empty">该账号暂无${title}</p>`);
         return;
       }
       if(b.dataset.viewRoleStores){
