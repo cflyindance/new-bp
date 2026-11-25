@@ -1284,7 +1284,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var total=invalid ? '无法试算' : formatEmployeeSummaryMoney(confirmed+estimated,true);
       var detail='贡献金额明细\n\n已分配日期：'+formatEmployeeSummaryMoney(confirmed,true)+'\n待分配日期（预计）：'+(errors.length ? '无法试算' : formatEmployeeSummaryMoney(estimated,true))+'\n合计：'+total+'\n\n待分配金额为试算结果，以实际分配结果为准。';
       if(errors.length) detail+='\n'+errors.join('；');
-      return total+' <span class="tipout-contribution-help" role="button" tabindex="0" aria-label="查看贡献入池金额明细" aria-haspopup="dialog" data-detail="'+escapeSummaryHtml(detail)+'" onclick="openContributionBreakdown(this,event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){openContributionBreakdown(this,event);}">?</span>';
+      return total+' <span class="tipout-contribution-help" data-tooltip="查看贡献入池明细" role="button" tabindex="0" aria-label="查看贡献入池金额明细" aria-haspopup="dialog" data-detail="'+escapeSummaryHtml(detail)+'" onclick="openContributionBreakdown(this,event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){openContributionBreakdown(this,event);}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 10.5V17M12 7v.5"/></svg></span>';
     }
 
     function openContributionBreakdown(trigger,event) {
@@ -1366,10 +1366,8 @@ var ALLOC_KEY = 'tipout_allocated';
       return ({ 'original-punch': '原始打卡', 'pos-corrected': 'POS 修正', 'max-hours': '最大工时', manual: '手工录入', mixed: '混合来源', 'not-applicable': '不适用' })[source] || '原始打卡';
     }
     function renderAllocationHoursSummaryButton(employeeId, summary) {
-      summary = summary || { kind: 'empty', display: '—' };
-      if (summary.kind === 'empty' || summary.kind === 'not-applicable') return '<span class="tipout-allocation-hours-empty">'+escapeSummaryHtml(summary.display)+'</span>';
       return '<button type="button" class="tipout-allocation-hours-button" data-native-onclick="openAllocationHoursDetail(event, &quot;' +
-        escapeSummaryHtml(employeeId) + '&quot;)">' + escapeSummaryHtml(summary.display) + '</button>';
+        escapeSummaryHtml(employeeId) + '&quot;)">按规则查看</button>';
     }
     function openAllocationHoursDetail(event, employeeId) {
       if (event && event.stopPropagation) event.stopPropagation();
@@ -1382,7 +1380,7 @@ var ALLOC_KEY = 'tipout_allocated';
           escapeSummaryHtml(TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind)) + '</td><td>' +
           escapeSummaryHtml(TipOutSummaryUi.allocationHourExplanation(entry)) + '</td><td><strong>' +
           escapeSummaryHtml(TipOutSummaryUi.allocationHourEntryDisplay(entry)) + '</strong></td><td>'+escapeSummaryHtml(TipOutSummaryUi.allocationHourCoverage(entry))+'</td></tr>';
-      }).join('');
+      }).join('') || '<tr><td colspan="5">暂无规则工时记录</td></tr>';
       var modal = document.getElementById('allocationHoursDetailModal');
       modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
       var close = document.getElementById('allocationHoursDetailClose'); if (close) close.focus();

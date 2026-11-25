@@ -25,6 +25,7 @@ els.employeeDetailStartDate.value='2026-10-20';els.employeeDetailEndDate.value='
 assert.equal(c.validateEmployeeDetailDateRange(c.employeeDetailViewState.snapshot,true),true);
 assert.equal(els.employeeDetailDateRangeError.hidden,true);
 els.employeeDetailStartDate.value='';
+c.employeeDetailViewState.snapshot.dateStart='';
 vm.runInContext(extract(source,'renderEmployeeDetailRange'),c);
 assert.equal(c.renderEmployeeDetailRange(c.employeeDetailViewState.snapshot,'start'),false,'invalid range stops before reading rows');
 for(const name of ['toggleEmployeeDetailExportMenu','collectEmployeeDetailExportData','sendEmployeeDetailEmail']){

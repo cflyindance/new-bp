@@ -998,7 +998,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
           '<table class="data-table detail-table detail-employee-table tipout-allocation-table" id="' + escHtml(subTableId) + '">' +
-          '<thead><tr><th>分配员工</th>' + hoursHead + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
+          '<thead><tr><th>分配员工</th>' + hoursHead + '<th hidden>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         emps.forEach(function(emp, ei) {
           var empAmount = empAmounts[ei];
@@ -1011,7 +1011,7 @@ var ALLOC_KEY = 'tipout_allocated';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
             hoursCell +
-            '<td class="input-cell"><input type="number"' + (hoursBased ? ' class="detail-emp-pct-input" min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' readonly style="background:rgba(0,0,0,0.04)"') + ' value="' + empPcts[ei] + '"> %</td>' +
+            '<td class="input-cell" hidden><input type="number"' + (hoursBased ? ' class="detail-emp-pct-input" min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' readonly style="background:rgba(0,0,0,0.04)"') + ' value="' + empPcts[ei] + '"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">—</td>' +
             '</tr>';
@@ -1784,7 +1784,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
           '<table class="data-table detail-table detail-employee-table tipout-allocation-table" id="' + escHtml(subTableId) + '">' +
-          '<thead><tr><th>分配员工</th>' + headHours + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
+          '<thead><tr><th>分配员工</th>' + headHours + '<th hidden>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         rc.employees.forEach(function(emp, ei) {
           var empAmount = empAmounts[ei];
@@ -1797,7 +1797,7 @@ var ALLOC_KEY = 'tipout_allocated';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
             hoursCell +
-            '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="' + empPcts[ei] +
+            '<td class="input-cell" hidden><input type="number" class="detail-emp-pct-input" value="' + empPcts[ei] +
             '" min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">' +
@@ -1871,7 +1871,7 @@ var ALLOC_KEY = 'tipout_allocated';
       newRow.innerHTML =
         '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + options + '</select></td>' +
         hoursCell +
-        '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="0"' + (manualHours ? ' min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' onchange="recalcRoleAmount(\'' + tableId + '\')"') + '> %</td>' +
+        '<td class="input-cell" hidden><input type="number" class="detail-emp-pct-input" value="0"' + (manualHours ? ' min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' onchange="recalcRoleAmount(\'' + tableId + '\')"') + '> %</td>' +
         '<td>$0.00</td>' +
         '<td class="action-cell"><a href="javascript:void(0)" onclick="addDetailRow(\'' + tableId + '\',this)">新增行</a>' +
         '<a href="javascript:void(0)" class="danger" onclick="removeDetailRow(\'' + tableId + '\',this)">删除行</a></td>';

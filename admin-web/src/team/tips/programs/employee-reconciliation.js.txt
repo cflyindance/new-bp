@@ -161,17 +161,14 @@ function detailNumber(value) { return Number(value) || 0; }
       return makeDetailCell(valid ? detailHours(row.punchHours === undefined ? attendance.hours : row.punchHours) + ' h' : '—');
     }
     var employeeDetailAllocationHoursTrigger = null;
-    var employeeDetailRangeHourEntries = [];
     function employeeDetailHourSourceLabel(source) {
       return ({ 'original-punch': '原始打卡', 'pos-corrected': 'POS 修正', 'max-hours': '最大工时', manual: '手工录入', mixed: '混合来源', 'not-applicable': '不适用' })[source] || '原始打卡';
     }
     function makeAllocationHoursCell(row) {
       var cell = document.createElement('td');
       var entries = TipOutSummaryUi.normalizeEmployeeHoursRow(row).allocationHourEntries;
-      var summary = TipOutSummaryUi.summarizeAllocationHourValues(entries);
-      if (summary.kind === 'empty' || summary.kind === 'not-applicable') { cell.textContent = summary.display; return cell; }
       var button = document.createElement('button');
-      button.type = 'button'; button.className = 'tipout-allocation-hours-button'; button.textContent = summary.display;
+      button.type = 'button'; button.className = 'tipout-allocation-hours-button'; button.textContent = '按规则查看';
       button._tipoutEntries = entries;
       button.addEventListener('click', function(event) { openEmployeeDetailAllocationHours(event, button._tipoutEntries, row.dateKey); });
       cell.appendChild(button);
@@ -183,6 +180,11 @@ function detailNumber(value) { return Number(value) || 0; }
       if (title) title.textContent = dateKey ? dateKey + ' 分配工时明细' : '分配工时明细';
       var body = document.getElementById('employeeDetailHoursRows');
       body.textContent = '';
+      if (!entries || !entries.length) {
+        var emptyRow = document.createElement('tr');
+        var emptyCell = document.createElement('td'); emptyCell.colSpan = 5; emptyCell.textContent = '暂无规则工时记录';
+        emptyRow.appendChild(emptyCell); body.appendChild(emptyRow);
+      }
       (entries || []).forEach(function(entry) {
         var tr = document.createElement('tr');
         [entry.ruleName, TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind), TipOutSummaryUi.allocationHourExplanation(entry), TipOutSummaryUi.allocationHourEntryDisplay(entry), TipOutSummaryUi.allocationHourCoverage(entry)].forEach(function(value, index) {
@@ -227,7 +229,8 @@ function detailNumber(value) { return Number(value) || 0; }
     }
     function makeEmployeeContributionHelp(text) {
       var button=document.createElement('button');
-      button.type='button'; button.className='tipout-contribution-help'; button.textContent='?';
+      button.type='button'; button.className='tipout-contribution-help'; button.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 10.5V17M12 7v.5"/></svg>';
+      button.setAttribute('data-tooltip','查看贡献入池明细');
       button.setAttribute('aria-label','查看贡献入池金额明细'); button.setAttribute('aria-haspopup','dialog');
       button.addEventListener('click',function(event){
         event.preventDefault(); event.stopPropagation();
@@ -459,12 +462,6 @@ function detailNumber(value) { return Number(value) || 0; }
     function renderEmployeeDetailSummary(summary) {
       summary = summary || {};
       setDetailText('employeeDetailPunchHours', summary.punchHoursDisplay);
-      employeeDetailRangeHourEntries = summary.allocationHourSummaries || [];
-      var allocationButton = document.getElementById('employeeDetailAllocationHours');
-      if (allocationButton) {
-        allocationButton.textContent = summary.allocationHoursSummary ? summary.allocationHoursSummary.display : '—';
-        allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty' || summary.allocationHoursSummary.kind === 'not-applicable';
-      }
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
       var errors=summary.contributionErrors || [];
       var confirmed=(summary.confirmedContributionCents || 0)/100, estimated=(summary.estimatedContributionCents || 0)/100;
@@ -498,9 +495,11 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function renderEmployeeDetailRange(snapshot, changedSide) {
-      if (!validateEmployeeDetailDateRange(snapshot, true)) return false;
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
+      startInput.value = snapshot.dateStart;
+      endInput.value = snapshot.dateEnd;
+      if (!validateEmployeeDetailDateRange(snapshot, true)) return false;
       var attendanceInput = document.getElementById('employeeDetailAttendanceFilter');
       var allocationStatusInput = document.getElementById('employeeDetailAllocationStatusFilter');
       var range = { start: startInput.value, end: endInput.value };
@@ -538,8 +537,6 @@ function detailNumber(value) { return Number(value) || 0; }
       startInput.value = snapshot.dateStart;
       endInput.value = snapshot.dateEnd;
       if (allocationStatusInput) allocationStatusInput.value = '全部状态';
-      startInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'start'); });
-      endInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'end'); });
       if (attendanceInput) attendanceInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'attendance'); });
       if (allocationStatusInput) allocationStatusInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'allocation'); });
       renderEmployeeDetailRange(snapshot, 'start');

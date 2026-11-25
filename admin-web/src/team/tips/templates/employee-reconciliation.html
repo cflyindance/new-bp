@@ -6,9 +6,9 @@
         <section class="employee-identity-card">
         <div class="employee-identity-heading"><span class="employee-identity-avatar" aria-hidden="true">员</span><h2 id="employeeDetailName">—</h2><span id="employeeDetailRole" class="tipout-role-tag">未设置角色</span></div>
         <div class="tipout-detail-date-range" aria-label="分配汇总日期范围">
-          <input id="employeeDetailStartDate" type="date" aria-label="开始日期" aria-describedby="employeeDetailDateRangeError">
+          <input id="employeeDetailStartDate" type="text" class="tipout-readonly-date" readonly aria-readonly="true" aria-label="开始日期" aria-describedby="employeeDetailDateRangeError">
           <span aria-hidden="true">～</span>
-          <input id="employeeDetailEndDate" type="date" aria-label="结束日期" aria-describedby="employeeDetailDateRangeError">
+          <input id="employeeDetailEndDate" type="text" class="tipout-readonly-date" readonly aria-readonly="true" aria-label="结束日期" aria-describedby="employeeDetailDateRangeError">
           <label class="tipout-detail-attendance-filter">
             <span>考勤状态</span>
             <select id="employeeDetailAttendanceFilter" aria-label="考勤状态">
@@ -33,7 +33,6 @@
         </section>
         <div class="tipout-employee-detail-metrics" aria-label="员工分配汇总金额概览">
           <div><span>打卡总工时</span><strong id="employeeDetailPunchHours">—</strong></div>
-          <div><span>分配计入工时</span><button id="employeeDetailAllocationHours" type="button" class="tipout-allocation-hours-button" disabled data-native-onclick="openEmployeeDetailAllocationHours(event, employeeDetailRangeHourEntries, '')">—</button></div>
           <div><span>分配前总小费</span><strong id="employeeDetailBefore">$0.00</strong></div>
           <div><span>贡献入池总额</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
           <div><span>从池分得总额</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
