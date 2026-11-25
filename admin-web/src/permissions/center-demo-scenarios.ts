@@ -1,4 +1,4 @@
-import type {Audit, CenterState, Employee, Role, Store} from './center-domain';
+import {roleAccess,type Audit,type CenterState,type Employee,type Resource,type Role,type Store} from './center-domain';
 import type {StaffLoginAccount} from './staff-account-store';
 
 const prefix='permission-scene-v1';
@@ -10,22 +10,51 @@ const rolePresets=[
   {key:'unscoped',name:'待配置门店角色'},
 ] as const;
 
-function refreshPresetRoleCopy(state:CenterState):CenterState {
+const presetPages:Record<string,string[]>={
+  manager:['/stores/profile','/orders/all','/reports/revenue'],
+  cashier:['/orders/all'],
+  spare:['/orders/all'],
+  unscoped:['/stores/profile'],
+};
+
+function seedRoleMenus(role:Role,key:string,resources:Map<string,Resource>):Role {
+  const grants={...role.grants};
+  const allow=(resourceKey:string)=>{
+    const resource=resources.get(resourceKey);
+    if(!resource)return;
+    grants[resourceKey]='read';
+    for(const parent of [resource.parent,resource.legacyGateKey,...(resource.requires??[])])
+      if(parent&&grants[parent]!=='read'&&grants[parent]!=='edit')allow(parent);
+    if(resource.settingPageGate&&grants[resource.settingPageGate]===undefined)grants[resource.settingPageGate]='read';
+  };
+  for(const path of presetPages[key]??[]){
+    const page=resources.get('page:'+path);
+    if(!page)continue;
+    allow(page.key);
+    if(page.pageContentKeys?.length)allow(page.pageContentKeys[0]!);
+  }
+  return {...role,grants};
+}
+
+function refreshPresetRoleCopy(state:CenterState,resources:Map<string,Resource>):CenterState {
   const roles=state.roles.map(role=>{
     const preset=rolePresets.find(item=>role.id===prefix+'-'+item.key);
     if(!preset)return role;
     const canRename=role.name==='演示 · '+preset.name&&!state.roles.some(item=>item.id!==role.id&&item.name.trim().toLowerCase()===preset.name.toLowerCase());
     const description='legacyDescription' in preset&&role.description===preset.legacyDescription?preset.description:role.description;
-    if(!canRename&&description===role.description)return role;
-    return {...role,name:canRename?preset.name:role.name,description};
+    const hasManualChanges=state.logs.some(log=>log.objectId===role.id&&log.source!=='demo');
+    const hasVisiblePage=[...resources.values()].some(resource=>resource.type==='page'&&roleAccess(role,resource.key,resources)!=='hidden');
+    const configured=!hasManualChanges&&!hasVisiblePage?seedRoleMenus(role,preset.key,resources):role;
+    if(!canRename&&description===role.description&&JSON.stringify(configured.grants)===JSON.stringify(role.grants))return role;
+    return {...configured,name:canRename?preset.name:role.name,description};
   });
   return roles.some((role,index)=>role!==state.roles[index])?{...state,roles,version:state.version+1}:state;
 }
 
 
-export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:StaffLoginAccount[],now:Date):{state:CenterState;accounts:StaffLoginAccount[]} {
+export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:StaffLoginAccount[],now:Date,resources=new Map<string,Resource>()):{state:CenterState;accounts:StaffLoginAccount[]} {
   const unchanged={state,accounts:[]};
-  if(state.demoScenarioSeedVersion===1)return {state:refreshPresetRoleCopy(state),accounts:[]};
+  if(state.demoScenarioSeedVersion===1)return {state:refreshPresetRoleCopy(state,resources),accounts:[]};
   const manager=state.roles.find(role=>role.id==='store-manager');
   const cashier=state.roles.find(role=>role.id==='cashier');
   const primary=stores.find(store=>store.id==='M00000001');
@@ -39,7 +68,7 @@ export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:Sta
     {...structuredClone(cashier),id:prefix+'-cashier',name:rolePresets[1].name,description:rolePresets[1].description,system:false,defaultStoreIds:[secondary.id]},
     {...structuredClone(cashier),id:prefix+'-spare',name:rolePresets[2].name,description:rolePresets[2].description,system:false,defaultStoreIds:[]},
     {...structuredClone(cashier),id:prefix+'-unscoped',name:rolePresets[3].name,description:'已分配，配置门店后才在相应门店生效。',system:false,defaultStoreIds:[]},
-  ];
+  ].map((role,index)=>seedRoleMenus(role,rolePresets[index]!.key,resources));
   if(roles.some(role=>state.roles.some(item=>item.id===role.id||item.name===role.name)))return unchanged;
   next.roles.push(...roles);
 

@@ -25,7 +25,7 @@ export const centerStores = (): Store[] => {
 export const centerBrands = (): ScopeBrand[] => getEnterpriseMerchantSnapshot().merchants.map(m=>({id:m.merchantId,name:m.name}));
 function initializeDemoScenarios(state:CenterState,expectedRaw:string|null):CenterState {
   if(getAuthenticatedEmail()?.toLowerCase()!==DEMO_LOGIN_ACCOUNT)return state;
-  const plans=buildDemoScenarios(state,centerStores(),listStaffLoginAccounts(),new Date());
+  const plans=buildDemoScenarios(state,centerStores(),listStaffLoginAccounts(),new Date(),buildCenterCatalog().resources);
   if(plans.state===state)return state;
   if(localStorage.getItem(CENTER_KEY)!==expectedRaw)throw Error('权限数据已被其他窗口修改，请刷新后重试');
   const accountKey='menusifu:staff-login-accounts:v1';

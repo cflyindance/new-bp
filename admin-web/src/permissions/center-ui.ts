@@ -63,6 +63,8 @@ export function bindCenterPage(): void {
   for(const n of flattenRoleTree(treeNodes))if(n.kind==='page'&&n.children.length)roleTree.collapsed.add(n.id);
   const treeNode=(id:string)=>flattenRoleTree(treeNodes).find(n=>n.id===id);
   const originalRole=()=>state.roles.find(r=>r.id===roleId)!;
+  const hasPendingChanges=()=>roleId?JSON.stringify(role())!==JSON.stringify(originalRole()):dirty;
+  let roleSaveNotice='';
   const employee=()=>draft.employees.find(e=>e.id===employeeId);
   const accountStatus=(e:Employee,a=listStaffLoginAccounts().find(a=>a.employeeId===e.id))=>a?.invitation?invitationStatus(a):statusLabels[e.status];
   const actor=()=>getUserSessionContext()?.employeeName??'本地管理员';
@@ -70,7 +72,7 @@ export function bindCenterPage(): void {
   const btn=(label:string,action:string,cls='')=>`<button type="button" class="${cls}" data-do="${action}">${label}</button>`;
   const link=(label:string,url:string)=>`<a class="pc-link" href="#${url}">${label}</a>`;
   const title=path.includes('/roles')?'角色与功能权限':path.includes('/staff')?'员工与账号':path.includes('/change-log')?'变更记录':'权限管理中心';
-  const mark=()=>{dirty=true;activeHash=location.hash;leaveGuard=()=>confirm('有未保存的修改，确定放弃并离开？');};
+  const mark=()=>{dirty=true;roleSaveNotice='';activeHash=location.hash;leaveGuard=()=>!hasPendingChanges()||confirm('有未保存的修改，确定放弃并离开？');};
   const value=(key:string):Access=>roleId&&role()?roleAccess(role()!,key,catalog.resources):resolveAccess(draft,employeeId,storeId,key,stores,catalog.resources);
   function editor(preview=false,selectedPage=page,selectedGroup=group,search=menuSearch):string {
     if(!preview&&roleId&&!roleView&&role())return renderRoleTree(catalog,role()!,originalRole(),roleTree);
@@ -138,7 +140,7 @@ export function bindCenterPage(): void {
       const staffEmployee=!roleId?employee():undefined;
       const staffTitle={overview:'门店与权限',authorization:'管理授权',security:'登录与安全',records:'变更记录'}[staffView];
       const staffSubtitle=staffEmployee&&!staffEditable?`<span>${esc(staffView==='records'?auditDisplayText(staffEmployee.name):staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
-      root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
+      root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span role="status">${hasPendingChanges()?'有未保存修改':roleSaveNotice||'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';
       if(path.includes('/roles'))body=`<div class="pc-toolbar"><input data-query aria-label="搜索角色" placeholder="搜索角色名称" value="${esc(query)}">${btn('新建角色','create-role','primary')}</div><div class="pc-card"><table><thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>授权门店</th><th>操作</th></tr></thead><tbody>${state.roles.filter(r=>r.name.includes(query)).map(r=>`<tr><td><strong>${link(esc(r.name),`/permissions/roles/view/${encodeURIComponent(r.id)}`)}</strong></td><td>${esc(roleDescription(r.description))||'—'}</td><td><button data-members="${esc(r.id)}">${memberCount(r.id)} 人</button></td><td><button type="button" data-view-role-stores="${esc(r.id)}">${r.defaultStoreIds?.length??0} 家</button></td><td><div class="pc-actions"><button data-role-info="${esc(r.id)}">编辑角色</button>${link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(r.id)}`)}<button type="button" data-role-default-stores="${esc(r.id)}">授权门店</button><button data-copy="${esc(r.id)}">复制</button><button class="danger" data-delete="${esc(r.id)}">删除</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="pc-empty">暂无匹配角色</td></tr>'}</tbody></table></div>`;
@@ -180,7 +182,12 @@ export function bindCenterPage(): void {
     return dialog;
   }
   const field=(d:HTMLDialogElement,id:string)=>(d.querySelector(`[name="${id}"]`) as HTMLInputElement|HTMLSelectElement).value;
-  function commit(next:CenterState,id:string,action:string):void {state=saveCenterState(next,state.version,id,action,actor());draft=structuredClone(state);dirty=false;leaveGuard=undefined;render();}
+  function commit(next:CenterState,id:string,action:string):void {
+    state=saveCenterState(next,state.version,id,action,actor());
+    draft=structuredClone(state);dirty=false;leaveGuard=undefined;
+    if(roleId&&roleId===id)roleSaveNotice=action==='批量更新角色权限'?'批量权限已保存':'权限已保存';
+    render();
+  }
   function roleDialog(id='',copy=false):void {
     const original=state.roles.find(r=>r.id===id);
     modal(copy?'复制角色':original?'编辑角色':'新建角色',`<label>角色名称<input name="name" required maxlength="30" value="${esc(original?(copy?original.name+' 副本':original.name):'')}"></label><label>描述<textarea name="description" maxlength="160">${esc(original?.description??'')}</textarea></label>`,d=>{
@@ -504,9 +511,14 @@ export function bindCenterPage(): void {
         case 'add-store-supplement':addStoreSupplement();break;
         case 'staff-effective':showStaffEffective();break;
 
-        case 'back':case 'cancel':if(!dirty||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
+        case 'back':case 'cancel':if(!hasPendingChanges()||confirm('放弃未保存的修改？')){dirty=false;leaveGuard=undefined;location.hash=roleId?'/permissions/roles':'/permissions/staff';}break;
         case 'save':{
-          if(!dirty){modal('无需保存','<p>当前没有未保存的修改。</p>',()=>true,'知道了');return;}
+          if(!hasPendingChanges()){
+            if(roleId){
+              modal('权限已保存',`<p>${roleSaveNotice==='批量权限已保存'?'批量权限已保存并生效。':'当前权限与已保存版本一致。'}</p>`,()=>true,'关闭');
+            }else modal('无需保存','<p>当前没有未保存的修改。</p>',()=>true,'知道了');
+            return;
+          }
           const id=roleId||employeeId,old=roleId?state.roles.find(r=>r.id===id):state.employees.find(e=>e.id===id),next=roleId?role():employee();
           const action=roleId?'更新角色权限':'更新员工授权';
           const pendingChange:Audit={id:'draft',at:'',actor:actor(),objectId:id,action,before:JSON.stringify(old??null),after:JSON.stringify(next??null)};
@@ -546,7 +558,7 @@ export function bindCenterPage(): void {
     const position=target.selectionStart;render();const input=root.querySelector<HTMLInputElement>(isMenu?'[data-menu-search]':'[data-query]');input?.focus();input?.setSelectionRange(position,position);
   });
   function openRoleBatch(mode:Access):void {
-    if(dirty){
+    if(hasPendingChanges()){
       modal('请先处理未保存的修改','<p>批量设置会直接保存。请先保存现有修改，或取消编辑后重新进入。</p>',()=>true,'返回编辑');
       return;
     }
@@ -565,7 +577,7 @@ export function bindCenterPage(): void {
         return `<tbody><tr class="pc-batch-group"><th colspan="3" scope="rowgroup">${esc(category.title)} · ${items.length} 项</th></tr>`+items.map(node=>`<tr><th scope="row">${esc(roleTreePath(treeNodes,node.id))}</th><td>${esc(label(node,original))}</td><td>${esc(label(node,candidate))}</td></tr>`).join('')+'</tbody>';
       }).join('');
       const confirmation=modal('批量设置权限',`<p>实际变更 ${changes.length} 项。确认保存后立即生效。</p><p>${esc(summary)}</p><div class="pc-batch-preview"><table><thead><tr><th>权限项目</th><th>变更前</th><th>变更后</th></tr></thead>${rows}</table></div>`,()=>{
-        if(dirty)throw Error('请先处理未保存的修改，再重新预览批量设置');
+        if(hasPendingChanges())throw Error('请先处理未保存的修改，再重新预览批量设置');
         const next=structuredClone(state);
         next.roles=next.roles.map(item=>item.id===roleId?candidate:item);
         commit(next,roleId,'批量更新角色权限');
