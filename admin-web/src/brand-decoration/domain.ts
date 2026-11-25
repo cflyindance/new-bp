@@ -81,7 +81,7 @@ export function validateScheme(s: Scheme): void {
         throw Error('方案主题色无效');
     if (s.sharedHeader !== undefined && !['layout', 'custom', 'light', 'brand'].includes(s.sharedHeader))
         throw Error('共用组件顶部样式无效');
-    if (s.pageContent !== undefined && (s.channel !== 'kiosk' || !validatePageContent(s.pageContent)))
+    if (s.pageContent !== undefined && !validatePageContent(s.channel, s.pageContent))
         throw Error('页面内容配置无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
         throw Error('页面配置不完整');

@@ -705,10 +705,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? resolvePalette(s.paletteId ?? 'custom', s.primary) : undefined,
-            elements: s.channel === 'kiosk' ? pageElements(page).flatMap(field => {
+            elements: pageElements(s.channel, page).flatMap(field => {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
                 return selector ? [{ id: field.id, kind: field.kind, selector, value: s.pageContent?.[page]?.[field.id] }] : [];
-            }) : [],
+            }),
             page, orientation,
         }, location.origin);
     }
@@ -766,12 +766,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     function pageContentPanel(s: Scheme, mode: string) {
         const empty = mode === 'inherit' ? '此页沿用门店日常装修。' : '当前页面布局暂无可编辑内容。';
-        return contentPanel('页面内容', pageContentControls(s, mode) || `<p class="bd-help">${empty}</p>`);
+        const switchLayout = mode === 'default' && scope.canWrite && pageElements(s.channel, page).some(field => field.custom)
+            ? '<button type="button" class="bd-link" data-bd-action="enable-page-content">切换自定义布局</button>'
+            : '';
+        return contentPanel('页面内容', pageContentControls(s, mode) || `<p class="bd-help">${empty}</p>${switchLayout}`);
     }
     function pageContentControls(s: Scheme, mode: string) {
-        if (s.channel !== 'kiosk' || mode === 'inherit') return '';
+        if (mode === 'inherit') return '';
         const content = s.pageContent?.[page] ?? {};
-        const elements = pageElements(page).filter(field => mode === 'custom' ? field.custom : field.native);
+        const elements = pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
         if (!elements.length) return '';
         return `<fieldset class="bd-page-content" aria-label="页面内容" ${writable()}>
             ${elements.map(field => {
@@ -968,6 +971,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const s = scheme();
         if (!s)
             return;
+        if (action === 'enable-page-content') {
+            const layout = root.querySelector<HTMLInputElement>('[name="bd-mode"][value="custom"]');
+            if (layout && !layout.checked) layout.click();
+            return;
+        }
         if (action === 'reset-page-content' || action === 'reset-element') {
             const id = action === 'reset-element' ? el.dataset.value : undefined;
             if (id) savePageElement(s, page, id);
@@ -1079,8 +1087,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     if (!s) return;
     if (field === 'element') {
         const id = input.dataset.element;
-        const element = pageElements(page).find(item => item.id === id);
-        if (!element || s.channel !== 'kiosk') return;
+        const element = pageElements(s.channel, page).find(item => item.id === id);
+        if (!element) return;
         if (element.kind === 'image') {
             const file = input.files?.[0];
             if (!file) return;
