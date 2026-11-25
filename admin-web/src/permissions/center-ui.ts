@@ -94,7 +94,7 @@ export function bindCenterPage(): void {
       (!auditType||row.category===auditType)&&
       (!needle||[row.log.actor,row.log.action,row.log.objectId,row.name,row.action].join(' ').toLowerCase().includes(needle))
     );
-    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>变更类型</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,objectLabel,category,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(objectLabel)}</td><td>${esc(category)}</td><td>${esc(action)}${log.source==='demo'?' <span class="pc-tag">演示</span>':''}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="7" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>变更类型</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,name,category,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(name)}</td><td>${esc(category)}</td><td>${esc(action)}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="7" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
   }
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
@@ -103,7 +103,7 @@ export function bindCenterPage(): void {
   }
   function changeDetail(log:Audit,pending=false):void {
     const entry=presentAudit(log,state,employeeId||undefined);
-    const dialog=modal('变更详情',`${log.source==='demo'?'<p class="pc-notice">演示记录，仅用于展示示例，不代表真实操作历史。</p>':''}<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(entry.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources},employeeId||undefined)}`,()=>true,'关闭');
+    const dialog=modal('变更详情',`<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(entry.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources},employeeId||undefined)}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
