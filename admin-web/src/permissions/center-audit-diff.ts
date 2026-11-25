@@ -1,3 +1,4 @@
+import {auditDisplayText} from './center-audit-presentation';
 import {describeAuditStoreChange} from './center-audit-metadata';
 import type { Audit, CenterState, Resource, Store } from './center-domain';
 
@@ -13,7 +14,7 @@ const missing=(id:string)=>`名称不可用（${id}）`;
 export function renderAuditDiff(log:Audit,ctx:Context,employeeId?:string):string {
   let before:unknown,after:unknown;
   try {before=log.before?JSON.parse(log.before):null;after=log.after?JSON.parse(log.after):null;} catch {
-    return `<p class="pc-notice">此历史记录无法解析，暂不能生成变更对照。</p><details><summary>查看原始记录</summary><h3>变更前</h3><pre class="pc-log-json">${escape(log.before)}</pre><h3>变更后</h3><pre class="pc-log-json">${escape(log.after)}</pre></details>`;
+    return `<p class="pc-notice">此历史记录无法解析，暂不能生成变更对照。</p><details><summary>查看原始记录</summary><h3>变更前</h3><pre class="pc-log-json">${escape(auditDisplayText(log.before))}</pre><h3>变更后</h3><pre class="pc-log-json">${escape(auditDisplayText(log.after))}</pre></details>`;
   }
   if((before!==null&&typeof before!=='object')||(after!==null&&typeof after!=='object')||Array.isArray(before)||Array.isArray(after))return '<p class="pc-notice">此历史记录不是角色或员工对象，无法生成业务变更对照。</p>';
   const a=object(before),b=object(after),rows:Row[]=[];
@@ -101,6 +102,6 @@ export function renderAuditDiff(log:Audit,ctx:Context,employeeId?:string):string
     }
   }
   const name=String(b.name??a.name??ctx.state.employees.find(e=>e.id===log.objectId)?.name??ctx.state.roles.find(r=>r.id===log.objectId)?.name??missing(log.objectId));
-  const cell=(values:Item[],other:Item[],kind:'added'|'removed')=>values.length?`<ul class="pc-audit-values">${values.map(v=>{const changed=!other.some(x=>x.key===v.key);return `<li${changed?` class="pc-audit-${kind}"`:''}>${escape(v.text)}${changed?` <span class="pc-audit-badge">${kind==='added'?'新增':'移除'}</span>`:''}</li>`;}).join('')}</ul>`:'<span class="pc-muted">无</span>';
-  return `<p class="pc-audit-object">${isRole?'角色':'员工'}：<strong>${escape(name)}</strong></p>${rows.length?'':'<p class="pc-empty">未发现字段变化</p>'}${[...new Set(rows.map(r=>r.group))].map(group=>`<section class="pc-audit-group"><h3>${group}</h3><table><thead><tr><th>变更项目</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${rows.filter(r=>r.group===group).map(r=>`<tr><th scope="row">${escape(r.label)}</th><td>${cell(r.before,r.after,'removed')}</td><td>${cell(r.after,r.before,'added')}</td></tr>`).join('')}</tbody></table></section>`).join('')}`;
+  const cell=(values:Item[],other:Item[],kind:'added'|'removed')=>values.length?`<ul class="pc-audit-values">${values.map(v=>{const changed=!other.some(x=>x.key===v.key);return `<li${changed?` class="pc-audit-${kind}"`:''}>${escape(auditDisplayText(v.text))}${changed?` <span class="pc-audit-badge">${kind==='added'?'新增':'移除'}</span>`:''}</li>`;}).join('')}</ul>`:'<span class="pc-muted">无</span>';
+  return `<p class="pc-audit-object">${isRole?'角色':'员工'}：<strong>${escape(auditDisplayText(name))}</strong></p>${rows.length?'':'<p class="pc-empty">未发现字段变化</p>'}${[...new Set(rows.map(r=>r.group))].map(group=>`<section class="pc-audit-group"><h3>${group}</h3><table><thead><tr><th>变更项目</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${rows.filter(r=>r.group===group).map(r=>`<tr><th scope="row">${escape(auditDisplayText(r.label))}</th><td>${cell(r.before,r.after,'removed')}</td><td>${cell(r.after,r.before,'added')}</td></tr>`).join('')}</tbody></table></section>`).join('')}`;
 }

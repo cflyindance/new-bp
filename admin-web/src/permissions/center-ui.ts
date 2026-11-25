@@ -6,7 +6,7 @@ import {openCenterAccount,deleteCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
 import {renderStandalonePageHeader} from '../ui/standalone-page-header';
 import {isRoleOnlyMigrationAudit} from './center-audit-visibility';
-import {presentAudit} from './center-audit-presentation';
+import {auditDisplayText,presentAudit} from './center-audit-presentation';
 import {renderAuditDiff} from './center-audit-diff';
 import { applyCategoryGrant } from './center-category-grants';
 import {deleteUnassignedRole,roleBoundEmployees} from './center-role-delete';
@@ -92,9 +92,9 @@ export function bindCenterPage(): void {
       return (!auditFrom||time>=Date.parse(auditFrom+'T00:00:00'))&&(!auditTo||time<=Date.parse(auditTo+'T23:59:59.999'));
     }).map(log=>({log,...presentAudit(log,state,objectId)})).filter(row=>
       (!auditType||row.category===auditType)&&
-      (!needle||[row.log.actor,row.log.action,row.log.objectId,row.name,row.action].join(' ').toLowerCase().includes(needle))
+      (!needle||[row.actor,row.log.actor,row.log.action,row.log.objectId,row.name,row.action].join(' ').toLowerCase().includes(needle))
     );
-    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>变更类型</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,name,category,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(log.actor)}</td><td>${esc(name)}</td><td>${esc(category)}</td><td>${esc(action)}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="7" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
+    return `<table><thead><tr><th>时间</th><th>操作人</th><th>变更对象</th><th>变更类型</th><th>操作</th><th>变更摘要</th><th>详情</th></tr></thead><tbody>${rows.map(({log,name,actor,category,action,summary})=>`<tr><td>${esc(new Date(log.at).toLocaleString())}</td><td>${esc(actor)}</td><td>${esc(name)}</td><td>${esc(category)}</td><td>${esc(action)}</td><td>${esc(summary)}</td><td><button type="button" data-log-id="${esc(log.id)}">查看前后值</button></td></tr>`).join('')||'<tr><td colspan="7" class="pc-empty">暂无变更记录</td></tr>'}</tbody></table>`;
   }
   function logDetail(id:string):void {
     const log=state.logs.find(row=>row.id===id);
@@ -103,7 +103,7 @@ export function bindCenterPage(): void {
   }
   function changeDetail(log:Audit,pending=false):void {
     const entry=presentAudit(log,state,employeeId||undefined);
-    const dialog=modal('变更详情',`<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(log.actor)}</dd></div><div><dt>操作</dt><dd>${esc(entry.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources},employeeId||undefined)}`,()=>true,'关闭');
+    const dialog=modal('变更详情',`<dl class="pc-log-meta">${pending?'':`<div><dt>时间</dt><dd>${esc(new Date(log.at).toLocaleString())}</dd></div>`}<div><dt>操作人</dt><dd>${esc(entry.actor)}</dd></div><div><dt>操作</dt><dd>${esc(entry.action)}</dd></div></dl>${renderAuditDiff(log,{state,stores,brands:centerBrands(),resources:catalog.resources},employeeId||undefined)}`,()=>true,'关闭');
     dialog.classList.add('pc-log-dialog');
     dialog.setAttribute('aria-label','变更详情');
     dialog.querySelector('footer [data-close]')?.remove();
@@ -128,7 +128,7 @@ export function bindCenterPage(): void {
     if(isDetail){
       const staffEmployee=!roleId?employee():undefined;
       const staffTitle={overview:'门店与权限',authorization:'管理授权',security:'登录与安全',records:'变更记录'}[staffView];
-      const staffSubtitle=staffEmployee&&!staffEditable?`<span>${esc(staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
+      const staffSubtitle=staffEmployee&&!staffEditable?`<span>${esc(staffView==='records'?auditDisplayText(staffEmployee.name):staffEmployee.name)}</span> <span class="pc-tag">${accountStatus(staffEmployee)}</span>`:'';
       root!.innerHTML=`<section class="pc-full${staffEditable?' pc-staff-authorization':''}">${renderStandalonePageHeader({className:'pc-heading',titleHtml:esc(role()?.name??(staffEmployee?staffTitle:'记录不存在')),backHtml:btn('← 返回','back'),subtitleHtml:staffEmployee?staffSubtitle:`<span class="pc-tag">${roleView?'查看权限':roleId?'编辑权限':staffEditable?'管理授权':'员工详情'}</span>`,actionsHtml:(roleId&&role()?(roleView?link('编辑权限',`/permissions/roles/edit/${encodeURIComponent(roleId)}`):btn('查看菜单效果','preview')):'')+(staffEditable?`<span class="pc-muted" role="status">${dirty?'有未保存修改':''}</span>${btn('取消','cancel')}<button type="button" class="primary" data-do="save" ${dirty?'':'disabled'}>保存更改</button>`:roleId&&!roleView?btn('取消','cancel')+btn('保存更改','save','primary'):'')})}<div class="pc-content">${roleId?(role()?`${roleView?'<div class="pc-toolbar"><h3>当前角色生效权限</h3></div>':''}${editor()}`:'<div class="pc-empty">角色不存在</div>'):staffDetail()}</div>${roleView?`<footer class="pc-footer"><span class="pc-muted">仅展示当前角色实际生效的菜单与已授权功能</span></footer>`:roleId?`<footer class="pc-footer"><span>${dirty?'有未保存修改':'所有修改已保存'}</span></footer>`:''}</section>`;
     }else{
       let body='';

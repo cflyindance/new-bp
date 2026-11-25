@@ -1,5 +1,9 @@
 import type {Audit, CenterState} from './center-domain';
 
+export function auditDisplayText(value:string):string {
+  return value.replace(/（演示）|【演示】|演示\s*·\s*|演示/g,'').trim();
+}
+
 const record=(raw:string):Record<string,unknown>=>{
   try{
     const parsed:unknown=JSON.parse(raw);
@@ -17,7 +21,7 @@ export function presentAudit(log:Audit,state:CenterState,employeeId?:string) {
   const target=(role?state.roles:state.employees).find(item=>item.id===log.objectId);
   const name=[after.name,before.name,target?.name].find((value):value is string=>typeof value==='string'&&!!value.trim())?.trim()??log.objectId;
   const category=role?'角色':/账号|邀请|开通/.test(log.action)?'账号':'员工授权';
-  let action=log.action.replace(/（演示）$/,'').replace(/^(创建|重发|接受)演示邀请$/,'$1邀请').replace(/^演示接受邀请$/,'接受邀请');
+  let action=auditDisplayText(log.action);
   let summary='';
   if(action==='变更账号状态'&&['enabled','disabled'].includes(String(after.status)))action=after.status==='enabled'?'启用账号':'停用账号';
   if(role&&action.includes('授权门店'))summary=describeCounts(countChanges(array(before.defaultStoreIds),array(after.defaultStoreIds)),'家');
@@ -55,5 +59,5 @@ export function presentAudit(log:Audit,state:CenterState,employeeId?:string) {
     else summary=[summary,added?`新增可访问 ${added} 家`:'',removed?`移除可访问 ${removed} 家`:''].filter(Boolean).join(' · ');
   }
   if(!summary&&before.name!==after.name&&before.name&&after.name)summary=`${String(before.name)} → ${String(after.name)}`;
-  return {name,category,action,summary:summary||'—'};
+  return {name:auditDisplayText(name)||log.objectId,actor:auditDisplayText(log.actor)||'—',category,action,summary:auditDisplayText(summary)||'—'};
 }
