@@ -3,9 +3,29 @@ import type {StaffLoginAccount} from './staff-account-store';
 
 const prefix='permission-scene-v1';
 
+const rolePresets=[
+  {key:'manager',name:'跨店运营主管'},
+  {key:'cashier',name:'门店收银专员',legacyDescription:'演示指定门店的收银角色。',description:'适用于指定门店的收银角色。'},
+  {key:'spare',name:'待分配收银角色',legacyDescription:'无成员、未配置门店，可用于分配、复制和删除演示。',description:'暂无成员和授权门店。'},
+  {key:'unscoped',name:'待配置门店角色'},
+] as const;
+
+function refreshPresetRoleCopy(state:CenterState):CenterState {
+  const roles=state.roles.map(role=>{
+    const preset=rolePresets.find(item=>role.id===prefix+'-'+item.key);
+    if(!preset)return role;
+    const canRename=role.name==='演示 · '+preset.name&&!state.roles.some(item=>item.id!==role.id&&item.name.trim().toLowerCase()===preset.name.toLowerCase());
+    const description='legacyDescription' in preset&&role.description===preset.legacyDescription?preset.description:role.description;
+    if(!canRename&&description===role.description)return role;
+    return {...role,name:canRename?preset.name:role.name,description};
+  });
+  return roles.some((role,index)=>role!==state.roles[index])?{...state,roles,version:state.version+1}:state;
+}
+
+
 export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:StaffLoginAccount[],now:Date):{state:CenterState;accounts:StaffLoginAccount[]} {
   const unchanged={state,accounts:[]};
-  if(state.demoScenarioSeedVersion===1)return unchanged;
+  if(state.demoScenarioSeedVersion===1)return {state:refreshPresetRoleCopy(state),accounts:[]};
   const manager=state.roles.find(role=>role.id==='store-manager');
   const cashier=state.roles.find(role=>role.id==='cashier');
   const primary=stores.find(store=>store.id==='M00000001');
@@ -15,10 +35,10 @@ export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:Sta
 
   const next=structuredClone(state);
   const roles:Role[]=[
-    {...structuredClone(manager),id:prefix+'-manager',name:'演示 · 跨店运营主管',description:'查看经营与门店配置，适用于已授权门店。',system:false,defaultStoreIds:[primary.id,secondary.id,third.id]},
-    {...structuredClone(cashier),id:prefix+'-cashier',name:'演示 · 门店收银专员',description:'演示指定门店的收银角色。',system:false,defaultStoreIds:[secondary.id]},
-    {...structuredClone(cashier),id:prefix+'-spare',name:'演示 · 待分配收银角色',description:'无成员、未配置门店，可用于分配、复制和删除演示。',system:false,defaultStoreIds:[]},
-    {...structuredClone(cashier),id:prefix+'-unscoped',name:'演示 · 待配置门店角色',description:'已分配，配置门店后才在相应门店生效。',system:false,defaultStoreIds:[]},
+    {...structuredClone(manager),id:prefix+'-manager',name:rolePresets[0].name,description:'查看经营与门店配置，适用于已授权门店。',system:false,defaultStoreIds:[primary.id,secondary.id,third.id]},
+    {...structuredClone(cashier),id:prefix+'-cashier',name:rolePresets[1].name,description:rolePresets[1].description,system:false,defaultStoreIds:[secondary.id]},
+    {...structuredClone(cashier),id:prefix+'-spare',name:rolePresets[2].name,description:rolePresets[2].description,system:false,defaultStoreIds:[]},
+    {...structuredClone(cashier),id:prefix+'-unscoped',name:rolePresets[3].name,description:'已分配，配置门店后才在相应门店生效。',system:false,defaultStoreIds:[]},
   ];
   if(roles.some(role=>state.roles.some(item=>item.id===role.id||item.name===role.name)))return unchanged;
   next.roles.push(...roles);
