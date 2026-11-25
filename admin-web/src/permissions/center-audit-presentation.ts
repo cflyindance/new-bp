@@ -55,6 +55,10 @@ export function presentAudit(log:Audit,state:CenterState,employeeId?:string) {
     const rows=impacts.flatMap(change=>change.stores);
     const added=rows.filter(row=>!row.before.length).length,removed=rows.filter(row=>!row.after.length).length;
     if(role&&!employeeId)summary=[summary,`影响 ${impacts.length} 位员工`].filter(Boolean).join(' · ');
+    else if(role){
+      const retained=rows.length-added-removed;
+      summary=[name,summary,added?`新增可访问 ${added} 家`:'',removed?`${removed} 家不再可访问`:'',retained?`${retained} 家仍可访问`:''].filter(Boolean).join(' · ');
+    }
     else if(!added&&!removed)summary=[summary,'可访问门店数不变'].filter(Boolean).join(' · ');
     else summary=[summary,added?`新增可访问 ${added} 家`:'',removed?`移除可访问 ${removed} 家`:''].filter(Boolean).join(' · ');
   }
