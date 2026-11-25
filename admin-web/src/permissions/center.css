@@ -231,3 +231,11 @@
 .pc-dialog.pc-role-store-detail { width: min(960px, calc(100vw - 32px)); }
 
 .pc-dialog.pc-role-assignment-dialog { width: min(860px, calc(100vw - 32px)); }
+
+.pc-list-layout #permission-center {
+  max-width: none;
+  margin-inline: 0;
+}
+.pc-list-layout #permission-center[data-path="/permissions/staff"] td:nth-child(2) {
+  overflow-wrap: anywhere;
+}

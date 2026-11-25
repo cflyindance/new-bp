@@ -11583,6 +11583,11 @@ function renderMain(): string {
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
   const isDeploymentLog = isDeploymentLogPath(path);
   const isStaffAccounts = isStaffAccountsPath(path);
+  const isPermissionList =
+    isStaffAccounts ||
+    path === "/permissions/staff" ||
+    path === "/permissions/roles" ||
+    path === "/permissions/change-log";
   const isPermissionsRbac = isPermissionsRbacPath(path);
   const isPlatformPreset = isPlatformPresetPath(path);
   const isLoginLogs = isLoginLogsPath(path);
@@ -11644,7 +11649,9 @@ function renderMain(): string {
     ? "flex w-full min-h-0 min-w-0 flex-1 flex-col"
     : wideContentLayout
         ? "mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]"
-        : path === PROMOTIONS_PATH
+        : isPermissionList
+          ? "pc-list-layout w-full min-w-0 space-y-6"
+          : path === PROMOTIONS_PATH
           ? "w-full min-w-0 space-y-6"
           : "mx-auto max-w-6xl space-y-6";
 
