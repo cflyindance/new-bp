@@ -72,7 +72,7 @@ export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:Sta
   const unchanged={state,accounts:[]};
   const existing=state.demoScenarioSeedVersion===1||state.demoScenarioSeedVersion===2;
   const prepared=existing?refreshPresetRoleCopy(state,resources):state;
-  if(existing&&state.demoStaffScenarioSeedVersion===1)return {state:prepared,accounts:[]};
+  if(existing&&state.demoStaffScenarioSeedVersion===2)return {state:prepared,accounts:[]};
   const manager=state.roles.find(role=>role.id==='store-manager');
   const cashier=state.roles.find(role=>role.id==='cashier');
   const primary=stores.find(store=>store.id==='M00000001');
@@ -101,12 +101,16 @@ export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:Sta
     {key:'unopened',name:'演示 · 宋雨（未开通）',status:'unopened',roles:['unscoped']},
     {key:'unassigned',name:'演示 · 罗佳（未分配角色）',status:'enabled',roles:[]},
     ] satisfies {key:string;name:string;status:Employee['status'];roles:string[];extraStoreIds?:string[]}[]),
+    ...(state.demoStaffScenarioSeedVersion===1?[]:[
     {key:'email-enabled',name:'何静',status:'enabled',roles:['cashier'],openedVia:'email'},
     {key:'email-disabled',name:'宋宁',status:'disabled',roles:['manager'],openedVia:'email'},
     {key:'extra-only',name:'周悦',status:'enabled',roles:[],extraStoreIds:[third.id]},
     {key:'overlap',name:'沈晨',status:'enabled',roles:['cashier'],extraStoreIds:[secondary.id,third.id]},
     {key:'unopened-no-grants',name:'陆可',status:'unopened',roles:[]},
     {key:'invited-assigned',name:'叶晴',status:'pending',roles:['cashier']},
+    ] satisfies {key:string;name:string;status:Employee['status'];roles:string[];extraStoreIds?:string[];openedVia?:'email'|'password'}[]),
+    {key:'extra-batch',name:'顾佳',status:'enabled',roles:['cashier'],extraStoreIds:[secondary.id,third.id,primary.id]},
+
   ];
   const additions:StaffLoginAccount[]=[];
   const events:Audit[]=[];
@@ -141,7 +145,7 @@ export function buildDemoScenarios(state:CenterState,stores:Store[],accounts:Sta
     if(plan.status==='pending'||plan.status==='revoked')event(plan.key,id,plan.status==='pending'?'创建演示邀请':'撤销邀请',{...employee,status:plan.status==='pending'?'unopened':'pending'},employee);
   }
   next.demoScenarioSeedVersion=resources.has('page:/team/payroll-report')?2:(prepared.demoScenarioSeedVersion??1);
-  next.demoStaffScenarioSeedVersion=1;
+  next.demoStaffScenarioSeedVersion=2;
   next.version++;
   next.logs=[...state.logs.filter(log=>log.source!=='demo'),...events,...state.logs.filter(log=>log.source==='demo')];
   return {state:next,accounts:additions};

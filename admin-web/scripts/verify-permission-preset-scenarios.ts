@@ -51,7 +51,7 @@ assert.equal(seed(upgraded),upgraded);
 console.log('PASS preset payroll edit/read/hidden, independent actions, store scopes, legacy upgrade and manual grant protection');
 
 
-const extraStaffKeys=['email-enabled','email-disabled','extra-only','overlap','unopened-no-grants','invited-assigned'];
+const extraStaffKeys=['email-enabled','email-disabled','extra-only','overlap','unopened-no-grants','invited-assigned','extra-batch'];
 const extraStaffIds=new Set(extraStaffKeys.map(key=>'permission-scene-v1-'+key));
 const existingStaff=structuredClone(state);
 delete existingStaff.demoStaffScenarioSeedVersion;
@@ -59,8 +59,8 @@ existingStaff.employees=existingStaff.employees.filter(employee=>!extraStaffIds.
 existingStaff.logs=existingStaff.logs.filter(log=>!extraStaffIds.has(log.objectId));
 const expanded=buildDemoScenarios(existingStaff,stores,[],new Date('2026-11-25T00:00:00Z'),catalog.resources);
 const staff=(key:string)=>expanded.state.employees.find(employee=>employee.id==='permission-scene-v1-'+key)!;
-assert.equal(expanded.state.employees.length,existingStaff.employees.length+6);
-assert.equal(expanded.accounts.length,5);
+assert.equal(expanded.state.employees.length,existingStaff.employees.length+7);
+assert.equal(expanded.accounts.length,6);
 assert.ok(existingStaff.employees.every(employee=>JSON.stringify(expanded.state.employees.find(item=>item.id===employee.id))===JSON.stringify(employee)));
 const accepted=expanded.accounts.find(account=>account.employeeId===staff('email-enabled').id)!;
 const disabled=expanded.accounts.find(account=>account.employeeId===staff('email-disabled').id)!;
@@ -79,3 +79,18 @@ assert.equal(staff('unopened-no-grants').email,'');
 assert.equal(seed(expanded.state),expanded.state);
 validateCenterState(expanded.state,catalog.resources);
 console.log('PASS staff scenario upgrade, account lifecycle and scope combinations');
+
+
+const previousStaff=structuredClone(state);
+previousStaff.demoStaffScenarioSeedVersion=1;
+const batchId='permission-scene-v1-extra-batch';
+previousStaff.employees=previousStaff.employees.filter(employee=>employee.id!==batchId);
+previousStaff.logs=previousStaff.logs.filter(log=>log.objectId!==batchId);
+const batchSeed=buildDemoScenarios(previousStaff,stores,[],new Date('2026-11-25T00:00:00Z'),catalog.resources);
+assert.equal(batchSeed.accounts.length,1);
+assert.equal(batchSeed.state.employees.length,previousStaff.employees.length+1);
+const batchStaff=batchSeed.state.employees.find(employee=>employee.id===batchId)!;
+assert.deepEqual(batchStaff.extraStoreIds,['M00000002','M00000003','M00000001']);
+assert.equal(accessibleEmployeeStores(batchStaff,batchSeed.state.roles,stores).length,3);
+assert.equal(seed(batchSeed.state),batchSeed.state);
+console.log('PASS extra store batch fixture, overlapping grant and one-time upgrade');
