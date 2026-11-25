@@ -1,6 +1,6 @@
 import {accountExtraStoreIds,accessibleEmployeeStores,roleBindingScope,type Scope} from './center-domain';
 import {renderRoleTree,visibleRoleTree,treeChoices} from './center-role-tree';
-import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged} from './center-role-tree-model';
+import {createRoleTreeState,buildRoleTree,flattenRoleTree,roleSelectionTargets,roleSelectionState,toggleRoleSelection,roleTreePath,applyTreeChoice,applyTreeBatch,treeSelection,treeChanged,selectSavedRolePermissions} from './center-role-tree-model';
 import {listStaffLoginAccounts} from './staff-account-store';
 import {openCenterAccount,deleteCenterAccount} from './center-account-opening';
 import {accountOpeningFields,accountPasswordFields,bindAccountOpening,invitationStatus} from './account-opening-ui';
@@ -63,6 +63,8 @@ export function bindCenterPage(): void {
   for(const n of flattenRoleTree(treeNodes))if(n.kind==='page'&&n.children.length)roleTree.collapsed.add(n.id);
   const treeNode=(id:string)=>flattenRoleTree(treeNodes).find(n=>n.id===id);
   const originalRole=()=>state.roles.find(r=>r.id===roleId)!;
+  const savedRole=originalRole();
+  if(savedRole&&!roleView)selectSavedRolePermissions(catalog,treeNodes,roleTree.selected,savedRole);
   const hasPendingChanges=()=>roleId?JSON.stringify(role())!==JSON.stringify(originalRole()):dirty;
   let roleSaveNotice='';
   const employee=()=>draft.employees.find(e=>e.id===employeeId);
@@ -183,8 +185,10 @@ export function bindCenterPage(): void {
   }
   const field=(d:HTMLDialogElement,id:string)=>(d.querySelector(`[name="${id}"]`) as HTMLInputElement|HTMLSelectElement).value;
   function commit(next:CenterState,id:string,action:string):void {
+    const previous=roleId===id&&action==='更新角色权限'?originalRole():undefined;
     state=saveCenterState(next,state.version,id,action,actor());
     draft=structuredClone(state);dirty=false;leaveGuard=undefined;
+    if(previous)selectSavedRolePermissions(catalog,treeNodes,roleTree.selected,originalRole(),previous);
     if(roleId&&roleId===id)roleSaveNotice=action==='批量更新角色权限'?'批量权限已保存':'权限已保存';
     render();
   }

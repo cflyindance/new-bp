@@ -46,9 +46,9 @@ export function roleSelectionTargets(nodes:RoleTreeNode[]):RoleTreeNode[]{
   return [...new Map(flattenRoleTree(nodes).filter(n=>n.key&&n.kind!=='action'&&n.kind!=='group').map(n=>[n.id,n])).values()];
 }
 export function roleSelectionState(nodes:RoleTreeNode[],selected:Set<string>):{checked:boolean;indeterminate:boolean;selectedCount:number;total:number} {
-  const targets=roleSelectionTargets(nodes),leaves=targets.filter(n=>!roleSelectionTargets(n.children).length);
-  const count=leaves.filter(n=>selected.has(n.id)).length;
-  return {checked:leaves.length>0&&count===leaves.length,indeterminate:count>0&&count<leaves.length,selectedCount:targets.filter(n=>selected.has(n.id)).length,total:targets.length};
+  const targets=roleSelectionTargets(nodes);
+  const count=targets.filter(n=>selected.has(n.id)).length;
+  return {checked:targets.length>0&&count===targets.length,indeterminate:count>0&&count<targets.length,selectedCount:count,total:targets.length};
 }
 /** Selection only: branch changes cascade; ancestors derive all/partial state without writing grants. */
 export function toggleRoleSelection(tree:RoleTreeNode[],range:RoleTreeNode[],selected:Set<string>,checked:boolean):void {
@@ -77,6 +77,14 @@ export function treeEffective(c:Catalog,role:Role,n:RoleTreeNode):Access {
   if(n.kind==='page'&&n.key)return pageMode(c,n.key,value);
   if(n.authorization){const a=n.authorization;if(value(a.contentKey)==='hidden')return 'hidden';const editable=a.editKeys.every(k=>value(k)==='edit');return n.kind==='action'?(editable?'edit':'hidden'):editable?'edit':'read';}
   return n.key?value(n.key):'hidden';
+}
+export function selectSavedRolePermissions(catalog:Catalog,nodes:RoleTreeNode[],selected:Set<string>,saved:Role,previous?:Role):void {
+  for(const node of roleSelectionTargets(nodes)){
+    const granted=treeEffective(catalog,saved,node)!=='hidden';
+    if(previous&&granted===(treeEffective(catalog,previous,node)!=='hidden'))continue;
+    if(granted)selected.add(node.id);
+    else selected.delete(node.id);
+  }
 }
 export function treeRestriction(c:Catalog,role:Role,n:RoleTreeNode):string {
   if(!n.key)return '';
