@@ -304,3 +304,5 @@
 .tipout-page-detail .detail-employee-table [hidden]{display:none!important}
 
 .tipout-page-rule-editor .contributor-method-choice[data-method="hours"],.tipout-page-rule-editor .contributor-method-choice[data-method="orders"]{border-color:var(--danger,#ff4d4f)!important}
+
+.tipout-page-rule-editor #manualConditionMenu .add-option-menu-item[data-type="hours"]{border:1px solid var(--danger,#ff4d4f);border-radius:6px}

@@ -2336,7 +2336,7 @@ var poolSalesDeductions = {};
         if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
         return;
       }
-      var names = getCondTypeNames();
+      var names = getCondTypeNames({ hours: '考勤时间段' });
       var cardId = 'manual-cond-' + type;
       var body = '';
       if (type === 'role') {
@@ -2348,7 +2348,7 @@ var poolSalesDeductions = {};
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('manualEmployeeCondRoleSelect', 'manualEmployeeCondStaffSelect');
       } else if (type === 'hours') {
-        body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
+        body = '<div class="drawer-form-row"><label>考勤时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'shift') {
         body = '<div class="drawer-form-row"><label>班次：</label><div class="multi-select shift-condition-select" id="manualShiftConditionSelect" style="flex:1" data-placeholder="请选择班次">' +
           '<div class="multi-select-input" onclick="toggleMultiSelect(\'manualShiftConditionSelect\')">' +
@@ -4351,7 +4351,7 @@ var poolSalesDeductions = {};
       showNotification('员工权重保存成功');
     }
 
-    function conditionPreviewFields(cond, pct) {
+    function conditionPreviewFields(cond, pct, hoursLabel) {
       cond = cond && typeof cond === 'object' ? cond : {};
       var fields = [];
       function add(label, value) {
@@ -4375,19 +4375,19 @@ var poolSalesDeductions = {};
       add(tipTerm('小费类型'), cond.tipTypes && cond.tipTypes.length ? cond.tipTypes : cond.tipType);
       if (cond.types || cond.surchargeType) add('加收类型', formatSurchargeTypeDisplay(cond.types || cond.surchargeType));
       if (cond.containsProduct && menuCascadeHasAnySelection(cond.containsProduct)) add('订单需包含商品', formatMenuCascadeCond(cond.containsProduct));
-      if (cond.hours && (cond.hours.start || cond.hours.end)) add('营业时间', (cond.hours.start || '未设置') + ' - ' + (cond.hours.end || '未设置'));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) add(hoursLabel || '营业时间', (cond.hours.start || '未设置') + ' - ' + (cond.hours.end || '未设置'));
       if (Array.isArray(cond.shift) && cond.shift.length) add('班次', formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) add('周期（星期）', formatWeekdaysCondDisplay(cond.weekdays));
       return fields;
     }
-    function renderConditionPreview(container, cond, pct, visible) {
+    function renderConditionPreview(container, cond, pct, visible, hoursLabel) {
       if (!container) return;
       var grid = container.querySelector('.condition-preview-grid');
       if (!grid) { grid = document.createElement('dl'); grid.className = 'condition-preview-grid'; container.appendChild(grid); }
       grid.replaceChildren();
       grid.hidden = !visible;
       if (!visible) return;
-      conditionPreviewFields(cond, pct).forEach(function(field) {
+      conditionPreviewFields(cond, pct, hoursLabel).forEach(function(field) {
         var item = document.createElement('div'); item.className = 'condition-preview-item';
         var label = document.createElement('dt'); label.textContent = field.label;
         var value = document.createElement('dd'); value.textContent = field.value;
@@ -4468,7 +4468,7 @@ var poolSalesDeductions = {};
       else if (cond.role) parts.push('角色: ' + cond.role);
       if (Array.isArray(cond.employeeRoles) && cond.employeeRoles.length) parts.push('员工筛选角色: ' + cond.employeeRoles.join(', '));
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
-      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('订单时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('考勤时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
       return parts.join(' | ');
@@ -4543,7 +4543,7 @@ var poolSalesDeductions = {};
       if (textEl) textEl.textContent = text || '未设置';
       el.classList.toggle('empty', !text);
       var rate = card && (card.querySelector('.pool-custom-pct') || card.querySelector('.pool-source-rate input[type=number]'));
-      renderConditionPreview(el, cond, rate ? rate.value : '', !!cond && Object.keys(cond).length > 0);
+      renderConditionPreview(el, cond, rate ? rate.value : '', !!cond && Object.keys(cond).length > 0, type === 'manual' ? '考勤时间段' : null);
     }
 
     function saveSalesCondition() {
