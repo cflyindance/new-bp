@@ -170,7 +170,6 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   gap: 18px;
   min-width: 0;
 }
-.bd-config .bd-component-shortcut { align-self: start; }
 
 .bd-config .bd-shared-components {
   flex-wrap: nowrap;
@@ -181,13 +180,7 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 }
 .bd-config .bd-shared-components .bd-radio { gap: 6px; white-space: nowrap; }
 .bd-config .bd-shared-components input { flex: 0 0 18px; }
-@media (min-width: 1280px) {
-  .bd-workbench.bd-workbench-components { grid-template-columns: minmax(232px, 280px) minmax(0, 1fr); }
-}
-@media (max-width: 1279px) {
-  .bd-workbench-components > .bd-config,
-  .bd-workbench-components > .bd-preview { grid-row: auto; }
-}
+
 
 .bd-page-content .bd-default-copy {
   color: #6b7280;
@@ -195,3 +188,7 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+.bd-content-group { display: grid; gap: 12px; min-width: 0; }
+.bd-content-group + .bd-content-group { border-top: 1px solid var(--bd-border); padding-top: 12px; }
+.bd-content-group > h3 { font-size: 13px; font-weight: 600; margin: 0; }

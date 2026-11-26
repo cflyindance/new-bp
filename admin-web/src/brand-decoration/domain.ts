@@ -38,6 +38,7 @@ export function sharedHeaderLayout(style: Scheme['sharedHeader']): SharedHeaderS
 
 export interface Scheme {
     sharedHeader?: SharedHeaderStyle | 'light' | 'brand';
+    sharedHeaderAppearance?: { background?: string; divider?: true };
     pageContent?: PageContent;
     paletteId?: PaletteId;
     draftStep?: 'rules' | 'editor' | 'stores' | 'period' | 'review';
@@ -81,6 +82,11 @@ export function validateScheme(s: Scheme): void {
         throw Error('方案主题色无效');
     if (s.sharedHeader !== undefined && !['layout', 'custom', 'light', 'brand'].includes(s.sharedHeader))
         throw Error('共用组件顶部样式无效');
+    const appearance = s.sharedHeaderAppearance;
+    if (appearance !== undefined && (!appearance || typeof appearance !== 'object' || Array.isArray(appearance) ||
+        (appearance.background !== undefined && (typeof appearance.background !== 'string' || !/^#[0-9a-f]{6}$/i.test(appearance.background))) ||
+        (appearance.divider !== undefined && appearance.divider !== true)))
+        throw Error('顶部导航属性无效');
     if (s.pageContent !== undefined && !validatePageContent(s.channel, s.pageContent))
         throw Error('页面内容配置无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
@@ -124,6 +130,12 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
     const header = SHARED_HEADER_STYLES[sharedHeaderLayout(after.sharedHeader)];
     const previousHeader = before ? SHARED_HEADER_STYLES[sharedHeaderLayout(before.sharedHeader)] : '未发布';
     if (header !== previousHeader) output.push({ label: '页面顶部', before: previousHeader, after: header });
+    const previousAppearance = before?.sharedHeaderAppearance;
+    const appearance = after.sharedHeaderAppearance;
+    if (appearance?.background !== previousAppearance?.background)
+        output.push({ label: '顶栏背景色', before: previousAppearance?.background ?? '跟随方案主题', after: appearance?.background ?? '跟随方案主题' });
+    if (appearance?.divider !== previousAppearance?.divider)
+        output.push({ label: '顶栏分隔线', before: previousAppearance?.divider ? '显示' : '隐藏', after: appearance?.divider ? '显示' : '隐藏' });
     const palette = describePalette(after.paletteId, after.primary);
     const previousPalette = before ? describePalette(before.paletteId, before.primary) : '未发布';
     if (palette !== previousPalette) output.push({ label: '方案主题色', before: previousPalette, after: palette });

@@ -1,4 +1,4 @@
-import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, pageElements } from './page-content';
+import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, PAGE_CONTENT_GROUPS, pageContentGroup, pageElements } from './page-content';
 import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
 import { latestPlanReleases, planAt, publishPlan, validatePlanRules, type PlanRules } from './plans';
 import { effectiveEnd, emptySchedule, formatLocal, parseLocal, resolveSchedule, saveActivity, type DecorationActivity } from './schedule';
@@ -719,10 +719,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             defaultCopyKey = key;
             defaultCopy = {};
         }
+        const header = s.sharedHeaderAppearance;
+        const headerColors = header?.background
+            ? resolvePalette('custom', header.background)
+            : resolvePalette(s.paletteId ?? 'custom', s.primary);
         frame?.contentWindow?.postMessage({
             type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
-            headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? resolvePalette(s.paletteId ?? 'custom', s.primary) : undefined,
+            headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
             elements: pageElements(s.channel, page).flatMap(field => {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
                 return selector ? [{ id: field.id, kind: field.kind, selector, value: s.pageContent?.[page]?.[field.id] }] : [];
@@ -731,6 +735,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }, location.origin);
     }
     function updateEditorPreview(s: Scheme) {
+        const headerBackground = root.querySelector<HTMLInputElement>('[data-bd-field=header-background]');
+        if (headerBackground && !s.sharedHeaderAppearance?.background)
+            headerBackground.value = resolvePalette(s.paletteId, s.primary)?.primary ?? s.primary;
         const inherits = flow && s.rules?.kind === 'activity' && !s.rules.pageIds.includes(page);
         if (!inherits) sendPreview(s);
     }
@@ -782,6 +789,34 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             </div>
         </details>`;
     }
+    function componentProperties(s: Scheme) {
+        const appearance = s.sharedHeaderAppearance;
+        const custom = sharedHeaderLayout(s.sharedHeader) === 'custom';
+        const background = appearance?.background ?? resolvePalette(s.paletteId, s.primary)?.primary ?? s.primary;
+        return contentPanel('组件属性', `<fieldset class="bd-page-content bd-component-properties" aria-label="顶部导航属性"
+            ${!custom || !scope.canWrite ? 'disabled' : ''}>
+            <section class="bd-content-group" aria-label="外观"><h3>外观</h3>
+                <div><label>背景色<small>默认：跟随方案主题</small>
+                    <input type="color" data-bd-field="header-background" value="${esc(background)}"></label>
+                    ${appearance?.background ? '<button type="button" class="bd-link" data-bd-action="reset-header-background">恢复默认</button>' : ''}
+                </div>
+                <label class="bd-radio"><input type="checkbox" data-bd-field="header-divider" ${appearance?.divider ? 'checked' : ''}>显示底部分隔线</label>
+            </section></fieldset>
+            ${custom ? '' : '<p class="bd-help">切换到自定义布局后可调整</p>'}`);
+    }
+    function saveHeaderAppearance(s: Scheme, patch: NonNullable<Scheme['sharedHeaderAppearance']>) {
+        if (sharedHeaderLayout(s.sharedHeader) !== 'custom') return;
+        const saved = mutate(next => {
+            const current = next.schemes.find(item => item.id === s.id)!;
+            current.sharedHeaderAppearance = { ...current.sharedHeaderAppearance, ...patch };
+            current.updatedAt = new Date().toISOString();
+            validateScheme(current);
+        });
+        const updated = scheme()!;
+        const properties = root.querySelector('.bd-content-panel');
+        if (properties) properties.outerHTML = componentProperties(updated);
+        if (saved) updateEditorPreview(updated);
+    }
     function pageContentPanel(s: Scheme, mode: string) {
         const empty = mode === 'inherit' ? '此页沿用门店日常装修。' : '当前页面布局暂无可编辑内容。';
         const switchLayout = mode === 'default' && scope.canWrite && pageElements(s.channel, page).some(field => field.custom)
@@ -794,8 +829,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const content = s.pageContent?.[page] ?? {};
         const elements = pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
         if (!elements.length) return '';
-        return `<fieldset class="bd-page-content" aria-label="页面内容" ${writable()}>
-            ${elements.map(field => {
+        const groups = Object.entries(PAGE_CONTENT_GROUPS).flatMap(([group, label]) => {
+            const fields = elements.filter(field => pageContentGroup(field) === group);
+            if (!fields.length) return [];
+            const controls = fields.map(field => {
                 const value = content[field.id];
                 const attrs = `data-bd-field="element" data-element="${field.id}"`;
                 const control = field.kind === 'image'
@@ -809,7 +846,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         (defaultCopyKey === copyKey(s, page) && defaultCopy[field.id]) || '…'
                     )}</span></small>` : '';
                 return `<div><label>${field.label}${original}${control}</label>${reset}</div>`;
-            }).join('')}
+            }).join('');
+            return [`<section class="bd-content-group" data-bd-content-group="${group}" aria-label="${label}">
+                <h3>${label}</h3>${controls}</section>`];
+        }).join('');
+        return `<fieldset class="bd-page-content" aria-label="页面内容" ${writable()}>${groups}
             ${Object.keys(content).length ? '<button type="button" class="bd-link" data-bd-action="reset-page-content">恢复整页内容</button>' : ''}
         </fieldset>`;
     }
@@ -862,9 +903,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const sidebar = components
             ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
                 ${sharedComponentControls(s)}`
-            : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}
-                <button type="button" class="bd-link bd-component-shortcut" data-bd-action="workbench-mode" data-value="components">编辑共用顶部导航</button>`;
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench${components ? ' bd-workbench-components' : ''}"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? '' : pageContentPanel(s, currentMode)}</div>`;
+            : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -989,6 +1029,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const s = scheme();
         if (!s)
             return;
+        if (action === 'reset-header-background') {
+            saveHeaderAppearance(s, { background: undefined });
+            return;
+        }
         if (action === 'enable-page-content') {
             const layout = root.querySelector<HTMLInputElement>('[name="bd-mode"][value="custom"]');
             if (layout && !layout.checked) layout.click();
@@ -1126,6 +1170,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         } else savePageElement(s, page, element.id, element.kind === 'hidden' ? (input.checked ? true : undefined) : input.value.trim());
         return;
     }
+    if (field === 'header-background' || field === 'header-divider') {
+        saveHeaderAppearance(s, field === 'header-background'
+            ? { background: input.value }
+            : { divider: input.checked ? true : undefined });
+        return;
+    }
     if (field === 'shared-header') {
         const value = input.value as SharedHeaderStyle;
         if (mutate(next => {
@@ -1133,8 +1183,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             current.sharedHeader = value;
             current.updatedAt = new Date().toISOString();
             validateScheme(current);
-        })) updateEditorPreview(scheme()!);
-        else {
+        })) {
+            const updated = scheme()!;
+            const properties = root.querySelector('.bd-content-panel');
+            if (properties) properties.outerHTML = componentProperties(updated);
+            updateEditorPreview(updated);
+        } else {
             const previous = root.querySelector<HTMLInputElement>(`[name="bd-header-mode"][value="${sharedHeaderLayout(s.sharedHeader)}"]`);
             if (previous) previous.checked = true;
         }
