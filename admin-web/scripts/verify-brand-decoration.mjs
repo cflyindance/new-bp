@@ -17,6 +17,11 @@ try{
       for(const role of ['label','selected','success','warning','error']){
         assert.ok(C.contrast(palette[role+'Text'],palette[role+'Fill'])>=4.5, id+' '+role);
       }
+      assert.ok(C.contrast(palette.muted,palette.surface)>=4.5);
+      assert.ok(C.contrast(palette.secondaryText,palette.secondaryFill)>=4.5);
+      assert.ok(C.contrast(palette.selectedMuted,palette.selectedFill)>=4.5);
+      assert.ok(C.contrast(palette.controlLine,palette.surface)>=3);
+      assert.ok(C.contrast(palette.controlLine,palette.background)>=3);
       assert.notEqual(palette.selectedFill,palette.labelFill);
       assert.notEqual(palette.successFill,palette.errorFill);
     }
@@ -80,13 +85,13 @@ try{
   const daily=makePlan('日常',{kind:'default',storeIds:['a','b'],timezone:'Asia/Shanghai',pageIds:['home']});
   P.publishPlan(flow,daily,stores,'demo');
   const start=Date.now()+3600000,end=start+3600000;
-  const winter=makePlan('冬季',{kind:'activity',activityName:'冬季活动',starts:start,ends:end,storeIds:['a'],timezone:'Asia/Shanghai',pageIds:['home']});
+  const winter=makePlan('冬季',{kind:'activity',starts:start,ends:end,storeIds:['a'],timezone:'Asia/Shanghai',pageIds:['home']});
   P.publishPlan(flow,winter,stores,'demo');
   assert.equal(P.planPage(flow,'a','kiosk','home',start).snapshot.id,winter.id);
   assert.equal(P.planPage(flow,'a','kiosk','menu',start).snapshot.id,daily.id);
   assert.equal(P.planPage(flow,'b','kiosk','home',start).snapshot.id,daily.id);
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,daily.id);
-  assert.throws(()=>P.checkPlanPublication(flow,makePlan('重叠',winter.rules),stores),/甲店.*冬季活动/);
+  assert.throws(()=>P.checkPlanPublication(flow,makePlan('重叠',winter.rules),stores),/甲店.*方案「冬季」/);
   assert.doesNotThrow(()=>P.checkPlanPublication(flow,makePlan('相邻',{...winter.rules,starts:end,ends:end+1000}),stores));
   assert.throws(()=>P.validatePlanRules({...winter.rules,storeIds:['a','b']},'kiosk',[stores[0],{...stores[1],timezone:'America/New_York'}]),/同一时区/);
   assert.throws(()=>P.validatePlanRules({...winter.rules,storeIds:['unknown']},'kiosk',stores),/有权/);

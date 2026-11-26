@@ -45,17 +45,27 @@ export function resolvePalette(id: PaletteId | undefined, primary: string) {
         const hue = dark ? mix(seed, '#ffffff', 0.52) : mix(seed, '#000000', 0.68);
         return { fill, text: contrast(hue, fill) >= 4.5 ? hue : ink };
     };
+    const strongestText = (fill: string) =>
+        contrast(fill, '#ffffff') >= contrast(fill, '#000000') ? '#ffffff' : '#000000';
+    const readable = (fill: string, preferred: string) =>
+        contrast(fill, preferred) >= 4.5 ? preferred : strongestText(fill);
+    const secondary = tone(color, 0.06);
     const label = tone(color, 0.10);
     const selected = tone(color, 0.20);
+    const selectedMuted = readable(selected.fill, mix(ink, selected.fill, 0.72));
+    const controlLine = [color, mix(ink, background, 0.55), ink]
+        .find(candidate => contrast(candidate, background) >= 3 && contrast(candidate, surface) >= 3) ?? ink;
     const success = tone('#15803d', 0.16);
     const warning = tone('#b45309', 0.16);
     const error = tone('#c02626', 0.16);
     return {
         primary: color, background, surface, ink,
-        onPrimary: contrast(color, '#ffffff') >= contrast(color, '#000000') ? '#ffffff' : '#000000',
-        muted: mix(ink, background, 0.72),
+        onPrimary: strongestText(color),
+        secondaryFill: secondary.fill, secondaryText: readable(secondary.fill, secondary.text), controlLine,
+        muted: [mix(ink, background, 0.72), ink].find(candidate =>
+            contrast(candidate, background) >= 4.5 && contrast(candidate, surface) >= 4.5) ?? ink,
         labelFill: label.fill, labelText: label.text,
-        selectedFill: selected.fill, selectedText: selected.text,
+        selectedFill: selected.fill, selectedText: readable(selected.fill, selected.text), selectedMuted,
         successFill: success.fill, successText: success.text,
         warningFill: warning.fill, warningText: warning.text,
         errorFill: error.fill, errorText: error.text,

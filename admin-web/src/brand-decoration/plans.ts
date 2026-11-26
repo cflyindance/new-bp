@@ -5,7 +5,6 @@ export interface PlanRules {
     kind: 'default' | 'activity';
     storeIds: string[];
     timezone: string;
-    activityName?: string;
     starts?: number;
     ends?: number;
     pageIds: string[];
@@ -33,7 +32,6 @@ export function validatePlanRules(rules: PlanRules, channel: Channel, stores: Pl
     if (targets.some(store => !store!.timezone || store!.timezone !== rules.timezone)) {
         throw Error('活动门店须使用同一时区，请按时区分批创建');
     }
-    if (!rules.activityName?.trim() || rules.activityName.length > 40) throw Error('活动名称需为 1–40 字');
     if (!Number.isFinite(rules.starts) || !Number.isFinite(rules.ends) || rules.starts! >= rules.ends!) {
         throw Error('结束时间须晚于开始时间');
     }
@@ -67,7 +65,7 @@ export function checkPlanPublication(data: DecorationData, scheme: Scheme, store
         if (release.snapshot.id === scheme.id || release.snapshot.channel !== scheme.channel || previous.kind !== 'activity') continue;
         if (rules.starts! >= previous.ends! || previous.starts! >= rules.ends!) continue;
         const collisions = stores.filter(store => rules.storeIds.includes(store.id) && previous.storeIds.includes(store.id));
-        if (collisions.length) throw Error('门店「' + collisions.map(store => store.name).join('、') + '」与活动「' + previous.activityName + '」时段重叠（' + formatLocal(previous.starts!, rules.timezone).replace('T', ' ') + ' 至 ' + formatLocal(previous.ends!, rules.timezone).replace('T', ' ') + '）');
+        if (collisions.length) throw Error('门店「' + collisions.map(store => store.name).join('、') + '」与方案「' + release.snapshot.name + '」时段重叠（' + formatLocal(previous.starts!, rules.timezone).replace('T', ' ') + ' 至 ' + formatLocal(previous.ends!, rules.timezone).replace('T', ' ') + '）');
     }
 }
 

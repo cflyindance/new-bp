@@ -266,16 +266,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     <span id="bd-usage-timed" role="tooltip">在指定时间内展示，到期后恢复门店的日常装修。</span></div>
             </div>
             </div></fieldset>
-            <div data-bd-activity-fields>
-            <label>活动名称<input name="activityName" maxlength="40" value="${esc(rules?.activityName ?? '')}"></label>
-            </div>
             <div data-bd-notice class="bd-notice" role="status"></div>
             </form></div>`;
         const form = root.querySelector<HTMLFormElement>('#bd-plan-rules')!;
         const update = () => {
             const activity = new FormData(form).get('kind') === 'activity';
-            form.querySelector<HTMLElement>('[data-bd-activity-fields]')!.hidden = !activity;
-            form.querySelector<HTMLInputElement>('[name=activityName]')!.required = activity;
             const progress = root.querySelector('.bd-flow-progress');
             if (progress) {
                 root.querySelector('.bd-flow-meter')?.remove();
@@ -292,10 +287,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             try {
                 const kind = fields.get('kind') === 'activity' ? 'activity' : 'default';
                 const name = String(fields.get('name')).trim();
-                const activityName = String(fields.get('activityName')).trim();
-                if (!draftOnly && kind === 'activity' && !activityName) throw Error('请输入活动名称');
                 const nextRules: PlanRules = {
-                    ...rules, kind, activityName,
+                    kind, starts: rules?.starts, ends: rules?.ends,
                     timezone: rules?.timezone ?? '',
                     storeIds: rules?.storeIds ?? [],
                     pageIds: rules?.pageIds ?? pages(nextChannel).map(([id]) => id),
@@ -606,7 +599,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? (item.draftStep ? '草稿' : '未上架') : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}${rules.activityName ? `<small>${esc(rules.activityName)}</small>` : ''}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
+                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
                     ${release ? '' : `<a class="bd-link" href="${planUrl(item.id, resumeStep(item), item.channel)}">编辑</a>`}
                     <button class="bd-link" data-bd-action="${release ? 'plan-off-shelf' : 'plan-on-shelf'}" data-id="${esc(item.id)}" ${!release && item.draftStep ? 'disabled' : ''}>${release ? '下架' : '上架'}</button>
                     <button class="bd-link" data-bd-action="duplicate" data-id="${esc(item.id)}">复制</button>
@@ -640,7 +633,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             ['页面顶部', SHARED_HEADER_STYLES[sharedHeaderLayout(s.sharedHeader)]],
             ['适用门店', storeNames(rules.storeIds)],
             ['生效时间', activity ? period(rules) : '长期有效'],
-            ...(activity && rules.activityName ? [['活动名称', rules.activityName]] : []),
             ['装修页面', selected.length === pages(channel).length ? '全部 ' + selected.length + ' 页' : selected.map(([, name]) => name).join('、')],
         ];
         root.innerHTML = flowHeader(activity ? 5 : 4, {

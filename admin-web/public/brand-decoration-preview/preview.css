@@ -32,7 +32,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .has-scheme-palette .pt-flag{border-radius:4px}
 .has-scheme-palette .eyebrow{padding:3px 6px;border-radius:4px;align-self:flex-start}
 .premium-kiosk.has-scheme-palette :is(.pt-option,.pt-combo-option,.pt-number,.pt-table).is-selected{
-  color:var(--bd-role-selected-text);background:var(--bd-role-selected-fill);border-color:var(--pt-primary)
+  color:var(--bd-role-selected-text);background:var(--bd-role-selected-fill);border-color:var(--bd-role-selected-text)
 }
 .premium-kiosk.has-scheme-palette .is-selected .pt-choice-check{
   color:var(--bd-role-selected-text);background:var(--bd-role-selected-fill);border-color:var(--bd-role-selected-text)
@@ -40,7 +40,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .premium-kiosk.has-scheme-palette .pt-success-seal,.em.has-scheme-palette .success i{
   color:var(--bd-role-success-text);background:var(--bd-role-success-fill);border-color:transparent
 }
-.premium-kiosk.has-scheme-palette .pt-validation,.premium-kiosk.has-scheme-palette .pt-error-page .pt-status-tag{
+.premium-kiosk.has-scheme-palette .pt-error,.premium-kiosk.has-scheme-palette .pt-validation,.premium-kiosk.has-scheme-palette .pt-error-page .pt-status-tag{
   color:var(--bd-role-error-text);background:var(--bd-role-error-fill)
 }
 .premium-kiosk.has-scheme-palette .pt-status-page:not(.pt-paid-page):not(.pt-error-page) .pt-status-tag{
@@ -91,3 +91,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .pt-post-payment .pt-status-card { margin-block: 0; }
 .pt-post-payment .pt-tip-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .pt-post-payment .pt-signature-card .pt-signature { height: 150px; }
+.has-scheme-palette :is(.pt-option,.pt-number,.pt-table).is-selected small { color: var(--bd-role-selected-muted); }
+.premium-kiosk.has-scheme-palette .pt-back-button {
+  background: var(--bd-role-secondary-fill);
+  color: var(--bd-role-secondary-text);
+  border: 1px solid var(--bd-role-control-line);
+}
+.has-scheme-palette :is(.pt-input,.em input) { border-color: var(--bd-role-control-line); }
+.has-scheme-palette :is(.pt-input,.em input)::placeholder { color: var(--bd-role-muted); opacity: 1; }
+.has-scheme-palette :is(.pt-input,.em input):focus-visible { outline: 2px solid var(--bd-role-control-line); }
+.bd-themed-header :is(.pt-header-note span,.pt-header-note b,.pt-brand strong,.pt-brand small,.pt-icon-button) { color: inherit; }

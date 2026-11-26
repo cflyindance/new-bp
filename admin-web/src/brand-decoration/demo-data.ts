@@ -58,14 +58,14 @@ export function createDecorationDemo(brandName: string, stores: PlanStore[], now
         }
         add('house', line + ' · 品牌日常', dailyRules([stores[0]]), 'pine', 'jade', dailyPages, 20);
         if (zonedStore) {
-            const activityRules = (activityName: string, from: number, to: number): PlanRules => ({
-                kind: 'activity', activityName, starts: now + from * DAY, ends: now + to * DAY,
+            const activityRules = (from: number, to: number): PlanRules => ({
+                kind: 'activity', starts: now + from * DAY, ends: now + to * DAY,
                 storeIds: activityStores.map(store => store.id), timezone: zonedStore.timezone, pageIds: featuredPages,
             });
-            add('past', line + ' · 会员回馈', activityRules('会员回馈周', -14, -10), 'amber', 'noir', featuredPages, 16);
-            add('active', line + ' · 当季新品', activityRules('当季新品季', -2, 3), 'clay', 'terra', featuredPages, 5);
-            add('upcoming', line + ' · 周末团聚', activityRules('周末团聚日', 7, 11), 'indigo', 'jade', featuredPages, 1);
-            add('offline', line + ' · 下午茶', activityRules('下午茶时段', 17, 20), 'amber', 'noir', featuredPages, 0, true);
+            add('past', line + ' · 会员回馈', activityRules(-14, -10), 'amber', 'noir', featuredPages, 16);
+            add('active', line + ' · 当季新品', activityRules(-2, 3), 'clay', 'terra', featuredPages, 5);
+            add('upcoming', line + ' · 周末团聚', activityRules(7, 11), 'indigo', 'jade', featuredPages, 1);
+            add('offline', line + ' · 下午茶', activityRules(17, 20), 'amber', 'noir', featuredPages, 0, true);
         } else {
             add('offline', line + ' · 周末限定', dailyRules([stores[0]]), 'amber', 'noir', dailyPages, 0, true);
         }
