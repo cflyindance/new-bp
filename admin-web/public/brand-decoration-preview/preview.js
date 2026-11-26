@@ -57,33 +57,68 @@ function applyNativePalette(frame, palette) {
   `;
 }
 const nativeContent = new WeakMap();
-function updateNativeContent(doc, elements, reportDefaults) {
+function updateNativeContent(doc, elements, reportDefaults, selection) {
   const previous = nativeContent.get(doc);
   previous?.observer.disconnect();
   previous?.restore();
   nativeContent.delete(doc);
-  if (!reportDefaults && !elements.some(field => typeof field.value === 'string')) return;
+  if (!selection && !reportDefaults && !elements.some(field => typeof field.value === 'string')) return;
   const applied = new Map();
+  let marked = new Set();
+  const click = event => selectPreviewField(event, selection?.request);
+  const style = selection ? doc.createElement('style') : null;
+  if (style) {
+    style.textContent = `
+      [data-bd-select-field] { cursor: pointer; }
+      [data-bd-select-field]:hover, [data-bd-selection] { outline: 2px solid #1677ff; outline-offset: 2px; }
+      [data-bd-selection="field"] { outline-width: 3px; }
+    `;
+    doc.head.append(style);
+    doc.addEventListener('click', click, true);
+  }
   const apply = () => {
     const defaults = {};
-    for (const {id, kind, selector, value} of elements) {
+    const nextMarked = new Set();
+    for (const {id, kind, group, selector, original: expectedOriginal, value} of elements) {
       if (kind !== 'text') continue;
-      const element = doc.querySelector(selector);
-      const text = element && Array.from(element.childNodes).find(node => node.nodeType === 3 && node.textContent.trim());
+      let text;
+      for (const candidate of doc.querySelectorAll(selector)) {
+        text = Array.from(candidate.childNodes).find(node => {
+          if (node.nodeType !== 3) return false;
+          const existing = applied.get(node);
+          const original = existing && node.textContent === existing.value ? existing.original : node.textContent;
+          return expectedOriginal ? original.trim() === expectedOriginal : original.trim().length > 0;
+        });
+        if (text) break;
+      }
       if (!text) continue;
       const existing = applied.get(text);
       const original = existing && text.textContent === existing.value ? existing.original : text.textContent;
       defaults[id] = original.trim();
+      if (selection && text.parentElement) {
+        const target = text.parentElement;
+        markPreviewField(target, { id, group }, selection);
+        nextMarked.add(target);
+      }
       if (typeof value !== 'string' || text.textContent === value) continue;
       applied.set(text, { original, value });
       text.textContent = value;
     }
+    for (const target of marked) {
+      if (!nextMarked.has(target)) clearPreviewField(target);
+    }
+    marked = nextMarked;
     reportDefaults?.(defaults);
   };
   const observer = new MutationObserver(apply);
   apply();
   observer.observe(doc.documentElement, { subtree: true, childList: true, characterData: true });
   nativeContent.set(doc, { observer, restore: () => {
+    if (style) {
+      doc.removeEventListener('click', click, true);
+      style.remove();
+    }
+    for (const target of marked) clearPreviewField(target);
     for (const [node, entry] of applied) {
       if (node.textContent === entry.value) node.textContent = entry.original;
     }
@@ -128,31 +163,39 @@ function applyCustomContent(root, elements) {
   }
 }
 let selectionRequest;
-screen.addEventListener('click', event => {
-  if (selectionRequest === undefined) return;
+function selectPreviewField(event, request) {
+  if (!Number.isInteger(request)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  const target = event.target.closest('[data-bd-select-field]');
-  if (target) parent.postMessage({ type: 'bd-select-content', id: target.dataset.bdSelectField, request: selectionRequest }, location.origin);
-}, true);
+  const target = event.target.closest?.('[data-bd-select-field]');
+  if (target) parent.postMessage({ type: 'bd-select-content', id: target.dataset.bdSelectField, request }, location.origin);
+}
+screen.addEventListener('click', event => selectPreviewField(event, selectionRequest), true);
 
+function markPreviewField(target, field, selection) {
+  target.dataset.bdSelectField = field.id;
+  if (field.group === selection.region) target.dataset.bdSelection = field.id === selection.field ? 'field' : 'region';
+  else delete target.dataset.bdSelection;
+}
+function clearPreviewField(target) {
+  delete target.dataset.bdSelectField;
+  delete target.dataset.bdSelection;
+}
 function markSelectableContent(elements, selection) {
   selectionRequest = selection?.request;
-  screen.style.pointerEvents = selection ? 'auto' : 'none';
   if (!selection) return;
   const header = screen.querySelector('header');
   if (header) header.dataset.bdSelectField = 'top-navigation';
   for (const field of elements) {
     const target = screen.querySelector(field.selector);
     if (!target) continue;
-    target.dataset.bdSelectField = field.id;
+    markPreviewField(target, field, selection);
     const hitArea = field.hitArea ? target.closest(field.hitArea) : null;
     if (hitArea) hitArea.dataset.bdSelectField = field.id;
-    if (field.group === selection.region) target.dataset.bdSelection = field.id === selection.field ? 'field' : 'region';
   }
   for (const control of screen.querySelectorAll('a,button,input,select,textarea,[tabindex]')) control.tabIndex = -1;
 }
-function renderNative(page, landscape, palette, headerPalette, elements, reportDefaults, postPaymentScene) {
+function renderNative(page, landscape, palette, headerPalette, elements, reportDefaults, postPaymentScene, selection) {
   const direction = landscape ? 'landscape' : 'portrait';
   const device = landscape ? 'android-14-1' : 'android-24-1';
   const params = new URLSearchParams({ page, orientation: direction, device });
@@ -162,6 +205,7 @@ function renderNative(page, landscape, palette, headerPalette, elements, reportD
   if (frame?.getAttribute('src') !== src) {
     frame = document.createElement('iframe');
     frame.dataset.nativePreview = '';
+    frame.tabIndex = -1;
     frame.title = 'Kiosk 原生参考 f84dd529';
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     Object.assign(frame.style, {
@@ -171,12 +215,13 @@ function renderNative(page, landscape, palette, headerPalette, elements, reportD
     frame.src = src;
     screen.replaceChildren(frame);
   }
+  frame.style.pointerEvents = selection ? 'auto' : 'none';
   const refresh = () => {
     applyNativePalette(frame, palette);
     const doc = frame.contentDocument;
     if (!doc?.head) return;
     styleNativeHeader(doc, headerPalette);
-    updateNativeContent(doc, elements, reportDefaults);
+    updateNativeContent(doc, elements, reportDefaults, selection);
   };
   frame.onload = refresh;
   if (frame.contentDocument?.URL !== 'about:blank') refresh();
@@ -203,7 +248,7 @@ const roleColors=palette?{
 }:undefined;
 if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
-if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements,reportDefaults,postPaymentScene);}
+if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements,reportDefaults,postPaymentScene,event.data.selection);}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation,postPaymentScene});
 if(palette){const item=screen.firstElementChild;const tokens={paper:palette.background,surface:palette.surface,ink:palette.ink,muted:palette.muted,line:palette.line,accent:palette.accent,primary:palette.primary,on:palette.onPrimary};
 for(const [name,color] of Object.entries(tokens))item.style.setProperty('--pt-'+name,color);}}}
@@ -239,5 +284,6 @@ if (style.mode === 'custom' && screen.firstElementChild) {
     header.style.boxShadow = headerPalette.divider ? 'inset 0 -1px 0 ' + headerPalette.onPrimary + '40' : 'none';
   }
 }
+screen.style.pointerEvents = event.data.selection ? 'auto' : 'none';
 markSelectableContent(elements, style.mode === 'custom' ? event.data.selection : undefined);fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();

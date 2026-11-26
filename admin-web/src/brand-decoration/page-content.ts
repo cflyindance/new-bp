@@ -18,6 +18,9 @@ type ElementSpec = {
     previewHitArea?: string;
     custom?: string;
     native?: string;
+    nativeOriginal?: string;
+    nativeLabel?: string;
+    nativeGroup?: ContentGroup;
 };
 
 const text = (id: string, label: string, custom: string, native?: string): ElementSpec =>
@@ -26,7 +29,8 @@ const button = (id: string, label: string, custom: string, native?: string): Ele
     ({ ...text(id, label, custom, native), group: 'button' });
 const fieldLabel = (id: string, label: string, custom: string, native?: string): ElementSpec =>
     ({ ...text(id, label, custom, native), group: 'field' });
-export function pageContentGroup(field: ElementSpec): ContentGroup {
+export function pageContentGroup(field: ElementSpec, native = false): ContentGroup {
+    if (native && field.nativeGroup) return field.nativeGroup;
     return field.kind === 'image' ? 'image' : field.kind === 'hidden' ? 'visibility' : field.group ?? 'copy';
 }
 const secondary = (label = '次按钮文案', native?: string) =>
@@ -328,6 +332,109 @@ const EMENU_LAYOUT_COPY: Record<string, readonly ElementSpec[]> = {
     ],
 };
 
+
+const nativeText = (id: string, label: string, selector: string, original?: string, group?: ElementSpec['group']): ElementSpec =>
+    ({ id, label, kind: 'text', native: selector, nativeOriginal: original, group });
+const nativeButton = (id: string, label: string, selector: string, original?: string) =>
+    nativeText(id, label, selector, original, 'button');
+
+const KIOSK_NATIVE_COPY: Record<string, readonly ElementSpec[]> = {
+    menu: [nativeText('listEnd', '列表底部提示', '#root div', '—— 已经到底啦 ——')],
+    combo: [
+        nativeText('listEnd', '列表底部提示', '#root div', '—— 已经到底啦 ——'),
+        nativeButton('continue', '加购按钮文案', '#root div', '加入购物车'),
+    ],
+    orderType: [
+        nativeButton('dineInTitle', '堂食按钮文案', '.text___2pQ--', '我要堂吃'),
+        nativeButton('takeoutTitle', '打包按钮文案', '.text___2pQ--', '我要打包'),
+    ],
+    detail: [
+        nativeText('specification', '规格区标题', '#root span', '规格'),
+        nativeText('itemNote', '商品备注标签', '.title___Z-GBw'),
+        nativeButton('continue', '加购按钮文案', '#root span', '加入购物车'),
+    ],
+    review: [
+        nativeText('orderNote', '订单备注标签', '.title___XfUCM'),
+        nativeText('listEnd', '列表底部提示', '#root div', '—— 已经到底啦 ——'),
+        nativeButton('continue', '确认订单按钮文案', '#root div', '确认订单'),
+    ],
+    payment: [
+        nativeText('title', '支付方式标题', '.paymentMethod___8b2eu'),
+        nativeText('cardTitle', '信用卡／借记卡文案', '.payText___k1kKm', '信用卡/借记卡', 'paymentMethods'),
+        nativeText('counterTitle', '柜台支付文案', '.payText___k1kKm', '柜台支付', 'paymentMethods'),
+    ],
+    finish: [
+        nativeText('receiptTitle', '收据方式标题', '.receipt___xNg8u'),
+        nativeButton('receiptPrint', '打印收据按钮', '.txt___Lj26F', '打印收据'),
+        nativeButton('receiptSkip', '不要收据按钮', '.txt___Lj26F', '不要收据'),
+    ],
+    tableService: [
+        nativeText('title', '取餐方式标题', '.serviceTypeMethod___3bdgp'),
+        nativeButton('counterTitle', '柜台自取按钮文案', '.title___FeLjk', '柜台自取'),
+        nativeButton('deliveryTitle', '送餐到桌按钮文案', '.title___FeLjk', '送餐到桌'),
+    ],
+    phoneInput: [
+        nativeText('title', '手机号输入标题', '#root span', '请提供您的手机号以便接收订单信息'),
+        nativeText('phonePlaceholder', '手机号输入提示', '.showPhone___HQ8g5', '请输入手机号', 'field'),
+        nativeButton('secondary', '跳过按钮文案', '.never___cxSDJ'),
+        nativeButton('submit', '确定按钮文案', '.btnConfirm___wH7C3, .btnNoConfirm___7glLx'),
+    ],
+    reward: [
+        nativeText('title', '会员奖励标题', '.title___G-N5s'),
+        nativeText('pointsLabel', '积分标签', '.pts___rdj6B', undefined, 'field'),
+        nativeButton('secondary', '跳过按钮文案', '.skipBtn___Cz-ty'),
+        nativeButton('continue', '选择兑换按钮文案', '.btnNotConfirm___nzxTe'),
+    ],
+    partySizeSelection: [
+        nativeButton('secondary', '跳过按钮文案', '.never___ElcYN'),
+        nativeButton('continue', '确定按钮文案', '.btnConfirm___buD-5'),
+    ],
+    togoOption: [
+        nativeButton('cutleryLabel', '餐具选项文案', '.name___-WAWB', '需要免费餐具'),
+        nativeButton('bagLabel', '打包袋选项文案', '.name___-WAWB', '需要免费打包袋'),
+        nativeButton('secondary', '跳过按钮文案', '.never___vAk1R'),
+        nativeButton('continue', '确定按钮文案', '#root div', '确定'),
+    ],
+    chooseTable: [nativeButton('secondary', '跳过按钮文案', '.skipBtn___eqrsV')],
+    tippingPanel: [
+        nativeButton('skipTip', '不添加小费按钮文案', '.tipBtnText___Eql6S', '没有小费'),
+        nativeButton('customTip', '自定义小费按钮文案', '.tipBtnText___Eql6S', '自定义'),
+        nativeButton('continue', '确定按钮文案', '.confirmBtnContainer___i5mLL'),
+    ],
+    cardPayment: [
+        nativeText('title', '读卡器操作标题', '#root div', '请使用右侧读卡器完成付款'),
+        nativeText('subtitle', '取消支付提示', '.cardPaymentSubTips___s08jH'),
+        nativeText('amountLabel', '总计标签', '#root div', '总计', 'field'),
+    ],
+    afterCreditCardPay: [
+        nativeButton('clearSignature', '重签按钮文案', '.backBtn___si-yA'),
+        nativeButton('continue', '确定按钮文案', '#root span', '确定'),
+    ],
+    signature: [
+        nativeText('title', '签名标题', '.header___XWCPD'),
+        nativeButton('clearSignature', '重签按钮文案', '.backBtn___si-yA'),
+        nativeButton('continue', '确定按钮文案', '#root span', '确定'),
+    ],
+    login: [
+        nativeText('title', '会员登录标题', '.title___3sx3O'),
+        nativeText('phonePlaceholder', '手机号输入提示', '.showPhone___HQ8g5', '请输入手机号', 'field'),
+        nativeButton('secondary', '取消按钮文案', '.never___a10Py'),
+        nativeButton('continue', '确定按钮文案', '.confirmBtn___bbIGb'),
+    ],
+    paymentMember: [
+        nativeText('title', '支付后会员标题', '#root h1', '将卡片绑定到会员账户'),
+        nativeText('subtitle', '绑定会员说明', '#root p', '输入手机号以绑定您的账户。'),
+        nativeButton('secondary', '跳过按钮文案', '.secondaryButton___Xilnw'),
+        nativeButton('continue', '注册或登录按钮文案', '.primaryButton___4Uuok'),
+    ],
+    connectionError: [
+        nativeText('title', '支付失败标题', '.ops___gr6Fv'),
+        nativeText('subtitle', '失败说明', '.failureDescription___nCpLq'),
+        nativeButton('secondary', '取消订单按钮文案', '.failureActionBtn___5p-2o'),
+        nativeButton('continue', '再试一次按钮文案', '.tryAgainBtn___n5542'),
+        nativeButton('payAtCounter', '柜台支付按钮文案', '.bottomBtn___Ca5CN'),
+    ],
+};
 export type PageContent = Record<string, Record<string, string | true>>;
 export const MAX_PAGE_IMAGE_BYTES = 120 * 1024;
 const MAX_IMAGE_LENGTH = 4 * Math.ceil(MAX_PAGE_IMAGE_BYTES / 3) + 32;
@@ -341,7 +448,17 @@ export function pageElements(channel: 'kiosk' | 'emenu', page: string) {
     const kicker = channel === 'kiosk' && fields.some(field => field.custom === '.pt-heading h1')
         ? [text('headingCaption', '页面短句', '.pt-heading > .pt-kicker')]
         : [];
-    return [...fields, ...kicker, ...(Object.hasOwn(extra, page) ? extra[page] : [])];
+    const combined = [...fields, ...kicker, ...(Object.hasOwn(extra, page) ? extra[page] : [])];
+    if (channel !== 'kiosk' || !Object.hasOwn(KIOSK_NATIVE_COPY, page)) return combined;
+    for (const nativeField of KIOSK_NATIVE_COPY[page]) {
+        const index = combined.findIndex(field => field.id === nativeField.id);
+        if (index < 0) combined.push(nativeField);
+        else combined[index] = {
+            ...combined[index], native: nativeField.native, nativeLabel: nativeField.label,
+            nativeOriginal: nativeField.nativeOriginal, nativeGroup: pageContentGroup(nativeField),
+        };
+    }
+    return combined;
 }
 
 export function validatePageContent(channel: 'kiosk' | 'emenu', content: PageContent) {

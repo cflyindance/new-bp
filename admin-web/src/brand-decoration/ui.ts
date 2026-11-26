@@ -743,9 +743,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     let contentRegion: ContentRegion | undefined;
     let contentRegionPage = '';
     let selectedField: string | undefined;
-    function currentContentRegion(s: Scheme) {
-        const key = s.channel + ':' + page;
-        const available = pageElements(s.channel, page).filter(field => field.custom).map(pageContentGroup);
+    function editablePageElements(s: Scheme, mode: string) {
+        return pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
+    }
+    function currentContentRegion(s: Scheme, mode: string = s.styles[page].mode) {
+        const key = [s.channel, page, mode].join(':');
+        const available = editablePageElements(s, mode).map(field => pageContentGroup(field, mode === 'default'));
         if (contentRegionPage !== key || !contentRegion || !available.includes(contentRegion)) {
             contentRegionPage = key;
             contentRegion = (Object.keys(PAGE_CONTENT_GROUPS) as ContentRegion[]).find(group => available.includes(group));
@@ -760,7 +763,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         selectedField = fieldId;
         picker.value = region;
         const fields = root.querySelector('.bd-page-content');
-        if (fields) fields.outerHTML = pageContentControls(s, 'custom');
+        if (fields) fields.outerHTML = pageContentControls(s, s.styles[page].mode);
         if (fieldId) {
             narrowContentOpen = true;
             const panel = root.querySelector<HTMLDetailsElement>('.bd-content-panel');
@@ -785,7 +788,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             ? resolvePalette('custom', header.background)
             : resolvePalette(s.paletteId ?? 'custom', s.primary);
         const selecting = !comparison && !previewRoute && workbenchMode === 'page' &&
-            s.styles[page].mode === 'custom' && !!root.querySelector('[data-bd-field=content-region]');
+            scheme()?.id === s.id && !!root.querySelector('[data-bd-field=content-region]');
         frame?.contentWindow?.postMessage({
             selection: selecting ? { region: currentContentRegion(s), field: selectedField, request } : undefined,
             type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
@@ -793,8 +796,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
             elements: pageElements(s.channel, page).flatMap(field => {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
-                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field), selector,
-                    hitArea: field.previewHitArea, attribute: field.attribute, value: s.pageContent?.[page]?.[field.id] }] : [];
+                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field, s.styles[page].mode === 'default'), selector,
+                    hitArea: field.previewHitArea, attribute: field.attribute, original: field.nativeOriginal, value: s.pageContent?.[page]?.[field.id] }] : [];
             }),
             homeLayout: s.channel === 'kiosk' && page === 'home' && s.styles.home.mode === 'custom'
                 ? comparison?.layout ?? s.styles.home.referenceLayout ?? s.styles.home.referenceTemplate?.layout
@@ -891,8 +894,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const switchLayout = mode === 'default' && scope.canWrite && pageElements(s.channel, page).some(field => field.custom)
             ? '<button type="button" class="bd-link" data-bd-action="enable-page-content">切换自定义布局</button>'
             : '';
-        const regions = mode === 'custom' ? pageElements(s.channel, page).filter(field => field.custom).map(pageContentGroup) : [];
-        const selected = regions.length ? currentContentRegion(s) : undefined;
+        const regions = mode === 'inherit' ? [] : editablePageElements(s, mode).map(field => pageContentGroup(field, mode === 'default'));
+        const selected = regions.length ? currentContentRegion(s, mode) : undefined;
         const picker = selected ? `<label>编辑区域<select data-bd-field="content-region">${
             Object.entries(PAGE_CONTENT_GROUPS).filter(([group]) => regions.includes(group as ContentRegion))
                 .map(([group, name]) => `<option value="${group}" ${selected === group ? 'selected' : ''}>${name}</option>`).join('')
@@ -902,32 +905,44 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     function pageContentControls(s: Scheme, mode: string) {
         if (mode === 'inherit') return '';
         const content = s.pageContent?.[page] ?? {};
-        const elements = pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
+        const elements = editablePageElements(s, mode);
         if (!elements.length) return '';
-        const region = mode === 'custom' ? currentContentRegion(s) : undefined;
-        const groups = Object.entries(PAGE_CONTENT_GROUPS).flatMap(([group, label]) => {
-            if (region && region !== group) return [];
-            const fields = elements.filter(field => pageContentGroup(field) === group);
-            if (!fields.length) return [];
-            const controls = fields.map(field => {
-                const value = content[field.id];
-                const attrs = `data-bd-field="element" data-element="${field.id}"`;
-                const control = field.kind === 'image'
-                    ? `<input type="file" ${attrs} accept="image/png,image/jpeg,image/webp"><small>${value ? '已替换图片' : 'PNG、JPEG、WebP，最大 120 KB'}</small>`
-                    : field.kind === 'hidden'
-                        ? `<input type="checkbox" ${attrs} ${value ? 'checked' : ''}>`
-                        : `<input ${attrs} maxlength="${MAX_PAGE_TEXT}" placeholder="使用默认文案" value="${esc(typeof value === 'string' ? value : '')}">`;
-                const reset = value === undefined ? '' : `<button type="button" class="bd-link" data-bd-action="reset-element" data-value="${field.id}" aria-label="恢复${field.label}">恢复默认</button>`;
-                const original = field.kind === 'text'
-                    ? `<small class="bd-default-copy">系统默认：<span data-bd-default-copy="${field.id}">${esc(
-                        (defaultCopyKey === copyKey(s, page) && defaultCopy[field.id]) || '…'
-                    )}</span></small>` : '';
-                return `<div ${selectedField === field.id && mode === 'custom' ? 'class="bd-selected-content-field"' : ''}><label>${field.label}${original}${control}</label>${reset}</div>`;
-            }).join('');
-            return [`<section class="bd-content-group" data-bd-content-group="${group}" aria-label="${label}">
-                <h3>${label}</h3>${controls}</section>`];
+        const region = currentContentRegion(s, mode);
+        if (!region) return '';
+        const fields = elements.filter(field => pageContentGroup(field, mode === 'default') === region);
+        const controls = fields.map(field => {
+            const fieldLabel = (mode === 'default' ? field.nativeLabel ?? field.label : field.label).replace(/按钮文案$/, '按钮');
+            const value = content[field.id];
+            const modified = value !== undefined;
+            const inputId = `bd-content-field-${field.id}`;
+            const attrs = `id="${inputId}" data-bd-field="element" data-element="${field.id}"`;
+            const reset = modified ? `<button type="button" class="bd-link bd-field-reset" data-bd-action="reset-element"
+                data-value="${field.id}" aria-label="恢复${esc(fieldLabel)}默认值">恢复默认</button>` : '';
+            const selected = selectedField === field.id ? ' bd-selected-content-field' : '';
+            const label = `<label for="${inputId}">${esc(fieldLabel)}</label>`;
+            if (field.kind === 'hidden') {
+                return `<div class="bd-content-field bd-content-toggle${selected}">
+                    ${label}<input type="checkbox" role="switch" ${attrs} ${value ? 'checked' : ''}>${reset}
+                </div>`;
+            }
+            const original = defaultCopyKey === copyKey(s, page) ? defaultCopy[field.id] : undefined;
+            const copyTarget = `data-bd-default-copy="${field.id}"`;
+            const control = field.kind === 'image'
+                ? `<div class="bd-content-image-controls">
+                    ${typeof value === 'string' ? `<img src="${esc(value)}" alt="">` : ''}
+                    <input class="bd-content-file" type="file" ${attrs} accept="image/png,image/jpeg,image/webp" aria-label="替换${esc(fieldLabel)}">
+                    <label class="bd-button" for="${inputId}" title="PNG、JPEG 或 WebP，最大 120 KB">替换图片</label>
+                </div><small class="bd-error" data-bd-field-error role="alert" hidden></small>`
+                : `<input ${attrs} maxlength="${MAX_PAGE_TEXT}" placeholder="${esc(modified ? '输入文案' : original || '输入文案')}"
+                    ${modified ? '' : copyTarget} value="${esc(typeof value === 'string' ? value : '')}">
+                    ${modified ? `<small class="bd-default-copy" ${original ? '' : 'hidden'}>默认：<span ${copyTarget}>${esc(original ?? '')}</span></small>` : ''}`;
+            return `<div class="bd-content-field${selected}">
+                <div class="bd-content-field-heading">${label}${reset || (field.kind === 'text' ? '<span class="bd-field-default">默认</span>' : '')}</div>
+                ${control}
+            </div>`;
         }).join('');
-        return `<fieldset class="bd-page-content" aria-label="页面内容" ${writable()}>${groups}
+        return `<fieldset class="bd-page-content" aria-label="页面内容" ${writable()}>
+            <section class="bd-content-group" data-bd-content-group="${region}" aria-label="${PAGE_CONTENT_GROUPS[region]}">${controls}</section>
             ${Object.keys(content).length ? '<button type="button" class="bd-link" data-bd-action="reset-page-content">恢复整页内容</button>' : ''}
         </fieldset>`;
     }
@@ -1243,6 +1258,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const suffix = inherits ? ' · 沿用日常装修' : s.styles[id].mode === 'custom' ? ' · 自定义布局' : '';
             return `<option value="${id}" ${id === page ? 'selected' : ''}>${name}${suffix}</option>`;
         }).join('');
+        const pageName = pages(channel).find(([id]) => id === page)?.[1] ?? '页面';
+        const layoutTitle = pageName + (pageName.endsWith('页') || pageName.endsWith('页面') ? '布局' : '页面布局');
         const currentMode = inherited ? 'inherit' : style.mode;
         const modes = activity
             ? [['inherit', '沿用日常装修'], ['default', '系统布局'], ['custom', '自定义布局']]
@@ -1253,7 +1270,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const sidebar = components
             ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
                 ${sharedComponentControls(s)}`
-            : `<h2>页面与布局</h2>${editorPagePicker(s)}<fieldset ${writable()}><legend>当前页布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
+            : `<h2>页面与布局</h2>${editorPagePicker(s)}<fieldset ${writable()}><legend>${esc(layoutTitle)}</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
             ${channel === 'kiosk' && page === 'home' ? homeTemplateControls(s) : ''}` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
         root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
         if (!components) {
@@ -1560,18 +1577,25 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         if (element.kind === 'image') {
             const file = input.files?.[0];
             if (!file) return;
-            if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > MAX_PAGE_IMAGE_BYTES) {
+            const error = input.closest('.bd-content-field')?.querySelector<HTMLElement>('[data-bd-field-error]');
+            const showError = (message: string) => {
+                if (!error) return;
+                error.textContent = message;
+                error.hidden = !message;
+            };
+            if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || !file.size || file.size > MAX_PAGE_IMAGE_BYTES) {
                 input.value = '';
-                notice('请选择 120 KB 以内的 PNG、JPEG 或 WebP 图片', true);
+                showError('请选择 120 KB 以内的 PNG、JPEG 或 WebP 图片');
                 return;
             }
+            showError('');
             const targetPage = page;
             const reader = new FileReader();
             reader.addEventListener('load', () => {
                 if (root.isConnected && typeof reader.result === 'string')
                     savePageElement(s, targetPage, element.id, reader.result);
             });
-            reader.addEventListener('error', () => notice('图片读取失败，请重新选择', true));
+            reader.addEventListener('error', () => { input.value = ''; showError('图片读取失败，请重新选择'); });
             reader.readAsDataURL(file);
         } else savePageElement(s, page, element.id, element.kind === 'hidden' ? (input.checked ? true : undefined) : input.value.trim());
         return;
@@ -1630,25 +1654,32 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         return;
         if (event.data?.type === 'bd-select-content' && event.data.request === defaultCopyRequest) {
             const current = scheme();
-            if (!current || current.styles[page].mode !== 'custom' || workbenchMode !== 'page' ||
+            if (!current || previewRoute || workbenchMode !== 'page' ||
                 !root.querySelector('[data-bd-field=content-region]')) return;
             if (event.data.id === 'top-navigation') {
                 narrowContentOpen = true;
                 switchWorkbench('components', true);
                 return;
             }
-            const field = pageElements(current.channel, page).find(item => item.id === event.data.id && item.custom);
-            if (field) selectContentRegion(current, pageContentGroup(field), field.id);
+            const mode = current.styles[page].mode;
+            const field = editablePageElements(current, mode).find(item => item.id === event.data.id);
+            if (field) selectContentRegion(current, pageContentGroup(field, mode === 'default'), field.id);
             return;
         }
         if (event.data?.type === 'bd-default-copy' && event.data.request === defaultCopyRequest) {
             const values = event.data.values;
             if (!values || typeof values !== 'object') return;
+            defaultCopy = Object.fromEntries(Object.entries(values)
+                .filter(([, value]) => typeof value === 'string')
+                .map(([id, value]) => [id, (value as string).slice(0, 240)]));
             for (const target of root.querySelectorAll<HTMLElement>('[data-bd-default-copy]')) {
-                const id = target.dataset.bdDefaultCopy!;
-                if (!Object.hasOwn(values, id) || typeof values[id] !== 'string') continue;
-                defaultCopy[id] = values[id].slice(0, 240);
-                target.textContent = defaultCopy[id];
+                const original = defaultCopy[target.dataset.bdDefaultCopy!];
+                if (target instanceof HTMLInputElement) target.placeholder = original || '输入文案';
+                else {
+                    target.textContent = original ?? '';
+                    const summary = target.closest<HTMLElement>('small');
+                    if (summary) summary.hidden = !original;
+                }
             }
             return;
         }

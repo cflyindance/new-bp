@@ -232,7 +232,50 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-reference-file-details { flex: 1 1 160px; min-width: 0; display: grid; gap: 10px; }
 .bd-reference-file-details strong { overflow-wrap: anywhere; }
 .bd-content-panel [data-bd-field="content-region"] { margin-bottom: 16px; }
-.bd-selected-content-field > label { color: #1677ff; }
+.bd-content-field { display: grid; gap: 6px; min-width: 0; }
+.bd-content-field-heading, .bd-content-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bd .bd-content-toggle input[role="switch"] {
+  appearance: none;
+  position: relative;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #9ca3af;
+  cursor: pointer;
+}
+.bd-content-toggle input[role="switch"]::before {
+  content: '';
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: 12px;
+  border-radius: 50%;
+  background: #fff;
+}
+.bd .bd-content-toggle input[role="switch"]:checked { background: #1677ff; }
+.bd-content-toggle input[role="switch"]:checked::before { transform: translateX(14px); }
+.bd-content-field label { min-width: 0; }
+.bd-content-field > input:not([type="checkbox"]) { width: 100%; }
+.bd .bd-field-reset { min-height: 28px; padding: 0 2px; font-size: 12px; flex: 0 0 auto; }
+.bd-field-default { color: var(--bd-muted, #6b7280); font-size: 12px; flex: 0 0 auto; }
+.bd-selected-content-field .bd-content-field-heading > label,
+.bd-selected-content-field.bd-content-toggle > label { color: #1677ff; }
+.bd-content-image-controls { position: relative; display: flex; align-items: center; gap: 8px; }
+.bd-content-image-controls > img { width: 44px; height: 36px; object-fit: cover; border-radius: 4px; }
+.bd .bd-content-file { position: absolute; width: 1px; min-height: 1px; height: 1px; padding: 0; opacity: 0; }
+.bd .bd-content-image-controls > label { min-height: 36px; justify-content: center; font-size: 12px; cursor: pointer; }
+.bd-content-file:focus-visible + label { outline: 2px solid #1677ff; }
+.bd-content-file:disabled + label { opacity: .5; cursor: not-allowed; }
+.bd-content-field .bd-default-copy[hidden], .bd-content-field [data-bd-field-error][hidden] { display: none; }
 .bd-page-picker { display: grid; gap: 8px; min-width: 0; }
 .bd-page-picker input, .bd-page-picker select { width: 100%; min-width: 0; }
 .bd-page-cards {
