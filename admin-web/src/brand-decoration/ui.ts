@@ -864,6 +864,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     let contentRegion: ContentRegion | undefined;
     let contentRegionPage = '';
     let selectedField: string | undefined;
+    let highlightContent = true;
     function editablePageElements(s: Scheme, mode: string) {
         return pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
     }
@@ -874,6 +875,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             contentRegionPage = key;
             contentRegion = (Object.keys(PAGE_CONTENT_GROUPS) as ContentRegion[]).find(group => available.includes(group));
             selectedField = undefined;
+            highlightContent = true;
         }
         return contentRegion;
     }
@@ -882,6 +884,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         if (!picker || !Array.from(picker.options).some(option => option.value === region)) return;
         contentRegion = region;
         selectedField = fieldId;
+        highlightContent = true;
         picker.value = region;
         const fields = root.querySelector('.bd-page-content');
         if (fields) fields.outerHTML = pageContentControls(s, s.styles[page].mode);
@@ -893,6 +896,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 ?.focus({ preventScroll: wideWorkbench.matches });
         }
         sendPreview(s);
+    }
+    function clearContentSelection(s: Scheme) {
+        if (!highlightContent && !selectedField) return;
+        highlightContent = false;
+        selectedField = undefined;
+        root.querySelector('.bd-selected-content-field')?.classList.remove('bd-selected-content-field');
+        updateEditorPreview(s);
     }
     function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'),
         comparison?: { layout?: HomeLayout; orientation: string }) {
@@ -920,8 +930,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             : resolvePalette(s.paletteId ?? 'custom', s.primary);
         const selecting = !comparison && !previewRoute && workbenchMode === 'page' &&
             scheme()?.id === s.id && !!root.querySelector('[data-bd-field=content-region]');
+        const region = selecting ? currentContentRegion(s) : undefined;
         frame?.contentWindow?.postMessage({
-            selection: selecting ? { region: currentContentRegion(s), field: selectedField, request } : undefined,
+            selection: selecting ? { region: highlightContent ? region : undefined, field: selectedField, request } : undefined,
             type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...previewScheme, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
@@ -1690,8 +1701,17 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         narrowContentOpen = !narrowContentOpen;
         syncContentPanel();
     };
-    const click = (event: Event) => { const button = (event.target as HTMLElement).closest<HTMLElement>('[data-bd-action]'); if (button && !button.hasAttribute('disabled'))
-        act(button.dataset.bdAction!, button); };
+    const click = (event: Event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.matches('.bd-workbench .bd-preview-stage') && !previewRoute && workbenchMode === 'page') {
+            const current = scheme();
+            if (current && root.querySelector('[data-bd-field=content-region]')) clearContentSelection(current);
+            return;
+        }
+        const button = target.closest<HTMLElement>('[data-bd-action]');
+        if (button && !button.hasAttribute('disabled')) act(button.dataset.bdAction!, button);
+    };
     const searchEditorPages = (event: Event) => {
         const input = event.target;
         if (!(input instanceof HTMLInputElement) || !input.hasAttribute('data-bd-page-search')) return;
@@ -1818,6 +1838,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const current = scheme();
             if (!current || previewRoute || workbenchMode !== 'page' ||
                 !root.querySelector('[data-bd-field=content-region]')) return;
+            if (event.data.id === null) {
+                clearContentSelection(current);
+                return;
+            }
             if (event.data.id === 'top-navigation') {
                 narrowContentOpen = true;
                 switchWorkbench('components', true);
