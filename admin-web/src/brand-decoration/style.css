@@ -40,8 +40,7 @@
 .bd-review-summary dt{color:var(--muted-foreground);margin-bottom:4px}
 .bd-review-summary dd{margin:0;overflow-wrap:anywhere}
 .bd-review-card .bd-help{margin-top:12px}
-.bd-workbench .bd-preview-stage{height:clamp(340px,calc(100dvh - 260px),780px)}
-@media(max-width:640px){.bd-flow-grid,.bd-review-summary{grid-template-columns:1fr}.bd-workbench .bd-preview-stage{height:520px}}
+@media(max-width:640px){.bd-flow-grid,.bd-review-summary{grid-template-columns:1fr}}
 
 .bd-plan-form [data-bd-store-item][hidden]{display:none}.bd-flow-actions{gap:12px;flex-wrap:wrap}
 
@@ -339,8 +338,73 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   align-items:start;
 }
 .bd-plan-preview .bd-page-cards {max-height:clamp(232px,calc(100dvh - 320px),660px)}
-.bd-plan-preview .bd-preview-stage {height:clamp(420px,calc(100dvh - 220px),900px)}
+
 @media (max-width:800px) {
   .bd-plan-preview {grid-template-columns:minmax(0,1fr)}
   .bd-plan-preview .bd-page-cards {max-height:232px}
+}
+
+.bd-card.bd-palette-panel {padding-block:10px;gap:8px 16px;margin-bottom:12px}
+.bd-palette-panel h2 {margin:0}
+.bd-palette-panel .bd-palette-option,.bd-palette-panel .bd-palette-custom input {min-height:36px}
+:is(.bd-workbench,.bd-plan-preview) .bd-preview-toolbar {padding:6px 12px;gap:6px 12px}
+:is(.bd-workbench,.bd-plan-preview) .bd-preview-toolbar select {min-height:36px}
+:is(.bd-workbench,.bd-plan-preview) .bd-preview-direction span {min-height:32px}
+:is(.bd-workbench,.bd-plan-preview) .bd-preview-stage {
+  height:var(--bd-preview-height,clamp(220px,calc(100dvh - 240px),900px));
+  padding:12px;
+}
+
+/* Keep each step inside the full-screen flow; scroll only the overflowing region. */
+[data-decoration-workbench]:has(> .bd > .bd-flow-header) {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+[data-decoration-workbench]:has(> .bd > .bd-flow-header) > :not(.bd) {flex:none}
+[data-decoration-workbench] > .bd:has(> .bd-flow-header) {
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.bd-flow-header,
+.bd-flow-header ~ :is(.bd-notice,.bd-palette-panel) {flex:none}
+.bd-flow-header ~ :is(.bd-flow-content,.bd-store-page,.bd-workbench) {
+  flex:1 1 auto;
+  min-height:0;
+}
+.bd-flow-header ~ :is(.bd-flow-content,.bd-store-page) {
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.bd-flow-header ~ .bd-workbench {grid-template-rows:minmax(0,1fr)}
+.bd-flow-header ~ .bd-workbench > :is(.bd-config,.bd-content-panel) {
+  max-height:100%;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.bd-flow-header ~ .bd-workbench > .bd-config > * {flex:none}
+.bd-flow-header ~ .bd-workbench > .bd-preview {
+  align-self:stretch;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.bd-flow-header ~ .bd-workbench .bd-preview > :is(.bd-preview-toolbar,.bd-help) {flex:none}
+.bd-flow-header ~ .bd-workbench .bd-preview-stage {flex:1;min-height:0;height:auto}
+@media (min-width:801px) and (max-width:1279px) {
+  .bd-flow-header ~ .bd-workbench {grid-template-rows:auto minmax(0,1fr)}
+  .bd-flow-header ~ .bd-workbench > .bd-content-panel {max-height:32dvh}
+}
+@media (max-width:800px) {
+  .bd-flow-header ~ .bd-workbench {
+    grid-template-rows:none;
+    overflow:auto;
+    overscroll-behavior:contain;
+  }
+  .bd-flow-header ~ .bd-workbench > :is(.bd-config,.bd-content-panel) {max-height:none}
+  .bd-flow-header ~ .bd-workbench .bd-preview-stage {flex:none;height:clamp(240px,65dvh,660px)}
 }

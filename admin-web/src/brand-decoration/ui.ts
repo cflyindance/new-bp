@@ -518,6 +518,29 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             resolveSchedule(legacyForStore(store), s.channel, now).fallback?.snapshot ??
             newScheme(s.channel, '项目原生样式', scope.brandName);
     }
+    const workbenchViewport = root.closest<HTMLElement>('[data-decoration-workbench]');
+    function fitPreviewStage() {
+        const stage = root.querySelector<HTMLElement>(':is(.bd-workbench,.bd-plan-preview) .bd-preview-stage');
+        if (!stage) return;
+        const viewportTop = workbenchViewport?.getBoundingClientRect().top ?? 0;
+        const viewportHeight = workbenchViewport?.clientHeight ?? window.innerHeight;
+        const scrollTop = workbenchViewport?.scrollTop ?? window.scrollY;
+        const stageTop = stage.getBoundingClientRect().top - viewportTop + scrollTop;
+        const height = Math.max(220, Math.floor(viewportHeight - stageTop - 16));
+        const value = height + 'px';
+        if (stage.style.getPropertyValue('--bd-preview-height') !== value)
+            stage.style.setProperty('--bd-preview-height', value);
+    }
+    const previewResize = new ResizeObserver(fitPreviewStage);
+    function observePreviewLayout() {
+        previewResize.disconnect();
+        if (workbenchViewport) previewResize.observe(workbenchViewport);
+        previewResize.observe(root);
+        for (const element of root.querySelectorAll('.standalone-page-header,.bd-palette-panel,.bd-preview-toolbar,.bd-preview > .bd-help,.bd-content-panel'))
+            previewResize.observe(element);
+        fitPreviewStage();
+    }
+
     function previewDirectionControls() {
         return `<fieldset class="bd-preview-direction" aria-label="预览方向"><div>
                 <label><input type="radio" name="bd-preview-direction" data-bd-field="orientation" value="portrait" ${orientation === 'portrait' ? 'checked' : ''}><span>竖版</span></label>
@@ -533,7 +556,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const inherited = version.rules?.kind === 'activity' && !version.rules.pageIds.includes(page);
         root.innerHTML = renderStandalonePageHeader({
             titleHtml: esc(s.name) + ' · 效果预览',
-            subtitleHtml: esc(label(channel)),
+            subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)),
             backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? '&legacy=1' : ''}">返回方案列表</a>`,
         }) + `<div class="bd-plan-preview">
             <aside class="bd-card bd-config">${pagePicker(s, true)}</aside>
@@ -546,6 +569,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div>
             </section></div>`;
         restorePagePicker();
+        observePreviewLayout();
     }
     type ListFilters = { channel: string; kind: string; name: string; published: string };
     const emptyListFilters = (): ListFilters => ({ channel: '', kind: '', name: '', published: '' });
@@ -1281,6 +1305,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         channel = s.channel;
         const previousGrid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
         if (previousGrid) pageCardsScroll = previousGrid.scrollTop;
+        const samePage = previousGrid?.querySelector<HTMLElement>('[aria-pressed=true]')?.dataset.value === page;
+        const scrollRegions = ['.bd-workbench', '.bd-workbench > .bd-config'];
+        if (samePage) scrollRegions.push('.bd-workbench > .bd-content-panel');
+        const scrollOffsets = scrollRegions.map(selector => root.querySelector(selector)?.scrollTop ?? 0);
         const style = s.styles[page];
         const activity = s.rules?.kind === 'activity';
         const inherited = activity && !s.rules!.pageIds.includes(page);
@@ -1308,6 +1336,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             : `<h2>页面与布局</h2>${pagePicker(s)}<fieldset ${writable()}><legend>${esc(layoutTitle)}</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}` : ''}${referenceTemplateControls(s, currentMode === 'custom')} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
         root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? previousStep(s.id, "rules", "方案信息") : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}${previewDirectionControls()}</div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
         if (!components) restorePagePicker();
+        scrollRegions.forEach((selector, index) => {
+            const region = root.querySelector(selector);
+            if (region) region.scrollTop = scrollOffsets[index];
+        });
+        if (!flow) observePreviewLayout();
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -1766,8 +1799,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     wideWorkbench.addEventListener('change', syncContentPanel);
     root.addEventListener('change', change);
     root.addEventListener('input', searchEditorPages);
+    window.addEventListener('resize', fitPreviewStage);
     window.addEventListener('message', frameMessage);
     window.addEventListener('storage', storage);
-    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('keydown', workbenchKeydown); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); root.removeEventListener('input', searchEditorPages); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
+    dispose = () => { previewResize.disconnect(); window.removeEventListener('resize', fitPreviewStage); window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('keydown', workbenchKeydown); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); root.removeEventListener('input', searchEditorPages); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
     draw();
 }
