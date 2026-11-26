@@ -5,6 +5,12 @@ window.KioskNativeFixtures = {
     const cfg = state.selfConfig;
     const set = (id, value) => { cfg.configList.find(c => c.id === id).value = value; cfg.configMap['id_' + id] = value; };
     set(4, [0, 1]); set(8, 1); state.menuGroup.forEach(group => group.menuCategories.forEach(category => { category.groupId = group.id; }));
+    if (page === 'afterCreditCardPay') {
+      const scene = new URLSearchParams(location.search).get('postPaymentScene') || 'both';
+      set(5, scene !== 'signature');
+      set(23, scene !== 'tip');
+      set(24, 1);
+    }
     if (page === 'screensaver') set(35, {...cfg.configMap.id_35, dataSource: 'local', delayTime: 0});
     cfg.charge = [{id: 2, select: {id: -1, rate: 0}}, {id: 3, select: {id: -1, rate: 0}}];
     goods.forEach(item => Object.assign(item, {hiddenItem: false, remark: {optionName: '', optionType: 'NOTE', price: 0, quantity: 1}, selectedOptionList: [], sectionDetail: [], taxIds: [], printerIds: [], fieldDisplayNameGroups: [], comboSections: []}));

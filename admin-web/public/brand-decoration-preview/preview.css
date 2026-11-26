@@ -88,3 +88,6 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 [data-bd-select-field] { cursor: pointer; }
 [data-bd-select-field]:hover, [data-bd-selection] { outline: 2px solid #1677ff; outline-offset: 2px; }
 [data-bd-selection="field"] { outline-width: 3px; }
+.pt-post-payment .pt-status-card { margin-block: 0; }
+.pt-post-payment .pt-tip-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pt-post-payment .pt-signature-card .pt-signature { height: 150px; }

@@ -20,7 +20,7 @@ export const PAGE_TEMPLATES: Record<Theme, { name: string; note: string }> = {
     terra: { name: '大图卡片', note: '突出图片和卡片层次' },
 };
 export const KIOSK_PAGES = [
-    ['screensaver', '屏保／待机页'], ['home', '首页'], ['orderType', '用餐方式页'], ['menu', '菜单页'], ['detail', '商品详情'], ['combo', '套餐选择'], ['review', '购物车／订单确认'], ['payment', '支付方式页'], ['finish', '完成页'], ['waitList', '等位登记'], ['tableService', '取餐／送餐方式'], ['phoneInput', '手机号输入'], ['reward', '会员奖励'], ['enterName', '姓名输入'], ['partySizeSelection', '用餐人数'], ['togoOption', '打包选项'], ['chooseTable', '选择桌台'], ['tippingPanel', '小费选择'], ['cardPayment', '刷卡支付过程'], ['afterCreditCardPay', '支付后处理'], ['signature', '签名'], ['login', '会员登录'], ['paymentMember', '支付后会员'], ['connectionError', '连接异常'],
+    ['screensaver', '屏保／待机页'], ['home', '首页'], ['orderType', '用餐方式页'], ['menu', '菜单页'], ['detail', '商品详情'], ['combo', '套餐选择'], ['review', '购物车／订单确认'], ['payment', '支付方式页'], ['finish', '完成页'], ['waitList', '等位登记'], ['tableService', '取餐／送餐方式'], ['phoneInput', '手机号输入'], ['reward', '会员奖励'], ['enterName', '姓名输入'], ['partySizeSelection', '用餐人数'], ['togoOption', '打包选项'], ['chooseTable', '选择桌台'], ['tippingPanel', '小费选择'], ['cardPayment', '刷卡支付过程'], ['afterCreditCardPay', '付款后小费与签名'], ['signature', '独立签名'], ['login', '会员登录'], ['paymentMember', '支付后会员'], ['connectionError', '连接异常'],
 ] as const;
 export const EMENU_PAGES = [['home', '首页'], ['menu', '菜单页'], ['detail', '商品详情'], ['review', '购物车'], ['payment', '支付方式页'], ['finish', '完成页'], ['login', '会员登录']] as const;
 export const pages = (channel: Channel): ReadonlyArray<readonly [

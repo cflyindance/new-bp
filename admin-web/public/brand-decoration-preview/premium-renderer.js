@@ -73,8 +73,18 @@
  function queue(c,s){
   return '<main class="pt-scroll pt-queue">'+heading(c.waitListTitle,c.waitListNote,'A TABLE IS WAITING FOR YOU')+'<section class="pt-queue-card"><span class="pt-kicker">WELCOME TO OUR TABLE</span><h2>美味值得<br>稍作等待</h2><p>相聚的每一刻，都值得认真对待。</p><div>'+glyph('bowl')+'<span>到店登记 · 用心安排</span></div></section><section class="pt-queue-form"><label class="pt-field-label">用餐人数</label><div class="pt-number-options">'+[1,2,3,4,6,8].map(n=>btn(String(n)+' 位','pt-select','data-group="party" data-value="'+n+'"','pt-number '+(pick(s,'party','2')===String(n)?'is-selected':''))).join('')+'</div><label class="pt-field-label" for="pt-wait-phone">联系电话</label><input id="pt-wait-phone" class="pt-input" inputmode="tel" maxlength="15" placeholder="请输入手机号码"><p class="pt-form-help">登记后请留意门店现场通知</p><p class="pt-validation" role="alert"></p></section></main>'+footer('模拟登记','pt-confirm','','返回首页','home');
  }
+ function signatureCard(){
+  return '<section class="pt-signature-card"><div><span>请在此处签名</span>'+btn('重新签写','native-clear','','pt-text-button')+'</div><canvas class="native-signature pt-signature" width="880" height="400" aria-label="签名区域，可拖动绘制"></canvas><div class="pt-sign-line"><span>签名</span><i></i><small>SIGN HERE</small></div></section>';
+ }
+ function postPayment(c,s,scene){
+  const showTip=scene!=='signature', showSignature=scene!=='tip';
+  const title=showTip&&showSignature?'选择小费并签名':showTip?'选择小费':'请签名确认';
+  const tips=showTip?options(s,[['15%','15%','感谢你的支持','leaf'],['18%','18%','谢谢你的心意','leaf'],['20%','20%','感谢认可','leaf'],['不添加','不添加小费','','grid']],'tip','pt-tip-options'):'';
+  const totalLabel='<section class="pt-status-card"><span>本次已支付</span><strong>'+money(s.orderTotal??total(s))+'</strong><p>请按提示完成后续操作</p></section>';
+  return '<main class="pt-scroll pt-signature-page pt-post-payment">'+heading(title,c.afterCreditCardPayNote,'PAYMENT RECEIVED')+totalLabel+tips+(showSignature?signatureCard():'')+'</main>'+footer('确认并继续','flow-next','','返回首页','home');
+ }
  function signature(c,s){
-  return '<main class="pt-scroll pt-signature-page">'+heading(c.signatureTitle,c.signatureNote,'ONE FINAL TOUCH')+'<div class="pt-signature-summary"><span>已支付金额</span><strong>'+money(s.orderTotal??60)+'</strong></div><section class="pt-signature-card"><div><span>请在此处签名</span>'+btn('重新签写','native-clear','','pt-text-button')+'</div><canvas class="native-signature pt-signature" width="880" height="400" aria-label="签名区域，可拖动绘制"></canvas><div class="pt-sign-line"><span>签名</span><i></i><small>SIGN HERE</small></div></section><p class="pt-form-help">确认后继续完成订单</p></main>'+footer('确认签名','flow-next','','稍后签名','flow-next');
+  return '<main class="pt-scroll pt-signature-page">'+heading(c.signatureTitle,c.signatureNote,'ONE FINAL TOUCH')+'<div class="pt-signature-summary"><span>已支付金额</span><strong>'+money(s.orderTotal??60)+'</strong></div>'+signatureCard()+'<p class="pt-form-help">确认后继续完成订单</p></main>'+footer('确认签名','flow-next','','稍后签名','flow-next');
  }
  function modalPage(c,s){
   const id=s.page;let inner='',actions='';
@@ -100,6 +110,7 @@
   else if(['phoneInput','enterName'].includes(s.page))body=inputPage(c,s);
   else if(['orderType','tableService','partySizeSelection','togoOption','chooseTable','tippingPanel'].includes(s.page))body=choices(c,s);
   else if(['reward','paymentMember'].includes(s.page))body=member(c,s);
+  else if(s.page==='afterCreditCardPay'&&opts.postPaymentScene)body=postPayment(c,s,opts.postPaymentScene);
   else if(['cardPayment','afterCreditCardPay','connectionError'].includes(s.page))body=processing(c,s);
   else if(s.page==='signature')body=signature(c,s);
   else if(s.page==='waitList')body=queue(c,s);
