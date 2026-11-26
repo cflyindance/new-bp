@@ -168,9 +168,9 @@ function selectPreviewField(event, request) {
   event.preventDefault();
   event.stopImmediatePropagation();
   const target = event.target.closest?.('[data-bd-select-field]');
-  if (target) parent.postMessage({ type: 'bd-select-content', id: target.dataset.bdSelectField, request }, location.origin);
+  parent.postMessage({ type: 'bd-select-content', id: target?.dataset.bdSelectField ?? null, request }, location.origin);
 }
-screen.addEventListener('click', event => selectPreviewField(event, selectionRequest), true);
+document.querySelector('#stage').addEventListener('click', event => selectPreviewField(event, selectionRequest), true);
 
 function markPreviewField(target, field, selection) {
   target.dataset.bdSelectField = field.id;
@@ -182,7 +182,6 @@ function clearPreviewField(target) {
   delete target.dataset.bdSelection;
 }
 function markSelectableContent(elements, selection) {
-  selectionRequest = selection?.request;
   if (!selection) return;
   const header = screen.querySelector('header');
   if (header) header.dataset.bdSelectField = 'top-navigation';
@@ -288,6 +287,7 @@ if (style.mode === 'custom' && screen.firstElementChild) {
     header.style.boxShadow = headerPalette.divider ? 'inset 0 -1px 0 ' + headerPalette.onPrimary + '40' : 'none';
   }
 }
+selectionRequest = event.data.selection?.request;
 screen.style.pointerEvents = event.data.selection ? 'auto' : 'none';
 markSelectableContent(elements, style.mode === 'custom' ? event.data.selection : undefined);fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();
