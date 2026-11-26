@@ -98,7 +98,7 @@ function styleNativeHeader(doc, palette) {
     :is(.logoBox___sS0OZ,.logoBox___vs4kp,.header___BrXnk) {
       background-color: ${palette.primary};
       color: ${palette.onPrimary};
-      box-shadow: none;
+      box-shadow: ${palette.divider ? 'inset 0 -1px 0 ' + palette.onPrimary + '40' : 'none'};
     }
     :is(.logoBox___sS0OZ,.logoBox___vs4kp,.header___BrXnk) :is(img[class*="backPrePage"],img[class*="homeBtn"]) {
       filter: ${palette.onPrimary === '#ffffff' ? 'brightness(0) invert(1)' : 'brightness(0)'};
@@ -195,7 +195,7 @@ if (style.mode === 'custom' && screen.firstElementChild) {
   if (header && headerPalette) {
     header.style.backgroundColor = headerPalette.primary;
     header.style.color = headerPalette.onPrimary;
-    header.style.boxShadow = 'none';
+    header.style.boxShadow = headerPalette.divider ? 'inset 0 -1px 0 ' + headerPalette.onPrimary + '40' : 'none';
   }
 }
 screen.style.pointerEvents='none';fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
