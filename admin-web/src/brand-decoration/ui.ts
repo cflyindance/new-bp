@@ -553,10 +553,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         fitPreviewStage();
     }
 
-    function previewDirectionControls() {
+    function previewDirectionControls(selected = orientation, groupName = 'bd-preview-direction') {
         return `<fieldset class="bd-preview-direction" aria-label="预览方向"><div>
-                <label><input type="radio" name="bd-preview-direction" data-bd-field="orientation" value="portrait" ${orientation === 'portrait' ? 'checked' : ''}><span>竖版</span></label>
-                <label><input type="radio" name="bd-preview-direction" data-bd-field="orientation" value="landscape" ${orientation === 'landscape' ? 'checked' : ''}><span>横版</span></label>
+                <label><input type="radio" name="${groupName}" data-bd-field="orientation" value="portrait" ${selected === 'portrait' ? 'checked' : ''}><span>竖版</span></label>
+                <label><input type="radio" name="${groupName}" data-bd-field="orientation" value="landscape" ${selected === 'landscape' ? 'checked' : ''}><span>横版</span></label>
             </div></fieldset>`;
     }
     function drawPlanPreview(s: Scheme) {
@@ -1105,13 +1105,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     function pageTemplates(channel: Channel, pageId: string, source = data) {
         return (source.homeTemplates ?? []).filter(item => templateMatches(item, channel, pageId));
     }
+    const referenceDesignerTitle = scope.demo ? 'AI 生成模板' : '用参考图生成模板';
     function referenceTemplateControls(s: Scheme, active: boolean) {
         const style = s.styles[page];
         const selected = active ? style.referenceTemplate : undefined;
         const items = pageTemplates(s.channel, page);
         return `<div class="bd-themes" role="group" aria-label="我的模板">
             <div class="bd-template-heading"><h3>我的模板</h3>
-                <button type="button" class="bd-link" data-bd-action="reference-designer" ${writable()}>用参考图创建模板</button>
+                <button type="button" class="bd-link" data-bd-action="reference-designer" ${writable()}>${referenceDesignerTitle}</button>
             </div>
             ${active && style.referenceLayout && scope.canWrite ? '<div class="bd-reference-actions"><button type="button" class="bd-link" data-bd-action="save-reference-template">保存为模板</button></div>' : ''}
             ${items.length ? items.map(item => `<div class="bd-saved-template">
@@ -1153,26 +1154,25 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         let selectedFile: File | undefined;
         let comparing = false;
         let compareOrientation = orientation;
-        let showGenerated = true;
         let generation = 0;
         openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-reference-title">
             <button type="button" class="bd-modal-backdrop" data-bd-modal-close tabindex="-1" aria-label="关闭"></button>
             <section class="bd-modal-panel bd-reference-designer">
-                <header><button type="button" data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-reference-title">用参考图创建模板</h2>
-                    <button type="button" class="bd-primary" data-bd-modal-confirm disabled>生成布局</button></header>
+                <header><button type="button" data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-reference-title">${referenceDesignerTitle}</h2>
+                    <button type="button" class="bd-primary" data-bd-modal-confirm disabled>生成模板</button></header>
                 <div class="bd-reference-dialog-body">
                     <div data-reference-upload>
-                        <p class="bd-help">参考图片的排版生成布局，沿用当前页面的文案、图片和主题。</p>
+                        <p class="bd-help">当前在浏览器内分析参考图，沿用本页文案、图片和主题。</p>
                         <input type="file" data-reference-file accept="image/png,image/jpeg,image/webp" hidden>
                         <div class="bd-reference-picker" data-reference-empty>
-                            <button type="button" class="bd-reference-pick" data-reference-select>选择图片</button>
+                            <button type="button" class="bd-reference-pick" data-reference-select>上传参考图</button>
                             <small>可拖入 JPG、PNG 或 WebP，最大 10 MB</small>
                         </div>
                         <div class="bd-reference-selected" data-reference-selected hidden>
                             <img data-reference-thumbnail alt="参考图">
                             <div class="bd-reference-file-details"><strong data-reference-filename></strong>
                                 <div class="bd-reference-actions">
-                                    <button type="button" data-reference-select>更换图片</button>
+                                    <button type="button" data-reference-select>更换参考图</button>
                                     <button type="button" class="bd-link" data-reference-remove>移除</button>
                                 </div>
                             </div>
@@ -1180,16 +1180,19 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     </div>
                     <div data-reference-comparison hidden>
                         <div class="bd-preview-toolbar">
-                            <div class="bd-reference-actions" role="group" aria-label="布局对比">
-                                <button type="button" data-reference-view="current" aria-pressed="false">当前布局</button>
-                                <button type="button" data-reference-view="generated" aria-pressed="true">生成布局</button>
-                            </div>
-                            <select data-reference-orientation aria-label="预览方向">
-                                <option value="portrait">竖屏</option><option value="landscape">横屏</option>
-                            </select>
+                            ${previewDirectionControls(compareOrientation, 'bd-reference-direction')}
                             <button type="button" class="bd-link" data-reference-replace>更换参考图</button>
                         </div>
-                        <iframe data-reference-preview title="参考图布局对比" sandbox="allow-scripts allow-same-origin"></iframe>
+                        <div class="bd-reference-comparison-grid">
+                            <section aria-labelledby="bd-reference-current-title">
+                                <h3 id="bd-reference-current-title">当前布局</h3>
+                                <iframe data-reference-preview="current" title="当前布局" sandbox="allow-scripts allow-same-origin"></iframe>
+                            </section>
+                            <section aria-labelledby="bd-reference-result-title">
+                                <h3 id="bd-reference-result-title">生成结果</h3>
+                                <iframe data-reference-preview="generated" title="生成结果" sandbox="allow-scripts allow-same-origin"></iframe>
+                            </section>
+                        </div>
                     </div>
                     <p data-reference-status role="status"></p>
                 </div>
@@ -1205,22 +1208,18 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const request = ++generation;
             primary.disabled = true;
             setPickerEnabled(false);
-            status.textContent = '正在生成布局';
+            status.textContent = '正在生成模板';
             analyzeReferenceImage(file).then(layout => {
                 if (!dialog.isConnected || request !== generation) return;
                 generated = layout;
                 comparing = true;
-                showGenerated = true;
-                currentView.setAttribute('aria-pressed', 'false');
-                generatedView.setAttribute('aria-pressed', 'true');
                 upload.hidden = true;
                 comparison.hidden = false;
                 status.textContent = '';
                 primary.textContent = '应用到当前页';
                 primary.disabled = false;
-                if (frame.hasAttribute('src')) preview();
-                else frame.src = PREVIEW_URL;
-                generatedView.focus();
+                refreshComparison();
+                primary.focus({ preventScroll: true });
             }).catch(error => {
                 if (!dialog.isConnected || request !== generation) return;
                 primary.disabled = false;
@@ -1235,16 +1234,23 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const fileInput = dialog.querySelector<HTMLInputElement>('[data-reference-file]')!;
         const thumbnail = dialog.querySelector<HTMLImageElement>('[data-reference-thumbnail]')!;
         const status = dialog.querySelector<HTMLElement>('[data-reference-status]')!;
-        const frame = dialog.querySelector<HTMLIFrameElement>('[data-reference-preview]')!;
-        const direction = dialog.querySelector<HTMLSelectElement>('[data-reference-orientation]')!;
-        const currentView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=current]')!;
-        const generatedView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=generated]')!;
-        direction.hidden = s.channel === 'emenu';
-        direction.value = compareOrientation;
-        const preview = () => sendPreview(showGenerated ? s : previewPage(s, s), frame, {
-            layout: showGenerated ? generated : undefined, orientation: compareOrientation,
-        });
-        frame.addEventListener('load', preview);
+        const frames = Array.from(dialog.querySelectorAll<HTMLIFrameElement>('[data-reference-preview]'));
+        const direction = dialog.querySelector<HTMLFieldSetElement>('.bd-preview-direction')!;
+        const currentScheme = previewPage(s, s);
+        const renderView = (frame: HTMLIFrameElement) => {
+            if (!comparing || !generated) return;
+            const isGenerated = frame.dataset.referencePreview === 'generated';
+            sendPreview(isGenerated ? s : currentScheme, frame, {
+                layout: isGenerated ? generated : undefined, orientation: compareOrientation,
+            });
+        };
+        const refreshComparison = () => {
+            for (const frame of frames) {
+                if (frame.hasAttribute('src')) renderView(frame);
+                else frame.src = PREVIEW_URL;
+            }
+        };
+        for (const frame of frames) frame.addEventListener('load', () => renderView(frame));
         const emptyPicker = dialog.querySelector<HTMLElement>('[data-reference-empty]')!;
         const selectedPicker = dialog.querySelector<HTMLElement>('[data-reference-selected]')!;
         const filename = dialog.querySelector<HTMLElement>('[data-reference-filename]')!;
@@ -1288,20 +1294,18 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (transfer.files.length !== 1) { status.textContent = '请选择一张参考图'; return; }
             chooseFile(transfer.files[0]);
         });
-        for (const view of [currentView, generatedView]) view.addEventListener('click', () => {
-            showGenerated = view === generatedView;
-            primary.disabled = !showGenerated;
-            currentView.setAttribute('aria-pressed', String(!showGenerated));
-            generatedView.setAttribute('aria-pressed', String(showGenerated));
-            preview();
+        direction.addEventListener('change', event => {
+            const input = event.target;
+            if (!(input instanceof HTMLInputElement) || !input.checked) return;
+            compareOrientation = input.value;
+            refreshComparison();
         });
-        direction.addEventListener('change', () => { compareOrientation = direction.value; preview(); });
         dialog.querySelector<HTMLButtonElement>('[data-reference-replace]')!.addEventListener('click', () => {
             comparing = false;
             comparison.hidden = true;
             upload.hidden = false;
             setPickerEnabled(true);
-            primary.textContent = '生成布局';
+            primary.textContent = '生成模板';
             primary.disabled = !selectedFile;
             (selectedFile ? chooseButtons[1] : chooseButtons[0]).focus();
         });
