@@ -43,6 +43,10 @@ function applyNativePalette(frame, palette) {
     .join('\n');
   theme.textContent = `
     :root, .appContent___4gt1b { ${colors} }
+    .LangSwitchItemActive___DsbIK,
+    .categoryNameLabel___Uul-M,
+    .tryAgainBtn___n5542,
+    .bottomBtn___Ca5CN,
     .orderingBtn___jUzMM,
     .waitLst___joqc3,
     .togo___spBB9,
@@ -52,7 +56,7 @@ function applyNativePalette(frame, palette) {
     .footBtnBox___Qxc-X .countBtn___XvuL- .btnEn___xS78r,
     .promoCodeArea___HG678 .promoCodeBtn___iluXN,
     .tipBox___IIwBw .tipBtn___m5zCV .confirmCard___po70Q {
-      color: var(--bd-native-on-primary);
+      color: var(--bd-native-on-primary) !important;
     }
   `;
 }
@@ -241,7 +245,9 @@ const reportDefaults = Number.isInteger(request) ? values => {
 
 const roleColors=palette?{
   'label-fill':palette.labelFill,'label-text':palette.labelText,
-  'selected-fill':palette.selectedFill,'selected-text':palette.selectedText,
+  'selected-fill':palette.selectedFill,'selected-text':palette.selectedText,'selected-muted':palette.selectedMuted,
+  'secondary-fill':palette.secondaryFill,'secondary-text':palette.secondaryText,'control-line':palette.controlLine,
+  'muted':palette.muted,
   'success-fill':palette.successFill,'success-text':palette.successText,
   'warning-fill':palette.warningFill,'warning-text':palette.warningText,
   'error-fill':palette.errorFill,'error-text':palette.errorText
@@ -279,6 +285,7 @@ if (style.mode === 'custom' && screen.firstElementChild) {
   applyCustomContent(screen.firstElementChild, elements);
   const header = screen.firstElementChild.querySelector('header');
   if (header && headerPalette) {
+    header.classList.add('bd-themed-header');
     header.style.backgroundColor = headerPalette.primary;
     header.style.color = headerPalette.onPrimary;
     header.style.boxShadow = headerPalette.divider ? 'inset 0 -1px 0 ' + headerPalette.onPrimary + '40' : 'none';
