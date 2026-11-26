@@ -1,0 +1,195 @@
+/* Map the bundled Kiosk controls to the foreground for their actual fill.
+   Update the component selectors when the native preview bundle changes. */
+.actived___h-hw6,
+.btnBox___oJ8Tn span:last-child,
+.btnBox___vc8BQ span:last-child,
+.loadBox___dMrSe .orderBottom___Re-6K > div:last-child,
+.btnBox___7dou7 .continueOrder___T4Kdj,
+.tipBox___IDWOi .tipBtn___hYh3S .confirm___tDbNj,
+.menuGroup___NCWWD .word___6u-r-,
+.menuGroup___NCWWD.menuGroupActived___Ii9Ho,
+.selectedNoGroupCtg___VSgVy,
+.ctgItemQty___SIyD3,
+.topMenu___JX-7x .outWrapper___hpQK4 .groupWrapper___Kxa-w .categoryWrapper___DqQbE.select___sLQSV,
+.chooseTable___gd1S- .tableTabs___uYSGC .tableTab___6TtV1.tableTabSelected___oiFhn,
+.drawBody___wd96Q .content___i8aJv .box___sR7SF .itemHeader___QLLZe .calcBox___boqxo i,
+.drawBody___wd96Q .content___i8aJv .box___sR7SF .itemsBox___q06CH .calcBox___boqxo i,
+.drawBody___wd96Q .continue___9t3GV i,
+.foot___LKYRJ .countBtn___EwSjZ .btnEn___nzZjn,
+.foot___LKYRJ .addCart___M-uMi,
+.deleteContainer___sUKtu .deleteBox___pCVVy .deleteBottom___D4-gf .addCart___FHg4w,
+.descContentWrapper___l253K .footerBtn___KYDrR .btn___j0qDU.btnActive___MTLKk,
+.actived___2sYDw,
+.containerBox___KjB6A .btnBox___GmjDA span:last-child,
+.sectionInfoSelected___Dy3fb,
+.sideBtnBox___Z5Jmv .activedPrev___4EO7q, .sideBtnBox___Z5Jmv .activedNext___cTvYy,
+.footBtnBox___CLEhg .details___ME5M5 .num___qEbUk,
+.footBtnBox___CLEhg .actived___Z4Bqh,
+.foot___OXLe2 .countBtn___sD-39 .btnEn___twwWI,
+.foot___OXLe2 .addCart___d7Fm6,
+.environmentButtonActive___zS5be,
+.mainPageContainer___ZGjQt .showDebug___CUjmT,
+.waitLst___joqc3, .togo___spBB9, .orderingBtn___jUzMM,
+.licenseNextBtn___3tkvp,
+.okBtn___YA7oj,
+.popupConfirmBtn___WA68r > span,
+.itemPromotionCenter___Ha2iZ .item_promotion_content___tCvsf .item_promotion_item___g3ssS .goAddItem___GafvU,
+.itemPromotionCenter___Ha2iZ .item_promotion_footer___6Nrd- div:last-child,
+.LangSwitchContainer___-gH7u .LangSwitchItemActive___DsbIK,
+.callerWrapper___zZUHF .confirmBtn___ag7sH,
+.btnWrapper___Nxk5Q:active,
+.btnWrapper___Nxk5Q.btnSelected___ws4a7,
+.foot___kx7sF .countBtn___325kJ .btnEn___2Gr94,
+.foot___kx7sF .addCart___96Sp9,
+.finishWarp___rRV6R .finishBox___-fRHM .close___mL5p5,
+.finishWarp___rRV6R .containerBox___JriTh .itemBox___bAToG + div,
+.failBox___N16tF .btnBox___FT2I6 span:last-child,
+.actived___C4Qjl,
+.waitingTimeWrapper___r-7ox .gotIt___S-J1K,
+.foot___ZRRHB .countBtn___r5-ub .btnEn___1KOE-,
+.footBtnBox___Qxc-X .countBtn___XvuL- .btnEn___xS78r,
+.footBtnBox___Qxc-X .details___JnY29 .num___zbOnr,
+.loginWrapper___BZn9q .loginModal___v9Mam .enableQueryButton___3BSPr,
+.containerBox___RtFzU .backHome___9NTn8,
+.promoCodeArea___HG678 .promoCodeBtn___iluXN,
+.actived___OgN2j,
+.btnBox___Z9hJx .apply___IkxXv,
+.btnBox___0kC4F .btnConfirm___1tLDT,
+.btnConfirm___buD-5,
+.tipBox___IIwBw .tipBtn___m5zCV .confirmCard___po70Q,
+.loginWrapper___rBLf- .loginModal___ekgBB .enableQueryButton___x6L-P,
+.phoneInputPage___KM15i .btnConfirm___wH7C3,
+.containerBox___O9a9- .btnBox___eoRG0 span:last-child,
+.containerBox___svNOU .btnSubmit___gbeW1,
+.footerOperation___sHaCC .policyBtn___pxLZO,
+.tagWrapper___xdpdJ .new___bEKZR,
+.rewardContainer___9L3tm .bottom___HKdxE .skipBtn___Cz-ty,
+.rewardContainer___9L3tm .bottom___HKdxE .selectedBtn___YlDFm,
+.rewardItem___R7QQn .rewardInfo___VMP0T .rewardText___s4ZNr .addRow___Xnzrq .selectReward___vxkqY,
+.unSatisfyWrapper___3aHd2 .footer___MZvrK div:last-child,
+.chosenItemWrapper___dM8yp .continue___04Hz8,
+.loginWrapper___3nmXz .loginModal___rW-C5 .confirmBtn___bbIGb,
+.authCodeWrapper___EbWhz .confirmBtn___bbIGb,
+.orderSignature___mhVF- .footBtnBox___Pmc5u .actived___sqXbo,
+.loadBox___-c23G .orderBottom___0kLno > div:last-child,
+.soldoutBox___3KSUF .soldoutBtn___pZAzo .continue___Qau9P,
+.categoryTipBox___q2nAa,
+.content___sUK-Z button,
+.actived___K1Khf,
+.btnBox___OW14C span:last-child,
+.btnBox___bs0YI .actived___WUiaU,
+.specialItemContent___N6moT .confirmBtn___6YyRQ,
+.deleteContainer___31fco .deleteBox___t2c4F .deleteBottom___Wi9RZ .addCart___kegc1,
+.btnBox___ugZll span:last-child,
+.btnBoxs___SCP-b .topBtn___1cvZz .tryAgainBtn___n5542,
+.btnBoxs___SCP-b .bottomBtn___Ca5CN,
+.payButton___RAHPH,
+.redeemButton___qQm75,
+.primaryButton___4Uuok,
+.memberBadge___qiHjk {
+  color: var(--bd-native-on-primary) !important;
+}
+
+.deleteContainer___sUKtu .deleteBox___pCVVy .calcBox___nlwa3 .btnEn___KVDM5,
+.rightCounter___4meW3 .counterBtnAdd___74JLZ,
+.footBtnBox___CLEhg .countBtn___yse2b .btnEn___q7r5u,
+.changeBrandBtn___bvVGn,
+.bannerProBox___lzzTh .continueOrderFallback___hl0pg,
+.cartWrapper___Pqin1 .calcBox___Fz74Y .btnEn___m9l9I,
+.cartWrapper___Pqin1 .continue___MpSHy,
+.foot___ZRRHB .addCart___0R-pl,
+.footBtnBox___Qxc-X .actived___-esBd,
+.orderItemInfoBx___JkGs9 .calcBox___rvuMc .calcBoxIcons___Ss3yC .btnEn___3CGVO,
+.deleteContainer___31fco .deleteBox___t2c4F .calcBox___LV0bs .btnEn___KjOFA {
+  color: var(--bd-native-on-selected) !important;
+  --primary-color-darker: var(--primary-secondary-color) !important;
+}
+
+.menuGroup___NCWWD.menuGroupActived___Ii9Ho .word___6u-r-,
+.selectedCtg___Wjl57,
+.selectedNoGroupCtg___VSgVy .ctgItemQty___SIyD3,
+.chooseTable___gd1S- .tableLayout___eT-VR .table___CuEQe.tableInUse___wwy7y .tableInUseTip___Bov-Z,
+.drawBody___wd96Q .content___i8aJv .box___sR7SF .itemHeader___QLLZe .calcBox___boqxo span,
+.deleteContainer___sUKtu .deleteBox___pCVVy .deleteList___nWoT7 .itemBox___MzG0n .itemLeft___Jbb26 .price___ij5AA,
+.deleteContainer___sUKtu .deleteBox___pCVVy .comboDeleteList___feyKZ .price___ij5AA,
+.benefitPrice___WIkBH.benefitPrice___WIkBH.benefitPrice___WIkBH:not(.button___fniEm),
+.rightCounter___4meW3 .counterBtnSubtract___pAEtL.optionMode___dFLrf, .rightCounter___4meW3 .counterBtnAdd___74JLZ.optionMode___dFLrf,
+.authorizationBox___A2DFu,
+.leftBox___-T-cW .noSize___NSIGs .title___kk05a > span:last-child, .rightBox___MXRO9 .noSize___NSIGs .title___kk05a > span:last-child,
+.footBtnBox___CLEhg .details___ME5M5,
+.tag___fJ-Cl,
+.drawBody___15RP3 .maxNote___u7-5Z,
+.icon-more___BULDT, .icon-check___XA4wa, .icon-svg_warn___3pFka,
+.policy___aSL5F .policyText___lND1s .likeLink___vgBIO,
+.enterLicense___6DH2o,
+.speed___PwPtG,
+.drawBody___2OKpN .maxNote___ozDCr,
+.finishWarp___rRV6R .containerBox___JriTh .itemBox___bAToG .paidBox___s8DT9 > span,
+.drawBody___cfclu .maxNote___wNQcl,
+.footBtnBox___Qxc-X .details___JnY29,
+.orderItemListContainer___2H6Pw .giftListWrapper___zt1zR .titleRow___lvQHB .btn___JuMvA,
+.orderItemInfoBx___JkGs9 .orderBox___--AlP .info___ahAfb .textInfo___n5xmh .discountPrice___UwcsT .price___csCya,
+.orderItemInfoBx___JkGs9 .giftsNumber___glR3z, .orderItemInfoBx___JkGs9 .promotion___6a--9,
+.promoCodeArea___HG678 .joinedRewardTips___-betZ,
+.orderDiscountInfo___4P6-s,
+.promotionCenterInfo___6boqB .goAddItems___fcWgG,
+.policyLink___AOpv3,
+.loginWrapper___rBLf- .loginModal___ekgBB .backToPartialPay___pTwHj,
+.containerBox___svNOU .welComeContent___QfsAP .rewardBlock___EQDfE .voucherList___GBI3v .voucherItem___XB5rK .count___azS71,
+.rewardItem___R7QQn .rewardInfo___VMP0T .rewardText___s4ZNr .detailRow___lXQM3 .detailRowText___6mQfN .detailRowBtn___ez2vT,
+.chosenItemWrapper___dM8yp .orderItem___jrvzP .contentWrapper___Fn0f7 .itemName___l9Zme .discountTxt___sRME5,
+.chosenItemWrapper___dM8yp .orderItem___jrvzP .btn___U7AQT,
+.deleteContainer___31fco .deleteBox___t2c4F .deleteList___tC4o6 .itemBox___aGGT- .itemLeft___KoQXY .price___YCvtQ,
+.deleteContainer___31fco .deleteBox___t2c4F .comboDeleteList___6GgSd .price___YCvtQ,
+.waitingBoxFixed___O4Jc0 .cupCount___rEvBB,
+.accent___gNALy,
+.textButton___kss7F {
+  color: var(--bd-native-accent) !important;
+}
+
+.logoBox___sS0OZ .navigateRight___2NFDO .earnReward___p3K4O,
+.rewardItem___R7QQn .rewardInfo___VMP0T .rewardImage___m5sqz .discountInfo___V9FQ5,
+.chosenItemWrapper___dM8yp .orderItem___jrvzP .orderItemInfo___JARDL .ruleDiscount___v4ePq {
+  color: var(--bd-native-on-label) !important;
+}
+
+.addCart___96Sp9.addCartDisabled___g7Akh,
+.addCart___d7Fm6.addCartDisabled___AIVqr,
+.addCart___0R-pl.addCartDisabled___elg-o,
+.confirmBtn___ag7sH.disableConfirm___FJI2d,
+.btnConfirm___buD-5.btnNoConfirm___1Nxw-,
+.rightCounter___4meW3 .counterBtnAdd___74JLZ.disableCounter___uWLDt,
+.rightCounter___4meW3 .counterBtnSubtract___pAEtL.disableCounter___uWLDt,
+.cartWrapper___Pqin1 .calcBox___Fz74Y .btnEn___m9l9I[aria-label=Remove] {
+  color: var(--bd-native-muted) !important;
+}
+
+/* Price labels and separators share their add-to-cart control's foreground. */
+:is(.addCart___96Sp9,.addCart___M-uMi,.addCart___d7Fm6,.addCart___0R-pl)
+  :is([class^="price___"],[class^="price___"] span) {
+  color: inherit !important;
+}
+
+:is(.addCart___96Sp9,.addCart___M-uMi,.addCart___d7Fm6,.addCart___0R-pl) [class^="price___"]::before {
+  color: inherit !important;
+}
+
+.payButton___RAHPH,
+.redeemButton___qQm75,
+.primaryButton___4Uuok,
+.memberBadge___qiHjk,
+.selected___ZCkSc .radio___3n1YE,
+.progress___77ELu span,
+.pointTiers___-tDs- span::before {
+  background-color: var(--primary-color) !important;
+}
+
+.paymentType___ixjpM .saveAmount___Lr9at {
+  background-color: var(--background-crm-login);
+  color: var(--bd-native-on-label);
+}
+
+/* A pressed button must keep the same foreground/background pair. */
+.linear-animate-btn:active {
+  --linear-change-darker: linear-gradient(var(--primary-color-darker), var(--primary-color-darker)) !important;
+}

@@ -61,6 +61,7 @@ export function resolvePalette(id: PaletteId | undefined, primary: string) {
     return {
         primary: color, background, surface, ink,
         onPrimary: strongestText(color),
+        nativeAccent: contrast('#ffffff', color) >= 4.5 ? color : '#17212b',
         secondaryFill: secondary.fill, secondaryText: readable(secondary.fill, secondary.text), controlLine,
         muted: [mix(ink, background, 0.72), ink].find(candidate =>
             contrast(candidate, background) >= 4.5 && contrast(candidate, surface) >= 4.5) ?? ink,

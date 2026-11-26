@@ -13,6 +13,7 @@ try{
     for(const color of ['#808080','#fff2c5','#0a1830']){
       const palette=C.resolvePalette(id,color);
       assert.ok(C.contrast(palette.primary,palette.onPrimary)>=4.5);
+      assert.ok(C.contrast(palette.nativeAccent,'#ffffff')>=4.5);
       assert.ok(C.contrast(palette.ink,palette.background)>=4.5);
       for(const role of ['label','selected','success','warning','error']){
         assert.ok(C.contrast(palette[role+'Text'],palette[role+'Fill'])>=4.5, id+' '+role);

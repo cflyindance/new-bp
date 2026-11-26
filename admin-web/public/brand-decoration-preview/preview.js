@@ -3,7 +3,7 @@
 function fit(){const scale=Math.min(innerWidth/width,innerHeight/height);Object.assign(screen.style,{width:width+'px',height:height+'px',left:(innerWidth-width*scale)/2+'px',top:(innerHeight-height*scale)/2+'px',transform:'scale('+scale+')'});}
 const esc=value=>KioskDemo.esc(String(value));
 function mobile(s,page,palette){const theme=s.styles[page].theme,colors={jade:['#f7f4eb','#204d40','#fff'],noir:['#191c1b','#d3b67a','#191c1b'],terra:['#fbf1e4','#9c4831','#fff']}[theme],style=palette ? `--paper:${palette.background};--ink:${palette.ink};--on:${palette.onPrimary};--primary:${palette.primary};--accent:${palette.accent};--surface:${palette.surface};--line:${palette.line}` : `--paper:${colors[0]};--ink:${s.primary};--on:${colors[2]}`;
-let body='',action='开始点餐';const meal=(i)=>`<div class="food"><div class="meal" style="background-position:${i%2?'100%':'0'} ${i>1?'100%':'0'}"></div><b>${['炙烤鸡腿饭','时蔬谷物碗','慢炖牛肉饭','南瓜浓汤'][i]}</b><small>¥${[32,28,42,18][i]}.00　＋</small></div>`;
+let body='',action='开始点餐';const meal=(i)=>`<div class="food"><div class="meal" style="background-position:${i%2?'100%':'0'} ${i>1?'100%':'0'}"></div><b>${['炙烤鸡腿饭','时蔬谷物碗','慢炖牛肉饭','南瓜浓汤'][i]}</b><div class="em-food-action"><small>¥${[32,28,42,18][i]}.00</small><button type="button" class="em-add" aria-label="加购" tabindex="-1">＋</button></div></div>`;
 if(page==='home')body='<span class="eyebrow">GOOD FOOD, GOOD MOMENTS</span><h1>一餐一味，<br>认真款待。</h1><p>新鲜现做，把好味道带到你面前。</p><div class="hero"></div>';
 if(page==='menu'){body='<div class="menu-tabs"><b>主厨推荐</b><span>当季轻食</span><span>饮品</span></div><div class="grid">'+[0,1,2,3].map(meal).join('')+'</div>';action='查看购物车 · ¥60.00';}
 if(page==='detail'){body='<div class="hero" style="height:300px;margin:0"></div><h1>炙烤鸡腿饭</h1><p data-emenu-copy="detail-note">鲜嫩鸡腿，搭配当季时蔬与热米饭。</p><div class="row"><b>口味</b><span>原味　微辣</span></div><div class="row"><b>份量</b><span>标准份</span></div>';action='加入购物车 · ¥32.00';}
@@ -19,8 +19,10 @@ function applyNativePalette(frame, palette) {
   const doc = frame.contentDocument;
   if (!doc?.head) return;
   let theme = doc.getElementById('bd-native-palette');
+  let rules = doc.getElementById('bd-native-palette-rules');
   if (!palette) {
     theme?.remove();
+    rules?.remove();
     return;
   }
   if (!theme) {
@@ -28,37 +30,31 @@ function applyNativePalette(frame, palette) {
     theme.id = 'bd-native-palette';
     doc.head.append(theme);
   }
-  // Only override colors consumed by the bundled native preview.
+  if (!rules) {
+    rules = doc.createElement('link');
+    rules.id = 'bd-native-palette-rules';
+    rules.rel = 'stylesheet';
+    rules.href = new URL('native-palette.css', location.href).href;
+    doc.head.append(rules);
+  }
+  // The original screen stays light. Only change the colors its controls use.
   const tokens = {
     '--primary-color': palette.primary,
     '--primary-selected-color': palette.primary,
     '--primary-secondary-color': palette.selectedFill,
     '--primary-color-darker': palette.primary,
     '--background-crm-login': palette.labelFill,
-    '--bd-native-on-primary': palette.onPrimary
+    '--bd-native-on-primary': palette.onPrimary,
+    '--bd-native-on-selected': palette.selectedText,
+    '--bd-native-on-label': palette.labelText,
+    '--bd-native-accent': palette.nativeAccent,
+    '--bd-native-muted': '#30343a'
   };
   const colors = Object.entries(tokens)
     .filter(([, color]) => /^#[0-9a-f]{6}$/i.test(color))
     .map(([name, color]) => `${name}: ${color} !important;`)
     .join('\n');
-  theme.textContent = `
-    :root, .appContent___4gt1b { ${colors} }
-    .LangSwitchItemActive___DsbIK,
-    .categoryNameLabel___Uul-M,
-    .tryAgainBtn___n5542,
-    .bottomBtn___Ca5CN,
-    .orderingBtn___jUzMM,
-    .waitLst___joqc3,
-    .togo___spBB9,
-    .finishWarp___rRV6R .finishBox___-fRHM .close___mL5p5,
-    .btnBox___0kC4F .btnConfirm___1tLDT,
-    .foot___ZRRHB .countBtn___r5-ub .btnEn___1KOE-,
-    .footBtnBox___Qxc-X .countBtn___XvuL- .btnEn___xS78r,
-    .promoCodeArea___HG678 .promoCodeBtn___iluXN,
-    .tipBox___IIwBw .tipBtn___m5zCV .confirmCard___po70Q {
-      color: var(--bd-native-on-primary) !important;
-    }
-  `;
+  theme.textContent = ':root, .appContent___4gt1b { ' + colors + ' }';
 }
 const nativeContent = new WeakMap();
 function updateNativeContent(doc, elements, reportDefaults, selection) {
