@@ -100,6 +100,7 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{grid-t
 @media(max-width:860px){.bd-store-layout{grid-template-columns:1fr}}
 
 .bd-flow-header .bd-draft-action{order:-1}
+.bd-flow-header .bd-primary{order:1}
 
 .bd .bd-plan-list-header{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px}
 .bd-plan-list-header + .bd-notice:empty{min-height:0;margin:0;padding:0}

@@ -218,6 +218,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
 
     const planUrl = (id: string, step = '', targetChannel = channel) => `#${ROOT}/pages/edit/${id}?flow=1&channel=${targetChannel}${step ? '&step=' + step : ''}`;
+    const backToPlans = () => `<a href="#${ROOT}/pages?channel=${channel}">返回方案列表</a>`;
+    const previousStep = (id: string, step: string, title: string) =>
+        `<a class="bd-button" href="${planUrl(id, step)}">上一步：${title}</a>`;
+    const previousStepSubmit = (form: string, destination: string, title: string) =>
+        `<button type="submit" form="${form}" name="destination" value="${destination}" formnovalidate>上一步：${title}</button>`;
     const returnAfterDraft = (target: Channel) => { location.hash = `${ROOT}/pages?channel=${target}`; };
     const draftButton = (form?: string) => form
         ? `<button class="bd-draft-action" type="submit" form="${form}" name="destination" value="draft" formnovalidate>保存草稿</button>`
@@ -323,8 +328,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const regions = [...new Set(scope.stores.map(store => store.region))].sort();
         root.innerHTML = flowHeader(3, {
             titleHtml: '选择门店', subtitleHtml: channel === 'kiosk' ? undefined : esc(s.name + ' · ' + label(channel)),
-            backHtml: '<button type="submit" form="bd-plan-stores" name="destination" value="editor">保存并返回装修页面</button>',
-            actionsHtml: `<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：${activity ? '活动有效期' : '核对并保存'}</button>${draftButton('bd-plan-stores')}`,
+            backHtml: backToPlans(),
+            actionsHtml: `<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：${activity ? '活动有效期' : '核对并保存'}</button>${previousStepSubmit('bd-plan-stores', 'editor', '装修页面')}${draftButton('bd-plan-stores')}`,
         }) + `<div class="bd-store-page"><form id="bd-plan-stores" class="bd-store-form">
             <div class="bd-store-layout">
               <section class="bd-card bd-store-catalog" aria-labelledby="bd-store-list-title">
@@ -452,13 +457,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const timezone = zones.length === 1 ? zones[0] : '';
         root.innerHTML = flowHeader(4, {
             titleHtml: '活动有效期', subtitleHtml: channel === 'kiosk' ? undefined : esc(s.name + ' · ' + label(channel)),
-            backHtml: `<a href="${planUrl(s.id, 'stores')}">返回选择门店</a>`,
-            actionsHtml: `<button type="submit" form="bd-plan-period" class="bd-primary">下一步：核对并保存</button>${draftButton('bd-plan-period')}`,
+            backHtml: backToPlans(),
+            actionsHtml: `<button type="submit" form="bd-plan-period" class="bd-primary">下一步：核对并保存</button>${previousStepSubmit('bd-plan-period', 'stores', '选择门店')}${draftButton('bd-plan-period')}`,
         }) + `<div class="bd-flow-content"><form id="bd-plan-period" class="bd-card bd-plan-form">
-            <dl class="bd-review-summary">
-                <div><dt>适用门店</dt><dd>${esc(storeNames(rules.storeIds))}</dd></div>
-                <div><dt>门店时区</dt><dd>${esc(timezone || '所选门店时区不同或未配置')}</dd></div>
-            </dl>
             <div class="bd-flow-grid">
                 <label>开始时间<input type="datetime-local" name="starts" required value="${timezone && rules.starts ? formatLocal(rules.starts, timezone) : ''}"></label>
                 <label>结束时间<input type="datetime-local" name="ends" required value="${timezone && rules.ends ? formatLocal(rules.ends, timezone) : ''}"></label>
@@ -471,7 +472,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         form.addEventListener('submit', event => {
             event.preventDefault();
             const fields = new FormData(form);
-            const draftOnly = (event.submitter as HTMLButtonElement | null)?.value === 'draft';
+            const destination = (event.submitter as HTMLButtonElement | null)?.value;
+            const draftOnly = destination === 'draft';
+            const goingBack = destination === 'stores';
+            if (goingBack && !timezone) {
+                location.hash = planUrl(s.id, 'stores');
+                return;
+            }
             try {
                 if (!timezone && !draftOnly) throw Error('请选择同一时区的门店');
                 const start = String(fields.get('starts') ?? '');
@@ -481,10 +488,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     ends: timezone && end ? parseLocal(end, timezone) : undefined,
                 };
                 const next = { ...s, rules: proposed, draftStep: draftOnly ? 'period' as const : s.draftStep, updatedAt: new Date().toISOString() };
-                if (!draftOnly) validatePlanRules(proposed, s.channel, scope.stores);
+                if (!draftOnly && !goingBack) validatePlanRules(proposed, s.channel, scope.stores);
                 if (mutate(draft => { draft.schemes = draft.schemes.map(item => item.id === s.id ? next : item); })) {
                     if (draftOnly) returnAfterDraft(s.channel);
-                    else location.hash = planUrl(s.id, 'review');
+                    else location.hash = planUrl(s.id, goingBack ? 'stores' : 'review');
                 }
             } catch (error) { notice((error as Error).message, true); }
         });
@@ -638,8 +645,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.innerHTML = flowHeader(activity ? 5 : 4, {
             titleHtml: esc(s.name),
             subtitleHtml: esc(scope.brandName),
-            backHtml: `<a href="${planUrl(s.id, activity ? 'period' : 'stores')}">返回上一步</a>`,
-            actionsHtml: scope.canWrite ? `<button class="bd-primary" data-bd-action="save-reviewed">保存</button>${draftButton()}` : '',
+            backHtml: backToPlans(),
+            actionsHtml: previousStep(s.id, activity ? 'period' : 'stores', activity ? '活动有效期' : '选择门店') +
+                (scope.canWrite ? `<button class="bd-primary" data-bd-action="save-reviewed">保存</button>${draftButton()}` : ''),
         }) + `<div class="bd-flow-content">
             <section class="bd-card bd-review-card"><h2>发布摘要</h2>
             <dl class="bd-review-summary">${summary.map(([title, value]) => `<div><dt>${title}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>
@@ -1264,7 +1272,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 ${sharedComponentControls(s)}`
             : `<h2>页面与布局</h2>${editorPagePicker(s)}<fieldset ${writable()}><legend>${esc(layoutTitle)}</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
             ${channel === 'kiosk' && page === 'home' ? homeTemplateControls(s) : ''}` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? previousStep(s.id, "rules", "方案信息") : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
         if (!components) {
             updatePageCards();
             root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = pageCardsScroll;
