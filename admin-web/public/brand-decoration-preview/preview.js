@@ -181,6 +181,16 @@ if(roleColors && style.mode==='custom' && screen.firstElementChild){
   for(const [role,color] of Object.entries(roleColors))screen.firstElementChild.style.setProperty('--bd-role-'+role,color);
 }
 if (style.mode === 'custom' && screen.firstElementChild) {
+  const homeLayout = event.data.homeLayout;
+  if (s.channel === 'kiosk' && page === 'home' && homeLayout) {
+    const root = screen.firstElementChild;
+    root.classList.add('pt-reference-home');
+    root.dataset.imageFirst = homeLayout.imageFirst === true ? 'true' : 'false';
+    root.dataset.referenceAlign = homeLayout.align === 'center' ? 'center' : 'start';
+    const bounded = (value, min, max, fallback) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+    root.style.setProperty('--pt-ref-image', bounded(homeLayout.imageShare, 42, 62, 50) + '%');
+    root.style.setProperty('--pt-ref-radius', bounded(homeLayout.radius, 4, 36, 24) + 'px');
+  }
   if (reportDefaults) {
     const defaults = {};
     for (const {id, kind, selector} of elements) {

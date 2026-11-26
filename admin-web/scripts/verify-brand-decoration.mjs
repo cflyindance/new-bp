@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const dir=await mkdtemp(join(process.env.BRAND_DECORATION_TEST_TEMP||tmpdir(),'brand-decoration-'));
 try{
-  await Promise.all(['domain','store','schedule','plans','palette'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
+  await Promise.all(['domain','store','schedule','plans','palette','demo-data'].map(name=>build({entryPoints:[`src/brand-decoration/${name}.ts`],bundle:true,platform:'node',format:'esm',outfile:join(dir,name+'.mjs')})));
   const D=await import(pathToFileURL(join(dir,'domain.mjs'))),S=await import(pathToFileURL(join(dir,'store.mjs')));
   const C=await import(pathToFileURL(join(dir,'palette.mjs')));
   for(const id of [...Object.keys(C.PALETTES),'custom']){
@@ -99,6 +99,32 @@ try{
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,daily.id,'下架后不能回退到同方案的历史版本');
   P.publishPlan(flow,newDaily,stores,'demo');
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id,'重新上架使用新快照');
+
+  const demo = await import(pathToFileURL(join(dir, 'demo-data.mjs')));
+  const now = Date.now();
+  const demoScope = 'brand-demo/plan-flow';
+  const fixtures = S.readData(demoScope, '甲品牌', storage, () => demo.createDecorationDemo('甲品牌', stores, now));
+  assert.equal(fixtures.revision, 1);
+  assert.equal(fixtures.homeTemplates.length, 2);
+  for (const channel of ['kiosk', 'emenu']) {
+    const prefix = 'sample-' + channel + '-';
+    const scenarios = fixtures.schemes.filter(scheme => scheme.channel === channel);
+    assert.equal(scenarios.length, 9);
+    assert.ok(scenarios.every(scheme => Object.keys(scheme.styles).length === D.pages(channel).length));
+    assert.equal(P.planPage(fixtures, 'a', channel, 'home', now).snapshot.id, prefix + 'active');
+    assert.equal(P.planPage(fixtures, 'a', channel, 'detail', now).snapshot.id, prefix + 'house');
+    assert.equal(P.planPage(fixtures, 'b', channel, 'detail', now).snapshot.id, prefix + 'regional');
+    const upcoming = scenarios.find(scheme => scheme.id === prefix + 'upcoming');
+    assert.equal(P.planPage(fixtures, 'a', channel, 'home', upcoming.rules.starts - 1).snapshot.id, prefix + 'house');
+    assert.equal(P.planPage(fixtures, 'a', channel, 'home', upcoming.rules.starts).snapshot.id, upcoming.id);
+    const offline = scenarios.find(scheme => scheme.id === prefix + 'offline');
+    assert.equal(P.planPage(fixtures, 'a', channel, 'home', offline.rules.starts).snapshot.id, prefix + 'house');
+  }
+  fixtures.schemes.shift();
+  const edited = S.writeData(demoScope, fixtures, fixtures.revision, storage);
+  assert.deepEqual(S.readData(demoScope, '甲品牌', storage, () => { throw Error('must not reseed'); }), edited);
+  assert.equal(demo.createDecorationDemo('甲品牌', []), undefined);
+  console.log('PASS: demo initialization, channel and store scenarios, fallback and existing-data preservation.');
 
   console.log('PASS: multi-store plans, partial pages, overlaps, timezone and latest fallback.');
   console.log('PASS: activity boundaries, overlap, fallback, channel isolation and time zones.');

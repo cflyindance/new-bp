@@ -33,5 +33,5 @@ export function decorationScope() {
             metadata.merchants.find(entry => entry.merchantId === item?.linkedMerchantId)?.timezone
             || metadata.merchants.find(entry => entry.merchantId === brand)?.timezone || '' };
     });
-    return { key, brand, stores, timezone, brandName, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
+    return { key, brand, stores, timezone, brandName, demo, name: store ? `${brandName} · ${store.labelZh}` : `${brandName} · 品牌方案`, canWrite };
 }

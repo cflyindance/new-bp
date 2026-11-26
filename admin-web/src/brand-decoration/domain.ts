@@ -1,3 +1,4 @@
+import { validHomeLayout, validHomeTemplate, type HomeLayout, type HomeTemplate } from './reference-template';
 import { validatePageContent, type PageContent } from './page-content';
 import { DEFAULT_PALETTE_ID, PALETTES, describePalette, type PaletteId } from './palette';
 import type { PlanRules } from './plans';
@@ -29,6 +30,8 @@ export const pages = (channel: Channel): ReadonlyArray<readonly [
 export interface Style {
     mode: 'default' | 'custom';
     theme: Theme;
+    referenceTemplate?: HomeTemplate;
+    referenceLayout?: HomeLayout;
 }
 export const SHARED_HEADER_STYLES = { layout: '系统布局', custom: '自定义布局' } as const;
 export type SharedHeaderStyle = keyof typeof SHARED_HEADER_STYLES;
@@ -62,6 +65,7 @@ export interface Release {
     snapshot: Scheme;
 }
 export interface DecorationData {
+    homeTemplates?: HomeTemplate[];
     schedule?: DecorationSchedule;
     schema: 1;
     revision: number;
@@ -95,11 +99,21 @@ export function validateScheme(s: Scheme): void {
         const style = s.styles[id];
         if (!style || !['default', 'custom'].includes(style.mode) || !Object.hasOwn(THEMES, style.theme))
             throw Error('页面样式无效');
+        if (style.referenceTemplate !== undefined &&
+            (s.channel !== 'kiosk' || id !== 'home' || !validHomeTemplate(style.referenceTemplate)))
+            throw Error('参考图模板无效');
+        if (style.referenceLayout !== undefined &&
+            (s.channel !== 'kiosk' || id !== 'home' || style.referenceTemplate !== undefined || !validHomeLayout(style.referenceLayout)))
+            throw Error('参考图布局无效');
     }
 }
 export function validateData(data: DecorationData): void {
     if (!data || data.schema !== 1 || !Number.isInteger(data.revision) || !Array.isArray(data.schemes) || !Array.isArray(data.releases))
         throw Error('装修数据无法读取，请保留当前数据并联系管理员');
+    if (data.homeTemplates !== undefined && (!Array.isArray(data.homeTemplates) ||
+        data.homeTemplates.length > 50 || !data.homeTemplates.every(validHomeTemplate) ||
+        new Set(data.homeTemplates.map(item => item.id)).size !== data.homeTemplates.length))
+        throw Error('我的模板数据无效');
     const ids = new Set<string>();
     for (const scheme of data.schemes) {
         validateScheme(scheme);
@@ -139,7 +153,7 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
     const palette = describePalette(after.paletteId, after.primary);
     const previousPalette = before ? describePalette(before.paletteId, before.primary) : '未发布';
     if (palette !== previousPalette) output.push({ label: '方案主题色', before: previousPalette, after: palette });
-    const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : PAGE_TEMPLATES[s.theme].name) : '未发布';
+    const text = (s: Style | undefined) => s ? (s.mode === 'default' ? '项目默认' : (s.referenceTemplate?.name ?? (s.referenceLayout ? '参考图布局' : PAGE_TEMPLATES[s.theme].name))) : '未发布';
     for (const [id, label] of pages(after.channel)) {
         const prev = before?.styles[id], next = after.styles[id];
         const previousContent = before?.pageContent?.[id] ?? {};
@@ -147,7 +161,7 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
         const fields = new Set([...Object.keys(previousContent), ...Object.keys(content)]);
         if ([...fields].some(key => previousContent[key] !== content[key]))
             output.push({ label: label + ' · 页面内容', before: Object.keys(previousContent).length ? '已配置' : '默认内容', after: Object.keys(content).length ? '已配置' : '默认内容' });
-        if (text(prev) !== text(next))
+        if (text(prev) !== text(next) || (prev?.mode === 'custom' && next.mode === 'custom' && JSON.stringify(prev.referenceLayout) !== JSON.stringify(next.referenceLayout)))
             output.push({ label, before: text(prev), after: text(next) });
     }
     return output;

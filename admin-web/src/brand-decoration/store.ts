@@ -4,7 +4,7 @@ export interface StoragePort {
     setItem(key: string, value: string): void;
 }
 export const storageKey = (scope: string) => `menusifu:brand-decoration:v1:${encodeURIComponent(scope)}`;
-export function readData(scope: string, brandName: string, storage: StoragePort = localStorage): DecorationData {
+export function readData(scope: string, brandName: string, storage: StoragePort = localStorage, initialize?: () => DecorationData | undefined): DecorationData {
     const text = storage.getItem(storageKey(scope));
     if (text !== null) {
         let data: DecorationData;
@@ -18,6 +18,8 @@ export function readData(scope: string, brandName: string, storage: StoragePort 
         validateData(data);
         return data;
     }
+    const initial = initialize?.();
+    if (initial) return writeData(scope, initial, 0, storage);
     return { schema: 1, revision: 0, schemes: [{ ...newScheme('kiosk', 'Kiosk 标准方案', brandName), id: 'initial-kiosk' }, { ...newScheme('emenu', 'eMenu 标准方案', brandName), id: 'initial-emenu' }], releases: [] };
 }
 /** Optimistic revision check prevents another tab from silently overwriting a newer draft. */

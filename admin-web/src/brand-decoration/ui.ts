@@ -1,3 +1,4 @@
+import { analyzeReferenceImage, isReferenceImage, type HomeLayout, type HomeTemplate } from './reference-template';
 import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, PAGE_CONTENT_GROUPS, pageContentGroup, pageElements } from './page-content';
 import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
 import { latestPlanReleases, planAt, publishPlan, validatePlanRules, type PlanRules } from './plans';
@@ -9,6 +10,7 @@ import { renderChangePreviewDialog } from '../config/deployment-change-preview';
 import { getAuthenticatedEmail } from '../auth/login';
 import { decorationScope } from './scope';
 import { readData, writeData } from './store';
+import { createDecorationDemo } from './demo-data';
 import { PAGE_TEMPLATES, SHARED_HEADER_STYLES, sharedHeaderLayout, type SharedHeaderStyle, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData } from './domain';
 const ROOT = '/brand-decoration';
 const PREVIEW_URL = `${import.meta.env.BASE_URL}brand-decoration-preview/index.html`;
@@ -41,7 +43,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     let legacyAvailable = false;
     let data: DecorationData;
     try {
-        data = readData(dataKey, scope.brandName);
+        const initialize = !legacy && scope.demo && scope.canWrite
+            ? () => createDecorationDemo(scope.brandName, scope.stores)
+            : undefined;
+        data = readData(dataKey, scope.brandName, localStorage, initialize);
         if (!legacy) {
             try { legacyAvailable = readData(scope.key, scope.brandName).revision > 0; }
             catch { legacyAvailable = true; }
@@ -712,12 +717,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     let defaultCopy: Record<string, string> = {};
     const copyKey = (s: Scheme, pageId: string) =>
         [s.id, pageId, s.styles[pageId].mode, s.styles[pageId].theme, orientation].join(':');
-    function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]')) {
-        const request = ++defaultCopyRequest;
-        const key = copyKey(s, page);
-        if (defaultCopyKey !== key) {
-            defaultCopyKey = key;
-            defaultCopy = {};
+    function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'),
+        comparison?: { layout?: HomeLayout; orientation: string }) {
+        const request = comparison ? undefined : ++defaultCopyRequest;
+        if (!comparison) {
+            const key = copyKey(s, page);
+            if (defaultCopyKey !== key) {
+                defaultCopyKey = key;
+                defaultCopy = {};
+            }
         }
         const header = s.sharedHeaderAppearance;
         const headerColors = header?.background
@@ -731,7 +739,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
                 return selector ? [{ id: field.id, kind: field.kind, selector, value: s.pageContent?.[page]?.[field.id] }] : [];
             }),
-            page, orientation,
+            homeLayout: s.channel === 'kiosk' && page === 'home' && s.styles.home.mode === 'custom'
+                ? comparison?.layout ?? s.styles.home.referenceLayout ?? s.styles.home.referenceTemplate?.layout
+                : undefined,
+            page, orientation: comparison?.orientation ?? orientation,
         }, location.origin);
     }
     function updateEditorPreview(s: Scheme) {
@@ -874,6 +885,237 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             updateEditorPreview(updated);
         }
     }
+    function templateCard(action: 'theme' | 'reference-template', id: string, name: string, selected: boolean, layout: string, note?: string) {
+        return `<button type="button" class="bd-theme ${selected ? 'is-selected' : ''}" data-bd-action="${action}" data-value="${esc(id)}" aria-pressed="${selected}" ${writable()}>
+            <i class="bd-template-mark" data-layout="${layout}" aria-hidden="true"></i>
+            <span><b>${esc(name)}</b>${note ? `<small>${esc(note)}</small>` : ''}</span>
+            <span aria-hidden="true">${selected ? '✓' : ''}</span>
+        </button>`;
+    }
+    function homeTemplateControls(s: Scheme) {
+        const selected = s.styles.home.referenceTemplate;
+        const items = data.homeTemplates ?? [];
+        return `<div class="bd-themes" role="group" aria-label="我的模板">
+            <div class="bd-template-heading"><h3>我的模板</h3>
+                <button type="button" class="bd-link" data-bd-action="reference-designer" ${writable()}>用参考图创建模板</button>
+            </div>
+            ${s.styles.home.referenceLayout && scope.canWrite ? '<div class="bd-reference-actions"><button type="button" class="bd-link" data-bd-action="save-reference-template">保存为模板</button></div>' : ''}
+            ${items.length ? items.map(item => `<div class="bd-saved-template">
+                ${templateCard('reference-template', item.id, item.name, item.id === selected?.id, item.layout.imageFirst ? 'terra' : 'classic')}
+                ${scope.canWrite ? `<button type="button" class="bd-link" data-bd-action="rename-reference-template" data-value="${esc(item.id)}" aria-label="重命名 ${esc(item.name)}">重命名</button>` : ''}
+            </div>`).join('') : '<p class="bd-help">暂无已保存的模板</p>'}
+        </div>`;
+    }
+    function selectHomeTemplate(s: Scheme, template: HomeTemplate, saveNew: boolean) {
+        if (!mutate(next => {
+            const current = next.schemes.find(item => item.id === s.id)!;
+            if (saveNew) {
+                next.homeTemplates ??= [];
+                if (next.homeTemplates.length >= 50) throw Error('我的模板最多保存 50 个');
+                if (next.homeTemplates.some(item => item.name.toLowerCase() === template.name.toLowerCase()))
+                    throw Error('已有同名模板');
+                next.homeTemplates.push(template);
+            }
+            delete current.styles.home.referenceLayout;
+            current.styles.home.referenceTemplate = copy(template);
+            current.updatedAt = new Date().toISOString();
+            validateScheme(current);
+        })) return false;
+        closeModal();
+        if (saveNew) notice('布局已应用并保存到我的模板');
+        draw();
+        return true;
+    }
+    function openReferenceDesigner(s: Scheme) {
+        let generated: HomeLayout | undefined;
+        let imageUrl: string | undefined;
+        let selectedFile: File | undefined;
+        let comparing = false;
+        let compareOrientation = orientation;
+        let showGenerated = true;
+        let generation = 0;
+        openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-reference-title">
+            <button type="button" class="bd-modal-backdrop" data-bd-modal-close tabindex="-1" aria-label="关闭"></button>
+            <section class="bd-modal-panel bd-reference-designer">
+                <header><button type="button" data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-reference-title">用参考图创建模板</h2>
+                    <button type="button" class="bd-primary" data-bd-modal-confirm disabled>生成布局</button></header>
+                <div class="bd-reference-dialog-body">
+                    <div data-reference-upload>
+                        <p class="bd-help">参考图片的排版生成布局，沿用当前页面的文案、图片和主题。</p>
+                        <input type="file" data-reference-file accept="image/png,image/jpeg,image/webp" hidden>
+                        <div class="bd-reference-picker" data-reference-empty>
+                            <button type="button" class="bd-reference-pick" data-reference-select>选择图片</button>
+                            <small>可拖入 JPG、PNG 或 WebP，最大 10 MB</small>
+                        </div>
+                        <div class="bd-reference-selected" data-reference-selected hidden>
+                            <img data-reference-thumbnail alt="参考图">
+                            <div class="bd-reference-file-details"><strong data-reference-filename></strong>
+                                <div class="bd-reference-actions">
+                                    <button type="button" data-reference-select>更换图片</button>
+                                    <button type="button" class="bd-link" data-reference-remove>移除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-reference-comparison hidden>
+                        <div class="bd-preview-toolbar">
+                            <div class="bd-reference-actions" role="group" aria-label="布局对比">
+                                <button type="button" data-reference-view="current" aria-pressed="false">当前布局</button>
+                                <button type="button" data-reference-view="generated" aria-pressed="true">生成布局</button>
+                            </div>
+                            <select data-reference-orientation aria-label="预览方向">
+                                <option value="portrait">竖屏</option><option value="landscape">横屏</option>
+                            </select>
+                            <button type="button" class="bd-link" data-reference-replace>更换参考图</button>
+                        </div>
+                        <iframe data-reference-preview title="参考图布局对比" sandbox="allow-scripts allow-same-origin"></iframe>
+                    </div>
+                    <p data-reference-status role="status"></p>
+                </div>
+            </section>
+        </div>`, () => {
+            if (primary.disabled) return;
+            if (comparing && generated) {
+                if (!saveReferenceTemplate(s, generated)) status.textContent = message;
+                return;
+            }
+            const file = selectedFile;
+            if (!file) return;
+            const request = ++generation;
+            primary.disabled = true;
+            setPickerEnabled(false);
+            status.textContent = '正在生成布局';
+            analyzeReferenceImage(file).then(layout => {
+                if (!dialog.isConnected || request !== generation) return;
+                generated = layout;
+                comparing = true;
+                showGenerated = true;
+                currentView.setAttribute('aria-pressed', 'false');
+                generatedView.setAttribute('aria-pressed', 'true');
+                upload.hidden = true;
+                comparison.hidden = false;
+                status.textContent = '';
+                primary.textContent = '应用到当前页';
+                primary.disabled = false;
+                if (frame.hasAttribute('src')) preview();
+                else frame.src = PREVIEW_URL;
+                generatedView.focus();
+            }).catch(error => {
+                if (!dialog.isConnected || request !== generation) return;
+                primary.disabled = false;
+                setPickerEnabled(true);
+                status.textContent = error.name === 'InvalidStateError' ? '无法读取图片，请更换参考图' : error.message;
+            });
+        });
+        const dialog = modal!;
+        const primary = dialog.querySelector<HTMLButtonElement>('[data-bd-modal-confirm]')!;
+        const upload = dialog.querySelector<HTMLElement>('[data-reference-upload]')!;
+        const comparison = dialog.querySelector<HTMLElement>('[data-reference-comparison]')!;
+        const fileInput = dialog.querySelector<HTMLInputElement>('[data-reference-file]')!;
+        const thumbnail = dialog.querySelector<HTMLImageElement>('[data-reference-thumbnail]')!;
+        const status = dialog.querySelector<HTMLElement>('[data-reference-status]')!;
+        const frame = dialog.querySelector<HTMLIFrameElement>('[data-reference-preview]')!;
+        const direction = dialog.querySelector<HTMLSelectElement>('[data-reference-orientation]')!;
+        const currentView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=current]')!;
+        const generatedView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=generated]')!;
+        direction.value = compareOrientation;
+        const preview = () => sendPreview(s, frame, { layout: showGenerated ? generated : undefined, orientation: compareOrientation });
+        frame.addEventListener('load', preview);
+        const emptyPicker = dialog.querySelector<HTMLElement>('[data-reference-empty]')!;
+        const selectedPicker = dialog.querySelector<HTMLElement>('[data-reference-selected]')!;
+        const filename = dialog.querySelector<HTMLElement>('[data-reference-filename]')!;
+        const chooseButtons = [...dialog.querySelectorAll<HTMLButtonElement>('[data-reference-select]')];
+        const remove = dialog.querySelector<HTMLButtonElement>('[data-reference-remove]')!;
+        const setPickerEnabled = (enabled: boolean) => {
+            fileInput.disabled = !enabled;
+            remove.disabled = !enabled;
+            for (const button of chooseButtons) button.disabled = !enabled;
+        };
+        const chooseFile = (file?: File) => {
+            if (file && !isReferenceImage(file)) {
+                status.textContent = '请选择 10 MB 以内的 JPG、PNG 或 WebP 图片';
+                return;
+            }
+            if (imageUrl) URL.revokeObjectURL(imageUrl);
+            selectedFile = file;
+            imageUrl = file ? URL.createObjectURL(file) : undefined;
+            if (imageUrl) thumbnail.src = imageUrl;
+            else thumbnail.removeAttribute('src');
+            filename.textContent = file?.name ?? '';
+            emptyPicker.hidden = Boolean(file);
+            selectedPicker.hidden = !file;
+            primary.disabled = !file;
+            status.textContent = '';
+            (file ? chooseButtons[1] : chooseButtons[0]).focus();
+        };
+        for (const button of chooseButtons) button.addEventListener('click', () => fileInput.click());
+        chooseButtons[0].focus();
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files?.[0];
+            fileInput.value = '';
+            if (file) chooseFile(file);
+        });
+        remove.addEventListener('click', () => chooseFile());
+        for (const eventName of ['dragover', 'drop']) upload.addEventListener(eventName, event => {
+            const transfer = (event as DragEvent).dataTransfer;
+            if (!transfer?.types.includes('Files')) return;
+            event.preventDefault();
+            if (fileInput.disabled || eventName !== 'drop') return;
+            if (transfer.files.length !== 1) { status.textContent = '请选择一张参考图'; return; }
+            chooseFile(transfer.files[0]);
+        });
+        for (const view of [currentView, generatedView]) view.addEventListener('click', () => {
+            showGenerated = view === generatedView;
+            primary.disabled = !showGenerated;
+            currentView.setAttribute('aria-pressed', String(!showGenerated));
+            generatedView.setAttribute('aria-pressed', String(showGenerated));
+            preview();
+        });
+        direction.addEventListener('change', () => { compareOrientation = direction.value; preview(); });
+        dialog.querySelector<HTMLButtonElement>('[data-reference-replace]')!.addEventListener('click', () => {
+            comparing = false;
+            comparison.hidden = true;
+            upload.hidden = false;
+            setPickerEnabled(true);
+            primary.textContent = '生成布局';
+            primary.disabled = !selectedFile;
+            (selectedFile ? chooseButtons[1] : chooseButtons[0]).focus();
+        });
+        dialog.addEventListener('bd-dismiss', () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, { once: true });
+    }
+    function saveReferenceTemplate(s: Scheme, layout: HomeLayout) {
+        const names = new Set(data.homeTemplates?.map(item => item.name.toLowerCase()));
+        let number = 1;
+        while (names.has(`首页参考模板 ${number}`)) number++;
+        return selectHomeTemplate(s, { id: crypto.randomUUID(), name: `首页参考模板 ${number}`, version: 1, layout }, true);
+    }
+    function renameReferenceTemplate(template: HomeTemplate) {
+        openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-template-name-title">
+            <button type="button" class="bd-modal-backdrop" data-bd-modal-close tabindex="-1" aria-label="关闭"></button>
+            <section class="bd-modal-panel"><header><button type="button" data-bd-modal-close aria-label="关闭">×</button>
+            <h2 id="bd-template-name-title">重命名模板</h2><button type="button" class="bd-primary" data-bd-modal-confirm>保存</button></header>
+            <form><label>模板名称<input data-bd-reference-name maxlength="32" required value="${esc(template.name)}"></label><p data-reference-status role="alert"></p></form></section>
+        </div>`, () => {
+            const input = modal!.querySelector<HTMLInputElement>('[data-bd-reference-name]')!;
+            input.value = input.value.trim();
+            if (!input.reportValidity()) return;
+            if (input.value === template.name) { closeModal(); return; }
+            if (!mutate(next => {
+                const items = next.homeTemplates!;
+                if (items.some(item => item.id !== template.id && item.name.toLowerCase() === input.value.toLowerCase()))
+                    throw Error('已有同名模板');
+                items.find(item => item.id === template.id)!.name = input.value;
+            })) {
+                modal!.querySelector<HTMLElement>('[data-reference-status]')!.textContent = message;
+                return;
+            }
+            closeModal();
+            notice('模板名称已更新');
+            draw();
+            root.querySelector<HTMLButtonElement>(`[data-bd-action="rename-reference-template"][data-value="${template.id}"]`)?.focus();
+        });
+        modal!.querySelector<HTMLInputElement>('[data-bd-reference-name]')!.select();
+    }
     function drawEditor() {
         const s = scheme();
         if (!s) {
@@ -903,7 +1145,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const sidebar = components
             ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
                 ${sharedComponentControls(s)}`
-            : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => `<button class="bd-theme ${style.theme === id ? 'is-selected' : ''}" data-bd-action="theme" data-value="${id}" aria-pressed="${style.theme === id}" ${writable()}><i class="bd-template-mark" data-layout="${id}" aria-hidden="true"></i><span><b>${PAGE_TEMPLATES[id].name}</b><small>${PAGE_TEMPLATES[id].note}</small></span><span>${style.theme === id ? '✓' : ''}</span></button>`).join('')}</div><button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
+            : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>页面布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
+            ${channel === 'kiosk' && page === 'home' ? homeTemplateControls(s) : ''}` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
         root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
     }
     function closeModal() { if (!modal)
@@ -1068,6 +1311,21 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     root.querySelector<HTMLElement>(`[data-bd-action="palette"][data-value="${id}"]`)?.focus();
                 }
                 updateEditorPreview(updated);
+            }
+            return;
+        }
+        if (action === 'reference-designer' || action === 'save-reference-template' || action === 'reference-template' || action === 'rename-reference-template') {
+            if (!scope.canWrite || s.channel !== 'kiosk' || page !== 'home' || s.styles.home.mode !== 'custom') return;
+            const layout = s.styles.home.referenceLayout;
+            if (action === 'reference-designer') openReferenceDesigner(s);
+            else if (action === 'save-reference-template' && layout) saveReferenceTemplate(s, layout);
+            else if (action === 'reference-template' || action === 'rename-reference-template') {
+                const template = data.homeTemplates?.find(item => item.id === el.dataset.value);
+                if (!template) return;
+                if (action === 'rename-reference-template') renameReferenceTemplate(template);
+                else if (s.styles.home.referenceTemplate?.id !== template.id && selectHomeTemplate(s, template, false)) {
+                    root.querySelector<HTMLButtonElement>(`[data-bd-action="reference-template"][data-value="${template.id}"]`)?.focus();
+                }
             }
             return;
         }
