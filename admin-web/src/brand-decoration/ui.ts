@@ -13,6 +13,20 @@ import { readData, writeData } from './store';
 import { createDecorationDemo } from './demo-data';
 import { PAGE_TEMPLATES, SHARED_HEADER_STYLES, sharedHeaderLayout, type SharedHeaderStyle, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData } from './domain';
 const ROOT = '/brand-decoration';
+const PAGE_STAGES = [
+    { id: 'start', label: '点餐前', pages: ['screensaver', 'home', 'orderType', 'waitList', 'phoneInput', 'enterName', 'partySizeSelection', 'login'] },
+    { id: 'browse', label: '浏览与选购', pages: ['menu', 'detail', 'combo', 'reward'] },
+    { id: 'checkout', label: '订单与支付', pages: ['review', 'payment', 'tippingPanel', 'cardPayment', 'afterCreditCardPay', 'signature', 'connectionError'] },
+    { id: 'service', label: '完成与服务', pages: ['finish', 'tableService', 'togoOption', 'chooseTable', 'paymentMember'] },
+] as const;
+function pageThumbnail(id: string) {
+    if (['screensaver', 'home', 'detail'].includes(id)) return 'hero';
+    if (['menu', 'combo', 'chooseTable', 'partySizeSelection'].includes(id)) return 'grid';
+    if (['phoneInput', 'enterName', 'login', 'waitList', 'signature'].includes(id)) return 'form';
+    if (['finish', 'cardPayment', 'afterCreditCardPay', 'connectionError'].includes(id)) return 'result';
+    return 'cards';
+}
+
 const PREVIEW_URL = `${import.meta.env.BASE_URL}brand-decoration-preview/index.html`;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const date = (s: string) => new Date(s).toLocaleString('zh-CN', { hour12: false });
@@ -1159,6 +1173,46 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         });
         modal!.querySelector<HTMLInputElement>('[data-bd-reference-name]')!.select();
     }
+    let pageStage = '';
+    let pageSearch = '';
+    let pageCardsScroll = 0;
+    function updatePageCards() {
+        const grid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
+        if (!grid) return;
+        const stage = PAGE_STAGES.find(item => item.id === pageStage);
+        const stagePages: readonly string[] | undefined = stage?.pages;
+        const search = pageSearch.trim().toLowerCase();
+        let count = 0;
+        let currentShown = false;
+        for (const card of grid.querySelectorAll<HTMLButtonElement>('[data-bd-action=select-editor-page]')) {
+            const id = card.dataset.value!;
+            card.hidden = Boolean(stagePages && !stagePages.includes(id)) || !card.textContent!.trim().toLowerCase().includes(search);
+            if (!card.hidden) {
+                count++;
+                if (id === page) currentShown = true;
+            }
+        }
+        root.querySelector<HTMLElement>('[data-bd-page-empty]')!.hidden = count > 0;
+        root.querySelector<HTMLElement>('[data-bd-page-current]')!.hidden = currentShown;
+    }
+    function editorPagePicker(s: Scheme) {
+        const catalog = pages(s.channel);
+        return `<section class="bd-page-picker" aria-label="装修页面">
+            <label>装修页面<select data-bd-field="page-stage">
+                <option value="">全部页面</option>
+                ${PAGE_STAGES.map(stage => `<option value="${stage.id}" ${pageStage === stage.id ? 'selected' : ''}>${stage.label}</option>`).join('')}
+            </select></label>
+            ${s.channel === 'kiosk' ? `<input type="search" aria-label="搜索页面名称" placeholder="搜索页面名称" data-bd-page-search value="${esc(pageSearch)}">` : ''}
+            <div class="bd-page-cards" data-bd-page-cards role="group" aria-label="可装修页面">
+                ${catalog.map(([id, name]) => `<button type="button" class="bd-page-card" data-bd-action="select-editor-page" data-value="${id}" aria-pressed="${id === page}">
+                    <span class="bd-page-thumbnail" data-thumbnail="${pageThumbnail(id)}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                    <span>${esc(name)}</span>
+                </button>`).join('')}
+            </div>
+            <p class="bd-help" data-bd-page-empty hidden>没有符合条件的页面</p>
+            <p class="bd-help" data-bd-page-current hidden>当前编辑：${esc(catalog.find(([id]) => id === page)?.[1] ?? '')}</p>
+        </section>`;
+    }
     function drawEditor() {
         const s = scheme();
         if (!s) {
@@ -1166,6 +1220,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             return;
         }
         channel = s.channel;
+        const previousGrid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
+        if (previousGrid) pageCardsScroll = previousGrid.scrollTop;
         const style = s.styles[page];
         const activity = s.rules?.kind === 'activity';
         const inherited = activity && !s.rules!.pageIds.includes(page);
@@ -1188,9 +1244,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const sidebar = components
             ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
                 ${sharedComponentControls(s)}`
-            : `<h2>页面与布局</h2><label>装修页面<select data-bd-field="page">${pageOptions}</select></label><fieldset ${writable()}><legend>当前页布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
+            : `<h2>页面与布局</h2>${editorPagePicker(s)}<fieldset ${writable()}><legend>当前页布局</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
             ${channel === 'kiosk' && page === 'home' ? homeTemplateControls(s) : ''}` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
         root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? `<a class="bd-button" href="${planUrl(s.id, "rules")}">上一步：方案信息</a>` : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
+        if (!components) {
+            updatePageCards();
+            root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = pageCardsScroll;
+        }
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -1239,6 +1299,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             page = 'home';
             channel = el.dataset.value as Channel;
             draw();
+            return;
+        }
+        if (action === 'select-editor-page') {
+            const current = scheme();
+            const id = el.dataset.value;
+            if (!current || workbenchMode !== 'page' || id === page || !pages(current.channel).some(([key]) => key === id)) return;
+            page = id!;
+            draw();
+            root.querySelector<HTMLButtonElement>('[data-bd-page-cards] [aria-pressed="true"]')?.focus({ preventScroll: true });
             return;
         }
         if (action === 'workbench-mode') {
@@ -1437,8 +1506,22 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     };
     const click = (event: Event) => { const button = (event.target as HTMLElement).closest<HTMLElement>('[data-bd-action]'); if (button && !button.hasAttribute('disabled'))
         act(button.dataset.bdAction!, button); };
+    const searchEditorPages = (event: Event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || !input.hasAttribute('data-bd-page-search')) return;
+        pageSearch = input.value;
+        updatePageCards();
+        root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = 0;
+    };
     const change = (event: Event) => { const input = event.target as HTMLInputElement; const field = input.dataset.bdField; if (!field)
-        return; if (field === 'preview-version') { previewDraft = input.value === 'draft'; draw(); return; } if (field === 'plan-store') { previewStore = input.value; draw(); return; } if (field === 'page' || field === 'schedule-page') {
+        return;
+    if (field === 'page-stage') {
+        pageStage = input.value;
+        updatePageCards();
+        root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = 0;
+        return;
+    }
+    if (field === 'preview-version') { previewDraft = input.value === 'draft'; draw(); return; } if (field === 'plan-store') { previewStore = input.value; draw(); return; } if (field === 'page' || field === 'schedule-page') {
         page = input.value;
         draw();
         return;
@@ -1599,8 +1682,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     root.addEventListener('click', toggleContentPanel);
     wideWorkbench.addEventListener('change', syncContentPanel);
     root.addEventListener('change', change);
+    root.addEventListener('input', searchEditorPages);
     window.addEventListener('message', frameMessage);
     window.addEventListener('storage', storage);
-    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('keydown', workbenchKeydown); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
+    dispose = () => { window.clearInterval(scheduleClock); closeModal(); root.removeEventListener('keydown', workbenchKeydown); root.removeEventListener('submit', filterSubmit); root.removeEventListener('click', click); root.removeEventListener('click', toggleContentPanel); wideWorkbench.removeEventListener('change', syncContentPanel); root.removeEventListener('change', change); root.removeEventListener('input', searchEditorPages); window.removeEventListener('message', frameMessage); window.removeEventListener('storage', storage); };
     draw();
 }
