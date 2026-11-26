@@ -1,10 +1,27 @@
+import type { Channel, Theme } from './domain';
+
 export type HomeLayout = {
     imageFirst: boolean;
     align: 'start' | 'center';
     imageShare: number;
     radius: number;
 };
-export type HomeTemplate = { id: string; name: string; version: 1; layout: HomeLayout };
+export type HomeTemplate = { id: string; name: string; version: 1; layout: HomeLayout; target?: { channel: Channel; page: string } };
+
+// Existing templates without an explicit target belong to the Kiosk home page.
+export function templateTarget(template: HomeTemplate): NonNullable<HomeTemplate['target']> {
+    return template.target ?? { channel: 'kiosk', page: 'home' };
+}
+
+export function templateMatches(template: HomeTemplate, channel: Channel, page: string) {
+    const target = templateTarget(template);
+    return target.channel === channel && target.page === page;
+}
+
+export function referenceTheme(layout: HomeLayout): Theme {
+    if (layout.imageFirst) return 'terra';
+    return layout.radius <= 18 ? 'noir' : 'jade';
+}
 
 export function validHomeLayout(layout: HomeLayout) {
     return !!layout && typeof layout.imageFirst === 'boolean' && ['start', 'center'].includes(layout.align) &&
@@ -14,7 +31,9 @@ export function validHomeLayout(layout: HomeLayout) {
 
 export function validHomeTemplate(value: HomeTemplate) {
     return value?.version === 1 && typeof value.id === 'string' && /^[a-f0-9-]{36}$/.test(value.id) &&
-        typeof value.name === 'string' && !!value.name.trim() && value.name.length <= 32 && validHomeLayout(value.layout);
+        typeof value.name === 'string' && !!value.name.trim() && value.name.length <= 32 && validHomeLayout(value.layout) &&
+        (value.target === undefined || (!!value.target && ['kiosk', 'emenu'].includes(value.target.channel) &&
+            typeof value.target.page === 'string' && !!value.target.page));
 }
 
 export function isReferenceImage(file: File) {

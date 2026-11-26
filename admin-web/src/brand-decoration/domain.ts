@@ -1,4 +1,4 @@
-import { validHomeLayout, validHomeTemplate, type HomeLayout, type HomeTemplate } from './reference-template';
+import { templateMatches, templateTarget, validHomeLayout, validHomeTemplate, type HomeLayout, type HomeTemplate } from './reference-template';
 import { validatePageContent, type PageContent } from './page-content';
 import { DEFAULT_PALETTE_ID, PALETTES, describePalette, type PaletteId } from './palette';
 import type { PlanRules } from './plans';
@@ -100,7 +100,7 @@ export function validateScheme(s: Scheme): void {
         if (!style || !['default', 'custom'].includes(style.mode) || !Object.hasOwn(THEMES, style.theme))
             throw Error('页面样式无效');
         if (style.referenceTemplate !== undefined &&
-            (s.channel !== 'kiosk' || id !== 'home' || !validHomeTemplate(style.referenceTemplate)))
+            (!validHomeTemplate(style.referenceTemplate) || !templateMatches(style.referenceTemplate, s.channel, id)))
             throw Error('参考图模板无效');
         if (style.referenceLayout !== undefined &&
             (s.channel !== 'kiosk' || id !== 'home' || style.referenceTemplate !== undefined || !validHomeLayout(style.referenceLayout)))
@@ -110,10 +110,20 @@ export function validateScheme(s: Scheme): void {
 export function validateData(data: DecorationData): void {
     if (!data || data.schema !== 1 || !Number.isInteger(data.revision) || !Array.isArray(data.schemes) || !Array.isArray(data.releases))
         throw Error('装修数据无法读取，请保留当前数据并联系管理员');
-    if (data.homeTemplates !== undefined && (!Array.isArray(data.homeTemplates) ||
-        data.homeTemplates.length > 50 || !data.homeTemplates.every(validHomeTemplate) ||
-        new Set(data.homeTemplates.map(item => item.id)).size !== data.homeTemplates.length))
-        throw Error('我的模板数据无效');
+    if (data.homeTemplates !== undefined) {
+        if (!Array.isArray(data.homeTemplates) || !data.homeTemplates.every(validHomeTemplate) ||
+            new Set(data.homeTemplates.map(item => item.id)).size !== data.homeTemplates.length)
+            throw Error('我的模板数据无效');
+        const counts = new Map<string, number>();
+        for (const template of data.homeTemplates) {
+            const { channel, page } = templateTarget(template);
+            const key = channel + ':' + page;
+            const count = (counts.get(key) ?? 0) + 1;
+            if (!pages(channel).some(([id]) => id === page) || count > 50)
+                throw Error('我的模板数据无效');
+            counts.set(key, count);
+        }
+    }
     const ids = new Set<string>();
     for (const scheme of data.schemes) {
         validateScheme(scheme);

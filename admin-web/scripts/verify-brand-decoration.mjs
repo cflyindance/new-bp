@@ -112,6 +112,17 @@ try{
   const fixtures = S.readData(demoScope, '甲品牌', storage, () => demo.createDecorationDemo('甲品牌', stores, now));
   assert.equal(fixtures.revision, 1);
   assert.equal(fixtures.homeTemplates.length, 2);
+  const template = { ...fixtures.homeTemplates[0], id: crypto.randomUUID(), target: { channel: 'emenu', page: 'detail' } };
+  const templateFixture = D.copy(fixtures);
+  templateFixture.homeTemplates.push(template);
+  const emenuTemplatePlan = templateFixture.schemes.find(scheme => scheme.channel === 'emenu');
+  emenuTemplatePlan.styles.detail = { mode: 'custom', theme: 'jade', referenceTemplate: template };
+  D.validateData(templateFixture);
+  emenuTemplatePlan.styles.menu.referenceTemplate = template;
+  assert.throws(() => D.validateData(templateFixture));
+  delete emenuTemplatePlan.styles.menu.referenceTemplate;
+  template.target.page = 'signature';
+  assert.throws(() => D.validateData(templateFixture));
   for (const channel of ['kiosk', 'emenu']) {
     const prefix = 'sample-' + channel + '-';
     const scenarios = fixtures.schemes.filter(scheme => scheme.channel === channel);

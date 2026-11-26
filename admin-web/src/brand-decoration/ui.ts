@@ -1,4 +1,4 @@
-import { analyzeReferenceImage, isReferenceImage, type HomeLayout, type HomeTemplate } from './reference-template';
+import { analyzeReferenceImage, isReferenceImage, referenceTheme, templateMatches, type HomeLayout, type HomeTemplate } from './reference-template';
 import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, PAGE_CONTENT_GROUPS, pageContentGroup, pageElements } from './page-content';
 import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
 import { latestPlanReleases, planAt, publishPlan, validatePlanRules, type PlanRules } from './plans';
@@ -244,8 +244,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         renderStandalonePageHeader({ ...options, className: 'bd-flow-header',
             progressHtml: flowProgress(step, scheme()?.rules?.kind === 'activity') });
     const storeNames = (ids: string[]) => ids.map(id => scope.stores.find(store => store.id === id)?.name ?? '门店已不可用').join('、');
-    const period = (rules: PlanRules) => rules.kind === 'default' ? '长期' : !rules.starts || !rules.ends ? '待设置' :
-        `${formatLocal(rules.starts!, rules.timezone).replace('T', ' ')} 至 ${formatLocal(rules.ends!, rules.timezone).replace('T', ' ')} · ${rules.timezone}`;
+    const period = (rules: PlanRules, showTimezone = true) => rules.kind === 'default' ? '长期' : !rules.starts || !rules.ends ? '待设置' :
+        `${formatLocal(rules.starts!, rules.timezone).replace('T', ' ')} 至 ${formatLocal(rules.ends!, rules.timezone).replace('T', ' ')}${showTimezone ? ' · ' + rules.timezone : ''}`;
     function drawRules() {
         const current = scheme();
         if (current) channel = current.channel;
@@ -499,7 +499,6 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
 
     const previewRoute = query.get('step') === 'preview';
     let previewStore = '';
-    let previewDraft = false;
     function previewRelease(s: Scheme) {
         if (!flow) return data.releases.find(record => record.snapshot.id === s.id);
         return latestPlanReleases(data).find(record => record.snapshot.id === s.id &&
@@ -507,38 +506,46 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     function previewVersion(s: Scheme) {
         const release = previewRelease(s);
-        return previewDraft || !release ? s : release.snapshot;
+        return release?.snapshot ?? s;
     }
     function previewPage(s: Scheme, version = previewVersion(s)) {
         const rules = version.rules;
         if (rules?.kind !== 'activity' || rules.pageIds.includes(page)) return version;
-        const store = rules.storeIds.includes(previewStore) ? previewStore : rules.storeIds[0];
+        const store = rules.storeIds.includes(previewStore) ? previewStore : previewRoute ? undefined : rules.storeIds[0];
         if (!store) return newScheme(s.channel, '项目原生样式', scope.brandName);
         const now = Date.now();
         return planAt(data, store, s.channel, now).fallback?.snapshot ??
             resolveSchedule(legacyForStore(store), s.channel, now).fallback?.snapshot ??
             newScheme(s.channel, '项目原生样式', scope.brandName);
     }
+    function previewDirectionControls() {
+        return `<fieldset class="bd-preview-direction" aria-label="预览方向"><div>
+                <label><input type="radio" name="bd-preview-direction" data-bd-field="orientation" value="portrait" ${orientation === 'portrait' ? 'checked' : ''}><span>竖版</span></label>
+                <label><input type="radio" name="bd-preview-direction" data-bd-field="orientation" value="landscape" ${orientation === 'landscape' ? 'checked' : ''}><span>横版</span></label>
+            </div></fieldset>`;
+    }
     function drawPlanPreview(s: Scheme) {
         channel = s.channel;
-        const release = previewRelease(s);
         const version = previewVersion(s);
-        const storeOptions = scope.stores.filter(store => version.rules?.storeIds.includes(store.id));
-        if (!storeOptions.some(store => store.id === previewStore)) previewStore = storeOptions[0]?.id ?? '';
+        previewStore = scope.stores.find(store => version.rules?.storeIds.includes(store.id))?.id ?? '';
+        const previousGrid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
+        if (previousGrid) pageCardsScroll = previousGrid.scrollTop;
         const inherited = version.rules?.kind === 'activity' && !version.rules.pageIds.includes(page);
         root.innerHTML = renderStandalonePageHeader({
             titleHtml: esc(s.name) + ' · 效果预览',
             subtitleHtml: esc(label(channel)),
             backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? '&legacy=1' : ''}">返回方案列表</a>`,
-        }) + `<section class="bd-card bd-schedule bd-plan-preview">
-            <div class="bd-toolbar">
-            ${release ? `<label>版本<select data-bd-field="preview-version"><option value="published">已发布 · V${release.version}</option><option value="draft" ${previewDraft ? 'selected' : ''}>当前草稿</option></select></label>` : '<span class="bd-tag">草稿</span>'}
-            ${storeOptions.length ? `<label>门店<select data-bd-field="plan-store">${storeOptions.map(store => `<option value="${esc(store.id)}" ${store.id === previewStore ? 'selected' : ''}>${esc(store.name)}</option>`).join('')}</select></label>` : ''}
-            <label>页面<select data-bd-field="schedule-page">${pages(channel).map(([id, title]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${title}</option>`).join('')}</select></label>
+        }) + `<div class="bd-plan-preview">
+            <aside class="bd-card bd-config">${pagePicker(s, true)}</aside>
+            <section class="bd-preview">
+            <div class="bd-preview-toolbar">
+            <strong>顾客端效果预览</strong>
             ${postPaymentScenePicker()}
-            ${channel === 'kiosk' ? `<label>设备方向<select data-bd-field="orientation"><option value="portrait">竖屏</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>横屏</option></select></label>` : ''}
-            </div>${inherited ? `<p class="bd-help">本页沿用门店日常装修 · ${esc(previewPage(s).name)}</p>` : ''}
-            <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div></section>`;
+            ${previewDirectionControls()}
+            </div>${inherited ? `<p class="bd-help">本页沿用日常装修 · ${esc(previewPage(s, version).name)}</p>` : ''}
+            <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div>
+            </section></div>`;
+        restorePagePicker();
     }
     type ListFilters = { channel: string; kind: string; name: string; published: string };
     const emptyListFilters = (): ListFilters => ({ channel: '', kind: '', name: '', published: '' });
@@ -606,7 +613,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? (item.draftStep ? '草稿' : '未上架') : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
+                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules, false))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
                     ${release ? '' : `<a class="bd-link" href="${planUrl(item.id, resumeStep(item), item.channel)}">编辑</a>`}
                     <button class="bd-link" data-bd-action="${release ? 'plan-off-shelf' : 'plan-on-shelf'}" data-id="${esc(item.id)}" ${!release && item.draftStep ? 'disabled' : ''}>${release ? '下架' : '上架'}</button>
                     <button class="bd-link" data-bd-action="duplicate" data-id="${esc(item.id)}">复制</button>
@@ -775,6 +782,16 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'),
         comparison?: { layout?: HomeLayout; orientation: string }) {
+        const style = s.styles[page];
+        const referenceLayout = comparison?.layout ?? (style.mode === 'custom'
+            ? style.referenceLayout ?? style.referenceTemplate?.layout
+            : undefined);
+        // Compare a generated layout without changing the saved plan or its page content.
+        const previewStyle = comparison?.layout ? { ...style, mode: 'custom' as const } : style;
+        const previewScheme = referenceLayout
+            ? { ...s, styles: { ...s.styles, [page]: { ...previewStyle,
+                theme: s.channel === 'kiosk' && page === 'home' ? style.theme : referenceTheme(referenceLayout) } } }
+            : s;
         const request = comparison ? undefined : ++defaultCopyRequest;
         if (!comparison) {
             const key = copyKey(s, page);
@@ -791,17 +808,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             scheme()?.id === s.id && !!root.querySelector('[data-bd-field=content-region]');
         frame?.contentWindow?.postMessage({
             selection: selecting ? { region: currentContentRegion(s), field: selectedField, request } : undefined,
-            type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
+            type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...previewScheme, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
             elements: pageElements(s.channel, page).flatMap(field => {
-                const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
-                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field, s.styles[page].mode === 'default'), selector,
+                const selector = previewStyle.mode === 'custom' ? field.custom : field.native;
+                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field, previewStyle.mode === 'default'), selector,
                     hitArea: field.previewHitArea, attribute: field.attribute, original: field.nativeOriginal, value: s.pageContent?.[page]?.[field.id] }] : [];
             }),
-            homeLayout: s.channel === 'kiosk' && page === 'home' && s.styles.home.mode === 'custom'
-                ? comparison?.layout ?? s.styles.home.referenceLayout ?? s.styles.home.referenceTemplate?.layout
-                : undefined,
+            referenceLayout,
             page, orientation: comparison?.orientation ?? orientation,
             postPaymentScene: page === 'afterCreditCardPay' ? postPaymentScene : undefined,
         }, location.origin);
@@ -973,32 +988,43 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <span aria-hidden="true">${selected ? '✓' : ''}</span>
         </button>`;
     }
-    function homeTemplateControls(s: Scheme) {
-        const selected = s.styles.home.referenceTemplate;
-        const items = data.homeTemplates ?? [];
+    function pageTemplates(channel: Channel, pageId: string, source = data) {
+        return (source.homeTemplates ?? []).filter(item => templateMatches(item, channel, pageId));
+    }
+    function referenceTemplateControls(s: Scheme, active: boolean) {
+        const style = s.styles[page];
+        const selected = active ? style.referenceTemplate : undefined;
+        const items = pageTemplates(s.channel, page);
         return `<div class="bd-themes" role="group" aria-label="我的模板">
             <div class="bd-template-heading"><h3>我的模板</h3>
                 <button type="button" class="bd-link" data-bd-action="reference-designer" ${writable()}>用参考图创建模板</button>
             </div>
-            ${s.styles.home.referenceLayout && scope.canWrite ? '<div class="bd-reference-actions"><button type="button" class="bd-link" data-bd-action="save-reference-template">保存为模板</button></div>' : ''}
+            ${active && style.referenceLayout && scope.canWrite ? '<div class="bd-reference-actions"><button type="button" class="bd-link" data-bd-action="save-reference-template">保存为模板</button></div>' : ''}
             ${items.length ? items.map(item => `<div class="bd-saved-template">
-                ${templateCard('reference-template', item.id, item.name, item.id === selected?.id, item.layout.imageFirst ? 'terra' : 'classic')}
+                ${templateCard('reference-template', item.id, item.name, item.id === selected?.id, referenceTheme(item.layout))}
                 ${scope.canWrite ? `<button type="button" class="bd-link" data-bd-action="rename-reference-template" data-value="${esc(item.id)}" aria-label="重命名 ${esc(item.name)}">重命名</button>` : ''}
             </div>`).join('') : '<p class="bd-help">暂无已保存的模板</p>'}
         </div>`;
     }
-    function selectHomeTemplate(s: Scheme, template: HomeTemplate, saveNew: boolean) {
+    function selectReferenceTemplate(s: Scheme, template: HomeTemplate, saveNew: boolean) {
+        const pageId = page;
+        if (!templateMatches(template, s.channel, pageId)) return false;
         if (!mutate(next => {
             const current = next.schemes.find(item => item.id === s.id)!;
             if (saveNew) {
                 next.homeTemplates ??= [];
-                if (next.homeTemplates.length >= 50) throw Error('我的模板最多保存 50 个');
-                if (next.homeTemplates.some(item => item.name.toLowerCase() === template.name.toLowerCase()))
+                const items = pageTemplates(s.channel, pageId, next);
+                if (items.length >= 50) throw Error('我的模板最多保存 50 个');
+                if (items.some(item => item.name.toLowerCase() === template.name.toLowerCase()))
                     throw Error('已有同名模板');
                 next.homeTemplates.push(template);
             }
-            delete current.styles.home.referenceLayout;
-            current.styles.home.referenceTemplate = copy(template);
+            const style = current.styles[pageId];
+            delete style.referenceLayout;
+            style.mode = 'custom';
+            style.referenceTemplate = copy(template);
+            if (current.rules?.kind === 'activity' && !current.rules.pageIds.includes(pageId))
+                current.rules.pageIds.push(pageId);
             current.updatedAt = new Date().toISOString();
             validateScheme(current);
         })) return false;
@@ -1099,8 +1125,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const direction = dialog.querySelector<HTMLSelectElement>('[data-reference-orientation]')!;
         const currentView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=current]')!;
         const generatedView = dialog.querySelector<HTMLButtonElement>('[data-reference-view=generated]')!;
+        direction.hidden = s.channel === 'emenu';
         direction.value = compareOrientation;
-        const preview = () => sendPreview(s, frame, { layout: showGenerated ? generated : undefined, orientation: compareOrientation });
+        const preview = () => sendPreview(showGenerated ? s : previewPage(s, s), frame, {
+            layout: showGenerated ? generated : undefined, orientation: compareOrientation,
+        });
         frame.addEventListener('load', preview);
         const emptyPicker = dialog.querySelector<HTMLElement>('[data-reference-empty]')!;
         const selectedPicker = dialog.querySelector<HTMLElement>('[data-reference-selected]')!;
@@ -1165,10 +1194,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         dialog.addEventListener('bd-dismiss', () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, { once: true });
     }
     function saveReferenceTemplate(s: Scheme, layout: HomeLayout) {
-        const names = new Set(data.homeTemplates?.map(item => item.name.toLowerCase()));
+        const pageName = pages(s.channel).find(([id]) => id === page)![1];
+        const names = new Set(pageTemplates(s.channel, page).map(item => item.name.toLowerCase()));
         let number = 1;
-        while (names.has(`首页参考模板 ${number}`)) number++;
-        return selectHomeTemplate(s, { id: crypto.randomUUID(), name: `首页参考模板 ${number}`, version: 1, layout }, true);
+        while (names.has(`${pageName}参考模板 ${number}`)) number++;
+        return selectReferenceTemplate(s, { id: crypto.randomUUID(), target: { channel: s.channel, page }, name: `${pageName}参考模板 ${number}`, version: 1, layout }, true);
     }
     function renameReferenceTemplate(template: HomeTemplate) {
         openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-template-name-title">
@@ -1183,7 +1213,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (input.value === template.name) { closeModal(); return; }
             if (!mutate(next => {
                 const items = next.homeTemplates!;
-                if (items.some(item => item.id !== template.id && item.name.toLowerCase() === input.value.toLowerCase()))
+                if (items.some(item => item.id !== template.id && templateMatches(item, channel, page) && item.name.toLowerCase() === input.value.toLowerCase()))
                     throw Error('已有同名模板');
                 items.find(item => item.id === template.id)!.name = input.value;
             })) {
@@ -1219,22 +1249,27 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         root.querySelector<HTMLElement>('[data-bd-page-empty]')!.hidden = count > 0;
         root.querySelector<HTMLElement>('[data-bd-page-current]')!.hidden = currentShown;
     }
-    function editorPagePicker(s: Scheme) {
+    function restorePagePicker() {
+        updatePageCards();
+        root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = pageCardsScroll;
+    }
+    function pagePicker(s: Scheme, preview = false) {
+        const title = preview ? '预览页面' : '装修页面';
         const catalog = pages(s.channel);
-        return `<section class="bd-page-picker" aria-label="装修页面">
-            <label>装修页面<select data-bd-field="page-stage">
+        return `<section class="bd-page-picker" aria-label="${title}">
+            <label>${title}<select data-bd-field="page-stage">
                 <option value="">全部页面</option>
                 ${PAGE_STAGES.map(stage => `<option value="${stage.id}" ${pageStage === stage.id ? 'selected' : ''}>${stage.label}</option>`).join('')}
             </select></label>
             ${s.channel === 'kiosk' ? `<input type="search" aria-label="搜索页面名称" placeholder="搜索页面名称" data-bd-page-search value="${esc(pageSearch)}">` : ''}
-            <div class="bd-page-cards" data-bd-page-cards role="group" aria-label="可装修页面">
+            <div class="bd-page-cards" data-bd-page-cards role="group" aria-label="${preview ? title : '可装修页面'}">
                 ${catalog.map(([id, name]) => `<button type="button" class="bd-page-card" data-bd-action="select-editor-page" data-value="${id}" aria-pressed="${id === page}">
                     <span class="bd-page-thumbnail" data-thumbnail="${pageThumbnail(id)}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
                     <span>${esc(name)}</span>
                 </button>`).join('')}
             </div>
             <p class="bd-help" data-bd-page-empty hidden>没有符合条件的页面</p>
-            <p class="bd-help" data-bd-page-current hidden>当前编辑：${esc(catalog.find(([id]) => id === page)?.[1] ?? '')}</p>
+            <p class="bd-help" data-bd-page-current hidden>${preview ? '当前预览' : '当前编辑'}：${esc(catalog.find(([id]) => id === page)?.[1] ?? '')}</p>
         </section>`;
     }
     function drawEditor() {
@@ -1270,13 +1305,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const sidebar = components
             ? `<label>共用组件<select data-bd-component-picker><option value="top-navigation">顶部导航</option></select></label>
                 ${sharedComponentControls(s)}`
-            : `<h2>页面与布局</h2>${editorPagePicker(s)}<fieldset ${writable()}><legend>${esc(layoutTitle)}</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}
-            ${channel === 'kiosk' && page === 'home' ? homeTemplateControls(s) : ''}` : ''} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
-        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? previousStep(s.id, "rules", "方案信息") : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}<label>${channel === 'kiosk' ? `<select data-bd-field="orientation"><option value="portrait" ${orientation === 'portrait' ? 'selected' : ''}>24 寸 · 1080 × 1920</option><option value="landscape" ${orientation === 'landscape' ? 'selected' : ''}>14 寸 · 1920 × 1080</option></select>` : '移动端 · 390 × 844'}</label></div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
-        if (!components) {
-            updatePageCards();
-            root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = pageCardsScroll;
-        }
+            : `<h2>页面与布局</h2>${pagePicker(s)}<fieldset ${writable()}><legend>${esc(layoutTitle)}</legend>${modeControls}</fieldset>${currentMode === 'custom' ? `<div class="bd-themes" role="group" aria-label="当前页面模板"><h3>页面模板</h3>${(Object.keys(PAGE_TEMPLATES) as Theme[]).map(id => templateCard('theme', id, PAGE_TEMPLATES[id].name, !style.referenceTemplate && !style.referenceLayout && style.theme === id, id, PAGE_TEMPLATES[id].note)).join('')}</div>${!style.referenceTemplate && !style.referenceLayout ? `<button class="bd-wide" data-bd-action="suite" ${writable()}>将当前模板应用到全部 ${pages(channel).length} 页</button>` : ''}` : ''}${referenceTemplateControls(s, currentMode === 'custom')} ${storePicker}${legacy ? `<label>方案名称<input data-bd-field="name" value="${esc(s.name)}" maxlength="40" ${writable()}></label>` : ''}`;
+        root.innerHTML = (flow ? flowHeader.bind(null, 2) : renderStandalonePageHeader)({ titleHtml: esc(s.name), backHtml: `<a href="#${ROOT}/pages?channel=${channel}${legacy ? "&legacy=1" : ""}">返回方案列表</a>`, subtitleHtml: channel === 'kiosk' ? undefined : esc(label(channel)), actionsHtml: `${flow && scope.canWrite ? previousStep(s.id, "rules", "方案信息") : ""}<button data-bd-action="publish" class="bd-primary" ${writable()}>${flow ? "下一步：选择门店" : "发布演示版本"}</button>${flow && scope.canWrite ? draftButton() : ''}` }) + (flow ? `<div data-bd-notice class="bd-notice ${messageError ? 'bd-error' : ''}" role="${messageError ? 'alert' : 'status'}">${esc(message)}</div>` : tip()) + paletteControls(s) + `<div class="bd-workbench"><aside class="bd-card bd-config">${workbenchTabs()}<div class="bd-sidebar-panel" id="bd-workbench-panel" role="tabpanel" aria-labelledby="bd-workbench-${workbenchMode}-tab">${sidebar}</div></aside><section class="bd-preview"><div class="bd-preview-toolbar"><strong>顾客端效果预览</strong>${components ? `<select aria-label="预览页面" data-bd-field="page">${pageOptions}</select>${storePicker}` : ''}${postPaymentScenePicker()}${previewDirectionControls()}</div><div class="bd-preview-stage">${inherited && !previewStores.length ? '<p class="bd-help">选择门店后可预览日常装修</p>' : `<iframe title="${label(channel)}页面样式预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe>`}</div></section>${components ? componentProperties(s) : pageContentPanel(s, currentMode)}</div>`;
+        if (!components) restorePagePicker();
     }
     function closeModal() { if (!modal)
         return; modal.dispatchEvent(new Event('bd-dismiss')); }
@@ -1330,7 +1361,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         if (action === 'select-editor-page') {
             const current = scheme();
             const id = el.dataset.value;
-            if (!current || workbenchMode !== 'page' || id === page || !pages(current.channel).some(([key]) => key === id)) return;
+            if (!current || (!previewRoute && workbenchMode !== 'page') || id === page || !pages(current.channel).some(([key]) => key === id)) return;
             page = id!;
             draw();
             root.querySelector<HTMLButtonElement>('[data-bd-page-cards] [aria-pressed="true"]')?.focus({ preventScroll: true });
@@ -1453,15 +1484,16 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             return;
         }
         if (action === 'reference-designer' || action === 'save-reference-template' || action === 'reference-template' || action === 'rename-reference-template') {
-            if (!scope.canWrite || s.channel !== 'kiosk' || page !== 'home' || s.styles.home.mode !== 'custom') return;
-            const layout = s.styles.home.referenceLayout;
+            if (!scope.canWrite) return;
+            const style = s.styles[page];
+            const layout = style.referenceLayout;
             if (action === 'reference-designer') openReferenceDesigner(s);
             else if (action === 'save-reference-template' && layout) saveReferenceTemplate(s, layout);
             else if (action === 'reference-template' || action === 'rename-reference-template') {
-                const template = data.homeTemplates?.find(item => item.id === el.dataset.value);
+                const template = pageTemplates(s.channel, page).find(item => item.id === el.dataset.value);
                 if (!template) return;
                 if (action === 'rename-reference-template') renameReferenceTemplate(template);
-                else if (s.styles.home.referenceTemplate?.id !== template.id && selectHomeTemplate(s, template, false)) {
+                else if (selectReferenceTemplate(s, template, false)) {
                     root.querySelector<HTMLButtonElement>(`[data-bd-action="reference-template"][data-value="${template.id}"]`)?.focus();
                 }
             }
@@ -1556,13 +1588,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         return;
     }
-    if (field === 'preview-version') { previewDraft = input.value === 'draft'; draw(); return; } if (field === 'plan-store') { previewStore = input.value; draw(); return; } if (field === 'page' || field === 'schedule-page') {
+    if (field === 'plan-store') { previewStore = input.value; draw(); return; } if (field === 'page' || field === 'schedule-page') {
         page = input.value;
         draw();
         return;
     } if (field === 'orientation') {
+        if (input.value !== 'portrait' && input.value !== 'landscape') return;
         orientation = input.value;
         draw();
+        root.querySelector<HTMLInputElement>('[name="bd-preview-direction"]:checked')?.focus({ preventScroll: true });
         return;
     } const s = scheme();
     if (!s) return;
@@ -1685,7 +1719,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         }
         if (event.data?.type !== 'bd-ready') return;
         let s = showSchedule ? selectedPreview() : scheme();
-        if (s?.rules?.kind === 'activity' && !s.rules.storeIds.length && !s.rules.pageIds.includes(page)) {
+        if (!previewRoute && s?.rules?.kind === 'activity' && !s.rules.storeIds.length && !s.rules.pageIds.includes(page)) {
             if (frame) frame.hidden = true;
             return;
         }

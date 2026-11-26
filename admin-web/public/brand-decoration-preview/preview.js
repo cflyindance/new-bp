@@ -2,16 +2,16 @@
 (()=>{'use strict';const screen=document.querySelector('#screen');let width=540,height=960;
 function fit(){const scale=Math.min(innerWidth/width,innerHeight/height);Object.assign(screen.style,{width:width+'px',height:height+'px',left:(innerWidth-width*scale)/2+'px',top:(innerHeight-height*scale)/2+'px',transform:'scale('+scale+')'});}
 const esc=value=>KioskDemo.esc(String(value));
-function mobile(s,page,palette){const theme=s.styles[page].theme,colors={jade:['#f7f4eb','#204d40','#fff'],noir:['#191c1b','#d3b67a','#191c1b'],terra:['#fbf1e4','#9c4831','#fff']}[theme],style=palette ? `--paper:${palette.background};--ink:${palette.ink};--on:${palette.onPrimary};--primary:${palette.primary};--accent:${palette.accent};--surface:${palette.surface};--line:${palette.line}` : `--paper:${colors[0]};--ink:${s.primary};--on:${colors[2]}`;
+function mobile(s,page,palette,landscape){const theme=s.styles[page].theme,colors={jade:['#f7f4eb','#204d40','#fff'],noir:['#191c1b','#d3b67a','#191c1b'],terra:['#fbf1e4','#9c4831','#fff']}[theme],style=palette ? `--paper:${palette.background};--ink:${palette.ink};--on:${palette.onPrimary};--primary:${palette.primary};--accent:${palette.accent};--surface:${palette.surface};--line:${palette.line}` : `--paper:${colors[0]};--ink:${s.primary};--on:${colors[2]}`;
 let body='',action='开始点餐';const meal=(i)=>`<div class="food"><div class="meal" style="background-position:${i%2?'100%':'0'} ${i>1?'100%':'0'}"></div><b>${['炙烤鸡腿饭','时蔬谷物碗','慢炖牛肉饭','南瓜浓汤'][i]}</b><div class="em-food-action"><small>¥${[32,28,42,18][i]}.00</small><button type="button" class="em-add" aria-label="加购" tabindex="-1">＋</button></div></div>`;
 if(page==='home')body='<span class="eyebrow">GOOD FOOD, GOOD MOMENTS</span><h1>一餐一味，<br>认真款待。</h1><p>新鲜现做，把好味道带到你面前。</p><div class="hero"></div>';
 if(page==='menu'){body='<div class="menu-tabs"><b>主厨推荐</b><span>当季轻食</span><span>饮品</span></div><div class="grid">'+[0,1,2,3].map(meal).join('')+'</div>';action='查看购物车 · ¥60.00';}
-if(page==='detail'){body='<div class="hero" style="height:300px;margin:0"></div><h1>炙烤鸡腿饭</h1><p data-emenu-copy="detail-note">鲜嫩鸡腿，搭配当季时蔬与热米饭。</p><div class="row"><b>口味</b><span>原味　微辣</span></div><div class="row"><b>份量</b><span>标准份</span></div>';action='加入购物车 · ¥32.00';}
+if(page==='detail'){body='<div class="hero"></div><h1>炙烤鸡腿饭</h1><p data-emenu-copy="detail-note">鲜嫩鸡腿，搭配当季时蔬与热米饭。</p><div class="row"><b>口味</b><span>原味　微辣</span></div><div class="row"><b>份量</b><span>标准份</span></div>';action='加入购物车 · ¥32.00';}
 if(page==='review'){body='<span class="eyebrow">YOUR ORDER</span><h1>确认这一餐</h1><div class="row"><b>炙烤鸡腿饭 × 1</b><span>¥32.00</span></div><div class="row"><b>时蔬谷物碗 × 1</b><span>¥28.00</span></div><div class="row"><b>合计</b><b>¥60.00</b></div>';action='确认订单';}
 if(page==='payment'){body='<span class="eyebrow">CHECKOUT</span><h1>选择支付方式</h1><p>应付金额</p><h1>¥60.00</h1><div class="row" data-payment-method="card"><b>信用卡／借记卡</b><span>○</span></div><div class="row" data-payment-method="scan"><b>扫码支付</b><span>○</span></div>';action='确认支付（演示）';}
 if(page==='finish'){body='<div class="success"><i>✓</i><p>THANK YOU FOR YOUR ORDER</p><h2>下单成功</h2><p>您的取餐号</p><h1>A038</h1><p>请留意取餐屏叫号</p></div>';action='返回菜单';}
 if(page==='login'){body='<span class="eyebrow">MEMBERSHIP</span><h1>欢迎回来</h1><p>登录会员，享受专属礼遇。</p><input aria-label="演示手机号" placeholder="输入手机号码" readonly>';action='登录（演示）';}
-return `<div class="em em-layout-${theme}" data-page="${esc(page)}" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${page === 'menu' || page === 'detail'
+return `<div class="em em-layout-${theme}${landscape ? ' em-landscape' : ''}" data-page="${esc(page)}" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${page === 'menu' || page === 'detail'
     ? `<span data-emenu-copy>${action.split(' · ')[0]}</span> · ${action.split(' · ')[1]}`
     : action}</button></footer></div>`;
 }
@@ -248,7 +248,7 @@ const roleColors=palette?{
   'warning-fill':palette.warningFill,'warning-text':palette.warningText,
   'error-fill':palette.errorFill,'error-text':palette.errorText
 }:undefined;
-if(s.channel==='emenu'){width=390;height=844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette);}
+if(s.channel==='emenu'){const landscape=orientation==='landscape';width=landscape?844:390;height=landscape?390:844;screen.innerHTML=style.mode==='default'?'<div class="em-empty"><div><strong>项目默认页面</strong>eMenu 原生默认效果尚未接入。<br>切换自定义装修可查看移动端样式。</div></div>':mobile(s,page,palette,landscape);}
 else{const landscape=orientation==='landscape';width=landscape?960:540;height=landscape?540:960;
 if(style.mode==='default'){renderNative(page,landscape,s.paletteId==='system'?undefined:palette,headerPalette,elements,reportDefaults,postPaymentScene,event.data.selection);}
 else{const config=KioskPremium.demoConfig(style.theme);config.name=s.brandName;const rgb=s.primary.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));const on=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000>150?'#17221d':'#ffffff';config.templateBrandOverrides={...config.templateBrandOverrides,primary:s.primary,onPrimary:on};screen.innerHTML=KioskPremium.render(config,KioskPremium.demoSession(page),{orientation,postPaymentScene});
@@ -259,15 +259,16 @@ if(roleColors && style.mode==='custom' && screen.firstElementChild){
   for(const [role,color] of Object.entries(roleColors))screen.firstElementChild.style.setProperty('--bd-role-'+role,color);
 }
 if (style.mode === 'custom' && screen.firstElementChild) {
-  const homeLayout = event.data.homeLayout;
-  if (s.channel === 'kiosk' && page === 'home' && homeLayout) {
+  const layout = event.data.referenceLayout ?? event.data.homeLayout;
+  if (layout) {
     const root = screen.firstElementChild;
-    root.classList.add('pt-reference-home');
-    root.dataset.imageFirst = homeLayout.imageFirst === true ? 'true' : 'false';
-    root.dataset.referenceAlign = homeLayout.align === 'center' ? 'center' : 'start';
+    const kioskHome = s.channel === 'kiosk' && page === 'home';
+    root.classList.add(kioskHome ? 'pt-reference-home' : 'bd-reference-layout');
+    root.dataset.imageFirst = layout.imageFirst === true ? 'true' : 'false';
+    root.dataset.referenceAlign = layout.align === 'center' ? 'center' : 'start';
     const bounded = (value, min, max, fallback) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
-    root.style.setProperty('--pt-ref-image', bounded(homeLayout.imageShare, 42, 62, 50) + '%');
-    root.style.setProperty('--pt-ref-radius', bounded(homeLayout.radius, 4, 36, 24) + 'px');
+    root.style.setProperty('--pt-ref-image', bounded(layout.imageShare, 42, 62, 50) + '%');
+    root.style.setProperty('--pt-ref-radius', bounded(layout.radius, 4, 36, 24) + 'px');
   }
   if (reportDefaults) {
     const defaults = {};
