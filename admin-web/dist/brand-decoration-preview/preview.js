@@ -8,7 +8,7 @@ if(page==='home')body='<span class="eyebrow">GOOD FOOD, GOOD MOMENTS</span><h1>�
 if(page==='menu'){body='<div class="menu-tabs"><b>主厨推荐</b><span>当季轻食</span><span>饮品</span></div><div class="grid">'+[0,1,2,3].map(meal).join('')+'</div>';action='查看购物车 · ¥60.00';}
 if(page==='detail'){body='<div class="hero" style="height:300px;margin:0"></div><h1>炙烤鸡腿饭</h1><p data-emenu-copy="detail-note">鲜嫩鸡腿，搭配当季时蔬与热米饭。</p><div class="row"><b>口味</b><span>原味　微辣</span></div><div class="row"><b>份量</b><span>标准份</span></div>';action='加入购物车 · ¥32.00';}
 if(page==='review'){body='<span class="eyebrow">YOUR ORDER</span><h1>确认这一餐</h1><div class="row"><b>炙烤鸡腿饭 × 1</b><span>¥32.00</span></div><div class="row"><b>时蔬谷物碗 × 1</b><span>¥28.00</span></div><div class="row"><b>合计</b><b>¥60.00</b></div>';action='确认订单';}
-if(page==='payment'){body='<span class="eyebrow">CHECKOUT</span><h1>选择支付方式</h1><p>应付金额</p><h1>¥60.00</h1><div class="row"><b>信用卡／借记卡</b><span>○</span></div><div class="row"><b>扫码支付</b><span>○</span></div>';action='确认支付（演示）';}
+if(page==='payment'){body='<span class="eyebrow">CHECKOUT</span><h1>选择支付方式</h1><p>应付金额</p><h1>¥60.00</h1><div class="row" data-payment-method="card"><b>信用卡／借记卡</b><span>○</span></div><div class="row" data-payment-method="scan"><b>扫码支付</b><span>○</span></div>';action='确认支付（演示）';}
 if(page==='finish'){body='<div class="success"><i>✓</i><p>THANK YOU FOR YOUR ORDER</p><h2>下单成功</h2><p>您的取餐号</p><h1>A038</h1><p>请留意取餐屏叫号</p></div>';action='返回菜单';}
 if(page==='login'){body='<span class="eyebrow">MEMBERSHIP</span><h1>欢迎回来</h1><p>登录会员，享受专属礼遇。</p><input aria-label="演示手机号" placeholder="输入手机号码" readonly>';action='登录（演示）';}
 return `<div class="em em-layout-${theme}" data-page="${esc(page)}" style="${style}"><header><strong>${esc(s.brandName)}</strong><span>电子菜单 · 演示</span></header><main>${body}</main><footer><button tabindex="-1">${page === 'menu' || page === 'detail'
@@ -107,11 +107,14 @@ function styleNativeHeader(doc, palette) {
   doc.head.append(style);
 }
 function applyCustomContent(root, elements) {
-  for (const { kind, selector, value } of elements) {
+  for (const { kind, selector, attribute, value } of elements) {
     const target = root.querySelector(selector);
     if (!target || !value) continue;
     if (kind === 'hidden') target.style.display = 'none';
-    else if (kind === 'text') target.textContent = value;
+    else if (kind === 'text') {
+      if (attribute === 'placeholder') target.setAttribute(attribute, value);
+      else target.textContent = value;
+    }
     else if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)) {
       const image = document.createElement('img');
       image.className = 'bd-content-image';
@@ -143,6 +146,8 @@ function markSelectableContent(elements, selection) {
     const target = screen.querySelector(field.selector);
     if (!target) continue;
     target.dataset.bdSelectField = field.id;
+    const hitArea = field.hitArea ? target.closest(field.hitArea) : null;
+    if (hitArea) hitArea.dataset.bdSelectField = field.id;
     if (field.group === selection.region) target.dataset.bdSelection = field.id === selection.field ? 'field' : 'region';
   }
   for (const control of screen.querySelectorAll('a,button,input,select,textarea,[tabindex]')) control.tabIndex = -1;
@@ -216,10 +221,10 @@ if (style.mode === 'custom' && screen.firstElementChild) {
   }
   if (reportDefaults) {
     const defaults = {};
-    for (const {id, kind, selector} of elements) {
+    for (const {id, kind, selector, attribute} of elements) {
       if (kind !== 'text') continue;
       const target = screen.firstElementChild.querySelector(selector);
-      if (target) defaults[id] = target.innerText.trim();
+      if (target) defaults[id] = (attribute === 'placeholder' ? target.getAttribute(attribute) ?? '' : target.innerText).trim();
     }
     reportDefaults(defaults);
   }
