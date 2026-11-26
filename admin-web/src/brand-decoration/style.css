@@ -355,14 +355,14 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   padding:12px;
 }
 
-/* Keep each step inside the full-screen flow; scroll only the overflowing region. */
-[data-decoration-workbench]:has(> .bd > .bd-flow-header) {
+/* Keep the full-screen editor and preview inside the viewport. */
+[data-decoration-workbench]:has(> .bd > :is(.bd-flow-header,.bd-plan-preview)) {
   display:flex;
   flex-direction:column;
   overflow:hidden;
 }
-[data-decoration-workbench]:has(> .bd > .bd-flow-header) > :not(.bd) {flex:none}
-[data-decoration-workbench] > .bd:has(> .bd-flow-header) {
+[data-decoration-workbench]:has(> .bd > :is(.bd-flow-header,.bd-plan-preview)) > :not(.bd) {flex:none}
+[data-decoration-workbench] > .bd:has(> :is(.bd-flow-header,.bd-plan-preview)) {
   display:flex;
   flex:1 1 auto;
   flex-direction:column;
@@ -370,8 +370,10 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   overflow:hidden;
 }
 .bd-flow-header,
-.bd-flow-header ~ :is(.bd-notice,.bd-palette-panel) {flex:none}
-.bd-flow-header ~ :is(.bd-flow-content,.bd-store-page,.bd-workbench) {
+.bd-flow-header ~ :is(.bd-notice,.bd-palette-panel),
+.bd:has(> .bd-plan-preview) > .standalone-page-header {flex:none}
+.bd-flow-header ~ :is(.bd-flow-content,.bd-store-page,.bd-workbench),
+.bd-plan-preview {
   flex:1 1 auto;
   min-height:0;
 }
@@ -379,32 +381,33 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   overflow:auto;
   overscroll-behavior:contain;
 }
-.bd-flow-header ~ .bd-workbench {grid-template-rows:minmax(0,1fr)}
-.bd-flow-header ~ .bd-workbench > :is(.bd-config,.bd-content-panel) {
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) {grid-template-rows:minmax(0,1fr)}
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) > :is(.bd-config,.bd-content-panel) {
   max-height:100%;
   min-height:0;
   overflow:auto;
   overscroll-behavior:contain;
 }
-.bd-flow-header ~ .bd-workbench > .bd-config > * {flex:none}
-.bd-flow-header ~ .bd-workbench > .bd-preview {
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) > .bd-config > * {flex:none}
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) > .bd-preview {
   align-self:stretch;
   min-height:0;
   display:flex;
   flex-direction:column;
 }
-.bd-flow-header ~ .bd-workbench .bd-preview > :is(.bd-preview-toolbar,.bd-help) {flex:none}
-.bd-flow-header ~ .bd-workbench .bd-preview-stage {flex:1;min-height:0;height:auto}
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) .bd-preview > :is(.bd-preview-toolbar,.bd-help) {flex:none}
+:is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) .bd-preview-stage {flex:1;min-height:0;height:auto}
 @media (min-width:801px) and (max-width:1279px) {
   .bd-flow-header ~ .bd-workbench {grid-template-rows:auto minmax(0,1fr)}
   .bd-flow-header ~ .bd-workbench > .bd-content-panel {max-height:32dvh}
 }
 @media (max-width:800px) {
-  .bd-flow-header ~ .bd-workbench {
+  :is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) {
     grid-template-rows:none;
     overflow:auto;
     overscroll-behavior:contain;
   }
-  .bd-flow-header ~ .bd-workbench > :is(.bd-config,.bd-content-panel) {max-height:none}
-  .bd-flow-header ~ .bd-workbench .bd-preview-stage {flex:none;height:clamp(240px,65dvh,660px)}
+  .bd-plan-preview {grid-auto-rows:max-content}
+  :is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) > :is(.bd-config,.bd-content-panel) {max-height:none}
+  :is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) .bd-preview-stage {flex:none;height:clamp(240px,65dvh,660px)}
 }

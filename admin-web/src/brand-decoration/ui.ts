@@ -520,7 +520,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     const workbenchViewport = root.closest<HTMLElement>('[data-decoration-workbench]');
     function fitPreviewStage() {
-        const stage = root.querySelector<HTMLElement>(':is(.bd-workbench,.bd-plan-preview) .bd-preview-stage');
+        const stage = root.querySelector<HTMLElement>('.bd-workbench .bd-preview-stage');
         if (!stage) return;
         const viewportTop = workbenchViewport?.getBoundingClientRect().top ?? 0;
         const viewportHeight = workbenchViewport?.clientHeight ?? window.innerHeight;
@@ -551,6 +551,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         channel = s.channel;
         const version = previewVersion(s);
         previewStore = scope.stores.find(store => version.rules?.storeIds.includes(store.id))?.id ?? '';
+        const scrollRegions = ['.bd-plan-preview', '.bd-plan-preview > .bd-config'];
+        const scrollOffsets = scrollRegions.map(selector => root.querySelector(selector)?.scrollTop ?? 0);
         const previousGrid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
         if (previousGrid) pageCardsScroll = previousGrid.scrollTop;
         const inherited = version.rules?.kind === 'activity' && !version.rules.pageIds.includes(page);
@@ -569,7 +571,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             <div class="bd-preview-stage"><iframe title="${esc(s.name)}效果预览" src="${PREVIEW_URL}" data-bd-frame sandbox="allow-scripts allow-same-origin"></iframe></div>
             </section></div>`;
         restorePagePicker();
-        observePreviewLayout();
+        scrollRegions.forEach((selector, index) => {
+            const region = root.querySelector(selector);
+            if (region) region.scrollTop = scrollOffsets[index];
+        });
     }
     type ListFilters = { channel: string; kind: string; name: string; published: string };
     const emptyListFilters = (): ListFilters => ({ channel: '', kind: '', name: '', published: '' });
