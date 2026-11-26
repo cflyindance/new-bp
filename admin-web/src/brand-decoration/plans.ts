@@ -42,8 +42,29 @@ export function validatePlanRules(rules: PlanRules, channel: Channel, stores: Pl
 export function planAt(data: DecorationData, store: string, channel: Channel, at: number) {
     const releases = latestPlanReleases(data).filter(release =>
         release.snapshot.channel === channel && release.rules.storeIds.includes(store));
+    const order = new Map(data.releases.map((release, index) => [release.id, index]));
+    const defaultPriority = (candidate: PlanRelease) => {
+        let priority = order.get(candidate.id)!;
+        let version: Release = candidate;
+        // Retained stores keep the precedence they had before a store-only update.
+        for (let index = priority + 1; version.storeScopeOnly && index < data.releases.length; index++) {
+            const prior = data.releases[index];
+            if (prior.snapshot.id !== candidate.snapshot.id) continue;
+            if (prior.offShelf || !prior.rules?.storeIds.includes(store)) break;
+            priority = index;
+            version = prior;
+        }
+        return priority;
+    };
+    let fallback: PlanRelease | undefined;
+    let priority = Infinity;
+    for (const release of releases) {
+        if (release.rules.kind !== 'default') continue;
+        const index = defaultPriority(release);
+        if (index < priority) { fallback = release; priority = index; }
+    }
     return {
-        fallback: releases.find(release => release.rules.kind === 'default'),
+        fallback,
         active: releases.find(release => release.rules.kind === 'activity' &&
             release.rules.starts! <= at && at < release.rules.ends!),
     };
@@ -60,10 +81,15 @@ export function checkPlanPublication(data: DecorationData, scheme: Scheme, store
     validatePlanRules(rules, scheme.channel, stores);
     if (rules.kind === 'default') return;
     if (rules.starts! < now) throw Error('开始时间须晚于当前时间');
+    checkActivityOverlap(data, scheme.id, scheme.channel, rules, stores, rules.starts!);
+}
+
+function checkActivityOverlap(data: DecorationData, id: string, channel: Channel, rules: PlanRules, stores: PlanStore[], starts: number) {
+    if (starts >= rules.ends!) return;
     for (const release of latestPlanReleases(data)) {
         const previous = release.rules;
-        if (release.snapshot.id === scheme.id || release.snapshot.channel !== scheme.channel || previous.kind !== 'activity') continue;
-        if (rules.starts! >= previous.ends! || previous.starts! >= rules.ends!) continue;
+        if (release.snapshot.id === id || release.snapshot.channel !== channel || previous.kind !== 'activity') continue;
+        if (starts >= previous.ends! || previous.starts! >= rules.ends!) continue;
         const collisions = stores.filter(store => rules.storeIds.includes(store.id) && previous.storeIds.includes(store.id));
         if (collisions.length) throw Error('门店「' + collisions.map(store => store.name).join('、') + '」与方案「' + release.snapshot.name + '」时段重叠（' + formatLocal(previous.starts!, rules.timezone).replace('T', ' ') + ' 至 ' + formatLocal(previous.ends!, rules.timezone).replace('T', ' ') + '）');
     }
@@ -71,9 +97,14 @@ export function checkPlanPublication(data: DecorationData, scheme: Scheme, store
 
 export function publishPlan(data: DecorationData, scheme: Scheme, stores: PlanStore[], actor: string) {
     checkPlanPublication(data, scheme, stores);
+    appendPlanRelease(data, scheme, stores, actor);
+}
+
+function appendPlanRelease(data: DecorationData, scheme: Scheme, stores: PlanStore[], actor: string, storeScopeOnly?: true) {
     const previous = data.releases.find(release => release.snapshot.channel === scheme.channel);
     const scopeName = stores.filter(store => scheme.rules!.storeIds.includes(store.id)).map(store => store.name).join('、');
     data.releases.unshift({
+        storeScopeOnly,
         id: crypto.randomUUID(),
         version: (previous?.version ?? 0) + 1,
         createdAt: new Date().toISOString(),
@@ -81,4 +112,22 @@ export function publishPlan(data: DecorationData, scheme: Scheme, stores: PlanSt
         snapshot: copy(scheme),
         rules: copy(scheme.rules!),
     });
+}
+
+export function updatePublishedPlanStores(data: DecorationData, id: string, releaseId: string, storeIds: string[], stores: PlanStore[], actor: string, now = Date.now()) {
+    const current = data.schemes.find(scheme => scheme.id === id);
+    const release = latestPlanReleases(data).find(item => item.snapshot.id === id);
+    if (!current?.rules || release?.id !== releaseId) throw Error('方案上架状态已变化，请返回列表重试');
+    const allowed = new Set(stores.map(store => store.id));
+    if ([...current.rules.storeIds, ...release.rules.storeIds].some(storeId => !allowed.has(storeId)))
+        throw Error('暂无管理该方案所有门店的权限');
+    const rules = { ...release.rules, storeIds: [...storeIds] };
+    validatePlanRules(rules, current.channel, stores);
+    const added = storeIds.filter(storeId => !release.rules.storeIds.includes(storeId));
+    if (!added.length && storeIds.length === release.rules.storeIds.length) throw Error('适用门店没有变化');
+    if (rules.kind === 'activity')
+        checkActivityOverlap(data, id, current.channel, { ...rules, storeIds: added }, stores, Math.max(now, rules.starts!));
+    current.rules = { ...current.rules, storeIds: [...storeIds] };
+    current.updatedAt = new Date(now).toISOString();
+    appendPlanRelease(data, { ...release.snapshot, rules, updatedAt: current.updatedAt }, stores, actor, true);
 }

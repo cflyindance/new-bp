@@ -106,6 +106,39 @@ try{
   P.publishPlan(flow,newDaily,stores,'demo');
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id,'重新上架使用新快照');
 
+  const scopeChange = { ...D.copy(flow), schemes: [D.copy(daily), D.copy(newDaily)] };
+  const liveDaily = P.latestPlanReleases(scopeChange).find(item => item.snapshot.id === daily.id);
+  const oldSnapshot = JSON.stringify(liveDaily);
+  P.updatePublishedPlanStores(scopeChange, daily.id, liveDaily.id, ['a'], stores, 'demo', end);
+  const amended = P.latestPlanReleases(scopeChange).find(item => item.snapshot.id === daily.id);
+  assert.deepEqual(amended.rules.storeIds, ['a']);
+  assert.deepEqual(amended.snapshot.styles, liveDaily.snapshot.styles);
+  assert.equal(JSON.stringify(liveDaily), oldSnapshot, 'scope adjustment preserves history');
+  assert.notEqual(P.planAt(scopeChange, 'b', 'kiosk', end).fallback?.snapshot.id, daily.id);
+  assert.equal(P.planAt(scopeChange, 'a', 'kiosk', end).fallback?.snapshot.id, newDaily.id,
+    'retained store must not displace newer fallback');
+  assert.throws(() => P.updatePublishedPlanStores(scopeChange, daily.id, liveDaily.id, ['a','b'], stores, 'demo', end));
+  assert.throws(() => P.updatePublishedPlanStores(scopeChange, daily.id, amended.id, [], stores, 'demo', end));
+  P.updatePublishedPlanStores(scopeChange, daily.id, amended.id, ['a','b'], stores, 'demo', end);
+  assert.equal(P.planAt(scopeChange, 'b', 'kiosk', end).fallback.snapshot.id, daily.id);
+
+  const activityChange = { schema: 1, revision: 0, schemes: [D.copy(winter)], releases: [] };
+  const other = makePlan('同期限时', {...winter.rules, storeIds:['b']});
+  activityChange.schemes.push(other);
+  P.publishPlan(activityChange, winter, stores, 'demo');
+  P.publishPlan(activityChange, other, stores, 'demo');
+  let liveWinter = P.latestPlanReleases(activityChange).find(item => item.snapshot.id === winter.id);
+  const ongoing = start + 1;
+  assert.throws(() => P.updatePublishedPlanStores(activityChange, winter.id, liveWinter.id, ['a','b'], stores, 'demo', ongoing), /重叠/);
+  assert.equal(activityChange.releases.length, 2);
+  activityChange.releases[0].offShelf = true;
+  P.updatePublishedPlanStores(activityChange, winter.id, liveWinter.id, ['b'], stores, 'demo', ongoing);
+  liveWinter = P.latestPlanReleases(activityChange).find(item => item.snapshot.id === winter.id);
+  assert.equal(liveWinter.rules.starts, start);
+  assert.equal(liveWinter.rules.ends, end);
+  assert.equal(P.planAt(activityChange, 'a', 'kiosk', ongoing).active, undefined);
+  assert.equal(P.planAt(activityChange, 'b', 'kiosk', ongoing).active.snapshot.id, winter.id);
+
   const demo = await import(pathToFileURL(join(dir, 'demo-data.mjs')));
   const now = Date.now();
   const demoScope = 'brand-demo/plan-flow';

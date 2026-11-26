@@ -56,6 +56,7 @@ export interface Scheme {
 }
 export interface Release {
     offShelf?: true;
+    storeScopeOnly?: true;
     rules?: PlanRules;
     id: string;
     version: number;

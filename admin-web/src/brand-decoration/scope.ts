@@ -29,7 +29,7 @@ export function decorationScope() {
     const storeIds = brandStoresForPath(brandStores.map(option => option.value), '/brand-decoration/pages');
     const stores = brandStores.filter(option => storeIds.includes(option.value)).map(option => {
         const item = metadata.stores.find(entry => entry.storeId === option.value);
-        return { id: option.value, name: option.labelZh, region: options.regions.find(region => region.value === item?.regionId)?.labelZh || item?.regionId || '未分区', timezone:
+        return { id: option.value, name: option.labelZh, postalCode: item?.postalCode?.trim(), region: options.regions.find(region => region.value === item?.regionId)?.labelZh || item?.regionId || '未分区', timezone:
             metadata.merchants.find(entry => entry.merchantId === item?.linkedMerchantId)?.timezone
             || metadata.merchants.find(entry => entry.merchantId === brand)?.timezone || '' };
     });

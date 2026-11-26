@@ -411,3 +411,12 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
   :is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) > :is(.bd-config,.bd-content-panel) {max-height:none}
   :is(.bd-flow-header ~ .bd-workbench,.bd-plan-preview) .bd-preview-stage {flex:none;height:clamp(240px,65dvh,660px)}
 }
+
+.bd .bd-store-count {padding-inline:0}
+.bd-plan-stores-dialog {display:flex;flex-direction:column;overflow:hidden}
+.bd-plan-stores-dialog > header {flex:none}
+.bd.bd-plan-stores-dialog-body {min-height:0;overflow:auto;background:transparent}
+.bd-plan-stores-dialog-body .bd-table-wrap:focus-visible {outline:2px solid var(--bd-blue);outline-offset:-2px}
+.bd-plan-stores-search {width:100%;margin-bottom:12px}
+
+.bd-plan-stores-dialog > header > .bd-button {white-space:nowrap}

@@ -1,7 +1,7 @@
 import { analyzeReferenceImage, isReferenceImage, referenceTheme, templateMatches, type HomeLayout, type HomeTemplate } from './reference-template';
 import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, PAGE_CONTENT_GROUPS, pageContentGroup, pageElements } from './page-content';
 import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
-import { latestPlanReleases, planAt, publishPlan, validatePlanRules, type PlanRules } from './plans';
+import { latestPlanReleases, planAt, publishPlan, updatePublishedPlanStores, validatePlanRules, type PlanRelease, type PlanRules } from './plans';
 import { effectiveEnd, emptySchedule, formatLocal, parseLocal, resolveSchedule, saveActivity, type DecorationActivity } from './schedule';
 import './style.css';
 import '../config/deployment-change-preview.css';
@@ -320,31 +320,37 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         });
     }
 
-    function drawStores(s: Scheme) {
+    function drawStores(s: Scheme, release?: PlanRelease) {
         channel = s.channel;
-        const rules = s.rules!;
+        const rules = release?.rules ?? s.rules!;
         const activity = rules.kind === 'activity';
         const picked = rules.storeIds.length ? rules.storeIds : scope.stores.length === 1 ? [scope.stores[0].id] : [];
         const regions = [...new Set(scope.stores.map(store => store.region))].sort();
-        root.innerHTML = flowHeader(3, {
+        const header = release ? renderStandalonePageHeader({
+            titleHtml: '调整门店',
+            subtitleHtml: esc(s.name),
+            backHtml: backToPlans(),
+            actionsHtml: '<button type="submit" form="bd-plan-stores" class="bd-primary" value="review">保存</button>',
+        }) : flowHeader(3, {
             titleHtml: '选择门店', subtitleHtml: channel === 'kiosk' ? undefined : esc(s.name + ' · ' + label(channel)),
             backHtml: backToPlans(),
             actionsHtml: `<button type="submit" form="bd-plan-stores" class="bd-primary" name="destination" value="review">下一步：${activity ? '活动有效期' : '核对并保存'}</button>${previousStepSubmit('bd-plan-stores', 'editor', '装修页面')}${draftButton('bd-plan-stores')}`,
-        }) + `<div class="bd-store-page"><form id="bd-plan-stores" class="bd-store-form">
+        });
+        root.innerHTML = header + `<div class="bd-store-page"><form id="bd-plan-stores" class="bd-store-form">
             <div class="bd-store-layout">
               <section class="bd-card bd-store-catalog" aria-labelledby="bd-store-list-title">
                 <h2 id="bd-store-list-title">门店列表</h2>
                 <div class="bd-store-filters">
-                  <input type="search" data-bd-store-search aria-label="搜索门店" placeholder="门店名称 / MID" autocomplete="off">
+                  <input type="search" data-bd-store-search aria-label="搜索门店" placeholder="门店名称 / MID / 区域 / 邮编" autocomplete="off">
                   <select data-bd-store-region aria-label="区域"><option value="">全部区域</option>${regions.map(region => `<option value="${esc(region)}">${esc(region)}</option>`).join('')}</select>
                   <button type="button" data-bd-store-reset>重置</button>
                 </div>
                 <div class="bd-table-wrap bd-store-table"><table>
-                  <thead><tr><th scope="col"><input type="checkbox" data-bd-store-all aria-label="全选当前筛选结果"></th><th scope="col">门店名称</th><th scope="col">MID</th><th scope="col">区域</th></tr></thead>
+                  <thead><tr><th scope="col"><input type="checkbox" data-bd-store-all aria-label="全选当前筛选结果"></th><th scope="col">门店名称</th><th scope="col">MID</th><th scope="col">区域</th><th scope="col">邮编</th></tr></thead>
                   <tbody>${scope.stores.map(store => `<tr data-bd-store-item data-region="${esc(store.region)}">
                     <td><input type="checkbox" name="store" value="${esc(store.id)}" aria-label="${esc(store.name)}" ${picked.includes(store.id) ? 'checked' : ''}></td>
-                    <td>${esc(store.name)}</td><td>${esc(store.id)}</td><td>${esc(store.region)}</td>
-                  </tr>`).join('')}<tr data-bd-store-empty hidden><td colspan="4" class="bd-empty">没有符合条件的门店</td></tr></tbody>
+                    <td>${esc(store.name)}</td><td>${esc(store.id)}</td><td>${esc(store.region)}</td><td>${esc(store.postalCode || '—')}</td>
+                  </tr>`).join('')}<tr data-bd-store-empty hidden><td colspan="5" class="bd-empty">没有符合条件的门店</td></tr></tbody>
                 </table></div>
                 <p class="bd-help" data-bd-store-total></p>
               </section>
@@ -376,7 +382,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             all.disabled = !visible.length;
             all.checked = !!visible.length && checkedCount === visible.length;
             all.indeterminate = checkedCount > 0 && checkedCount < visible.length;
-            nextButton.disabled = !chosen.length;
+            nextButton.disabled = !chosen.length || Boolean(release && chosen.length === rules.storeIds.length &&
+                chosen.every(store => rules.storeIds.includes(store.id)));
             form.querySelector('[data-bd-store-count]')!.textContent = '(' + chosen.length + ')';
             const selectionHtml = chosen.length ? `<ul class="bd-picked-stores">${chosen.map(store => `<li>
                 <span><strong>${esc(store.name)}</strong><small>${esc(store.id)}</small></span>
@@ -392,7 +399,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const search = searchInput.value.trim().toLowerCase();
             const region = regionInput.value;
             rows.forEach(row => {
-                row.hidden = ![row.cells[1], row.cells[2]].some(cell => cell.textContent!.toLowerCase().includes(search)) || (!!region && row.dataset.region !== region);
+                row.hidden = ![...row.cells].slice(1).some(cell => cell.textContent!.toLowerCase().includes(search)) || (!!region && row.dataset.region !== region);
             });
             const visible = visibleChecks().length;
             form.querySelector<HTMLElement>('[data-bd-store-empty]')!.hidden = visible > 0;
@@ -428,6 +435,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         form.addEventListener('submit', event => {
             event.preventDefault();
             const targets = selected();
+            if (release) {
+                confirmStoreAdjustment(release, targets.map(store => store.id));
+                return;
+            }
             const timezone = targets[0]?.timezone ?? '';
             const destination = (event.submitter as HTMLButtonElement | null)?.value;
             const draftOnly = destination === 'draft';
@@ -642,7 +653,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? (item.draftStep ? '草稿' : '未上架') : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${esc(storeNames(rules.storeIds))}</td><td>${esc(period(rules, false))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
+                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${rules.storeIds.length ? `<button type="button" class="bd-link bd-store-count" data-bd-action="plan-stores" data-id="${esc(item.id)}" aria-haspopup="dialog" aria-label="${esc(item.name)}适用门店，${rules.storeIds.length} 家">${rules.storeIds.length} 家</button>` : '0 家'}</td><td>${esc(period(rules, false))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
                     ${release ? '' : `<a class="bd-link" href="${planUrl(item.id, resumeStep(item), item.channel)}">编辑</a>`}
                     <button class="bd-link" data-bd-action="${release ? 'plan-off-shelf' : 'plan-on-shelf'}" data-id="${esc(item.id)}" ${!release && item.draftStep ? 'disabled' : ''}>${release ? '下架' : '上架'}</button>
                     <button class="bd-link" data-bd-action="duplicate" data-id="${esc(item.id)}">复制</button>
@@ -651,8 +662,66 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             </tbody></table></div><div class="bd-pagination">共 ${plans.length} 个方案</div>${legacyAvailable ? `<p><a class="bd-link" href="#${ROOT}/pages?channel=${channel}&legacy=1">查看已有装修数据</a></p>` : ''}`;
     }
 
+    function openPlanStores(id: string) {
+        const plan = data.schemes.find(item => item.id === id);
+        const storesById = new Map(scope.stores.map(store => [store.id, store]));
+        if (!plan?.rules || !plan.rules.storeIds.every(storeId => storesById.has(storeId))) return;
+        const release = latestPlanReleases(data).find(item => item.snapshot.id === id);
+        const rule = release?.rules ?? plan.rules;
+        const stores = rule.storeIds.map(storeId => storesById.get(storeId));
+        if (!stores.length || !stores.every(store => store !== undefined)) return;
+        openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-plan-stores-title">
+            <div class="bd-modal-backdrop" data-bd-modal-close aria-hidden="true"></div>
+            <section class="bd-modal-panel bd-plan-stores-dialog">
+                <header><button type="button" data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-plan-stores-title">适用门店</h2>
+                    ${release && scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl(id, 'adjust-stores', plan.channel)}">调整门店</a>` : ''}</header>
+                <div class="bd bd-plan-stores-dialog-body">
+                    <input type="search" class="bd-plan-stores-search" data-bd-plan-stores-search aria-label="搜索门店" placeholder="门店名称 / MID / 区域 / 邮编">
+                    <div class="bd-table-wrap" tabindex="0" role="region" aria-label="适用门店列表"><table>
+                        <thead><tr><th scope="col">门店名称</th><th scope="col">MID</th><th scope="col">区域</th><th scope="col">邮编</th></tr></thead>
+                        <tbody>${stores.map(store => `<tr data-bd-plan-store-row><td>${esc(store.name)}</td><td>${esc(store.id)}</td><td>${esc(store.region)}</td><td>${esc(store.postalCode || '—')}</td></tr>`).join('')}
+                        <tr data-bd-plan-stores-empty hidden><td class="bd-empty" colspan="4">没有符合条件的门店</td></tr></tbody>
+                    </table></div>
+                </div>
+            </section>
+        </div>`);
+        const search = modal!.querySelector<HTMLInputElement>('[data-bd-plan-stores-search]')!;
+        const rows = Array.from(modal!.querySelectorAll<HTMLTableRowElement>('[data-bd-plan-store-row]'));
+        const empty = modal!.querySelector<HTMLTableRowElement>('[data-bd-plan-stores-empty]')!;
+        search.addEventListener('input', () => {
+            const query = search.value.trim().toLocaleLowerCase();
+            rows.forEach((row, index) => {
+                const { name, id, region, postalCode } = stores[index];
+                row.hidden = ![name, id, region, postalCode].some(value => value?.toLocaleLowerCase().includes(query));
+            });
+            empty.hidden = rows.some(row => !row.hidden);
+        });
+    }
+
     function legacyForStore(id: string) {
         return readData(scope.brand + '/' + id, scope.brandName);
+    }
+    function confirmStoreAdjustment(release: PlanRelease, storeIds: string[]) {
+        const added = storeIds.filter(id => !release.rules.storeIds.includes(id));
+        const removed = release.rules.storeIds.filter(id => !storeIds.includes(id));
+        if (!storeIds.length || (!added.length && !removed.length)) return;
+        const rows = [
+            ...(added.length ? [{ label: '新增门店', before: '—', after: storeNames(added) }] : []),
+            ...(removed.length ? [{ label: '移除门店', before: storeNames(removed), after: '—' }] : []),
+        ];
+        confirm('确认调整门店', rows, '确认保存', () => {
+            if (mutate(next => {
+                const now = Date.now();
+                if (release.rules.kind === 'activity' && release.rules.ends! > now && added.length)
+                    checkLegacyConflicts({ ...release.snapshot, rules: { ...release.rules, storeIds: added, starts: Math.max(now, release.rules.starts!) } });
+                updatePublishedPlanStores(next, release.snapshot.id, release.id, storeIds, decorationScope().stores, getAuthenticatedEmail() || '当前账号', now);
+            })) {
+                closeModal();
+                location.hash = `${ROOT}/pages?channel=${release.snapshot.channel}&saved=1`;
+            } else {
+                closeModal();
+            }
+        }, '保存后按调整后的门店范围生效。');
     }
     function checkLegacyConflicts(s: Scheme) {
         const rules = s.rules!;
@@ -700,6 +769,15 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
 
     function draw() {
         const editing = flow && !previewRoute ? scheme() : undefined;
+        if (editing && query.get('step') === 'adjust-stores') {
+            const release = latestPlanReleases(data).find(item => item.snapshot.id === editing.id);
+            if (scope.canWrite && release?.rules.storeIds.every(id => scope.stores.some(store => store.id === id))) {
+                drawStores(editing, release);
+                return;
+            }
+            location.hash = planUrl(editing.id, 'preview', editing.channel);
+            return;
+        }
         if (editing && latestPlanReleases(data).some(release => release.snapshot.id === editing.id)) {
             location.hash = planUrl(editing.id, 'preview', editing.channel);
             return;
@@ -1361,7 +1439,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         siblings.forEach(el => el.inert = true);
         const panel = modal;
         panel.addEventListener('submit', event => { event.preventDefault(); onConfirm?.(); });
-        const controls = () => Array.from(panel.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')).filter(el => el.getClientRects().length > 0);
+        const controls = () => Array.from(panel.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]')).filter(el => el.tabIndex >= 0 && el.getClientRects().length > 0);
         panel.addEventListener('bd-dismiss', () => { panel.remove(); states.forEach(([el, inert]) => el.inert = inert); modal = undefined; focus?.isConnected && focus.focus(); }, { once: true });
         panel.addEventListener('keydown', ev => { if (ev.key === 'Escape') {
             ev.preventDefault();
@@ -1427,6 +1505,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 modal!.querySelector('[data-bd-form-error]')!.textContent = message; });
             return;
         }
+        if (action === 'plan-stores') { openPlanStores(el.dataset.id ?? ''); return; }
         if (action === 'plan-on-shelf' || action === 'plan-off-shelf' || action === 'plan-delete') {
             const id = el.dataset.id;
             const title = action === 'plan-on-shelf' ? '上架' : action === 'plan-off-shelf' ? '下架' : '删除';
