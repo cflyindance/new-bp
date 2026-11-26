@@ -124,6 +124,29 @@ function applyCustomContent(root, elements) {
     }
   }
 }
+let selectionRequest;
+screen.addEventListener('click', event => {
+  if (selectionRequest === undefined) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const target = event.target.closest('[data-bd-select-field]');
+  if (target) parent.postMessage({ type: 'bd-select-content', id: target.dataset.bdSelectField, request: selectionRequest }, location.origin);
+}, true);
+
+function markSelectableContent(elements, selection) {
+  selectionRequest = selection?.request;
+  screen.style.pointerEvents = selection ? 'auto' : 'none';
+  if (!selection) return;
+  const header = screen.querySelector('header');
+  if (header) header.dataset.bdSelectField = 'top-navigation';
+  for (const field of elements) {
+    const target = screen.querySelector(field.selector);
+    if (!target) continue;
+    target.dataset.bdSelectField = field.id;
+    if (field.group === selection.region) target.dataset.bdSelection = field.id === selection.field ? 'field' : 'region';
+  }
+  for (const control of screen.querySelectorAll('a,button,input,select,textarea,[tabindex]')) control.tabIndex = -1;
+}
 function renderNative(page, landscape, palette, headerPalette, elements, reportDefaults) {
   const direction = landscape ? 'landscape' : 'portrait';
   const device = landscape ? 'android-14-1' : 'android-24-1';
@@ -208,5 +231,5 @@ if (style.mode === 'custom' && screen.firstElementChild) {
     header.style.boxShadow = headerPalette.divider ? 'inset 0 -1px 0 ' + headerPalette.onPrimary + '40' : 'none';
   }
 }
-screen.style.pointerEvents='none';fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
+markSelectableContent(elements, style.mode === 'custom' ? event.data.selection : undefined);fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();

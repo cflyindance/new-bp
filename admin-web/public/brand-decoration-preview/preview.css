@@ -85,3 +85,6 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .premium-kiosk.pt-reference-home .pt-home-action { grid-area: action; }
 .premium-kiosk.pt-reference-home[data-reference-align=center] .pt-home-copy { text-align: center; }
 .premium-kiosk.pt-reference-home[data-reference-align=center] .pt-home-detail { justify-content: center; }
+[data-bd-select-field] { cursor: pointer; }
+[data-bd-select-field]:hover, [data-bd-selection] { outline: 2px solid #1677ff; outline-offset: 2px; }
+[data-bd-selection="field"] { outline-width: 3px; }

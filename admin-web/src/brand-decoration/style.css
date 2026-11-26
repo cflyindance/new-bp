@@ -231,3 +231,5 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-reference-selected img { width: 124px; height: 104px; object-fit: contain; border-radius: 6px; background: #f4f6f8; }
 .bd-reference-file-details { flex: 1 1 160px; min-width: 0; display: grid; gap: 10px; }
 .bd-reference-file-details strong { overflow-wrap: anywhere; }
+.bd-content-panel [data-bd-field="content-region"] { margin-bottom: 16px; }
+.bd-selected-content-field > label { color: #1677ff; }

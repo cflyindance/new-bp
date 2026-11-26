@@ -717,6 +717,37 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     let defaultCopy: Record<string, string> = {};
     const copyKey = (s: Scheme, pageId: string) =>
         [s.id, pageId, s.styles[pageId].mode, s.styles[pageId].theme, orientation].join(':');
+    type ContentRegion = ReturnType<typeof pageContentGroup>;
+    let contentRegion: ContentRegion | undefined;
+    let contentRegionPage = '';
+    let selectedField: string | undefined;
+    function currentContentRegion(s: Scheme) {
+        const key = s.channel + ':' + page;
+        const available = pageElements(s.channel, page).filter(field => field.custom).map(pageContentGroup);
+        if (contentRegionPage !== key || !contentRegion || !available.includes(contentRegion)) {
+            contentRegionPage = key;
+            contentRegion = (Object.keys(PAGE_CONTENT_GROUPS) as ContentRegion[]).find(group => available.includes(group));
+            selectedField = undefined;
+        }
+        return contentRegion;
+    }
+    function selectContentRegion(s: Scheme, region: ContentRegion, fieldId?: string) {
+        const picker = root.querySelector<HTMLSelectElement>('[data-bd-field=content-region]');
+        if (!picker || !Array.from(picker.options).some(option => option.value === region)) return;
+        contentRegion = region;
+        selectedField = fieldId;
+        picker.value = region;
+        const fields = root.querySelector('.bd-page-content');
+        if (fields) fields.outerHTML = pageContentControls(s, 'custom');
+        if (fieldId) {
+            narrowContentOpen = true;
+            const panel = root.querySelector<HTMLDetailsElement>('.bd-content-panel');
+            if (panel) panel.open = true;
+            root.querySelector<HTMLElement>(`[data-bd-field=element][data-element="${fieldId}"]`)
+                ?.focus({ preventScroll: wideWorkbench.matches });
+        }
+        sendPreview(s);
+    }
     function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'),
         comparison?: { layout?: HomeLayout; orientation: string }) {
         const request = comparison ? undefined : ++defaultCopyRequest;
@@ -731,13 +762,16 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const headerColors = header?.background
             ? resolvePalette('custom', header.background)
             : resolvePalette(s.paletteId ?? 'custom', s.primary);
+        const selecting = !comparison && !previewRoute && workbenchMode === 'page' &&
+            s.styles[page].mode === 'custom' && !!root.querySelector('[data-bd-field=content-region]');
         frame?.contentWindow?.postMessage({
+            selection: selecting ? { region: currentContentRegion(s), field: selectedField, request } : undefined,
             type: 'bd-render', defaultCopyRequest: root.querySelector('.bd-page-content') ? request : undefined, scheme: { ...s, brandName: scope.brandName },
             palette: resolvePalette(s.paletteId, s.primary),
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
             elements: pageElements(s.channel, page).flatMap(field => {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
-                return selector ? [{ id: field.id, kind: field.kind, selector, value: s.pageContent?.[page]?.[field.id] }] : [];
+                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field), selector, value: s.pageContent?.[page]?.[field.id] }] : [];
             }),
             homeLayout: s.channel === 'kiosk' && page === 'home' && s.styles.home.mode === 'custom'
                 ? comparison?.layout ?? s.styles.home.referenceLayout ?? s.styles.home.referenceTemplate?.layout
@@ -754,11 +788,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     let workbenchMode: 'page' | 'components' = 'page';
     let pageBeforeComponents = page;
-    function switchWorkbench(mode: typeof workbenchMode) {
+    function switchWorkbench(mode: typeof workbenchMode, keepPreviewPage = false) {
         if (mode === workbenchMode) return;
         if (mode === 'components') {
             pageBeforeComponents = page;
-            if (channel === 'kiosk' && (page === 'home' || page === 'screensaver')) {
+            if (!keepPreviewPage && channel === 'kiosk' && (page === 'home' || page === 'screensaver')) {
                 const current = scheme();
                 const candidates = ['finish', 'orderType', 'menu'];
                 page = current?.rules?.kind === 'activity'
@@ -833,14 +867,22 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const switchLayout = mode === 'default' && scope.canWrite && pageElements(s.channel, page).some(field => field.custom)
             ? '<button type="button" class="bd-link" data-bd-action="enable-page-content">切换自定义布局</button>'
             : '';
-        return contentPanel('页面内容', pageContentControls(s, mode) || `<p class="bd-help">${empty}</p>${switchLayout}`);
+        const regions = mode === 'custom' ? pageElements(s.channel, page).filter(field => field.custom).map(pageContentGroup) : [];
+        const selected = regions.length ? currentContentRegion(s) : undefined;
+        const picker = selected ? `<label>编辑区域<select data-bd-field="content-region">${
+            Object.entries(PAGE_CONTENT_GROUPS).filter(([group]) => regions.includes(group as ContentRegion))
+                .map(([group, name]) => `<option value="${group}" ${selected === group ? 'selected' : ''}>${name}</option>`).join('')
+        }</select></label>` : '';
+        return contentPanel('页面内容', picker + pageContentControls(s, mode) || `<p class="bd-help">${empty}</p>${switchLayout}`);
     }
     function pageContentControls(s: Scheme, mode: string) {
         if (mode === 'inherit') return '';
         const content = s.pageContent?.[page] ?? {};
         const elements = pageElements(s.channel, page).filter(field => mode === 'custom' ? field.custom : field.native);
         if (!elements.length) return '';
+        const region = mode === 'custom' ? currentContentRegion(s) : undefined;
         const groups = Object.entries(PAGE_CONTENT_GROUPS).flatMap(([group, label]) => {
+            if (region && region !== group) return [];
             const fields = elements.filter(field => pageContentGroup(field) === group);
             if (!fields.length) return [];
             const controls = fields.map(field => {
@@ -856,7 +898,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     ? `<small class="bd-default-copy">系统默认：<span data-bd-default-copy="${field.id}">${esc(
                         (defaultCopyKey === copyKey(s, page) && defaultCopy[field.id]) || '…'
                     )}</span></small>` : '';
-                return `<div><label>${field.label}${original}${control}</label>${reset}</div>`;
+                return `<div ${selectedField === field.id && mode === 'custom' ? 'class="bd-selected-content-field"' : ''}><label>${field.label}${original}${control}</label>${reset}</div>`;
             }).join('');
             return [`<section class="bd-content-group" data-bd-content-group="${group}" aria-label="${label}">
                 <h3>${label}</h3>${controls}</section>`];
@@ -1405,6 +1447,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         return;
     } const s = scheme();
     if (!s) return;
+    if (field === 'content-region') {
+        selectContentRegion(s, input.value as ContentRegion);
+        return;
+    }
     if (field === 'element') {
         const id = input.dataset.element;
         const element = pageElements(s.channel, page).find(item => item.id === id);
@@ -1480,6 +1526,19 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     else input.value = String(s[field as 'name' | 'primary'] ?? ''); };
     const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow)
         return;
+        if (event.data?.type === 'bd-select-content' && event.data.request === defaultCopyRequest) {
+            const current = scheme();
+            if (!current || current.styles[page].mode !== 'custom' || workbenchMode !== 'page' ||
+                !root.querySelector('[data-bd-field=content-region]')) return;
+            if (event.data.id === 'top-navigation') {
+                narrowContentOpen = true;
+                switchWorkbench('components', true);
+                return;
+            }
+            const field = pageElements(current.channel, page).find(item => item.id === event.data.id && item.custom);
+            if (field) selectContentRegion(current, pageContentGroup(field), field.id);
+            return;
+        }
         if (event.data?.type === 'bd-default-copy' && event.data.request === defaultCopyRequest) {
             const values = event.data.values;
             if (!values || typeof values !== 'object') return;
