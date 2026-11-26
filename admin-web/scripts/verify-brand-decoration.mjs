@@ -106,6 +106,26 @@ try{
   P.publishPlan(flow,newDaily,stores,'demo');
   assert.equal(P.planPage(flow,'a','kiosk','home',end).snapshot.id,newDaily.id,'重新上架使用新快照');
 
+  const draftScope = makePlan('门店待定',{kind:'activity', storeIds:[], timezone:'', pageIds:['home']});
+  draftScope.draftStep = 'rules';
+  const offlineScope = D.copy(daily);
+  const archived = D.copy(flow.releases.find(release => release.snapshot.id === daily.id));
+  archived.offShelf = true;
+  const unpublishedScope = { schema: 1, revision: 0, schemes: [draftScope, offlineScope], releases: [archived] };
+  const history = JSON.stringify(unpublishedScope.releases);
+  P.updateUnpublishedPlanStores(unpublishedScope, draftScope.id, ['a'], stores, start);
+  assert.deepEqual(draftScope.rules.storeIds,['a']);
+  assert.equal(draftScope.rules.timezone,'Asia/Shanghai');
+  assert.equal(draftScope.draftStep,'rules');
+  P.updateUnpublishedPlanStores(unpublishedScope, offlineScope.id, ['b'], stores, start);
+  assert.deepEqual(offlineScope.rules.storeIds,['b']);
+  assert.equal(offlineScope.draftStep,undefined);
+  assert.equal(JSON.stringify(unpublishedScope.releases),history);
+  assert.equal(P.latestPlanReleases(unpublishedScope).length,0);
+  assert.throws(() => P.updateUnpublishedPlanStores(unpublishedScope, draftScope.id, ['a','missing'], stores, start), /有权/);
+  assert.throws(() => P.updateUnpublishedPlanStores(unpublishedScope, draftScope.id, [], stores, start), /有权/);
+  assert.throws(() => P.updateUnpublishedPlanStores(unpublishedScope, draftScope.id, ['a','b'], [stores[0],{...stores[1], timezone:'America/New_York'}], start), /时区/);
+
   const scopeChange = { ...D.copy(flow), schemes: [D.copy(daily), D.copy(newDaily)] };
   const liveDaily = P.latestPlanReleases(scopeChange).find(item => item.snapshot.id === daily.id);
   const oldSnapshot = JSON.stringify(liveDaily);

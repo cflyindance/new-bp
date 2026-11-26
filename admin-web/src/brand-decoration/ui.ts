@@ -1,7 +1,7 @@
 import { analyzeReferenceImage, isReferenceImage, referenceTheme, templateMatches, type HomeLayout, type HomeTemplate } from './reference-template';
 import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_TEXT, PAGE_CONTENT_GROUPS, pageContentGroup, pageElements } from './page-content';
 import { PALETTES, describePalette, resolvePalette, type PaletteId } from './palette';
-import { latestPlanReleases, planAt, publishPlan, updatePublishedPlanStores, validatePlanRules, type PlanRelease, type PlanRules } from './plans';
+import { latestPlanReleases, planAt, publishPlan, updatePublishedPlanStores, updateUnpublishedPlanStores, validatePlanRules, type PlanRelease, type PlanRules } from './plans';
 import { effectiveEnd, emptySchedule, formatLocal, parseLocal, resolveSchedule, saveActivity, type DecorationActivity } from './schedule';
 import './style.css';
 import '../config/deployment-change-preview.css';
@@ -320,13 +320,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         });
     }
 
-    function drawStores(s: Scheme, release?: PlanRelease) {
+    function drawStores(s: Scheme, adjustment?: { release?: PlanRelease }) {
+        const release = adjustment?.release;
         channel = s.channel;
         const rules = release?.rules ?? s.rules!;
         const activity = rules.kind === 'activity';
-        const picked = rules.storeIds.length ? rules.storeIds : scope.stores.length === 1 ? [scope.stores[0].id] : [];
+        const picked = adjustment || rules.storeIds.length ? rules.storeIds : scope.stores.length === 1 ? [scope.stores[0].id] : [];
         const regions = [...new Set(scope.stores.map(store => store.region))].sort();
-        const header = release ? renderStandalonePageHeader({
+        const header = adjustment ? renderStandalonePageHeader({
             titleHtml: '调整门店',
             subtitleHtml: esc(s.name),
             backHtml: backToPlans(),
@@ -382,7 +383,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             all.disabled = !visible.length;
             all.checked = !!visible.length && checkedCount === visible.length;
             all.indeterminate = checkedCount > 0 && checkedCount < visible.length;
-            nextButton.disabled = !chosen.length || Boolean(release && chosen.length === rules.storeIds.length &&
+            nextButton.disabled = !chosen.length || Boolean(adjustment && chosen.length === rules.storeIds.length &&
                 chosen.every(store => rules.storeIds.includes(store.id)));
             form.querySelector('[data-bd-store-count]')!.textContent = '(' + chosen.length + ')';
             const selectionHtml = chosen.length ? `<ul class="bd-picked-stores">${chosen.map(store => `<li>
@@ -435,8 +436,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         form.addEventListener('submit', event => {
             event.preventDefault();
             const targets = selected();
-            if (release) {
-                confirmStoreAdjustment(release, targets.map(store => store.id));
+            if (adjustment) {
+                confirmStoreAdjustment(s, release, targets.map(store => store.id));
                 return;
             }
             const timezone = targets[0]?.timezone ?? '';
@@ -653,7 +654,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                 const state = !release ? (item.draftStep ? '草稿' : '未上架') : rules.kind === 'activity' ?
                     (now < rules.starts! ? '待开始' : now >= rules.ends! ? '已结束' : '进行中') :
                     activeStores.length === rules.storeIds.length ? '日常使用中' : activeStores.length ? '部分门店使用中' : '已被替换';
-                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${rules.storeIds.length ? `<button type="button" class="bd-link bd-store-count" data-bd-action="plan-stores" data-id="${esc(item.id)}" aria-haspopup="dialog" aria-label="${esc(item.name)}适用门店，${rules.storeIds.length} 家">${rules.storeIds.length} 家</button>` : '0 家'}</td><td>${esc(period(rules, false))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
+                return `<tr><td>${esc(item.name)}</td><td>${rules.kind === 'activity' ? '限时装修' : '日常装修'}</td><td>${lineLabel[item.channel]}</td><td>${(scope.canWrite || rules.storeIds.length) ? `<button type="button" class="bd-link bd-store-count" data-bd-action="plan-stores" data-id="${esc(item.id)}" aria-haspopup="dialog" aria-label="${esc(item.name)}适用门店，${rules.storeIds.length} 家">${rules.storeIds.length} 家</button>` : '0 家'}</td><td>${esc(period(rules, false))}</td><td>${release ? '已上架 · ' : ''}${state}</td><td><a class="bd-link" href="${planUrl(item.id, 'preview', item.channel)}" aria-label="${esc(item.name)}效果预览">效果预览</a>${scope.canWrite ? `
                     ${release ? '' : `<a class="bd-link" href="${planUrl(item.id, resumeStep(item), item.channel)}">编辑</a>`}
                     <button class="bd-link" data-bd-action="${release ? 'plan-off-shelf' : 'plan-on-shelf'}" data-id="${esc(item.id)}" ${!release && item.draftStep ? 'disabled' : ''}>${release ? '下架' : '上架'}</button>
                     <button class="bd-link" data-bd-action="duplicate" data-id="${esc(item.id)}">复制</button>
@@ -669,18 +670,18 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const release = latestPlanReleases(data).find(item => item.snapshot.id === id);
         const rule = release?.rules ?? plan.rules;
         const stores = rule.storeIds.map(storeId => storesById.get(storeId));
-        if (!stores.length || !stores.every(store => store !== undefined)) return;
+        if (!stores.every(store => store !== undefined) || (!stores.length && !scope.canWrite)) return;
         openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-plan-stores-title">
             <div class="bd-modal-backdrop" data-bd-modal-close aria-hidden="true"></div>
             <section class="bd-modal-panel bd-plan-stores-dialog">
                 <header><button type="button" data-bd-modal-close aria-label="关闭">×</button><h2 id="bd-plan-stores-title">适用门店</h2>
-                    ${release && scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl(id, 'adjust-stores', plan.channel)}">调整门店</a>` : ''}</header>
+                    ${scope.canWrite ? `<a class="bd-button bd-primary" href="${planUrl(id, 'adjust-stores', plan.channel)}">调整门店</a>` : ''}</header>
                 <div class="bd bd-plan-stores-dialog-body">
-                    <input type="search" class="bd-plan-stores-search" data-bd-plan-stores-search aria-label="搜索门店" placeholder="门店名称 / MID / 区域 / 邮编">
+                    <input type="search" class="bd-plan-stores-search" data-bd-plan-stores-search ${stores.length ? '' : 'hidden'} aria-label="搜索门店" placeholder="门店名称 / MID / 区域 / 邮编">
                     <div class="bd-table-wrap" tabindex="0" role="region" aria-label="适用门店列表"><table>
                         <thead><tr><th scope="col">门店名称</th><th scope="col">MID</th><th scope="col">区域</th><th scope="col">邮编</th></tr></thead>
                         <tbody>${stores.map(store => `<tr data-bd-plan-store-row><td>${esc(store.name)}</td><td>${esc(store.id)}</td><td>${esc(store.region)}</td><td>${esc(store.postalCode || '—')}</td></tr>`).join('')}
-                        <tr data-bd-plan-stores-empty hidden><td class="bd-empty" colspan="4">没有符合条件的门店</td></tr></tbody>
+                        <tr data-bd-plan-stores-empty ${stores.length ? 'hidden' : ''}><td class="bd-empty" colspan="4">${stores.length ? '没有符合条件的门店' : '尚未选择门店'}</td></tr></tbody>
                     </table></div>
                 </div>
             </section>
@@ -701,9 +702,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     function legacyForStore(id: string) {
         return readData(scope.brand + '/' + id, scope.brandName);
     }
-    function confirmStoreAdjustment(release: PlanRelease, storeIds: string[]) {
-        const added = storeIds.filter(id => !release.rules.storeIds.includes(id));
-        const removed = release.rules.storeIds.filter(id => !storeIds.includes(id));
+    function confirmStoreAdjustment(s: Scheme, release: PlanRelease | undefined, storeIds: string[]) {
+        const rules = release?.rules ?? s.rules!;
+        const added = storeIds.filter(id => !rules.storeIds.includes(id));
+        const removed = rules.storeIds.filter(id => !storeIds.includes(id));
         if (!storeIds.length || (!added.length && !removed.length)) return;
         const rows = [
             ...(added.length ? [{ label: '新增门店', before: '—', after: storeNames(added) }] : []),
@@ -712,16 +714,21 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         confirm('确认调整门店', rows, '确认保存', () => {
             if (mutate(next => {
                 const now = Date.now();
+                const stores = decorationScope().stores;
+                if (!release) {
+                    updateUnpublishedPlanStores(next, s.id, storeIds, stores, now);
+                    return;
+                }
                 if (release.rules.kind === 'activity' && release.rules.ends! > now && added.length)
                     checkLegacyConflicts({ ...release.snapshot, rules: { ...release.rules, storeIds: added, starts: Math.max(now, release.rules.starts!) } });
-                updatePublishedPlanStores(next, release.snapshot.id, release.id, storeIds, decorationScope().stores, getAuthenticatedEmail() || '当前账号', now);
+                updatePublishedPlanStores(next, release.snapshot.id, release.id, storeIds, stores, getAuthenticatedEmail() || '当前账号', now);
             })) {
                 closeModal();
-                location.hash = `${ROOT}/pages?channel=${release.snapshot.channel}&saved=1`;
+                location.hash = `${ROOT}/pages?channel=${s.channel}&saved=1`;
             } else {
                 closeModal();
             }
-        }, '保存后按调整后的门店范围生效。');
+        }, release ? '保存后按调整后的门店范围生效。' : '');
     }
     function checkLegacyConflicts(s: Scheme) {
         const rules = s.rules!;
@@ -771,8 +778,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const editing = flow && !previewRoute ? scheme() : undefined;
         if (editing && query.get('step') === 'adjust-stores') {
             const release = latestPlanReleases(data).find(item => item.snapshot.id === editing.id);
-            if (scope.canWrite && release?.rules.storeIds.every(id => scope.stores.some(store => store.id === id))) {
-                drawStores(editing, release);
+            if (scope.canWrite && (!release || release.rules.storeIds.every(id => scope.stores.some(store => store.id === id)))) {
+                drawStores(editing, { release });
                 return;
             }
             location.hash = planUrl(editing.id, 'preview', editing.channel);

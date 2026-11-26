@@ -131,3 +131,25 @@ export function updatePublishedPlanStores(data: DecorationData, id: string, rele
     current.updatedAt = new Date(now).toISOString();
     appendPlanRelease(data, { ...release.snapshot, rules, updatedAt: current.updatedAt }, stores, actor, true);
 }
+
+export function updateUnpublishedPlanStores(data: DecorationData, id: string, storeIds: string[], stores: PlanStore[], now = Date.now()) {
+    const scheme = data.schemes.find(item => item.id === id);
+    if (!scheme?.rules || latestPlanReleases(data).some(release => release.snapshot.id === id))
+        throw Error('方案状态已变化，请返回列表重试');
+    const previous = scheme.rules;
+    const allowed = new Map(stores.map(store => [store.id, store]));
+    if (!storeIds.length || new Set(storeIds).size !== storeIds.length ||
+        [...previous.storeIds, ...storeIds].some(storeId => !allowed.has(storeId)))
+        throw Error('请选择有权使用的门店');
+    if (previous.storeIds.length === storeIds.length && storeIds.every(storeId => previous.storeIds.includes(storeId)))
+        throw Error('适用门店没有变化');
+    const timezone = allowed.get(storeIds[0])!.timezone;
+    if (previous.kind === 'activity') {
+        if (!timezone || storeIds.some(storeId => allowed.get(storeId)!.timezone !== timezone))
+            throw Error('活动门店须使用同一时区，请按时区分批创建');
+        if ((previous.starts !== undefined || previous.ends !== undefined) && previous.timezone !== timezone)
+            throw Error('新门店与已设置的有效期时区不同，请在编辑方案时重新设置有效期');
+    }
+    scheme.rules = { ...previous, storeIds: [...storeIds], timezone };
+    scheme.updatedAt = new Date(now).toISOString();
+}
