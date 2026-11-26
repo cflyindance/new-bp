@@ -1,6 +1,8 @@
 export const PAGE_CONTENT_GROUPS = {
     copy: '标题与说明',
     button: '按钮',
+    paymentMethods: '支付方式卡片',
+    choiceCards: '选项卡片',
     field: '字段标签',
     image: '图片',
     visibility: '显示设置',
@@ -11,7 +13,9 @@ type ElementSpec = {
     id: string;
     label: string;
     kind: 'text' | 'image' | 'hidden';
-    group?: 'button' | 'field';
+    group?: Exclude<ContentGroup, 'image' | 'visibility'>;
+    attribute?: 'placeholder';
+    previewHitArea?: string;
     custom?: string;
     native?: string;
 };
@@ -81,6 +85,12 @@ const KIOSK_ELEMENTS: Record<string, readonly ElementSpec[]> = {
     payment: [
         ...heading(),
         fieldLabel('amountLabel', '金额标签', '.pt-pay-amount > span'),
+        { ...text('scanTitle', '扫码支付标题', '.pt-payment-options [data-value="scan"] .pt-option-copy > strong'),
+            group: 'paymentMethods', previewHitArea: '.pt-payment-options [data-value="scan"]' },
+        { ...text('scanNote', '扫码支付说明', '.pt-payment-options [data-value="scan"] .pt-option-copy > small'), group: 'paymentMethods' },
+        { ...text('cardTitle', '银行卡支付标题', '.pt-payment-options [data-value="card"] .pt-option-copy > strong'),
+            group: 'paymentMethods', previewHitArea: '.pt-payment-options [data-value="card"]' },
+        { ...text('cardNote', '银行卡支付说明', '.pt-payment-options [data-value="card"] .pt-option-copy > small'), group: 'paymentMethods' },
     ],
     waitList: [
         ...heading(),
@@ -157,6 +167,167 @@ const EMENU_ELEMENTS: Record<string, readonly ElementSpec[]> = {
     login: mobileHeading('登录按钮文案'),
 };
 
+
+const placeholder = (id: string, label: string, selector: string): ElementSpec =>
+    ({ ...fieldLabel(id, label, selector), attribute: 'placeholder' });
+const choiceCopy = (id: string, label: string, group: string, value: string, editableTitle = true): ElementSpec[] => {
+    const card = `[data-k="pt-select"][data-group="${group}"][data-value="${value}"]`;
+    const options: ElementSpec[] = [
+        { ...text(id + 'Note', label + '说明', card + ' .pt-option-copy > small'), group: 'choiceCards' },
+    ];
+    if (editableTitle) options.unshift({
+        ...text(id + 'Title', label + '标题', card + ' .pt-option-copy > strong'), group: 'choiceCards', previewHitArea: card,
+    });
+    else options[0].previewHitArea = card;
+    return options;
+};
+
+const homeCopy = [
+    text('eyebrow', '页眉短句', '.pt-home-copy > .pt-kicker'),
+    text('leftTagline', '品牌短句一', '.pt-home-detail > span:first-child'),
+    text('rightTagline', '品牌短句二', '.pt-home-detail > span:last-child'),
+    text('actionNote', '操作提示', '.pt-home-action > small'),
+    text('footerNote', '页脚寄语', '.pt-home-foot > span:last-child'),
+];
+const phoneCopy = [
+    fieldLabel('phoneFieldLabel', '手机号字段标签', '.pt-phone-field > span'),
+    placeholder('phonePlaceholder', '手机号输入提示', '#pt-phone'),
+    text('phoneHelp', '手机号用途说明', '.pt-form-card .pt-form-help'),
+    text('formCaption', '表单短句', '.pt-form-symbol > span'),
+    button('clearPhone', '清空按钮', '.pt-key[data-value="清空"]'),
+];
+const membershipCopy = [
+    text('memberTagline', '会员卡标识', '.pt-membership-card > div:first-child > span'),
+    text('memberCaption', '会员卡短句', '.pt-membership-card > .pt-kicker'),
+    text('memberTitle', '会员卡标题', '.pt-membership-card > h2'),
+];
+const KIOSK_LAYOUT_COPY: Record<string, readonly ElementSpec[]> = {
+    home: homeCopy,
+    screensaver: homeCopy,
+    orderType: [...choiceCopy('dineIn', '堂食卡片', 'dining', '堂食'), ...choiceCopy('takeout', '打包卡片', 'dining', '打包')],
+    menu: [
+        text('bannerCaption', '推荐区短句', '.pt-menu-banner .pt-kicker'),
+        text('bannerTitle', '活动主标题', '.pt-menu-banner h2'),
+        text('bannerNote', '活动说明', '.pt-menu-banner p'),
+        text('listNote', '商品区说明', '.pt-list-title > span'),
+        fieldLabel('cartCountLabel', '已选餐品标签', '.pt-cart > div small'),
+    ],
+    detail: [
+        text('detailCaption', '商品详情短句', '.pt-detail-copy > .pt-kicker'),
+        text('detailBadge', '商品展示角标', '.pt-detail-hero .pt-flag'),
+        ...choiceCopy('regular', '标准份规格', 'spec', '标准份', false),
+        ...choiceCopy('large', '大份规格', 'spec', '大份', false),
+    ],
+    combo: ['主食', '配菜', '饮品'].flatMap((name, index) => [
+        fieldLabel('groupTitle' + index, name + '分组名称', `.pt-combo-groups > section:nth-child(${index + 1}) .pt-combo-title h3`),
+        text('groupNote' + index, name + '分组说明', `.pt-combo-groups > section:nth-child(${index + 1}) .pt-combo-title small`),
+    ]),
+    review: [
+        text('summaryCaption', '订单摘要短句', '.pt-summary > .pt-kicker'),
+        text('summaryTitle', '订单摘要标题', '.pt-summary > h2'),
+        fieldLabel('diningLabel', '用餐方式标签', '.pt-summary > div:nth-of-type(1) > span'),
+        fieldLabel('quantityLabel', '餐品数量标签', '.pt-summary > div:nth-of-type(2) > span'),
+        text('summaryNote', '订单摘要说明', '.pt-summary > small'),
+    ],
+    payment: [text('paymentSafety', '支付提示', '.pt-payment-safety > [data-bd-copy]')],
+    finish: [
+        text('finishCaption', '完成页短句', '.pt-finish > .pt-kicker'),
+        text('subtitle', '完成页说明', '.pt-finish > p'),
+        fieldLabel('orderCaption', '取餐号副标签', '.pt-ticket-label > small'),
+        fieldLabel('totalLabel', '订单金额标签', '.pt-ticket-total > span'),
+        button('receiptPrint', '打印小票按钮', '.pt-receipt-actions [data-k="print"] > [data-bd-copy]'),
+        button('receiptSkip', '无需小票按钮', '.pt-receipt-actions [data-k="home"]'),
+        text('thanksNote', '致谢说明', '.pt-thanks > span'),
+    ],
+    waitList: [
+        text('queueCaption', '登记卡片短句', '.pt-queue-card > .pt-kicker'),
+        text('queueTitle', '登记卡片标题', '.pt-queue-card > h2'),
+        text('queueNote', '登记卡片说明', '.pt-queue-card > p'),
+        text('queueTagline', '服务寄语', '.pt-queue-card > div > span:last-child'),
+        fieldLabel('partyLabel', '用餐人数标签', '.pt-queue-form > label:first-child'),
+        placeholder('phonePlaceholder', '联系电话输入提示', '#pt-wait-phone'),
+    ],
+    tableService: [...choiceCopy('counter', '柜台取餐卡片', 'service', '柜台自取'), ...choiceCopy('delivery', '送餐到桌卡片', 'service', '送餐到桌')],
+    phoneInput: phoneCopy,
+    reward: [
+        ...membershipCopy,
+        fieldLabel('pointsLabel', '可用积分标签', '.pt-membership-bottom small'),
+        button('firstRewardAction', '第一条奖励领取按钮', '.pt-reward:nth-child(1) > i'),
+        button('secondRewardAction', '第二条奖励领取按钮', '.pt-reward:nth-child(2) > i'),
+    ],
+    enterName: [
+        text('nameCaption', '姓名输入短句', '.pt-name-card > .pt-kicker'),
+        placeholder('namePlaceholder', '姓名输入提示', '#pt-name'),
+        text('nameNote', '姓名卡片说明', '.pt-name-decoration > p'),
+    ],
+    partySizeSelection: [
+        text('introTitle', '人数卡片标题', '.pt-party-intro > h2'),
+        text('introNote', '人数卡片说明', '.pt-party-intro > p'),
+    ],
+    togoOption: [
+        ...choiceCopy('withCutlery', '需要餐具卡片', 'cutlery', '需要餐具'),
+        ...choiceCopy('withoutCutlery', '无需餐具卡片', 'cutlery', '无需餐具'),
+        text('ecoNote', '外带提示', '.pt-quiet-note > [data-bd-copy]'),
+    ],
+    chooseTable: [
+        fieldLabel('zoneLabel', '用餐区域标签', '.pt-zone-label > span'),
+        text('zoneHelp', '选桌提示', '.pt-zone-label > small'),
+    ],
+    tippingPanel: [
+        text('gratitudeTitle', '感谢卡片标题', '.pt-gratitude > h2'),
+        text('gratitudeNote', '感谢卡片说明', '.pt-gratitude > p'),
+        ...choiceCopy('tip15', '第一档小费', 'tip', '15%', false),
+        ...choiceCopy('tip18', '第二档小费', 'tip', '18%', false),
+        ...choiceCopy('tip20', '第三档小费', 'tip', '20%', false),
+        button('skipTip', '不添加按钮', '.pt-tip-alternatives [data-k="pt-select"]'),
+        button('customTip', '自定义金额按钮', '.pt-tip-alternatives [data-k="pt-custom-tip"]'),
+        text('tipHelp', '小费说明', '.pt-choice-page > .pt-form-help'),
+    ],
+    cardPayment: [text('statusNote', '读卡器提示', '.pt-status-card > p')],
+    afterCreditCardPay: [text('statusNote', '支付完成说明', '.pt-status-card > p')],
+    signature: [
+        fieldLabel('paidLabel', '已支付金额标签', '.pt-signature-summary > span'),
+        button('clearSignature', '重新签写按钮', '.pt-signature-card [data-k="native-clear"]'),
+        fieldLabel('signLineLabel', '签名线标签', '.pt-sign-line > span'),
+        text('signLineNote', '签名线说明', '.pt-sign-line > small'),
+    ],
+    login: phoneCopy,
+    paymentMember: [
+        ...membershipCopy,
+        text('memberNote', '会员卡说明', '.pt-membership-bottom > span'),
+        text('benefitTitle', '权益标题', '.pt-benefits > div:first-child > strong'),
+        text('benefitNote', '权益说明', '.pt-benefits > div:first-child > small'),
+        text('pointsTitle', '积分标题', '.pt-benefits > div:last-child > strong'),
+        text('pointsNote', '积分说明', '.pt-benefits > div:last-child > small'),
+    ],
+    connectionError: [
+        text('errorTitle', '异常卡片标题', '.pt-status-card > strong'),
+        text('errorNote', '异常卡片说明', '.pt-status-card > p'),
+        text('errorTag', '异常卡片提示', '.pt-status-tag'),
+    ],
+};
+const EMENU_LAYOUT_COPY: Record<string, readonly ElementSpec[]> = {
+    home: [text('eyebrow', '首页短句', '.em main > .eyebrow')],
+    menu: [
+        fieldLabel('featuredCategory', '第二分类标签', '.em .menu-tabs > span:first-of-type'),
+        fieldLabel('drinkCategory', '第三分类标签', '.em .menu-tabs > span:last-of-type'),
+    ],
+    detail: [fieldLabel('portionLabel', '份量标签', '.em main .row:last-child > b')],
+    review: [text('eyebrow', '订单短句', '.em main > .eyebrow')],
+    payment: [
+        text('eyebrow', '支付短句', '.em main > .eyebrow'),
+        { ...text('cardTitle', '银行卡支付标题', '.em [data-payment-method="card"] > b'), group: 'paymentMethods',
+            previewHitArea: '[data-payment-method="card"]' },
+        { ...text('scanTitle', '扫码支付标题', '.em [data-payment-method="scan"] > b'), group: 'paymentMethods',
+            previewHitArea: '[data-payment-method="scan"]' },
+    ],
+    finish: [text('eyebrow', '完成页短句', '.em .success > p:first-of-type')],
+    login: [
+        text('eyebrow', '登录短句', '.em main > .eyebrow'),
+        placeholder('phonePlaceholder', '手机号输入提示', '.em main > input'),
+    ],
+};
+
 export type PageContent = Record<string, Record<string, string | true>>;
 export const MAX_PAGE_IMAGE_BYTES = 120 * 1024;
 const MAX_IMAGE_LENGTH = 4 * Math.ceil(MAX_PAGE_IMAGE_BYTES / 3) + 32;
@@ -164,7 +335,13 @@ export const MAX_PAGE_TEXT = 60;
 
 export function pageElements(channel: 'kiosk' | 'emenu', page: string) {
     const catalog = channel === 'kiosk' ? KIOSK_ELEMENTS : EMENU_ELEMENTS;
-    return Object.hasOwn(catalog, page) ? catalog[page] : [];
+    if (!Object.hasOwn(catalog, page)) return [];
+    const extra = channel === 'kiosk' ? KIOSK_LAYOUT_COPY : EMENU_LAYOUT_COPY;
+    const fields = catalog[page];
+    const kicker = channel === 'kiosk' && fields.some(field => field.custom === '.pt-heading h1')
+        ? [text('headingCaption', '页面短句', '.pt-heading > .pt-kicker')]
+        : [];
+    return [...fields, ...kicker, ...(Object.hasOwn(extra, page) ? extra[page] : [])];
 }
 
 export function validatePageContent(channel: 'kiosk' | 'emenu', content: PageContent) {

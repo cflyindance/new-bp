@@ -771,7 +771,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             headerPalette: sharedHeaderLayout(s.sharedHeader) === 'custom' ? { ...headerColors, divider: header?.divider } : undefined,
             elements: pageElements(s.channel, page).flatMap(field => {
                 const selector = s.styles[page].mode === 'custom' ? field.custom : field.native;
-                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field), selector, value: s.pageContent?.[page]?.[field.id] }] : [];
+                return selector ? [{ id: field.id, kind: field.kind, group: pageContentGroup(field), selector,
+                    hitArea: field.previewHitArea, attribute: field.attribute, value: s.pageContent?.[page]?.[field.id] }] : [];
             }),
             homeLayout: s.channel === 'kiosk' && page === 'home' && s.styles.home.mode === 'custom'
                 ? comparison?.layout ?? s.styles.home.referenceLayout ?? s.styles.home.referenceTemplate?.layout
