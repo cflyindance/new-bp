@@ -101,9 +101,32 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .has-scheme-palette :is(.pt-input,.em input)::placeholder { color: var(--bd-role-muted); opacity: 1; }
 .has-scheme-palette :is(.pt-input,.em input):focus-visible { outline: 2px solid var(--bd-role-control-line); }
 .bd-themed-header :is(.pt-header-note span,.pt-header-note b,.pt-brand strong,.pt-brand small,.pt-icon-button) { color: inherit; }
+/* Apply reference details to the chosen page template without moving its required controls. */
+.premium-kiosk.bd-reference-layout { --pt-radius: var(--pt-ref-radius); }
+.em.bd-reference-layout :is(.hero,.meal,.food,.row,footer button) { border-radius: var(--pt-ref-radius); }
+.bd-reference-layout[data-reference-align=center] :is(.pt-page-heading,.pt-detail-copy,.pt-status-card,.pt-form-card h1) { text-align: center; }
+.em.bd-reference-layout[data-reference-align=center] main > h1 { text-align: center; }
+.em[data-page=detail] main > .hero { height: 300px; margin: 0; }
+.em.bd-reference-layout[data-page=detail]:not(.em-landscape) main > .hero { height: calc(var(--pt-ref-image) * .68); }
 .em-food-action{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .em .em-add{display:grid;place-items:center;width:28px;height:28px;padding:0;border-radius:50%;flex:none}
 .em.has-scheme-palette :is(p,.eyebrow){opacity:1}
 .em.has-scheme-palette p{color:var(--bd-role-muted)}
 .premium-kiosk.has-scheme-palette .pt-combo-option.is-selected > i{color:inherit}
 .em .bd-themed-header span, .has-scheme-palette :is(.pt-primary > i,.pt-membership-card > .pt-kicker){opacity:1}
+.em-landscape header{padding:12px 24px}
+.em-landscape main{padding:14px 24px;overflow:auto}
+.em-landscape h1{font-size:28px;margin:8px 0}
+.em-landscape footer{padding:10px 24px}
+.em-landscape .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.em-landscape .meal{height:94px}
+.em-landscape.em-layout-noir .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.em-landscape .row{padding-block:10px}
+.em-landscape .success{padding:8px 0}
+.em-landscape .success p{margin:6px 0}
+.em-landscape .success i{width:42px;height:42px;font-size:23px}
+.em-landscape .success h1{font-size:36px}
+.em-landscape[data-page=home] main,.em-landscape[data-page=detail] main{display:block}
+.em-landscape[data-page=home] main>.hero,.em-landscape[data-page=detail] main>.hero{
+  float:right;width:46%;height:100%;max-height:220px;margin:0 0 0 24px;border-radius:16px;
+}
