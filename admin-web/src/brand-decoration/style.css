@@ -437,7 +437,7 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-suite-panel h2 {margin:0;white-space:nowrap}
 .bd-suite-picker {width:min(1180px,100%);--bd-border:#e5e7eb}
 .bd-suite-picker-body {padding:20px 24px;display:grid;grid-template-columns:clamp(210px,22%,260px) minmax(0,1fr);gap:16px}
-.bd-suite-picker-body fieldset {border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0;align-content:start}
+.bd-suite-picker-body > fieldset {border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0;align-content:start}
 .bd-suite-option {display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 8px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer}
 .bd-suite-option small {grid-column:2;color:#6b7280}
 .bd-suite-option:has(input:checked) {border-color:#1677ff;background:#1677ff0d}
@@ -446,7 +446,11 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-suite-preview {display:grid;grid-template-columns:minmax(0,32%) minmax(0,1fr);height:clamp(280px,calc(90dvh - 144px),520px)}
 .bd-suite-pages {display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:12px;border-inline-end:1px solid var(--bd-border);min-height:0}
 .bd-suite-pages .bd-page-cards {grid-template-columns:repeat(auto-fit,minmax(min(100%,86px),1fr));grid-auto-rows:minmax(68px,auto);align-content:start;max-height:none}
-.bd-suite-frame {background:#e8ecea;min-width:0;min-height:0}
+.bd-suite-effect {display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0}
+.bd-suite-effect .bd-preview-toolbar {justify-content:flex-end;padding:8px 12px}
+.bd-suite-effect .bd-preview-direction span {min-height:32px;padding-inline:12px}
+.bd-suite-frame {box-sizing:border-box;background:#e8ecea;min-width:0;min-height:0;padding-inline:clamp(8px,2vw,16px)}
+.bd-suite-frame[data-orientation=portrait] {padding-block:clamp(8px,2vh,16px)}
 .bd-suite-frame iframe {width:100%;height:100%;border:0;display:block}
 @media(max-width:800px) {
     .bd-scheme-settings,.bd-suite-picker-body {grid-template-columns:minmax(0,1fr)}

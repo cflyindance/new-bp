@@ -880,7 +880,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                                 ${previewPages.map(([id, name]) => pageCard(id, name, page, 'data-bd-suite-page')).join('')}
                             </div>
                         </div>
-                        <div class="bd-suite-frame"><iframe data-bd-suite-frame title="页面套件预览" sandbox="allow-scripts allow-same-origin"></iframe></div>
+                        <div class="bd-suite-effect">
+                            <div class="bd-preview-toolbar">${previewDirectionControls(orientation, 'bd-suite-direction')}</div>
+                            <div class="bd-suite-frame" data-orientation="${orientation}"><iframe data-bd-suite-frame title="页面套件预览" sandbox="allow-scripts allow-same-origin"></iframe></div>
+                        </div>
                     </section>
                 </div>
                 <p data-bd-suite-error role="alert" class="bd-error" hidden></p>
@@ -915,7 +918,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             applyButton.disabled = !changed;
             const sample = copy(s);
             if (changed) applyPageSuite(sample, suite, reset?.checked ?? false);
-            sendPreview(sample, frame, { orientation, pageId: previewPage, wheelPageNavigation: true });
+            const direction = dialog.querySelector<HTMLInputElement>('[name=bd-suite-direction]:checked')?.value ?? orientation;
+            frame.parentElement!.dataset.orientation = direction;
+            sendPreview(sample, frame, { orientation: direction, pageId: previewPage, wheelPageNavigation: true });
         };
         const selectPage = (card: HTMLButtonElement) => {
             const nextPage = card.dataset.value;
