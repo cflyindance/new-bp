@@ -864,7 +864,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         ${initialOverrides ? `<small class="bd-suite-impact">首次应用会替换已自定义的 ${initialOverrides} 页布局。</small>` : ''}
                         ${customCount ? `<label class="bd-suite-reset"><input type="checkbox" data-bd-suite-reset>将已调整的 ${customCount} 页恢复为所选套件布局</label>` : ''}
                     </fieldset>
-                    <section class="bd-preview">
+                    <section class="bd-preview bd-suite-preview">
                         <div class="bd-suite-pages">
                             <strong id="bd-suite-pages-title">预览页面</strong>
                             <div class="bd-page-cards" role="group" aria-labelledby="bd-suite-pages-title">
@@ -897,7 +897,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const reset = dialog.querySelector<HTMLInputElement>('[data-bd-suite-reset]');
         const applyButton = dialog.querySelector<HTMLButtonElement>('[data-bd-modal-confirm]')!;
         let previewPage = page;
-        const pageCards = dialog.querySelectorAll<HTMLButtonElement>('[data-bd-suite-page]');
+        const pageCards = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-bd-suite-page]'));
         const frame = dialog.querySelector<HTMLIFrameElement>('[data-bd-suite-frame]')!;
         const candidate = () => catalog.find(suite => suite.id === dialog.querySelector<HTMLInputElement>('[name=bd-suite]:checked')?.value);
         const refresh = () => {
@@ -906,14 +906,36 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             applyButton.disabled = !changed;
             const sample = copy(s);
             if (changed) applyPageSuite(sample, suite, reset?.checked ?? false);
-            sendPreview(sample, frame, { orientation, pageId: previewPage });
+            sendPreview(sample, frame, { orientation, pageId: previewPage, wheelPageNavigation: true });
         };
-        pageCards.forEach(card => card.addEventListener('click', () => {
-            if (card.dataset.value === previewPage) return;
-            previewPage = card.dataset.value!;
+        const selectPage = (card: HTMLButtonElement) => {
+            const nextPage = card.dataset.value;
+            if (!nextPage || nextPage === previewPage) return;
+            previewPage = nextPage;
             pageCards.forEach(button => button.setAttribute('aria-pressed', String(button === card)));
+            const grid = card.parentElement!;
+            const item = card.getBoundingClientRect();
+            const visible = grid.getBoundingClientRect();
+            if (item.top < visible.top) grid.scrollTop += item.top - visible.top;
+            else if (item.bottom > visible.bottom) grid.scrollTop += item.bottom - visible.bottom;
             refresh();
-        }));
+        };
+        pageCards.forEach(card => card.addEventListener('click', () => selectPage(card)));
+
+        let lastPageTurn = -Infinity;
+        const wheelListener = new AbortController();
+        window.addEventListener('message', event => {
+            if (event.origin !== location.origin || event.source !== frame.contentWindow ||
+                event.data?.type !== 'bd-preview-wheel' || event.data.page !== previewPage) return;
+            const direction: unknown = event.data.direction;
+            if (direction !== -1 && direction !== 1) return;
+            const next = pageCards[pageCards.findIndex(card => card.dataset.value === previewPage) + direction];
+            const now = performance.now();
+            if (!next || now - lastPageTurn < 220) return;
+            lastPageTurn = now;
+            selectPage(next);
+        }, { signal: wheelListener.signal });
+        dialog.addEventListener('bd-dismiss', () => wheelListener.abort(), { once: true });
         dialog.addEventListener('change', refresh);
         frame.addEventListener('load', refresh);
         frame.src = PREVIEW_URL;
@@ -987,7 +1009,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         updateEditorPreview(s);
     }
     function sendPreview(s: Scheme, frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'),
-        comparison?: { layout?: HomeLayout; orientation: string; pageId?: string }) {
+        comparison?: { layout?: HomeLayout; orientation: string; pageId?: string; wheelPageNavigation?: boolean }) {
         const pageId = comparison?.pageId ?? page;
         const style = s.styles[pageId];
         const referenceLayout = comparison?.layout ?? (style.mode === 'custom'
@@ -1026,6 +1048,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             }),
             referenceLayout,
             page: pageId, orientation: comparison?.orientation ?? orientation,
+            wheelPageNavigation: comparison?.wheelPageNavigation,
             postPaymentScene: pageId === 'afterCreditCardPay' ? postPaymentScene : undefined,
         }, location.origin);
     }

@@ -194,6 +194,26 @@ function markSelectableContent(elements, selection) {
   }
   for (const control of screen.querySelectorAll('a,button,input,select,textarea,[tabindex]')) control.tabIndex = -1;
 }
+let wheelPreviewPage;
+const wheelDocuments = new WeakSet();
+function preservePreviewScroll(event) {
+  if (!wheelPreviewPage || event.ctrlKey || event.defaultPrevented ||
+      !event.deltaY || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+  const direction = Math.sign(event.deltaY);
+  const scrollable = event.composedPath().some(node => {
+    const view = node.ownerDocument?.defaultView;
+    if (!view || node.nodeType !== 1 || node.scrollHeight <= node.clientHeight + 1) return false;
+    if (!/^(auto|scroll|overlay)$/.test(view.getComputedStyle(node).overflowY)) return false;
+    return direction > 0
+      ? node.scrollTop + node.clientHeight < node.scrollHeight - 1
+      : node.scrollTop > 1;
+  });
+  if (scrollable) return;
+  event.preventDefault();
+  parent.postMessage({ type: 'bd-preview-wheel', page: wheelPreviewPage, direction }, location.origin);
+}
+document.addEventListener('wheel', preservePreviewScroll, { passive: false });
+
 function renderNative(page, landscape, palette, headerPalette, elements, reportDefaults, postPaymentScene, selection) {
   const direction = landscape ? 'landscape' : 'portrait';
   const device = landscape ? 'android-14-1' : 'android-24-1';
@@ -214,11 +234,20 @@ function renderNative(page, landscape, palette, headerPalette, elements, reportD
     frame.src = src;
     screen.replaceChildren(frame);
   }
-  frame.style.pointerEvents = selection ? 'auto' : 'none';
+  frame.style.pointerEvents = selection || wheelPreviewPage ? 'auto' : 'none';
   const refresh = () => {
     applyNativePalette(frame, palette);
     const doc = frame.contentDocument;
     if (!doc?.head) return;
+    if (wheelPreviewPage && !wheelDocuments.has(doc)) {
+      wheelDocuments.add(doc);
+      doc.addEventListener('wheel', preservePreviewScroll, { passive: false });
+      doc.addEventListener('click', event => {
+        if (!wheelPreviewPage) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, { capture: true });
+    }
     styleNativeHeader(doc, headerPalette);
     updateNativeContent(doc, elements, reportDefaults, selection);
   };
@@ -227,6 +256,7 @@ function renderNative(page, landscape, palette, headerPalette, elements, reportD
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='bd-render')return;const {scheme:s,palette,page,orientation}=event.data;const style=s?.styles?.[page];if(!style)return;
 const { headerPalette } = event.data;
+wheelPreviewPage = event.data.wheelPageNavigation === true ? page : undefined;
 const postPaymentScene = ['tip', 'signature'].includes(event.data.postPaymentScene) ? event.data.postPaymentScene : 'both';
 const elements = Array.isArray(event.data.elements) ? event.data.elements : [];
 const request = event.data.defaultCopyRequest;
@@ -288,6 +318,6 @@ if (style.mode === 'custom' && screen.firstElementChild) {
   }
 }
 selectionRequest = event.data.selection?.request;
-screen.style.pointerEvents = event.data.selection ? 'auto' : 'none';
+screen.style.pointerEvents = event.data.selection || wheelPreviewPage ? 'auto' : 'none';
 markSelectableContent(elements, style.mode === 'custom' ? event.data.selection : undefined);fit();});addEventListener('resize',fit);parent.postMessage({type:'bd-ready'},location.origin);
 })();
