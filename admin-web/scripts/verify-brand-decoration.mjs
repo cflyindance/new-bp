@@ -27,6 +27,36 @@ try{
       assert.notEqual(palette.successFill,palette.errorFill);
     }
   }
+  for (const channel of ['kiosk', 'emenu']) {
+    const draft = D.newScheme(channel, '套件方案', '品牌');
+    const before = D.copy(draft);
+    const [first, second, third] = D.pageSuites(channel);
+    draft.rules = { kind: 'activity', pageIds: ['menu'] };
+    draft.sharedHeader = 'custom';
+    draft.pageContent = { home: { title: '欢迎' } };
+    D.applyPageSuite(draft, first, false);
+    assert.deepEqual(Object.keys(draft.styles), D.pages(channel).map(([id]) => id));
+    assert.notEqual(draft.styles.home.theme, draft.styles.menu.theme);
+    assert.notEqual(draft.pageSuite, first);
+    assert.equal(draft.styles.menu.fromSuite, true);
+    assert.equal(draft.styles.menu.theme, first.layouts.menu);
+    assert.ok(D.changes(before, draft).some(change => change.label === '页面套件'));
+    draft.styles.menu = { mode: 'default', theme: 'jade' };
+    D.applyPageSuite(draft, second, false);
+    assert.equal(draft.styles.menu.mode, 'default');
+    assert.equal(draft.styles.detail.theme, second.layouts.detail);
+    assert.equal(draft.paletteId, before.paletteId);
+    assert.equal(draft.sharedHeader, 'custom');
+    assert.deepEqual(draft.rules.pageIds, ['menu']);
+    assert.deepEqual(draft.pageContent, { home: { title: '欢迎' } });
+    delete draft.pageContent;
+    D.validateScheme(draft);
+    D.applyPageSuite(draft, third, true);
+    assert.deepEqual(draft.styles.menu, D.suitePageStyle(draft, 'menu'));
+    D.applyPageSuite(draft, undefined, false);
+    assert.ok(Object.values(draft.styles).every(style => style.mode === 'default' && !style.fromSuite));
+    D.validateScheme(draft);
+  }
   const themed=D.newScheme('kiosk','方案','品牌');
   const old=D.copy(themed);delete old.paletteId;D.validateScheme(old);
   themed.styles.home.theme='noir';

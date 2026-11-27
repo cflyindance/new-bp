@@ -30,9 +30,50 @@ export const pages = (channel: Channel): ReadonlyArray<readonly [
 export interface Style {
     mode: 'default' | 'custom';
     theme: Theme;
+    fromSuite?: true;
     referenceTemplate?: HomeTemplate;
     referenceLayout?: HomeLayout;
 }
+export interface PageSuite {
+    id: string;
+    name: string;
+    version: number;
+    layouts: Record<string, Theme>;
+}
+
+export function pageSuites(channel: Channel): PageSuite[] {
+    const catalog = pages(channel);
+    const make = (id: string, name: string, fallback: Theme, overrides: Partial<Record<string, Theme>>): PageSuite => ({
+        id, name, version: 1,
+        layouts: Object.fromEntries(catalog.map(([page]) => [page, overrides[page] ?? fallback])),
+    });
+    return [
+        make('quick-order', channel === 'kiosk' ? '快餐点单' : '快捷点单', 'noir',
+            { screensaver: 'terra', home: 'terra', detail: 'jade', finish: 'jade', login: 'jade' }),
+        make('brand-display', '品牌精选', 'jade',
+            { screensaver: 'terra', home: 'terra', menu: 'terra', review: 'noir', payment: 'noir' }),
+        make('simple-order', '简洁点单', 'jade',
+            { menu: 'noir', combo: 'noir', review: 'noir', payment: 'noir', finish: 'noir' }),
+    ];
+}
+
+export function suitePageStyle(s: Scheme, page: string): Style {
+    return s.pageSuite
+        ? { mode: 'custom', theme: s.pageSuite.layouts[page], fromSuite: true }
+        : { mode: 'default', theme: 'jade' };
+}
+
+export function applyPageSuite(s: Scheme, suite: PageSuite | undefined, resetOverrides: boolean) {
+    const previous = s.pageSuite;
+    if (suite) s.pageSuite = copy(suite);
+    else delete s.pageSuite;
+
+    for (const [page] of pages(s.channel)) {
+        if (!previous || resetOverrides || s.styles[page].fromSuite)
+            s.styles[page] = suitePageStyle(s, page);
+    }
+}
+
 export const SHARED_HEADER_STYLES = { layout: '系统布局', custom: '自定义布局' } as const;
 export type SharedHeaderStyle = keyof typeof SHARED_HEADER_STYLES;
 export function sharedHeaderLayout(style: Scheme['sharedHeader']): SharedHeaderStyle {
@@ -43,6 +84,7 @@ export interface Scheme {
     sharedHeader?: SharedHeaderStyle | 'light' | 'brand';
     sharedHeaderAppearance?: { background?: string; divider?: true };
     pageContent?: PageContent;
+    pageSuite?: PageSuite;
     paletteId?: PaletteId;
     draftStep?: 'rules' | 'editor' | 'stores' | 'period' | 'review';
     rules?: PlanRules;
@@ -96,10 +138,19 @@ export function validateScheme(s: Scheme): void {
         throw Error('页面内容配置无效');
     if (!s.styles || Object.keys(s.styles).length !== pages(s.channel).length)
         throw Error('页面配置不完整');
+    const suite = s.pageSuite;
+    if (suite !== undefined && (!suite || typeof suite.id !== 'string' || typeof suite.name !== 'string' ||
+        !Number.isInteger(suite.version) || suite.version < 1 || !suite.layouts ||
+        Object.keys(suite.layouts).length !== pages(s.channel).length))
+        throw Error('页面套件无效');
     for (const [id] of pages(s.channel)) {
         const style = s.styles[id];
         if (!style || !['default', 'custom'].includes(style.mode) || !Object.hasOwn(THEMES, style.theme))
             throw Error('页面样式无效');
+        if ((suite && !Object.hasOwn(THEMES, suite.layouts[id])) ||
+            (style.fromSuite !== undefined && (style.fromSuite !== true || !suite ||
+                style.mode !== 'custom' || style.theme !== suite.layouts[id] || style.referenceTemplate || style.referenceLayout)))
+            throw Error('页面套件布局无效');
         if (style.referenceTemplate !== undefined &&
             (!validHomeTemplate(style.referenceTemplate) || !templateMatches(style.referenceTemplate, s.channel, id)))
             throw Error('参考图模板无效');
@@ -152,6 +203,8 @@ export function changes(before: Scheme | undefined, after: Scheme): Array<{
         if (before?.[key] !== after[key])
             output.push({ label, before: before?.[key] ?? '未发布', after: after[key] });
     }
+    if (before?.pageSuite?.id !== after.pageSuite?.id || before?.pageSuite?.version !== after.pageSuite?.version)
+        output.push({ label: '页面套件', before: before?.pageSuite?.name ?? '系统布局', after: after.pageSuite?.name ?? '系统布局' });
     const header = SHARED_HEADER_STYLES[sharedHeaderLayout(after.sharedHeader)];
     const previousHeader = before ? SHARED_HEADER_STYLES[sharedHeaderLayout(before.sharedHeader)] : '未发布';
     if (header !== previousHeader) output.push({ label: '页面顶部', before: previousHeader, after: header });

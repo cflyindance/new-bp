@@ -429,3 +429,22 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-plan-stores-search {width:100%;margin-bottom:12px}
 
 .bd-plan-stores-dialog > header > .bd-button {white-space:nowrap}
+
+.bd-scheme-settings {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-bottom:12px}
+.bd-flow-header ~ .bd-scheme-settings {flex:none}
+.bd-scheme-settings .bd-palette-panel {margin-bottom:0}
+.bd-card.bd-suite-panel {display:flex;align-items:center;gap:12px;padding:8px 16px}
+.bd-suite-panel h2 {margin:0;white-space:nowrap}
+.bd-suite-picker {width:min(960px,100%)}
+.bd-suite-picker-body {padding:20px 24px;display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:16px}
+.bd-suite-picker-body fieldset {border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0;align-content:start}
+.bd-suite-option {display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 8px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer}
+.bd-suite-option small {grid-column:2;color:#6b7280}
+.bd-suite-option:has(input:checked) {border-color:#1677ff;background:#1677ff0d}
+.bd-suite-option input,.bd-suite-reset input {width:auto;min-height:0;padding:0;accent-color:#1677ff}
+.bd-suite-reset {display:flex;align-items:center;gap:8px;flex-direction:row}
+.bd-suite-frame {background:#e8ecea;height:min(52dvh,450px)}
+.bd-suite-frame iframe {width:100%;height:100%;border:0;display:block}
+@media(max-width:800px) {
+    .bd-scheme-settings,.bd-suite-picker-body {grid-template-columns:minmax(0,1fr)}
+}
