@@ -11,7 +11,7 @@ import { getAuthenticatedEmail } from '../auth/login';
 import { decorationScope } from './scope';
 import { readData, writeData } from './store';
 import { createDecorationDemo } from './demo-data';
-import { PAGE_TEMPLATES, SHARED_HEADER_STYLES, sharedHeaderLayout, type SharedHeaderStyle, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData, type PageSuite, applyPageSuite, pageSuites, suitePageStyle } from './domain';
+import { PAGE_TEMPLATES, SHARED_HEADER_STYLES, sharedHeaderLayout, type SharedHeaderStyle, copy, newScheme, pages, changes, publish, validateScheme, type Channel, type Theme, type Scheme, type DecorationData, type CatalogPageSuite, applyPageSuite, pageSuites, suitePageStyle, hasSuitePurchase, purchasePageSuite, requirePageSuitePurchase } from './domain';
 const ROOT = '/brand-decoration';
 const PAGE_STAGES = [
     { id: 'start', label: '点餐前', pages: ['screensaver', 'home', 'orderType', 'waitList', 'phoneInput', 'enterName', 'partySizeSelection', 'login'] },
@@ -852,12 +852,21 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
 
     function openSuitePicker(s: Scheme) {
-        const catalog = pageSuites(s.channel);
+        const catalog = pageSuites(s.channel).filter(suite => !legacy || !suite.priceUsdCents);
+        const price = (cents: number) => 'US$' + (cents / 100).toFixed(2);
+        const locked = (suite?: CatalogPageSuite) => !!suite?.priceUsdCents && !hasSuitePurchase(data, s.channel, suite.id);
+        const canPurchase = () => {
+            const current = decorationScope();
+            return current.key === scope.key && current.demo && current.canWrite;
+        };
+        const badge = (suite?: CatalogPageSuite) => suite?.priceUsdCents
+            ? locked(suite) ? price(suite.priceUsdCents) : '已购'
+            : '免费';
         const previewPages = pages(s.channel);
         const customCount = s.pageSuite ? previewPages.filter(([id]) => !s.styles[id].fromSuite).length : 0;
         const initialOverrides = !s.pageSuite && previewPages.filter(([id]) => s.styles[id].mode === 'custom').length;
         const selectedId = s.pageSuite?.id ?? '';
-        const cards: Array<PageSuite | undefined> = [undefined, ...catalog];
+        const cards: Array<CatalogPageSuite | undefined> = [undefined, ...catalog];
         openModal(`<div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bd-suite-title">
             <div class="bd-modal-backdrop" data-bd-modal-close aria-hidden="true"></div>
             <section class="bd-modal-panel bd-suite-picker">
@@ -867,7 +876,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     <fieldset aria-label="页面套件">
                         ${cards.map(suite => `<label class="bd-suite-option">
                             <input type="radio" name="bd-suite" value="${esc(suite?.id ?? '')}" ${(suite?.id ?? '') === selectedId ? 'checked' : ''}>
-                            <strong>${esc(suite?.name ?? '系统布局')}</strong>
+                            <strong>${esc(suite?.name ?? '系统布局')}</strong><span class="bd-suite-badge" data-bd-suite-badge>${badge(suite)}</span>
                             ${['home', 'menu', 'payment'].map(id => `<small>${previewPages.find(([pageId]) => pageId === id)?.[1]} · ${suite ? PAGE_TEMPLATES[suite.layouts[id]].name : '系统布局'}</small>`).join('')}
                         </label>`).join('')}
                         ${initialOverrides ? `<small class="bd-suite-impact">首次应用会替换已自定义的 ${initialOverrides} 页布局。</small>` : ''}
@@ -886,12 +895,38 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         </div>
                     </section>
                 </div>
+                <div class="bd-suite-checkout" data-bd-suite-checkout hidden>
+                    <dl><div><dt>套件</dt><dd data-bd-purchase-suite></dd></div>
+                        <div><dt>适用品牌</dt><dd>${esc(scope.brandName)}</dd></div>
+                        <div><dt>适用渠道</dt><dd>${esc(lineLabel[s.channel])}</dd></div>
+                        <div><dt>应付金额</dt><dd data-bd-purchase-price></dd></div></dl>
+                    <p class="bd-help">模拟支付，不会扣款。</p>
+                    <button type="button" data-bd-purchase-cancel>返回预览</button>
+                </div>
                 <p data-bd-suite-error role="alert" class="bd-error" hidden></p>
             </section></div>`, () => {
                 const next = candidate();
                 if (applyButton.disabled) return;
+                if (next && locked(next)) {
+                    if (!checkingOut) {
+                        checkingOut = true;
+                        dialog.querySelector<HTMLElement>('[data-bd-purchase-suite]')!.textContent = next.name;
+                        dialog.querySelector<HTMLElement>('[data-bd-purchase-price]')!.textContent = price(next.priceUsdCents!);
+                        refresh();
+                        return;
+                    }
+                    if (mutate(draft => {
+                        if (!canPurchase()) throw Error('暂无套件购买权限');
+                        purchasePageSuite(draft, s.channel, next.id);
+                    })) {
+                        checkingOut = false;
+                        refresh();
+                    } else showError();
+                    return;
+                }
                 if (mutate(data => {
                     const current = data.schemes.find(item => item.id === s.id)!;
+                    requirePageSuitePurchase(data, current.channel, next);
                     applyPageSuite(current, next, reset?.checked ?? false);
                     current.updatedAt = new Date().toISOString();
                     validateScheme(current);
@@ -899,14 +934,17 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                     closeModal();
                     draw();
                     root.querySelector<HTMLButtonElement>('[data-bd-action=choose-suite]')?.focus();
-                } else {
-                    const error = dialog.querySelector<HTMLElement>('[data-bd-suite-error]')!;
-                    error.textContent = message;
-                    error.hidden = false;
-                }
+                } else showError();
             });
         const dialog = modal!;
         const reset = dialog.querySelector<HTMLInputElement>('[data-bd-suite-reset]');
+        const checkout = dialog.querySelector<HTMLElement>('[data-bd-suite-checkout]')!;
+        const pickerBody = dialog.querySelector<HTMLElement>('.bd-suite-picker-body')!;
+        const title = dialog.querySelector<HTMLElement>('#bd-suite-title')!;
+        const error = dialog.querySelector<HTMLElement>('[data-bd-suite-error]')!;
+        const suiteBadges = Array.from(dialog.querySelectorAll<HTMLElement>('[data-bd-suite-badge]'));
+        let checkingOut = false;
+        const showError = () => { error.textContent = message; error.hidden = false; };
         const applyButton = dialog.querySelector<HTMLButtonElement>('[data-bd-modal-confirm]')!;
         let previewPage = page;
         const pageCards = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-bd-suite-page]'));
@@ -915,7 +953,16 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const refresh = () => {
             const suite = candidate();
             const changed = (suite?.id ?? '') !== selectedId || suite?.version !== s.pageSuite?.version || !!reset?.checked;
-            applyButton.disabled = !changed;
+            const needsPurchase = locked(suite);
+            pickerBody.hidden = checkingOut;
+            checkout.hidden = !checkingOut;
+            title.textContent = checkingOut ? '购买套件' : '选择页面套件';
+            applyButton.textContent = checkingOut ? '确认模拟支付' : needsPurchase ? '购买套件' : '应用套件';
+            applyButton.disabled = needsPurchase ? !canPurchase() : !changed;
+            applyButton.title = needsPurchase && applyButton.disabled ? '请联系有付款权限的账号购买' : '';
+            suiteBadges.forEach((target, index) => { target.textContent = badge(cards[index]); });
+            error.hidden = true;
+            if (checkingOut) return;
             const sample = copy(s);
             if (changed) applyPageSuite(sample, suite, reset?.checked ?? false);
             const direction = dialog.querySelector<HTMLInputElement>('[name=bd-suite-direction]:checked')?.value ?? orientation;
@@ -946,6 +993,11 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             selectPage(next);
         }, { signal: wheelListener.signal });
         dialog.addEventListener('bd-dismiss', () => wheelListener.abort(), { once: true });
+        checkout.querySelector('[data-bd-purchase-cancel]')!.addEventListener('click', () => {
+            checkingOut = false;
+            refresh();
+            applyButton.focus();
+        });
         dialog.addEventListener('change', refresh);
         frame.addEventListener('load', refresh);
         frame.src = PREVIEW_URL;
@@ -1694,7 +1746,9 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const source = data.schemes.find(s => s.id === el.dataset.id);
             if (!source || (!legacy && !source.rules?.storeIds.every(id => scope.stores.some(store => store.id === id))))
                 return;
-            if (mutate(next => { if (next.schemes.length >= 20)
+            if (mutate(next => {
+                requirePageSuitePurchase(next, source.channel, source.pageSuite);
+                if (next.schemes.length >= 20)
                 throw Error('演示最多保存 20 个方案'); next.schemes.push({ ...copy(source), id: crypto.randomUUID(), name: source.name.slice(0, 35) + ' 副本', updatedAt: new Date().toISOString() }); }))
                 draw();
             return;
@@ -1935,7 +1989,10 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             current.rules.pageIds = value === 'inherit' ? current.rules.pageIds.filter(id => id !== page)
                 : [...new Set([...current.rules.pageIds, page])];
         }
-        if (value === 'suite') current.styles[page] = suitePageStyle(current, page);
+        if (value === 'suite') {
+            requirePageSuitePurchase(next, current.channel, current.pageSuite);
+            current.styles[page] = suitePageStyle(current, page);
+        }
         else if (value !== 'inherit') {
             current.styles[page].mode = value as 'default' | 'custom';
             delete current.styles[page].fromSuite;

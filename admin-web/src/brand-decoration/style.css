@@ -437,9 +437,9 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 .bd-suite-panel h2 {margin:0;white-space:nowrap}
 .bd-suite-picker {width:min(1180px,100%);--bd-border:#e5e7eb}
 .bd-suite-picker-body {padding:20px 24px;display:grid;grid-template-columns:clamp(210px,22%,260px) minmax(0,1fr);gap:16px}
-.bd-suite-picker-body > fieldset {border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0;align-content:start}
-.bd-suite-option {display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 8px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer}
-.bd-suite-option small {grid-column:2;color:#6b7280}
+.bd-suite-picker-body > fieldset {border:0;padding:2px;margin:0;display:grid;gap:8px;min-width:0;align-content:start;max-height:clamp(280px,calc(90dvh - 144px),520px);overflow:auto}
+.bd-suite-option {display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 8px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer}
+.bd-suite-option small {grid-column:2 / -1;color:#6b7280}
 .bd-suite-option:has(input:checked) {border-color:#1677ff;background:#1677ff0d}
 .bd-suite-option input,.bd-suite-reset input {width:auto;min-height:0;padding:0;accent-color:#1677ff}
 .bd-suite-reset {display:flex;align-items:center;gap:8px;flex-direction:row}
@@ -455,3 +455,13 @@ header.standalone-page-header.bd-flow-header[data-standalone-page-header]{
 @media(max-width:800px) {
     .bd-scheme-settings,.bd-suite-picker-body {grid-template-columns:minmax(0,1fr)}
 }
+
+.bd-suite-badge {font-size:12px;color:var(--bd-muted,#6b7280);white-space:nowrap}
+.bd-suite-picker [hidden] {display:none}
+.bd-suite-picker:has(.bd-suite-checkout:not([hidden])) {width:min(560px,100%)}
+.bd-suite-checkout {padding:24px;max-width:520px;margin-inline:auto}
+.bd-suite-checkout dl {margin:0 0 16px}
+.bd-suite-checkout dl div {display:flex;justify-content:space-between;gap:16px;padding-block:12px;border-bottom:1px solid var(--bd-border)}
+.bd-suite-checkout dd {margin:0;text-align:end;font-weight:600}
+.bd-suite-checkout button {margin-top:16px}
+.bd-suite-picker > [data-bd-suite-error] {margin:0;padding:0 24px 16px}

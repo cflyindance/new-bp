@@ -1,5 +1,5 @@
 import { formatLocal } from './schedule';
-import { copy, pages, type Channel, type DecorationData, type Release, type Scheme } from './domain';
+import { copy, pages, requirePageSuitePurchase, type Channel, type DecorationData, type Release, type Scheme } from './domain';
 
 export interface PlanRules {
     kind: 'default' | 'activity';
@@ -96,6 +96,7 @@ function checkActivityOverlap(data: DecorationData, id: string, channel: Channel
 }
 
 export function publishPlan(data: DecorationData, scheme: Scheme, stores: PlanStore[], actor: string) {
+    requirePageSuitePurchase(data, scheme.channel, scheme.pageSuite);
     checkPlanPublication(data, scheme, stores);
     appendPlanRelease(data, scheme, stores, actor);
 }

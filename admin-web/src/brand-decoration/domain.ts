@@ -41,7 +41,18 @@ export interface PageSuite {
     layouts: Record<string, Theme>;
 }
 
-export function pageSuites(channel: Channel): PageSuite[] {
+export interface CatalogPageSuite extends PageSuite {
+    priceUsdCents?: number;
+}
+
+export interface SuitePurchase {
+    channel: Channel;
+    suiteId: string;
+    purchasedAt: string;
+    priceUsdCents: number;
+}
+
+export function pageSuites(channel: Channel): CatalogPageSuite[] {
     const catalog = pages(channel);
     const make = (id: string, name: string, fallback: Theme, overrides: Partial<Record<string, Theme>>): PageSuite => ({
         id, name, version: 1,
@@ -54,7 +65,27 @@ export function pageSuites(channel: Channel): PageSuite[] {
             { screensaver: 'terra', home: 'terra', menu: 'terra', review: 'noir', payment: 'noir' }),
         make('simple-order', '简洁点单', 'jade',
             { menu: 'noir', combo: 'noir', review: 'noir', payment: 'noir', finish: 'noir' }),
+        { ...make('signature-collection', '精品餐饮', 'terra',
+            { home: 'noir', menu: 'jade', detail: 'terra', review: 'jade', payment: 'jade', finish: 'noir' }),
+            priceUsdCents: 9900 },
     ];
+}
+
+export function hasSuitePurchase(data: DecorationData, channel: Channel, suiteId: string): boolean {
+    return data.suitePurchases?.some(item => item.channel === channel && item.suiteId === suiteId) ?? false;
+}
+
+export function purchasePageSuite(data: DecorationData, channel: Channel, suiteId: string) {
+    const suite = pageSuites(channel).find(item => item.id === suiteId);
+    if (!suite?.priceUsdCents) throw Error('该套件无需购买或已停售');
+    if (hasSuitePurchase(data, channel, suiteId)) return;
+    (data.suitePurchases ??= []).push({ channel, suiteId, purchasedAt: new Date().toISOString(), priceUsdCents: suite.priceUsdCents });
+}
+
+export function requirePageSuitePurchase(data: DecorationData, channel: Channel, suite?: PageSuite) {
+    const catalogItem = suite && pageSuites(channel).find(item => item.id === suite.id);
+    if (catalogItem?.priceUsdCents && !hasSuitePurchase(data, channel, catalogItem.id))
+        throw Error('请先购买「' + catalogItem.name + '」套件');
 }
 
 export function suitePageStyle(s: Scheme, page: string): Style {
@@ -65,7 +96,7 @@ export function suitePageStyle(s: Scheme, page: string): Style {
 
 export function applyPageSuite(s: Scheme, suite: PageSuite | undefined, resetOverrides: boolean) {
     const previous = s.pageSuite;
-    if (suite) s.pageSuite = copy(suite);
+    if (suite) s.pageSuite = copy({ id: suite.id, name: suite.name, version: suite.version, layouts: suite.layouts });
     else delete s.pageSuite;
 
     for (const [page] of pages(s.channel)) {
@@ -109,6 +140,7 @@ export interface Release {
 }
 export interface DecorationData {
     homeTemplates?: HomeTemplate[];
+    suitePurchases?: SuitePurchase[];
     schedule?: DecorationSchedule;
     schema: 1;
     revision: number;
@@ -162,6 +194,14 @@ export function validateScheme(s: Scheme): void {
 export function validateData(data: DecorationData): void {
     if (!data || data.schema !== 1 || !Number.isInteger(data.revision) || !Array.isArray(data.schemes) || !Array.isArray(data.releases))
         throw Error('装修数据无法读取，请保留当前数据并联系管理员');
+    if (data.suitePurchases !== undefined) {
+        if (!Array.isArray(data.suitePurchases) || !data.suitePurchases.every(item => item &&
+            ['kiosk', 'emenu'].includes(item.channel) && typeof item.suiteId === 'string' && !!item.suiteId &&
+            Number.isFinite(Date.parse(item.purchasedAt)) && Number.isInteger(item.priceUsdCents) && item.priceUsdCents > 0))
+            throw Error('套件购买记录无效');
+        const keys = data.suitePurchases.map(item => item.channel + ':' + item.suiteId);
+        if (new Set(keys).size !== keys.length) throw Error('套件购买记录重复');
+    }
     if (data.homeTemplates !== undefined) {
         if (!Array.isArray(data.homeTemplates) || !data.homeTemplates.every(validHomeTemplate) ||
             new Set(data.homeTemplates.map(item => item.id)).size !== data.homeTemplates.length)
@@ -235,6 +275,7 @@ export function publish(data: DecorationData, id: string, actor: string, scopeNa
     if (!scheme)
         throw Error('方案不存在');
     validateScheme(scheme);
+    requirePageSuitePurchase(data, scheme.channel, scheme.pageSuite);
     const previous = data.releases.find(r => r.snapshot.channel === scheme.channel);
     if (!changes(previous?.snapshot, scheme).length)
         throw Error('与当前演示版本一致，无需重复发布');
