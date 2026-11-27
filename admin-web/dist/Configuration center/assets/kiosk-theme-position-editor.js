@@ -19,13 +19,15 @@
     var picking=!selected&&editable();
     var section=document.createElement('section');section.className='mx-auto w-full max-w-4xl rounded-2xl border border-[#f0f0f0] bg-white p-4 sm:p-8 shadow-sm';
     section.innerHTML='<h2 class="mb-2 text-base font-medium">选择渠道 <span class="text-red-500">*</span></h2><p class="mb-5 text-sm text-gray-500">一条广告投放到一个渠道、一个展示位置</p><div id="adChannelGrid" class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="投放渠道"></div><div class="mt-8 border-t pt-6"><h2 class="mb-4 text-base font-medium">展示位置 <span class="text-red-500">*</span></h2><div class="grid gap-4 sm:grid-cols-2"><div class="min-w-0"><label id="adSlotSearchLabel" class="mb-3 block"><input id="adSlotSearch" type="search" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm" aria-label="搜索展示位置" placeholder="搜索位置名称或场景"></label><div id="adSlotGrid" class="grid content-start gap-2" role="radiogroup" aria-label="展示位置"></div></div><details id="adSlotPreview" class="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3"><summary class="cursor-pointer text-sm font-medium sm:hidden">查看位置示例</summary><div id="adSlotPreviewContent" aria-live="polite"></div></details></div></div><p id="adSlotError" class="mt-5 text-sm text-red-500" role="alert"></p>';
-    var purposeBox=document.createElement('fieldset');purposeBox.className='mb-8';purposeBox.innerHTML='<legend class="mb-4 text-base font-medium">广告用途</legend><div class="grid grid-cols-2 gap-3">'+radio('adPurpose','campaign','活动投放',purpose==='campaign')+radio('adPurpose','default','默认展示',purpose==='default')+'</div>';purposeBox.hidden=existing;section.prepend(purposeBox);
+    var purposeBox=document.createElement('fieldset');purposeBox.className='mb-8';purposeBox.innerHTML='<legend class="mb-4 text-base font-medium">广告用途</legend><div class="grid grid-cols-2 gap-3">'+radio('adPurpose','campaign','限时投放',purpose==='campaign')+radio('adPurpose','default','日常展示',purpose==='default')+'</div>';purposeBox.querySelector('input[value="default"]').nextElementSibling.insertAdjacentHTML('beforeend','<span class="mt-1 block text-xs font-normal text-gray-500">无有效限时广告时展示</span>');purposeBox.hidden=existing;section.prepend(purposeBox);
     purposeBox.addEventListener('change',async function(e){if(e.target.name!=='adPurpose')return;var nextPurpose=e.target.value;flush();if(nextPurpose==='default'&&allBankItems().some(function(item){return item.clickAction&&item.clickAction.type!=='none';})&&!await confirmChange('默认广告不支持跳转。切换后将清除当前副本中的点击行为，是否继续？')){purposeBox.querySelectorAll('input').forEach(function(r){r.checked=r.value===purpose;});return;}purpose=nextPurpose;purposeBox.querySelectorAll('label').forEach(function(label){var checked=label.querySelector('input').value===purpose;label.classList.toggle('border-primary',checked);label.classList.toggle('bg-[#e6f4ff]',checked);label.classList.toggle('border-[#d9d9d9]',!checked);});if(purpose==='default')allBankItems().forEach(function(item){item.clickAction={type:'none'};});renderMedia();});
     function allBankItems(){return Object.values(bank).concat(Object.values(cache).filter(function(v){return v&&typeof v==='object';}).flatMap(function(v){return Object.values(v);})).flat().filter(function(v){return v&&typeof v==='object'&&('type' in v||'assetId' in v);});}
     form.before(section);
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
     var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
     var notice=document.createElement('div');notice.className='mb-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-600';summary.after(notice);
+    var batchButton=document.createElement('button');batchButton.type='button';batchButton.className='ad-batch-entry';batchButton.textContent='批量设置点击行为';summary.after(batchButton);
+    batchButton.onclick=function(){root.KioskAdActivityEditor.openBatch(editorApi,batchButton).catch(function(error){if(root.Toast)Toast.validate(error.message);});};
     var validationNotice=document.createElement('p');validationNotice.className='mb-4 text-sm text-red-500';validationNotice.setAttribute('role','alert');notice.after(validationNotice);
     function scheduleCompatibility(){clearTimeout(compatibilityTimer);var revision=++compatibilityRevision;compatibilityTimer=setTimeout(function(){checkCompatibility(revision);},80);}
     async function checkCompatibility(revision){flush();var errors=[];if(selected){var supported=KioskAdActivities.capabilities(selected,KioskAdActivities.getContext());try{if(Object.values(bank).some(function(list){return list.some(function(item){return !supported.includes(KioskAdActivities.normalizeAction(item.clickAction).type);});}))errors.push('该渠道或位置不支持当前点击行为，请设置为不跳转或更换位置');}catch(actionError){errors.push(actionError.message);}}for(var target of selected?selected.specs:[]){var items=bank[target.id]||[],types=Array.from(new Set(items.map(function(v){return v.type||'image';})));if(types.length>1)errors.push(target.name+'不能混用图片与视频，请删除或替换素材');if(items.length>(types[0]==='video'?target.maxVideos:target.maxImages))errors.push(target.name+'素材数量超过上限，请删除多余素材');for(var item of items){try{var meta=await metadata(item);if(allowedKinds(target).indexOf(meta.kind)<0)throw Error('不支持此素材类型');api.validateMedia(target,meta);}catch(e){errors.push(target.name+'：'+e.message+'，请删除或替换该素材');}}}if(revision===compatibilityRevision)validationNotice.textContent=Array.from(new Set(errors)).join('；');}
@@ -41,7 +43,9 @@
     function spec(role){var list=specs(role);return list.find(function(s){return s.id===active[role];})||list[0]||api.newSpec(role,role==='portrait'?1080:1920,role==='portrait'?1920:1080);}
     function flush(){if(hooks&&selected)['portrait','landscape'].forEach(function(role){if(specs(role).length)bank[spec(role).id]=hooks.get(role);});}
     function allowedKinds(s){var source=slots.find(function(v){return selected&&v.id===selected.id;}),binding=source&&source.bindings[channel];return s.mediaKinds.filter(function(k){return !binding||binding.mediaKinds.indexOf(k)>=0;});}
+    function syncBatchButton(){batchButton.hidden=purpose==='default';batchButton.disabled=purpose==='default'||!KioskAdActivities.getContext().canWrite||existing&&theme.interactionScope&&theme.interactionScope!==KioskAdActivities.getContext().scope;}
     function renderMedia(){
+      syncBatchButton();
       if(!hooks)return;
       ['portrait','landscape'].forEach(function(role){
         var list=specs(role),s=spec(role),label=document.querySelector('[data-position-ratio="'+role+'"]'),block=label.closest('.border-t');block.style.display=list.length?'':'none';
@@ -93,7 +97,7 @@
       document.getElementById('adChannelGrid').innerHTML=api.CHANNELS.map(function(c){return radio('adChannel',c,c,c===channel);}).join('');
       var options=api.available(slots,channel);renderSlotPicker(options);renderSlotPreview(options);
       section.querySelector('#adSlotError').textContent=catalogError;next.disabled=!selected||selected.productLine!==channel||!options.some(function(s){return s.id===selected.id;});next.style.opacity=next.disabled?'0.45':'';
-      summary.querySelector('span').textContent=selected?(purpose==='default'?'默认展示':'活动投放')+'　投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
+      summary.querySelector('span').textContent=selected?(purpose==='default'?'日常展示':'限时投放')+'　投放渠道：'+channel+'　展示位置：'+api.displayName(selected):'未选择渠道与广告位';
       summary.querySelector('button').hidden=!existing||!editable();
       notice.hidden=!existing||editable();
       if(!notice.hidden){notice.textContent=latest()&&policy.history(latest())==='published'?'已投放广告的渠道与位置不可修改。':'历史投放状态无法确认，渠道与位置不可修改。';var link=document.createElement('a');link.textContent='复制广告';link.className='ml-3 text-primary';link.href=(window.appendMenusifuEmbeddedParam||function(v){return v;})('screensaver-create.html?copyFrom='+encodeURIComponent(theme.id));notice.append(link);}
@@ -144,8 +148,9 @@
       if(warnings.length&& !(await confirmChange('以下素材与推荐尺寸不同：\n'+warnings.join('\n')+'\n是否保留当前素材并继续保存？')))throw Error('已取消保存，请检查素材尺寸');
       return {adPurpose:purpose,bySpec:bySpec,portrait:portrait,landscape:landscape,slot:JSON.parse(JSON.stringify(selected)),interactionScope:interactionScope};
     }
-    root.addEventListener('ad-activity-context',function(){if(hooks&&selected)scheduleCompatibility();});
-    return {
+    root.addEventListener('ad-activity-context',function(){syncBatchButton();if(hooks&&selected)scheduleCompatibility();});
+    var editorApi={
+      mediaEntries:function(){flush();var entries=[];if(selected)selected.specs.forEach(function(s){(bank[s.id]||[]).forEach(function(item,index){if(!item.assetId)item.assetId=crypto.randomUUID();entries.push({item:item,spec:s,role:roleFor(s),index:index});});});return entries;},
       defaultKind:function(role){return allowedKinds(spec(role))[0]||'image';},
       validateItem:async function(role,item){var meta=await metadata(item);if(allowedKinds(spec(role)).indexOf(meta.kind)<0)throw Error('该渠道不支持此素材类型');return api.validateMedia(spec(role),meta);},
       value:function(){return selected?selected.code:'';},snapshot:function(){return selected;},channel:function(){return channel;},
@@ -163,6 +168,7 @@
       purpose:function(){return purpose;},canEditActivity:function(){return purpose!=='default'&&(!existing||!theme.interactionScope||theme.interactionScope===KioskAdActivities.getContext().scope);},allMedia:function(){flush();return selected?selected.specs.flatMap(function(s){return bank[s.id]||[];}):[];},refreshMedia:renderMedia,refreshCompatibility:scheduleCompatibility,assertSave:assertSave,serialize:serialize,
       back:function(){if(staged)return cancelChange();if(existing||config.formId==='editForm'||picking)return false;flush();picking=true;refresh();return true;}
     };
+    return editorApi;
   }
   root.KioskThemePositionEditor={mount:mount,escape:esc};
 })(window);

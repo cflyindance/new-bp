@@ -130,7 +130,7 @@
               </a>
             </div>
             <div class="flex w-full flex-wrap items-center gap-6">
-              <select id="filterAdPurpose" class="ui-select h-12 min-w-[140px] rounded-full border-0 bg-black/[0.04] pl-5 pr-10" aria-label="广告用途"><option value="">全部用途</option><option value="campaign">活动投放</option><option value="default">默认展示</option></select>
+              <select id="filterAdPurpose" class="ui-select h-12 min-w-[140px] rounded-full border-0 bg-black/[0.04] pl-5 pr-10" aria-label="广告用途"><option value="">全部用途</option><option value="campaign">限时投放</option><option value="default">日常展示</option></select>
               <div class="relative h-12 min-w-[140px] max-w-[220px] shrink-0 rounded-full bg-black/[0.04]">
                 <select id="filterShelfStatus" class="ui-select w-full hidden" aria-label="按活动状态筛选">
                   <option value="" selected>全部</option>
@@ -1236,7 +1236,7 @@
           var defaultAd=KioskDefaultAds.isDefault(t);
           var effectStr = getThemeEffectDisplayText(t);
           var shelfStatus = getListShelfStatus(t);
-          var purposeBadge='<span class="ad-purpose-tag '+(defaultAd?'ad-purpose-tag--default':'ad-purpose-tag--campaign')+'">'+(defaultAd?'默认展示':'活动投放')+'</span>';
+          var purposeBadge='<span class="ad-purpose-tag '+(defaultAd?'ad-purpose-tag--default':'ad-purpose-tag--campaign')+'">'+(defaultAd?'日常展示':'限时投放')+'</span>';
           var shelfStatusBadge = '<span class="inline-flex items-center rounded-lg px-2 py-px text-xs font-normal leading-5 ' + shelfStatus.tagClass + '">' + escapeHtml(shelfStatus.text) + '</span>';
           var storeCount = t.distributedStores && t.distributedStores.length ? t.distributedStores.length : 0;
           var storeCol = storeCount
