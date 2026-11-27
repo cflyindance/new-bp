@@ -1,7 +1,41 @@
 /* 原生组件预览的数据适配；不定义或覆盖页面样式。金额为美元演示数据。 */
+function addMenuSamples(state, goods) {
+  const menu = state.menuGroup[0];
+  const rice = menu.menuCategories[0];
+  const samples = [
+    [rice.id, rice.name, [['香菇卤肉饭', 26], ['咖喱鸡肉饭', 29], ['照烧鸡肉饭', 28], ['番茄牛腩饭', 32]]],
+    ['noodles', '面食', [['红烧牛肉面', 30], ['葱油拌面', 18], ['菌菇鸡汤面', 24], ['麻酱凉面', 20]]],
+    ['sides', '小食', [['香酥鸡块', 14], ['清爽蔬菜沙拉', 18], ['脆皮春卷', 12], ['椒盐薯条', 10]]],
+    ['soups', '汤品', [['紫菜蛋花汤', 9], ['玉米鸡汤', 12], ['番茄豆腐汤', 10], ['菌菇清汤', 11]]],
+    ['drinks', '饮品', [['冰柠檬茶', 8], ['桂花乌龙', 9], ['鲜榨橙汁', 12], ['无糖气泡水', 6]]],
+    ['desserts', '甜品', [['椰奶布丁', 10], ['红豆小丸子', 12], ['芝麻麻薯', 9], ['芒果西米露', 13]]],
+  ];
+
+  for (const [key, name, dishes] of samples) {
+    const category = key === rice.id ? rice : { id: 'preview-' + key, name, saleItems: [] };
+    if (category !== rice) menu.menuCategories.push(category);
+    for (const [itemName, price] of dishes) {
+      const sequence = category.saleItems.length + 1;
+      category.saleItems.push({
+        ...goods[0],
+        id: category.id + '-' + sequence,
+        name: itemName,
+        displayName: itemName,
+        categoryId: category.id,
+        menuCategoryId: category.id,
+        price,
+        basePrice: price,
+        sequence,
+      });
+    }
+  }
+  state.currentCategoryList = menu.menuCategories;
+  state.currentSaleItems = menu.menuCategories.flatMap(category => category.saleItems);
+}
+
 window.KioskNativeFixtures = {
   prepare(state, page, goods) {
-    if(page==='menu'){const samples=[['香菇卤肉饭',26],['咖喱鸡肉饭',29],['照烧鸡肉饭',28],['番茄牛腩饭',32],['清爽蔬菜沙拉',18],['热汤',12]];samples.forEach(([name,price],i)=>goods.push({...goods[0],id:'preview-extra-'+i,name,displayName:name,price,basePrice:price,sequence:i+3}));}
+    if (page === 'menu') addMenuSamples(state, goods);
     const cfg = state.selfConfig;
     const set = (id, value) => { cfg.configList.find(c => c.id === id).value = value; cfg.configMap['id_' + id] = value; };
     set(4, [0, 1]); set(8, 1); state.menuGroup.forEach(group => group.menuCategories.forEach(category => { category.groupId = group.id; }));
@@ -13,7 +47,8 @@ window.KioskNativeFixtures = {
     }
     if (page === 'screensaver') set(35, {...cfg.configMap.id_35, dataSource: 'local', delayTime: 0});
     cfg.charge = [{id: 2, select: {id: -1, rate: 0}}, {id: 3, select: {id: -1, rate: 0}}];
-    goods.forEach(item => Object.assign(item, {hiddenItem: false, remark: {optionName: '', optionType: 'NOTE', price: 0, quantity: 1}, selectedOptionList: [], sectionDetail: [], taxIds: [], printerIds: [], fieldDisplayNameGroups: [], comboSections: []}));
+    const previewItems = page === 'menu' ? state.currentSaleItems : goods;
+    previewItems.forEach(item => Object.assign(item, {hiddenItem: false, remark: {optionName: '', optionType: 'NOTE', price: 0, quantity: 1}, selectedOptionList: [], sectionDetail: [], taxIds: [], printerIds: [], fieldDisplayNameGroups: [], comboSections: []}));
     if (!['home', 'screensaver', 'orderType', 'menu', 'detail', 'combo', 'login'].includes(page)) state.currentOrder.itemList = goods;
     state.currentItem = {...goods[0], ...(page === 'combo' ? {isCombo: true, comboType: 'CHOICE_SELECTION', name: '招牌双拼套餐', comboSections: [{id: 101,name:'选择配菜',min:1,max:1,minNumOfSelectionAllowed:1,maxNumOfSelectionAllowed:1,numOfItemAllowed:1,comboSectionSaleItems:[{saleItemId:goods[1].id,addPrice:0}]}]} : {})};
     state.currentOrder.originalItemList = goods;
