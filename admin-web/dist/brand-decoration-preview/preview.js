@@ -243,7 +243,7 @@ function renderNative(page, landscape, palette, headerPalette, elements, reportD
       wheelDocuments.add(doc);
       doc.addEventListener('wheel', preservePreviewScroll, { passive: false });
       doc.addEventListener('click', event => {
-        if (!wheelPreviewPage) return;
+        if (!wheelPreviewPage || selectionRequest !== undefined) return;
         event.preventDefault();
         event.stopImmediatePropagation();
       }, { capture: true });
