@@ -27,6 +27,15 @@ function pageThumbnail(id: string) {
     return 'cards';
 }
 
+const PREVIEW_WHEEL_INTERVAL = 220;
+
+function revealPageCard(card: HTMLElement, grid: HTMLElement) {
+    const item = card.getBoundingClientRect();
+    const visible = grid.getBoundingClientRect();
+    if (item.top < visible.top) grid.scrollTop += item.top - visible.top;
+    else if (item.bottom > visible.bottom) grid.scrollTop += item.bottom - visible.bottom;
+}
+
 const PREVIEW_URL = `${import.meta.env.BASE_URL}brand-decoration-preview/index.html`;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const date = (s: string) => new Date(s).toLocaleString('zh-CN', { hour12: false });
@@ -913,11 +922,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (!nextPage || nextPage === previewPage) return;
             previewPage = nextPage;
             pageCards.forEach(button => button.setAttribute('aria-pressed', String(button === card)));
-            const grid = card.parentElement!;
-            const item = card.getBoundingClientRect();
-            const visible = grid.getBoundingClientRect();
-            if (item.top < visible.top) grid.scrollTop += item.top - visible.top;
-            else if (item.bottom > visible.bottom) grid.scrollTop += item.bottom - visible.bottom;
+            revealPageCard(card, card.parentElement!);
             refresh();
         };
         pageCards.forEach(card => card.addEventListener('click', () => selectPage(card)));
@@ -931,7 +936,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             if (direction !== -1 && direction !== 1) return;
             const next = pageCards[pageCards.findIndex(card => card.dataset.value === previewPage) + direction];
             const now = performance.now();
-            if (!next || now - lastPageTurn < 220) return;
+            if (!next || now - lastPageTurn < PREVIEW_WHEEL_INTERVAL) return;
             lastPageTurn = now;
             selectPage(next);
         }, { signal: wheelListener.signal });
@@ -1048,7 +1053,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             }),
             referenceLayout,
             page: pageId, orientation: comparison?.orientation ?? orientation,
-            wheelPageNavigation: comparison?.wheelPageNavigation,
+            wheelPageNavigation: comparison?.wheelPageNavigation ?? (!comparison && !!editorId && !showSchedule),
             postPaymentScene: pageId === 'afterCreditCardPay' ? postPaymentScene : undefined,
         }, location.origin);
     }
@@ -1600,6 +1605,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         before: string;
         after: string;
     }>, action: string, callback: () => void, subtitle = '确认后仅更新本机演示配置，不向设备下发。') => openModal(renderChangePreviewDialog({ mode: 'confirm', dialogId: 'bd-confirm', title, subtitle, changes: rows, confirmLabel: action, closeAttr: 'data-bd-modal-close', backdropAttr: 'data-bd-modal-close', confirmAttr: 'data-bd-modal-confirm', zClass: 'z-[10060]' }), callback);
+    function setPreviewPage(id: string) {
+        page = id;
+        draw();
+        const grid = root.querySelector<HTMLElement>('[data-bd-page-cards]');
+        const selected = grid?.querySelector<HTMLButtonElement>('[aria-pressed="true"]:not([hidden])');
+        if (selected && grid) revealPageCard(selected, grid);
+        return selected;
+    }
     function act(action: string, el: HTMLElement) {
         if (scheduleAction(action, el)) return;
         if (action === 'channel') {
@@ -1613,9 +1626,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             const current = scheme();
             const id = el.dataset.value;
             if (!current || (!previewRoute && workbenchMode !== 'page') || id === page || !pages(current.channel).some(([key]) => key === id)) return;
-            page = id!;
-            draw();
-            root.querySelector<HTMLButtonElement>('[data-bd-page-cards] [aria-pressed="true"]')?.focus({ preventScroll: true });
+            setPreviewPage(id!)?.focus({ preventScroll: true });
             return;
         }
         if (action === 'workbench-mode') {
@@ -1944,8 +1955,30 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
     }
     else if (field === 'mode') draw();
     else input.value = String(s[field as 'name' | 'primary'] ?? ''); };
+    let lastPreviewPageTurn = -Infinity;
     const frameMessage = (event: MessageEvent) => { const frame = root.querySelector<HTMLIFrameElement>('[data-bd-frame]'); if (event.origin !== location.origin || event.source !== frame?.contentWindow)
         return;
+        if (event.data?.type === 'bd-preview-wheel') {
+            const direction: unknown = event.data.direction;
+            if (!editorId || showSchedule || modal || event.data.page !== page ||
+                (direction !== -1 && direction !== 1)) return;
+            const now = performance.now();
+            const current = scheme();
+            if (!current || now - lastPreviewPageTurn < PREVIEW_WHEEL_INTERVAL) return;
+            const catalog = pages(current.channel);
+            const index = catalog.findIndex(([id]) => id === page);
+            const grid = root.querySelector('[data-bd-page-cards]');
+            const visible = grid && new Set(Array.from(grid.querySelectorAll<HTMLButtonElement>('.bd-page-card:not([hidden])'), card => card.dataset.value));
+            const candidates = direction === 1 ? catalog.slice(index + 1) : catalog.slice(0, index).reverse();
+            const next = candidates.find(([id]) => (!visible || visible.has(id)) &&
+                (previewRoute || !flow || current.rules?.kind !== 'activity' ||
+                    current.rules.pageIds.includes(id) || current.rules.storeIds.length > 0));
+            if (next) {
+                lastPreviewPageTurn = now;
+                setPreviewPage(next[0]);
+            }
+            return;
+        }
         if (event.data?.type === 'bd-select-content' && event.data.request === defaultCopyRequest) {
             const current = scheme();
             if (!current || previewRoute || workbenchMode !== 'page' ||
