@@ -865,7 +865,12 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
                         ${customCount ? `<label class="bd-suite-reset"><input type="checkbox" data-bd-suite-reset>将已调整的 ${customCount} 页恢复为所选套件布局</label>` : ''}
                     </fieldset>
                     <section class="bd-preview">
-                        <div class="bd-preview-toolbar"><label>预览页面 <select data-bd-suite-page>${previewPages.map(([id, name]) => `<option value="${id}" ${id === page ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label></div>
+                        <div class="bd-suite-pages">
+                            <strong id="bd-suite-pages-title">预览页面</strong>
+                            <div class="bd-page-cards" role="group" aria-labelledby="bd-suite-pages-title">
+                                ${previewPages.map(([id, name]) => pageCard(id, name, page, 'data-bd-suite-page')).join('')}
+                            </div>
+                        </div>
                         <div class="bd-suite-frame"><iframe data-bd-suite-frame title="页面套件预览" sandbox="allow-scripts allow-same-origin"></iframe></div>
                     </section>
                 </div>
@@ -891,7 +896,8 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         const dialog = modal!;
         const reset = dialog.querySelector<HTMLInputElement>('[data-bd-suite-reset]');
         const applyButton = dialog.querySelector<HTMLButtonElement>('[data-bd-modal-confirm]')!;
-        const pageInput = dialog.querySelector<HTMLSelectElement>('[data-bd-suite-page]')!;
+        let previewPage = page;
+        const pageCards = dialog.querySelectorAll<HTMLButtonElement>('[data-bd-suite-page]');
         const frame = dialog.querySelector<HTMLIFrameElement>('[data-bd-suite-frame]')!;
         const candidate = () => catalog.find(suite => suite.id === dialog.querySelector<HTMLInputElement>('[name=bd-suite]:checked')?.value);
         const refresh = () => {
@@ -900,8 +906,14 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             applyButton.disabled = !changed;
             const sample = copy(s);
             if (changed) applyPageSuite(sample, suite, reset?.checked ?? false);
-            sendPreview(sample, frame, { orientation, pageId: pageInput.value });
+            sendPreview(sample, frame, { orientation, pageId: previewPage });
         };
+        pageCards.forEach(card => card.addEventListener('click', () => {
+            if (card.dataset.value === previewPage) return;
+            previewPage = card.dataset.value!;
+            pageCards.forEach(button => button.setAttribute('aria-pressed', String(button === card)));
+            refresh();
+        }));
         dialog.addEventListener('change', refresh);
         frame.addEventListener('load', refresh);
         frame.src = PREVIEW_URL;
@@ -1454,6 +1466,13 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
         updatePageCards();
         root.querySelector<HTMLElement>('[data-bd-page-cards]')!.scrollTop = pageCardsScroll;
     }
+    function pageCard(id: string, name: string, selectedPage: string, action: string) {
+        return `<button type="button" class="bd-page-card" ${action} data-value="${id}" aria-pressed="${id === selectedPage}">
+            <span class="bd-page-thumbnail" data-thumbnail="${pageThumbnail(id)}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span>${esc(name)}</span>
+        </button>`;
+    }
+
     function pagePicker(s: Scheme, preview = false) {
         const title = preview ? '预览页面' : '装修页面';
         const catalog = pages(s.channel);
@@ -1464,10 +1483,7 @@ export function bindBrandDecorationPage(app: HTMLElement): void {
             </select></label>
             ${s.channel === 'kiosk' ? `<input type="search" aria-label="搜索页面名称" placeholder="搜索页面名称" data-bd-page-search value="${esc(pageSearch)}">` : ''}
             <div class="bd-page-cards" data-bd-page-cards role="group" aria-label="${preview ? title : '可装修页面'}">
-                ${catalog.map(([id, name]) => `<button type="button" class="bd-page-card" data-bd-action="select-editor-page" data-value="${id}" aria-pressed="${id === page}">
-                    <span class="bd-page-thumbnail" data-thumbnail="${pageThumbnail(id)}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                    <span>${esc(name)}</span>
-                </button>`).join('')}
+                ${catalog.map(([id, name]) => pageCard(id, name, page, 'data-bd-action="select-editor-page"')).join('')}
             </div>
             <p class="bd-help" data-bd-page-empty hidden>没有符合条件的页面</p>
             <p class="bd-help" data-bd-page-current hidden>${preview ? '当前预览' : '当前编辑'}：${esc(catalog.find(([id]) => id === page)?.[1] ?? '')}</p>
