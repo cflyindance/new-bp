@@ -81,7 +81,7 @@ export function bindMNavigation(): void {
   });
 }
 
-const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[data-view-switch-trigger],[data-theme-toggle],#theme-toggle,[data-sub-modal-close],[data-template-close],[data-pp-changelog-close],[data-merchant-stores-dialog-close]';
+const harmless = '[data-m-nav-back],[data-m-nav-open],[data-exit-m-platform],[data-view-switch-trigger],[data-theme-toggle],#theme-toggle,[data-sub-modal-close],[data-template-close],[data-pp-changelog-close],[data-merchant-stores-dialog-close],.brand-audit-detail [data-brand-audit-close]';
 const readonlyBrowse = '[data-brand-list-filter],[data-admin-query],[data-admin-status-filter],[data-brand-row-more],[data-permission-audit],[data-sub-more],[data-sub-operation=detail],[data-brand-store-details],[data-brand-store-detail-dialog],[data-merchant-usage] [data-activity-browse],[data-merchant-filter],[data-group-filter],[data-enterprise-hw-filter],[data-enterprise-hw-filter-form],[data-brand-hardware-device],.brand-hardware-device-dialog [data-close],[data-enterprise-merchant-filter-form],[data-enterprise-group-filter-form],[data-pp-col-select],[data-pp-select-bt],[data-pp-line-card],[data-nb-structure-focus],[data-merchant-view-stores],[data-store-change-log],[data-pp-list-changelog],[data-pp-changelog],[data-sub-route-search],[data-spe-tab],[data-spe-category],[data-spe-search],[data-spe-only],[data-spe-expand],[data-spe-collapse],[data-spe-version],[data-sub-brand-rights],[data-rights-query],[data-rights-status],[data-rights-store],[data-rights-expand],[data-rights-stores],[data-rights-store-dialog],[data-rights-audit-more],[data-rights-tab],[data-rights-audit-query],[data-rights-audit-operation],[data-rights-audit-from],[data-rights-audit-to],[data-rights-audit-reset],[data-rights-drawer-close],[data-rights-history-open],[data-rights-basis],[data-rights-basis-dialog],[data-package-toast-close],[data-service-version-preview]';
 function deniedControl(target: Element, type: string): boolean {
   if(target.closest('[data-page-copy-path]'))return false;
@@ -107,6 +107,7 @@ function deniedControl(target: Element, type: string): boolean {
   if (keys.length && keys.every(a => !a.write)) return false;
   if (target.closest('[data-pp-enable],[data-rbac-l4-editable],[data-nb-edit-l1],[data-nb-drag-handle],[data-nb-draggable-row]')) return true;
   if (page.id === 'activity-follow-up' && target.closest('[data-notification-browse]')) return false;
+  if (page.id === 'merchant-log' && target.closest('[data-enterprise-change-log] :is([data-log-category],[data-log-operator],[data-log-reset],[data-change-detail]),.brand-log-modal [data-log-store]')) return false;
   if (target.closest(readonlyBrowse) || page.id === 'merchant-activity' && target.closest('[data-activity-browse]') || page.id === 'device-activity' && target.closest('[data-device-activity-browse]')) return false;
   if (anchor) return false;
   if (control instanceof HTMLButtonElement && control.type === 'button' && /关闭|取消|返回/.test(control.textContent ?? '')) return false;

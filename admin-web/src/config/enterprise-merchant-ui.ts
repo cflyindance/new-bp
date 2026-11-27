@@ -591,27 +591,10 @@ function renderReportsPage(): string {
 }
 
 function renderChangeLogPage(): string {
-  const logs = getMerchantChangelog();
-  return `
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-      <p class="text-sm text-muted-foreground">企业级品牌变更审计（演示数据）。</p>
-      <div class="space-y-2">
-        ${logs
-          .map((l) => {
-            const merchant = getMerchantById(l.merchantId);
-            return `
-          <div class="rounded-xl border border-border bg-card p-4">
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-              <span class="font-medium">${escapeHtml(merchant?.name ?? l.merchantId)}</span>
-              <span class="text-xs text-muted-foreground">${escapeHtml(l.action)}</span>
-            </div>
-            <p class="mt-1 text-sm text-muted-foreground">${escapeHtml(l.detail)}</p>
-            <p class="mt-2 text-xs text-muted-foreground">${escapeHtml(l.operatorEmail)} · ${formatDate(l.at)}</p>
-          </div>`;
-          })
-          .join("")}
-      </div>
-    </div>`;
+  return `<section class="brand-list-card ba-audit-card">
+    <h1 id="main-content" tabindex="-1">变更记录</h1>
+    <div class="ba ba-audit-overview" data-enterprise-change-log></div>
+  </section>`;
 }
 
 function renderDetailTabs(merchantId: string, active: MerchantDetailTab): string {
@@ -1176,7 +1159,7 @@ export function renderEnterpriseMerchantPage(path: string): string {
     else if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/change-log`) body = renderChangeLogPage();
     else { const detail = parseMerchantDetailPath(path); body = detail ? renderMerchantDetailPage(detail.merchantId, detail.tab) : renderOverviewPage(); }
   }
-  const hideEnterpriseBar = isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path)) || path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`;
+  const hideEnterpriseBar = path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/change-log` || isMerchantListPath(path) || isStoreListPath(path) || Boolean(parseStoreDetailPath(path)) || Boolean(parseMerchantDetailPath(path)) || path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`;
   return wrapMerchantPage(body, { hideEnterpriseBar });
 }
 
@@ -1200,6 +1183,25 @@ function readStoreFilter(form: HTMLFormElement): Parameters<typeof getEnterprise
 
 export function bindEnterpriseMerchant(onMount: () => void): void {
   bindBrandServiceEntitlements(onMount);
+  const changeLog = document.querySelector<HTMLElement>('[data-enterprise-change-log]');
+  if (changeLog) {
+    const entries = getMerchantChangelog();
+    const stores = [...new Set(entries.flatMap(entry => entry.storeId ? [entry.storeId] : []))]
+      .map(getStoreById).filter(store => store !== undefined);
+    const menuChoices = new Map<string, ReturnType<typeof brandMenuChoices>>();
+    bindBrandChangeLog(changeLog, entries, [], stores, {
+      enterpriseView: {
+        brandName: id => id === 'enterprise' ? '企业' : getMerchantById(id)?.name ?? id,
+        menuChoices: id => {
+          const cached = menuChoices.get(id);
+          if (cached) return cached;
+          const choices = brandMenuChoices(getMerchantCapability(id)?.productLineIds);
+          menuChoices.set(id, choices);
+          return choices;
+        },
+      },
+    });
+  }
   document.querySelectorAll<HTMLElement>('[data-store-change-log]').forEach(host=>{const store=getStoreById(host.dataset.storeChangeLog!);if(store)bindBrandChangeLog(host,getStoreChangelog(store.storeId),brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),[{storeId:store.storeId,name:store.name}],{storeView:true});});
   document.querySelectorAll<HTMLElement>('[data-store-menu-read]').forEach(host=>{const store=getStoreById(host.dataset.storeMenuRead!);if(store)bindOpenedBrandMenuTree(host,brandMenuChoices(getMerchantCapability(store.merchantId)?.productLineIds),new Set(getStoreCapability(store.storeId)?.enabledKeys??[]),{emptyText:'本店暂无生效菜单'});});
   bindBrandWorkspaces({canView: canViewBrandStoreDetails, open: openBrandStoreDetails});

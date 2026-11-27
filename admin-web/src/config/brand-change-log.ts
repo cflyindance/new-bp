@@ -3,6 +3,15 @@ import { auditComparison, auditDetailShell, auditFields, auditValue, showAuditDe
 import type {MenuChoice} from './brand-menu-choices';
 import type {MerchantChangeLogEntry} from './enterprise-merchant-types';
 const labels:Record<string,string>={'store.capability.update':'配置门店菜单','brand.menu.update':'修改品牌菜单','org.store.associate':'添加新门店','merchant.create':'创建品牌'};
+const enterpriseActionLabels: Record<string, string> = {
+ 'license.expired':'许可证到期', 'status.active':'启用品牌', 'status.onboarding':'开始品牌开通',
+ 'status.closing.cancel':'取消关闭品牌', 'onboarding.invite':'发送开通邀请',
+ 'group.create':'创建集团', 'group.update':'修改集团', 'group.delete':'删除集团',
+ 'org.store.mount':'挂载门店', 'org.store.status':'修改门店状态',
+ 'capability.update':'修改品牌能力', 'capability.sync':'同步品牌预设',
+ 'impersonate.start':'开始代登录', 'impersonate.end':'结束代登录',
+ 'crm.sync':'同步 CRM', 'crm.renew':'续签合同',
+};
 const modeName=(mode:string)=>({inherit:'继承品牌菜单',independent:'独立配置',add:'独立配置 · 增量开通',replace:'独立配置 · 替换',brand:'品牌菜单'}[mode]??'历史记录未保存');
 export function menuChangeKeys(entry:MerchantChangeLogEntry){
  if(entry.menuChange)return {added:entry.menuChange.added,removed:entry.menuChange.removed};
@@ -14,26 +23,31 @@ export function changeCount(keys:string[],choices:MenuChoice[]):string{
  for(const key of new Set(keys)){const c=map.get(key);if(!c)unknown++;else if(c.isPage)pages++;else if(c.kind==='setting')settings++;else directories++;}
  return [[pages,'个页面'],[directories,'个目录/分组'],[settings,'个设置项'],[unknown,'个历史菜单']].filter(([n])=>n).map(([n,t])=>`${n} ${t}`).join('、')||'无';
 }
-export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEntry[],current:MenuChoice[],stores:{storeId:string;name:string;address?:string;postalCode?:string}[],options:{storeView?:boolean}={}):void{
+export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEntry[],current:MenuChoice[],stores:{storeId:string;name:string;address?:string;postalCode?:string}[],options:{storeView?:boolean;enterpriseView?:{brandName:(id:string)=>string;menuChoices:(id:string)=>MenuChoice[]}}={}):void{
+ const enterprise=options.enterpriseView;
  const groups=new Map<string,MerchantChangeLogEntry[]>();
- for(const e of entries){const key=e.facts?.operationId??e.menuChange?.operationId??e.id;groups.set(key,[...(groups.get(key)??[]),e]);}
+ for(const e of entries){const operationId=e.facts?.operationId??e.menuChange?.operationId??e.id;const key=enterprise?JSON.stringify([e.merchantId,operationId]):operationId;groups.set(key,[...(groups.get(key)??[]),e]);}
  const rows=[...groups.values()].map(row=>row.sort((a,b)=>b.at.localeCompare(a.at))).sort((a,b)=>b[0].at.localeCompare(a[0].at));
  const category=(e:MerchantChangeLogEntry)=>options.storeView&&e.action.startsWith('impersonate.')?'门店代登录':options.storeView&&e.action.startsWith("store.capability")?"门店菜单":options.storeView&&e.action.startsWith("org.store.")?"门店归属":e.facts?.category??(e.action.startsWith('store.')||e.action.startsWith('org.store.')?'品牌门店':e.action==='brand.menu.update'?'品牌菜单':'其他');
- const title=(e:MerchantChangeLogEntry)=>e.facts?.title??labels[e.action]??(e.action.startsWith('access:')?e.action.slice(7):'品牌信息变更');
- const target=(e:MerchantChangeLogEntry)=>e.facts?.target??(e.storeId?`${e.menuChange?.storeName??stores.find(s=>s.storeId===e.storeId)?.name??'历史门店'} · ${e.storeId}`:'品牌');
+ const title=(e:MerchantChangeLogEntry)=>e.facts?.title??labels[e.action]??(e.action.startsWith('access:')?e.action.slice(7):enterprise?(enterpriseActionLabels[e.action]??e.action):'品牌信息变更');
+ const target=(e:MerchantChangeLogEntry)=>e.facts?.target??(e.storeId?`${e.menuChange?.storeName??stores.find(s=>s.storeId===e.storeId)?.name??'历史门店'} · ${e.storeId}`:enterprise?.brandName(e.merchantId)??'品牌');
+ const choicesFor=(e:MerchantChangeLogEntry)=>e.menuChange?.choices??enterprise?.menuChoices(e.merchantId)??current;
  const fieldSummary=(e:MerchantChangeLogEntry)=>e.facts?.fields.filter(f=>f.before!==f.after).map(f=>`${f.name}：${f.before} → ${f.after}`).join('；');
  const summary=(row:MerchantChangeLogEntry[])=>{
   const e=row[0],diff=menuChangeKeys(e);
   if(row.length>1){if(diff&&!row.some(v=>{const k=menuChangeKeys(v);return k&&(k.added.length||k.removed.length);}))return `${row.length} 家门店，配置方式已调整；菜单范围不变`;if(diff)return `${row.length} 家门店；新增菜单 ${row.filter(v=>menuChangeKeys(v)?.added.length).length} 家，关闭菜单 ${row.filter(v=>menuChangeKeys(v)?.removed.length).length} 家；详情逐店核对`;return `${row.length} 家门店${e.action==='org.store.associate'?'关联到品牌，默认继承品牌菜单':'发生变更'}`;}
   if(!diff){if(e.facts?.title==='重设管理员密码')return '已重设密码，旧密码失效';if(e.facts?.title==='开通管理员')return '已开通并启用品牌管理员';return fieldSummary(e)||e.detail;}
-  const c=e.menuChange?.choices??current,mode=e.facts?.fields.find(f=>f.name==='配置方式');
+  const c=choicesFor(e),mode=e.facts?.fields.find(f=>f.name==='配置方式');
   const modeText=mode&&mode.before!==mode.after?`${mode.before} → ${mode.after}；`:'';
   const impact=e.facts?.fields.filter(f=>f.name.startsWith('门店影响')).length??0;
   return modeText+(diff.added.length||diff.removed.length?`${diff.added.length?'新增 '+changeCount(diff.added,c):'未新增菜单'}；${diff.removed.length?'关闭 '+changeCount(diff.removed,c):'未关闭菜单'}`:'菜单范围不变')+(impact?`；影响 ${impact} 家门店`:'');
  };
  const brandDetail=!!host.closest('[data-brand-detail-tab]');
+ const fullFilters=brandDetail||!!enterprise;
+ const categories=enterprise?[...new Set(rows.map(row=>category(row[0])))].sort((a,b)=>a.localeCompare(b,'zh-CN'))
+  :options.storeView?['门店菜单','门店归属','门店代登录','其他']:['品牌门店','品牌菜单','品牌管理员','品牌服务','其他'];
  const operators=[...new Set(rows.map(row=>row[0].operatorEmail).filter(Boolean))].sort();
- host.innerHTML=`<header class="ba-head ba-log-filters">${brandDetail?"":"<h2>变更记录</h2>"}<label class="ba-field">变更类型<select data-log-category><option value="">${brandDetail?'变更类型':'全部类型'}</option>${(options.storeView?['门店菜单','门店归属','门店代登录','其他']:['品牌门店','品牌菜单','品牌管理员','品牌服务','其他']).map(c=>`<option>${c}</option>`).join('')}</select></label>${brandDetail?`<label class="ba-field">操作人<select data-log-operator><option value="">操作人</option>${operators.map(operator=>`<option>${esc(operator)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-log-reset>重置</button>`:''}</header><div class="ba-table-wrap ba-change-list"><table><thead><tr><th>时间</th><th>操作人</th><th>类型</th><th>操作</th><th>涉及对象</th><th>变更摘要</th><th>操作</th></tr></thead><tbody>${rows.map((row,i)=>{const e=row[0],text=summary(row);return `<tr data-change-row data-change-category="${esc(category(e))}" data-change-operator="${esc(e.operatorEmail)}"><td>${esc(new Date(e.at).toLocaleString('zh-CN'))}</td><td>${esc(e.operatorEmail)}${e.id.startsWith('demo-brand-change-')?' <span class="ba-tag">演示</span>':''}</td><td><span class="ba-log-category">${esc(category(e))}</span></td><td>${esc(title(e))}</td><td>${row.length>1?`${row.length} 家门店`:esc(target(e))}</td><td>${esc(text.length>180?text.slice(0,180)+'…':text)}</td><td><button type="button" class="ba-btn" data-change-detail="${i}">查看详情</button></td></tr>`;}).join('')}<tr data-log-empty ${rows.length?'hidden':''}><td colspan="7" class="ba-empty">暂无变更记录</td></tr></tbody></table></div>`;
+ host.innerHTML=`<header class="ba-head ba-log-filters">${fullFilters?"":"<h2>变更记录</h2>"}<label class="ba-field">变更类型<select data-log-category><option value="">${fullFilters?'变更类型':'全部类型'}</option>${categories.map(c=>`<option>${esc(c)}</option>`).join('')}</select></label>${fullFilters?`<label class="ba-field">操作人<select data-log-operator><option value="">操作人</option>${operators.map(operator=>`<option>${esc(operator)}</option>`).join('')}</select></label><button type="button" class="ba-btn" data-log-reset>重置</button>`:''}</header><div class="ba-table-wrap ba-change-list"><table><thead><tr><th>时间</th><th>操作人</th><th>类型</th><th>变更操作</th>${enterprise?'<th>所属品牌</th>':''}<th>涉及对象</th><th>变更摘要</th><th>操作</th></tr></thead><tbody>${rows.map((row,i)=>{const e=row[0],text=summary(row);return `<tr data-change-row data-change-category="${esc(category(e))}" data-change-operator="${esc(e.operatorEmail)}"><td>${esc(new Date(e.at).toLocaleString('zh-CN'))}</td><td>${esc(e.operatorEmail)}</td><td><span class="ba-log-category">${esc(category(e))}</span></td><td>${esc(title(e))}</td>${enterprise?`<td>${esc(enterprise.brandName(e.merchantId))}</td>`:''}<td>${row.length>1?`${row.length} 家门店`:enterprise&&!e.storeId&&!e.facts?.target?'—':esc(target(e))}</td><td>${esc(text.length>180?text.slice(0,180)+'…':text)}</td><td><button type="button" class="ba-btn" data-change-detail="${i}">查看详情</button></td></tr>`;}).join('')}<tr data-log-empty ${rows.length?'hidden':''}><td colspan="${enterprise?8:7}" class="ba-empty">暂无变更记录</td></tr></tbody></table></div>`;
  const categoryFilter=host.querySelector<HTMLSelectElement>('[data-log-category]')!;
  const operatorFilter=host.querySelector<HTMLSelectElement>('[data-log-operator]');
  const applyFilters=()=>{
@@ -85,7 +99,7 @@ export function bindBrandChangeLog(host:HTMLElement,entries:MerchantChangeLogEnt
     : diff ? (!entry.storeId ? object : '') : `${object}<p class="ba-muted">该历史记录仅保留操作摘要，未保存字段前后值。</p><p>${esc(entry.detail)}</p>`;
    const menus=dialog.querySelector('[data-log-tree]')!;
    if(!diff){menus.innerHTML='';return;}
-   const choices=new Map((entry.menuChange?.choices??current).map(choice=>[choice.key,choice]));
+   const choices=new Map(choicesFor(entry).map(choice=>[choice.key,choice]));
    const label=(key: string)=>{
     const chain:string[]=[];
     const seen=new Set<string>();
