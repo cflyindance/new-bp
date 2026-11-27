@@ -26,7 +26,7 @@
     var next=document.createElement('button');next.type='button';next.id='positionNextBtn';next.className=action.className;next.textContent='下一步';action.before(next);
     var summary=document.createElement('div');summary.className='mb-5 flex items-center justify-between gap-4 text-sm';summary.innerHTML='<span id="adPositionSummary"></span><button type="button" id="adChangeTarget" class="shrink-0 text-primary">修改渠道与位置</button>';form.prepend(summary);
     var notice=document.createElement('div');notice.className='mb-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-600';summary.after(notice);
-    var batchButton=document.createElement('button');batchButton.type='button';batchButton.className='ad-batch-entry';batchButton.textContent='批量设置点击行为';summary.after(batchButton);
+    var batchButton=document.createElement('button');batchButton.type='button';batchButton.className='ad-batch-entry';batchButton.textContent='批量设置点击行为';form.querySelector('[data-ad-material-actions]').append(batchButton);
     batchButton.onclick=function(){root.KioskAdActivityEditor.openBatch(editorApi,batchButton).catch(function(error){if(root.Toast)Toast.validate(error.message);});};
     var validationNotice=document.createElement('p');validationNotice.className='mb-4 text-sm text-red-500';validationNotice.setAttribute('role','alert');notice.after(validationNotice);
     function scheduleCompatibility(){clearTimeout(compatibilityTimer);var revision=++compatibilityRevision;compatibilityTimer=setTimeout(function(){checkCompatibility(revision);},80);}
@@ -47,8 +47,9 @@
     function renderMedia(){
       syncBatchButton();
       if(!hooks)return;
+      var firstMaterialBlock=true;
       ['portrait','landscape'].forEach(function(role){
-        var list=specs(role),s=spec(role),label=document.querySelector('[data-position-ratio="'+role+'"]'),block=label.closest('.border-t');block.style.display=list.length?'':'none';
+        var list=specs(role),s=spec(role),label=document.querySelector('[data-position-ratio="'+role+'"]'),block=label.closest('.border-t');block.style.display=list.length?'':'none';block.classList.toggle('ad-material-first',!!list.length&&firstMaterialBlock);if(list.length)firstMaterialBlock=false;
         var select=block.querySelector('[data-ad-spec-selector]');if(!select){select=document.createElement('select');select.setAttribute('data-ad-spec-selector',role);select.setAttribute('aria-label',role==='portrait'?'竖版素材规格':'横版素材规格');select.className='mb-4 h-10 rounded-xl border border-gray-300 px-3 text-sm';label.parentElement.after(select);select.addEventListener('change',function(){flush();active[role]=this.value;hooks.set(role,bank[this.value]||[]);renderMedia();});}
         select.innerHTML=list.map(function(v){return '<option value="'+esc(v.id)+'"'+(v.id===s.id?' selected':'')+'>'+esc(v.name)+' · '+v.width+'×'+v.height+' · '+esc(v.applicability)+'</option>';}).join('');select.style.display=list.length>1?'':'none';
         var kinds=allowedKinds(s),items=bank[s.id]||hooks.get(role);var kind=items.length?items[0].type:kinds[0]||'image';
